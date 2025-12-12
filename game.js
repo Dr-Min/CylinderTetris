@@ -696,9 +696,17 @@ let touchStartX = 0;
 let touchStartY = 0;
 let touchStartTime = 0;
 let isSwiping = false;
+let isControlPressed = false; // [추가] 버튼 조작 중인지 확인하는 플래그
 
 document.addEventListener("touchstart", e => {
+    // 버튼 위에서 시작된 터치라면 무시 (e.target이 버튼인지 확인)
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        isControlPressed = true;
+        return;
+    }
+    
     if (!state.isPlaying) return;
+    isControlPressed = false;
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
@@ -706,6 +714,7 @@ document.addEventListener("touchstart", e => {
 }, {passive: false});
 
 document.addEventListener("touchmove", e => {
+    if (isControlPressed) return; // 버튼 조작 중이면 무시
     if (!state.isPlaying) return;
     e.preventDefault();
     
@@ -732,6 +741,12 @@ document.addEventListener("touchmove", e => {
 }, {passive: false});
 
 document.addEventListener("touchend", e => {
+    // 버튼 조작이었으면 회전 로직 스킵하고 플래그 초기화
+    if (isControlPressed) {
+        isControlPressed = false;
+        return;
+    }
+
     if (!state.isPlaying) return;
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;

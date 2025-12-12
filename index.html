@@ -6,8 +6,8 @@
     <title>Cylinder Tetris 3D</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#050510">
-    <!-- [수정] v1.4 -->
-    <link rel="stylesheet" href="style.css?v=1.4">
+    <!-- [수정] v1.5 -->
+    <link rel="stylesheet" href="style.css?v=1.5">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -44,6 +44,9 @@
         <div class="controls-hint">
             Swipe ↔: Move | Drag ↓: Speed Up | Button: Drop
         </div>
+        
+        <!-- [추가] 버전 정보 -->
+        <div class="version-info">v1.5</div>
     </div>
 
     <div id="start-screen">
@@ -57,8 +60,8 @@
         <button id="restart-btn">RETRY</button>
     </div>
 
-    <!-- [수정] v1.4 -->
-    <script src="game.js?v=1.4"></script>
+    <!-- [수정] v1.5 -->
+    <script src="game.js?v=1.5"></script>
     
     <script>
         if ('serviceWorker' in navigator) {

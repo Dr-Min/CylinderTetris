@@ -191,13 +191,24 @@ body {
 
 .controls-hint {
     position: absolute;
-    bottom: 110px; /* 버튼 위쪽으로 띄움 */
+    bottom: 110px; 
     width: 100%;
     color: rgba(255, 255, 255, 0.5);
     font-size: 12px;
     text-align: center;
     text-shadow: 0 0 5px white;
     pointer-events: none;
+}
+
+/* [추가] 버전 정보 표시 */
+.version-info {
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 10px;
+    pointer-events: none;
+    z-index: 10;
 }
 
 #start-screen, #game-over-screen {
