@@ -1,11 +1,17 @@
-const CACHE_NAME = 'tetris-3d-v1';
+const CACHE_NAME = 'tetris-3d-v2';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
-  './game.js',
   './manifest.json',
-  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+  './js/main.js',
+  './js/game.js',
+  './js/renderer.js',
+  './js/resources.js',
+  './js/audio.js',
+  './js/constants.js',
+  './js/input.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js'
 ];
 
 // 설치 시 캐싱
@@ -21,4 +27,3 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then((response) => response || fetch(e.request))
   );
 });
-
