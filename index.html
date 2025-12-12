@@ -6,9 +6,27 @@
     <title>Cylinder Tetris 3D</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#050510">
-    <!-- [수정] v1.10 -->
-    <link rel="stylesheet" href="style.css?v=1.10">
+    <!-- [수정] v1.11 (파일 교체) -->
+    <link rel="stylesheet" href="style_v2.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // 에러 캡처용 (모바일 디버깅)
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            var errorBox = document.createElement('div');
+            errorBox.style.position = 'fixed';
+            errorBox.style.top = '0';
+            errorBox.style.left = '0';
+            errorBox.style.width = '100%';
+            errorBox.style.background = 'rgba(255,0,0,0.8)';
+            errorBox.style.color = 'white';
+            errorBox.style.zIndex = '99999';
+            errorBox.style.padding = '10px';
+            errorBox.style.pointerEvents = 'none';
+            errorBox.innerHTML = 'Error: ' + msg + '<br>Line: ' + lineNo;
+            document.body.appendChild(errorBox);
+            return false;
+        };
+    </script>
 </head>
 <body>
 
@@ -46,7 +64,7 @@
         </div>
         
         <!-- [수정] v1.10 -->
-        <div class="version-info">v1.10</div>
+        <div class="version-info">v1.11</div>
     </div>
 
     <div id="start-screen">
@@ -60,8 +78,8 @@
         <button id="restart-btn">RETRY</button>
     </div>
 
-    <!-- [수정] v1.10 -->
-    <script src="game.js?v=1.10"></script>
+    <!-- [수정] v1.11 (파일 교체) -->
+    <script src="game_v2.js"></script>
     
     <script>
         if ('serviceWorker' in navigator) {

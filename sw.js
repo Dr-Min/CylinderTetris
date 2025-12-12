@@ -1,10 +1,10 @@
-// [수정] v11
-const CACHE_NAME = 'tetris-3d-v11';
+// [수정] v12 (파일명 변경으로 강력한 갱신)
+const CACHE_NAME = 'tetris-3d-v12';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=1.10', // [수정] v1.10
-  './game.js?v=1.10',   // [수정] v1.10
+  './style_v2.css', // [수정] style_v2.css
+  './game_v2.js',   // [수정] game_v2.js
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
 ];
