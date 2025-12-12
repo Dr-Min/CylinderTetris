@@ -4,7 +4,7 @@ body {
     background-color: #050510;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     touch-action: none;
-    user-select: none; /* 텍스트 선택 방지 */
+    user-select: none;
     -webkit-user-select: none;
 }
 #game-container {
@@ -23,20 +23,21 @@ body {
     height: 100%;
     z-index: 2;
     pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
     padding: 10px;
     box-sizing: border-box;
 }
 
-/* 상단 정보 바 */
+/* 1. 상단 바 (Level - Score - Next) */
 .top-bar {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    width: 100%;
-    padding-top: 10px;
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .level-box {
@@ -44,10 +45,14 @@ body {
     font-size: 20px;
     font-weight: bold;
     text-shadow: 0 0 5px #00ff00;
-    margin-left: 10px;
+    margin-top: 5px;
 }
 
 .score-board {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 15px; /* 중앙 배치 */
     color: #00ffff;
     font-size: 32px;
     font-weight: bold;
@@ -57,17 +62,13 @@ body {
     border: none;
     letter-spacing: 2px;
     text-align: center;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top: 20px;
+    white-space: nowrap;
 }
 
 .next-box {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-right: 10px;
 }
 .next-box .label {
     color: #ff00ff;
@@ -84,15 +85,16 @@ body {
     border-radius: 5px;
 }
 
-/* 설정 버튼 영역 (좌측 상단, Level 아래) */
+/* 2. 설정 버튼 영역 (좌측 상단, Level 바로 아래) */
 .settings-area {
     position: absolute;
-    top: 60px;
-    left: 20px; /* 우측->좌측 이동 */
+    top: 60px; /* Level 아래 */
+    left: 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
     pointer-events: auto;
+    z-index: 30;
 }
 
 #toggle-btn, #bgm-btn {
@@ -104,22 +106,24 @@ body {
     color: #00ffff;
     border: 1px solid #00ffff;
     text-align: left;
-    width: 110px;
+    width: 120px;
 }
 #bgm-btn {
     color: #ff00ff;
     border: 1px solid #ff00ff;
 }
 
-/* 모바일 전용 컨트롤 (좌측 하단: 이동) */
+/* 3. 모바일 컨트롤 (좌측 하단: 이동) */
 .mobile-controls-left {
     position: absolute;
-    bottom: 80px;
-    left: 30px;
+    bottom: 30px;
+    left: 20px;
     display: flex;
-    gap: 20px;
+    gap: 15px;
     pointer-events: auto;
-    display: none; /* PC 기본 숨김 */
+    z-index: 30;
+    /* 테스트를 위해 PC에서도 일단 보이게 설정 (나중에 none으로 변경 가능) */
+    display: flex; 
 }
 
 #left-btn, #right-btn {
@@ -135,26 +139,27 @@ body {
     align-items: center;
     cursor: pointer;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    user-select: none;
 }
 #left-btn:active, #right-btn:active {
     background: rgba(0, 255, 255, 0.5);
     transform: scale(0.95);
 }
 
-/* 모바일 전용 컨트롤 (우측 하단: 드롭) */
+/* 4. 모바일 컨트롤 (우측 하단: 드롭) */
 #drop-btn {
     position: absolute;
-    bottom: 80px;
-    right: 30px;
-    width: 80px;
-    height: 80px;
+    bottom: 30px;
+    right: 20px;
+    width: 70px;
+    height: 70px;
     background: rgba(255, 0, 0, 0.3);
     border: 2px solid #ff0000;
     border-radius: 50%;
     color: white;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
-    z-index: 20;
+    z-index: 30;
     pointer-events: auto;
     display: flex;
     justify-content: center;
@@ -162,7 +167,8 @@ body {
     cursor: pointer;
     touch-action: manipulation;
     box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
-    display: none; /* PC 기본 숨김 */
+    /* 테스트를 위해 PC에서도 보이게 설정 */
+    display: flex;
 }
 #drop-btn:active {
     background: rgba(255, 0, 0, 0.6);
@@ -170,35 +176,14 @@ body {
 }
 
 .controls-hint {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 14px;
-    text-align: center;
-    margin-bottom: 20px;
-    text-shadow: 0 0 5px white;
+    position: absolute;
+    bottom: 110px; /* 버튼 위쪽으로 띄움 */
     width: 100%;
-}
-
-/* 모바일 화면에서만 컨트롤 버튼 보이기 */
-@media (max-width: 768px) {
-    .mobile-controls-left {
-        display: flex;
-    }
-    #drop-btn {
-        display: flex;
-    }
-    .controls-hint {
-        display: none; /* 모바일엔 버튼 있으니 힌트 숨김 */
-    }
-}
-
-/* 터치 지원 기기 감지 (더 정확함) */
-@media (hover: none) and (pointer: coarse) {
-    .mobile-controls-left {
-        display: flex;
-    }
-    #drop-btn {
-        display: flex;
-    }
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+    text-align: center;
+    text-shadow: 0 0 5px white;
+    pointer-events: none;
 }
 
 #start-screen, #game-over-screen {
@@ -208,7 +193,7 @@ body {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.85);
-    z-index: 10;
+    z-index: 50;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -244,3 +229,13 @@ button:active {
 .hidden {
     display: none !important;
 }
+
+/* PC 화면(마우스가 있는 환경)에서는 모바일 버튼 숨기기 */
+/* 지금은 확인을 위해 주석 처리 해제 안 함 -> 확인 후 아래 주석을 풀면 PC에서 사라짐 */
+/*
+@media (hover: hover) and (pointer: fine) {
+    .mobile-controls-left, #drop-btn {
+        display: none;
+    }
+}
+*/
