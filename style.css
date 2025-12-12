@@ -85,28 +85,33 @@ body {
     border-radius: 5px;
 }
 
-/* 2. 설정 버튼 영역 (좌측 상단, Level 바로 아래) */
+/* 2. 설정 버튼 영역 (좌측 상단) */
 .settings-area {
     position: absolute;
-    top: 60px; /* Level 아래 */
+    top: 60px; 
     left: 20px;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    flex-direction: row; /* 가로 배열로 변경 */
+    gap: 15px;
     pointer-events: auto;
     z-index: 30;
 }
 
 #toggle-btn, #bgm-btn {
     background: rgba(0,0,0,0.5);
-    padding: 5px 10px;
-    border-radius: 10px;
+    padding: 0; /* 패딩 제거하고 크기 고정 */
+    border-radius: 50%; /* 완벽한 원형 */
     cursor: pointer;
-    font-size: 11px;
+    font-size: 10px;
     color: #00ffff;
     border: 1px solid #00ffff;
-    text-align: left;
-    width: 120px;
+    text-align: center;
+    width: 50px;  /* 가로 세로 동일하게 */
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    line-height: 1.2;
 }
 #bgm-btn {
     color: #ff00ff;
@@ -122,18 +127,17 @@ body {
     gap: 15px;
     pointer-events: auto;
     z-index: 30;
-    /* 테스트를 위해 PC에서도 일단 보이게 설정 (나중에 none으로 변경 가능) */
     display: flex; 
 }
 
 #left-btn, #right-btn {
-    width: 60px;
-    height: 60px;
+    width: 50px; /* 60 -> 50 축소 */
+    height: 50px;
     background: rgba(0, 255, 255, 0.2);
     border: 2px solid #00ffff;
     border-radius: 50%;
     color: #00ffff;
-    font-size: 24px;
+    font-size: 20px; /* 폰트 축소 */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -151,13 +155,13 @@ body {
     position: absolute;
     bottom: 30px;
     right: 20px;
-    width: 70px;
-    height: 70px;
+    width: 60px; /* 70 -> 60 축소 */
+    height: 60px;
     background: rgba(255, 0, 0, 0.3);
     border: 2px solid #ff0000;
     border-radius: 50%;
     color: white;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
     z-index: 30;
     pointer-events: auto;
@@ -167,7 +171,6 @@ body {
     cursor: pointer;
     touch-action: manipulation;
     box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
-    /* 테스트를 위해 PC에서도 보이게 설정 */
     display: flex;
 }
 #drop-btn:active {

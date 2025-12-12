@@ -843,43 +843,64 @@ document.getElementById("restart-btn").addEventListener("click", () => {
     initGame();
 });
 
+// [추가] 공통: 버튼 터치 시 게임 조작(회전 등) 방지
+function stopPropagation(e) {
+    e.stopPropagation();
+}
+
+document.getElementById("toggle-btn").addEventListener("touchstart", stopPropagation);
+document.getElementById("bgm-btn").addEventListener("touchstart", stopPropagation);
+document.getElementById("left-btn").addEventListener("touchstart", stopPropagation);
+document.getElementById("right-btn").addEventListener("touchstart", stopPropagation);
+document.getElementById("drop-btn").addEventListener("touchstart", stopPropagation);
+
 document.getElementById("toggle-btn").addEventListener("click", (e) => {
+    e.stopPropagation(); // 클릭 시에도 전파 방지
     CONFIG.TRANSPARENT_MODE = !CONFIG.TRANSPARENT_MODE;
-    e.target.innerText = "Transparency: " + (CONFIG.TRANSPARENT_MODE ? "ON" : "OFF");
+    // 텍스트를 짧게 변경 (줄바꿈 허용)
+    e.target.innerHTML = "VIEW<br>" + (CONFIG.TRANSPARENT_MODE ? "ON" : "OFF");
     
     if(occluderCylinder) {
         occluderCylinder.visible = !CONFIG.TRANSPARENT_MODE;
     }
-    
     e.target.blur();
 });
 
 document.getElementById("bgm-btn").addEventListener("click", (e) => {
+    e.stopPropagation();
     const isOn = SoundManager.toggleBGM();
-    e.target.innerText = "BGM: " + (isOn ? "ON" : "OFF");
+    e.target.innerHTML = "BGM<br>" + (isOn ? "ON" : "OFF");
     e.target.blur();
 });
 
 const dropBtn = document.getElementById("drop-btn");
 dropBtn.addEventListener("touchstart", (e) => {
     e.preventDefault(); 
+    e.stopPropagation(); // 전파 방지
     if (state.isPlaying) hardDrop();
 });
 dropBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
     if (state.isPlaying) hardDrop();
     e.target.blur();
 });
 
-// [추가] 좌우 이동 버튼 이벤트
+// [추가] 초기 텍스트 설정 (짧게)
+document.getElementById("toggle-btn").innerHTML = "VIEW<br>ON";
+document.getElementById("bgm-btn").innerHTML = "BGM<br>ON";
+
+// 좌우 이동 버튼 이벤트
 const leftBtn = document.getElementById("left-btn");
 const rightBtn = document.getElementById("right-btn");
 
 leftBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
+    e.stopPropagation(); // 전파 방지
     if(state.isPlaying) moveHorizontal(-1);
 });
 rightBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
+    e.stopPropagation(); // 전파 방지
     if(state.isPlaying) moveHorizontal(1);
 });
 // PC 테스트용 클릭
