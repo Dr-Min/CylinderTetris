@@ -183,6 +183,41 @@ export class TetrisGame {
         
         // 터치 이벤트
         this.initTouchControls();
+        
+        // 버튼 컨트롤 (this 바인딩 및 이벤트 연결)
+        this.initButtonControls();
+    }
+
+    initButtonControls() {
+        // 좌우 이동 버튼
+        const leftBtn = document.getElementById("left-btn");
+        const rightBtn = document.getElementById("right-btn");
+        
+        if(leftBtn) {
+            leftBtn.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // 이벤트 전파 중단 (상위 터치/회전 로직 방지)
+                this.moveHorizontal(-1);
+            });
+        }
+        
+        if(rightBtn) {
+            rightBtn.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.moveHorizontal(1);
+            });
+        }
+
+        // 드롭 버튼
+        const dropBtn = document.getElementById("drop-btn");
+        if(dropBtn) {
+            dropBtn.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.hardDrop();
+            });
+        }
     }
 
     initTouchControls() {

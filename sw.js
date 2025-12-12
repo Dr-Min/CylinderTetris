@@ -1,5 +1,5 @@
-// v17 - Auto Update Enabled
-const CACHE_NAME = 'hacker-tetris-v17';
+// v18 - Mobile Controls Fixed
+const CACHE_NAME = 'hacker-tetris-v18';
 const ASSETS = [
   './',
   './index.html',
