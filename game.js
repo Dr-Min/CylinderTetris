@@ -163,9 +163,10 @@ function initThree() {
     camera.position.set(0, TOTAL_HEIGHT / 2, CONFIG.RADIUS + 100); 
     camera.lookAt(0, TOTAL_HEIGHT / 2, 0);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // [최적화] 모바일 부하 방지를 위해 픽셀 비율 제한 (최대 1.5)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
     container.appendChild(renderer.domElement);
 
     worldGroup = new THREE.Group();
@@ -204,7 +205,7 @@ function initThree() {
 
 function createStarfield() {
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 2000;
+    const starCount = 1000; // [최적화] 2000 -> 1000 (메모리 절약)
     const posArray = new Float32Array(starCount * 3);
     
     for(let i=0; i<starCount*3; i++) {
@@ -704,6 +705,9 @@ function update(time) {
         const p = explosions[i];
         p.userData.life -= 0.03; 
         if(p.userData.life <= 0) {
+            // [중요] 메모리 해제 (WebGL Context Lost 방지)
+            p.geometry.dispose();
+            p.material.dispose();
             effectGroup.remove(p);
             explosions.splice(i, 1);
             continue;
