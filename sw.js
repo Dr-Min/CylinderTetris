@@ -1,17 +1,21 @@
-// [수정] v15
-const CACHE_NAME = 'tetris-3d-v15';
+// v16 - File Structure Updated
+const CACHE_NAME = 'hacker-tetris-v16';
 const ASSETS = [
   './',
   './index.html',
-  './style_v2.css', // [수정] style_v2.css
-  './game_v2.js',   // [수정] game_v2.js
+  './css/style.css',
+  './css/terminal.css',
+  './js/main.js',
+  './js/modules/GameManager.js',
+  './js/modules/TerminalUI.js',
+  './js/modules/TetrisGame.js',
   './manifest.json',
-  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+  'https://fonts.googleapis.com/css2?family=VT323&display=swap'
 ];
 
 // 설치 시 캐싱
 self.addEventListener('install', (e) => {
-  // [중요] 대기하지 않고 즉시 활성화 (새 버전 바로 적용)
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
@@ -32,7 +36,6 @@ self.addEventListener('activate', (e) => {
       );
     })
   );
-  // 모든 탭(클라이언트)에서 즉시 제어권 획득
   return self.clients.claim();
 });
 
@@ -42,4 +45,3 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then((response) => response || fetch(e.request))
   );
 });
-

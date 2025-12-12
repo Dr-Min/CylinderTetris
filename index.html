@@ -3,92 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cylinder Tetris 3D</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#050510">
-    <!-- [수정] v1.11 (파일 교체) -->
-    <link rel="stylesheet" href="style_v2.css">
+    <title>HACKER_TETRIS_PROTOCOL_V1</title>
+    <!-- 게임 UI 스타일 -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 터미널 스타일 (우선순위를 위해 뒤에 배치) -->
+    <link rel="stylesheet" href="css/terminal.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        // 에러 캡처용 (모바일 디버깅)
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            var errorBox = document.createElement('div');
-            errorBox.style.position = 'fixed';
-            errorBox.style.top = '0';
-            errorBox.style.left = '0';
-            errorBox.style.width = '100%';
-            errorBox.style.background = 'rgba(255,0,0,0.8)';
-            errorBox.style.color = 'white';
-            errorBox.style.zIndex = '99999';
-            errorBox.style.padding = '10px';
-            errorBox.style.pointerEvents = 'none';
-            errorBox.innerHTML = 'Error: ' + msg + '<br>Line: ' + lineNo;
-            document.body.appendChild(errorBox);
-            return false;
-        };
-    </script>
 </head>
 <body>
+    <!-- CRT 효과 오버레이 (전체 적용) -->
+    <div class="crt-overlay"></div>
+    <div class="scanline"></div>
 
-    <div id="game-container"></div>
+    <!-- 터미널 레이어 (인트로 및 스토리 진행) -->
+    <div id="terminal-layer">
+        <div id="terminal-content"></div>
+        <div class="input-line hidden">
+            <span class="prompt">root@hack_sys:~#</span>
+            <span id="user-input"></span><span class="cursor"></span>
+        </div>
+        
+        <div id="choice-area" class="choice-container hidden">
+            <!-- 선택지 버튼들이 여기 생성됨 -->
+        </div>
+    </div>
 
-    <div id="ui-layer">
-        <!-- 1. 상단 바 -->
+    <!-- 3D 게임 컨테이너 -->
+    <div id="game-container" style="opacity: 0;"></div>
+
+    <!-- 게임 UI 레이어 (게임 시작 후 표시) -->
+    <div id="game-ui" style="display: none;">
+        <!-- 상단 정보 바 -->
         <div class="top-bar">
-            <div class="level-box">LEVEL <span id="level">1</span></div>
-            <div class="score-board">SCORE <span id="score">0</span></div>
+            <div class="level-box">
+                <div>LEVEL</div>
+                <div id="level-display">1</div>
+            </div>
+            
+            <div class="score-board">
+                <div style="font-size: 14px; color: #aaa;">DATA MINED</div>
+                <div id="score-display">0</div>
+            </div>
+
             <div class="next-box">
                 <div class="label">NEXT</div>
                 <canvas id="next-canvas" width="60" height="60"></canvas>
             </div>
         </div>
 
-        <!-- 2. 설정 버튼 (우측 상단 NEXT 아래로 이동) -->
+        <!-- 우측 상단 설정 버튼 -->
         <div class="settings-area">
-            <button id="toggle-btn">VIEW<br>ON</button>
-            <button id="bgm-btn">BGM<br>ON</button>
+            <div id="bgm-btn">BGM<br>ON</div>
+            <div id="toggle-btn">VIEW<br>OFF</div>
         </div>
-        
-        <!-- 5. 힌트 (버튼들 위쪽) -->
-        <div class="controls-hint">
-            Swipe ↔: Move | Drag ↓: Speed Up | Button: Drop
+
+        <!-- 모바일 컨트롤 (좌측 이동) -->
+        <div class="mobile-controls-left">
+            <div id="left-btn">◀</div>
+            <div id="right-btn">▶</div>
         </div>
+
+        <!-- 모바일 컨트롤 (우측 드롭) -->
+        <div id="drop-btn">DROP</div>
         
-        <!-- [수정] v1.14 -->
-        <div class="version-info">v1.14</div>
+        <div class="version-info">PROTOCOL V1.0</div>
     </div>
 
-    <!-- [수정] 모바일 컨트롤을 ui-layer 밖으로 이동 (position: fixed 보장) -->
-    <div class="mobile-controls-left" style="position: fixed; bottom: 30px; left: 20px; z-index: 9999; display: flex; gap: 20px;">
-        <button id="left-btn">◀</button>
-        <button id="right-btn">▶</button>
-    </div>
-
-    <!-- [수정] 인라인 스타일로 위치 강제 고정 (CSS 파일 로드 문제 무시) -->
-    <button id="drop-btn" style="position: fixed; bottom: 30px; right: 20px; z-index: 9999;">DROP</button>
-
-    <div id="start-screen">
-        <h1>CYLINDER<br>TETRIS</h1>
-        <button id="start-btn">GAME START</button>
-    </div>
-
+    <!-- 게임 오버 스크린 -->
     <div id="game-over-screen" class="hidden">
-        <h1>GAME OVER</h1>
-        <p style="color:white; font-size: 20px; margin-bottom: 20px;">Score: <span id="final-score">0</span></p>
-        <button id="restart-btn">RETRY</button>
+        <h1>CONNECTION<br>LOST</h1>
+        <div style="color: #00ff00; margin-bottom: 20px;">
+            FINAL DATA: <span id="final-score">0</span>
+        </div>
+        <button id="restart-btn" onclick="location.reload()">RECONNECT</button>
     </div>
 
-    <!-- [수정] v1.11 (파일 교체) -->
-    <script src="game_v2.js"></script>
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW Registered!', reg))
-                    .catch(err => console.log('SW Failed:', err));
-            });
-        }
-    </script>
+    <!-- 진입점 -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

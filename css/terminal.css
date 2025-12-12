@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+:root {
+    --term-color: #33ff00; /* 클래식 그린 */
+    --term-bg: #0d1117;
+    --term-font: 'VT323', monospace;
+}
+
+body {
+    background-color: var(--term-bg);
+    margin: 0;
+    overflow: hidden;
+}
+
+/* CRT 효과 레이어 */
+.crt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.6) 100%), 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 100%, 100% 4px, 6px 100%; /* 스캔라인 */
+    pointer-events: none;
+    z-index: 9999;
+}
+
+/* 터미널 레이어 */
+#terminal-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 40px;
+    box-sizing: border-box;
+    font-family: var(--term-font);
+    font-size: 24px;
+    color: var(--term-color);
+    z-index: 100;
+    text-shadow: 0 0 5px var(--term-color);
+    overflow-y: auto;
+}
+
+/* 스크롤바 커스텀 */
+#terminal-layer::-webkit-scrollbar {
+    width: 10px;
+}
+#terminal-layer::-webkit-scrollbar-track {
+    background: #000;
+}
+#terminal-layer::-webkit-scrollbar-thumb {
+    background: var(--term-color);
+    border-radius: 5px;
+}
+
+#terminal-content p {
+    margin: 0 0 10px 0;
+    line-height: 1.4;
+    white-space: pre-wrap; /* 줄바꿈 유지 */
+}
+
+.input-line {
+    display: flex;
+    margin-top: 10px;
+}
+
+.prompt {
+    margin-right: 10px;
+    color: #00ff00;
+}
+
+.cursor {
+    display: inline-block;
+    width: 12px;
+    height: 24px;
+    background-color: var(--term-color);
+    animation: blink 1s step-end infinite;
+    vertical-align: bottom;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* 선택지 스타일 */
+.choice-container {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.choice-btn {
+    background: transparent;
+    border: 1px solid var(--term-color);
+    color: var(--term-color);
+    padding: 10px 20px;
+    font-family: var(--term-font);
+    font-size: 20px;
+    cursor: pointer;
+    text-align: left;
+    width: fit-content;
+    transition: all 0.2s;
+}
+
+.choice-btn:hover, .choice-btn.selected {
+    background: var(--term-color);
+    color: #000;
+    box-shadow: 0 0 10px var(--term-color);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* 게임 컨테이너 (초기엔 숨김 처리 될 수도 있음) */
+#game-container {
+    transition: opacity 1s;
+}
+
+.fade-out {
+    opacity: 0;
+}
