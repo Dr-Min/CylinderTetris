@@ -54,17 +54,18 @@
             Swipe ↔: Move | Drag ↓: Speed Up | Button: Drop
         </div>
         
-        <!-- [수정] v1.13 -->
-        <div class="version-info">v1.13</div>
+        <!-- [수정] v1.14 -->
+        <div class="version-info">v1.14</div>
     </div>
 
     <!-- [수정] 모바일 컨트롤을 ui-layer 밖으로 이동 (position: fixed 보장) -->
-    <div class="mobile-controls-left">
+    <div class="mobile-controls-left" style="position: fixed; bottom: 30px; left: 20px; z-index: 9999; display: flex; gap: 20px;">
         <button id="left-btn">◀</button>
         <button id="right-btn">▶</button>
     </div>
 
-    <button id="drop-btn">DROP</button>
+    <!-- [수정] 인라인 스타일로 위치 강제 고정 (CSS 파일 로드 문제 무시) -->
+    <button id="drop-btn" style="position: fixed; bottom: 30px; right: 20px; z-index: 9999;">DROP</button>
 
     <div id="start-screen">
         <h1>CYLINDER<br>TETRIS</h1>
