@@ -23,9 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.log('SW Registration Failed:', err));
 
         // 버전 표시 (캐시 이름에서 버전을 가져올 수 없으므로 sw.js와 일치시켜야 함, 여기서는 하드코딩 혹은 별도 관리)
-        // 편의상 UI에 v19 표시
+        // 편의상 UI에 v20 표시
         const verEl = document.getElementById('app-version');
-        if(verEl) verEl.innerText = "PROTOCOL v19";
+        if(verEl) verEl.innerText = "PROTOCOL v20";
     }
 
     const gameManager = new GameManager();
