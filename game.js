@@ -848,25 +848,22 @@ function stopPropagation(e) {
     e.stopPropagation();
 }
 
-document.getElementById("toggle-btn").addEventListener("touchstart", stopPropagation);
-document.getElementById("bgm-btn").addEventListener("touchstart", stopPropagation);
-document.getElementById("left-btn").addEventListener("touchstart", stopPropagation);
-document.getElementById("right-btn").addEventListener("touchstart", stopPropagation);
-document.getElementById("drop-btn").addEventListener("touchstart", stopPropagation);
-
-document.getElementById("toggle-btn").addEventListener("click", (e) => {
-    e.stopPropagation(); // 클릭 시에도 전파 방지
+// [수정] touchstart/click 대신 pointerdown 하나로 통합 (중복 입력 및 씹힘 방지)
+document.getElementById("toggle-btn").addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     CONFIG.TRANSPARENT_MODE = !CONFIG.TRANSPARENT_MODE;
-    // 텍스트를 짧게 변경 (줄바꿈 허용)
     e.target.innerHTML = "VIEW<br>" + (CONFIG.TRANSPARENT_MODE ? "ON" : "OFF");
     
     if(occluderCylinder) {
         occluderCylinder.visible = !CONFIG.TRANSPARENT_MODE;
     }
+    // 포커스 해제 (키보드 간섭 방지)
     e.target.blur();
 });
 
-document.getElementById("bgm-btn").addEventListener("click", (e) => {
+document.getElementById("bgm-btn").addEventListener("pointerdown", (e) => {
+    e.preventDefault();
     e.stopPropagation();
     const isOn = SoundManager.toggleBGM();
     e.target.innerHTML = "BGM<br>" + (isOn ? "ON" : "OFF");
@@ -874,13 +871,9 @@ document.getElementById("bgm-btn").addEventListener("click", (e) => {
 });
 
 const dropBtn = document.getElementById("drop-btn");
-dropBtn.addEventListener("touchstart", (e) => {
+dropBtn.addEventListener("pointerdown", (e) => {
     e.preventDefault(); 
-    e.stopPropagation(); // 전파 방지
-    if (state.isPlaying) hardDrop();
-});
-dropBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
+    e.stopPropagation(); 
     if (state.isPlaying) hardDrop();
     e.target.blur();
 });
@@ -889,26 +882,20 @@ dropBtn.addEventListener("click", (e) => {
 document.getElementById("toggle-btn").innerHTML = "VIEW<br>ON";
 document.getElementById("bgm-btn").innerHTML = "BGM<br>ON";
 
-// 좌우 이동 버튼 이벤트
+// 좌우 이동 버튼 이벤트 (pointerdown으로 통합)
 const leftBtn = document.getElementById("left-btn");
 const rightBtn = document.getElementById("right-btn");
 
-leftBtn.addEventListener("touchstart", (e) => {
+leftBtn.addEventListener("pointerdown", (e) => {
     e.preventDefault();
-    e.stopPropagation(); // 전파 방지
-    if(state.isPlaying) moveHorizontal(-1);
-});
-rightBtn.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    e.stopPropagation(); // 전파 방지
-    if(state.isPlaying) moveHorizontal(1);
-});
-// PC 테스트용 클릭
-leftBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
     if(state.isPlaying) moveHorizontal(-1);
     e.target.blur();
 });
-rightBtn.addEventListener("click", (e) => {
+
+rightBtn.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if(state.isPlaying) moveHorizontal(1);
     e.target.blur();
 });

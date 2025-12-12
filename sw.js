@@ -1,10 +1,10 @@
-// [수정] v4
-const CACHE_NAME = 'tetris-3d-v4';
+// [수정] v5
+const CACHE_NAME = 'tetris-3d-v5';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=1.3', // [수정] v1.3
-  './game.js?v=1.3',   // [수정] v1.3
+  './style.css?v=1.4', // [수정] v1.4
+  './game.js?v=1.4',   // [수정] v1.4
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
 ];
