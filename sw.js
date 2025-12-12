@@ -1,5 +1,5 @@
-// v16 - File Structure Updated
-const CACHE_NAME = 'hacker-tetris-v16';
+// v17 - Auto Update Enabled
+const CACHE_NAME = 'hacker-tetris-v17';
 const ASSETS = [
   './',
   './index.html',
