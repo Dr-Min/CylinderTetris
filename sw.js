@@ -1,11 +1,10 @@
-// [수정] 버전을 올려서(v1 -> v2) 새로운 캐시 저장소 생성
-const CACHE_NAME = 'tetris-3d-v2';
+// [수정] 버전 업그레이드 v3
+const CACHE_NAME = 'tetris-3d-v3';
 const ASSETS = [
   './',
   './index.html',
-  // [수정] 여기도 ?v=1.1 붙여야 함 (index.html과 일치)
-  './style.css?v=1.1',
-  './game.js?v=1.1',
+  './style.css?v=1.2', // [수정] v1.2
+  './game.js?v=1.2',   // [수정] v1.2
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
 ];
