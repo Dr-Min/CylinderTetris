@@ -1,10 +1,10 @@
-// [수정] 버전 업그레이드 v3
-const CACHE_NAME = 'tetris-3d-v3';
+// [수정] v4
+const CACHE_NAME = 'tetris-3d-v4';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=1.2', // [수정] v1.2
-  './game.js?v=1.2',   // [수정] v1.2
+  './style.css?v=1.3', // [수정] v1.3
+  './game.js?v=1.3',   // [수정] v1.3
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
 ];
