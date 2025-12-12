@@ -146,8 +146,9 @@ let scene, camera, renderer;
 let worldGroup, piecesGroup, ghostGroup, particleSystem;
 let occluderCylinder;
 
-// [추가] Next Piece 캔버스 컨텍스트
-let nextCtx; 
+// [최적화] 자원 재사용을 위한 변수
+let sharedGeometry;
+let sharedMaterials = {}; 
 
 function initThree() {
     const container = document.getElementById("game-container");
@@ -199,6 +200,51 @@ function initThree() {
     createStarfield();
     createCylinderGrid();
     createOccluder();
+
+    // [최적화] 공용 지오메트리 및 머티리얼 미리 생성 (1회만)
+    // 원기둥 둘레에 맞춰 블록 너비 계산
+    const circumference = 2 * Math.PI * CONFIG.RADIUS; 
+    const cellArcLength = circumference / CONFIG.GRID_WIDTH; 
+    const blockWidth = cellArcLength * 0.92; 
+    const blockHeight = CELL_HEIGHT * 0.92; 
+
+    sharedGeometry = new THREE.BoxGeometry(blockWidth, blockHeight, 0.5);
+
+    // 색상별 머티리얼 생성
+    const colorKeys = Object.keys(CONFIG.COLORS);
+    colorKeys.forEach(key => {
+        const color = CONFIG.COLORS[key];
+        // 일반 블록용
+        sharedMaterials[color] = new THREE.MeshStandardMaterial({
+            color: color,
+            emissive: color,
+            emissiveIntensity: 0.8,
+            transparent: true,
+            opacity: 1.0, 
+            roughness: 0.2,
+            metalness: 0.1
+        });
+        // 고스트용 (투명)
+        sharedMaterials[color + '_ghost'] = new THREE.MeshStandardMaterial({
+            color: color,
+            emissive: color,
+            emissiveIntensity: 0.3,
+            transparent: true,
+            opacity: 0.3, 
+            roughness: 0.2,
+            metalness: 0.1
+        });
+        // 반투명 모드용
+        sharedMaterials[color + '_trans'] = new THREE.MeshStandardMaterial({
+            color: color,
+            emissive: color,
+            emissiveIntensity: 0.8,
+            transparent: true,
+            opacity: 0.9, 
+            roughness: 0.2,
+            metalness: 0.1
+        });
+    });
 
     window.addEventListener("resize", onWindowResize, false);
 }
@@ -546,24 +592,31 @@ function getCylinderPosition(gridX, gridY) {
 function addBlockToGroup(gx, gy, color, group, isGhost = false) {
     const pos = getCylinderPosition(gx, gy);
     
-    const circumference = 2 * Math.PI * CONFIG.RADIUS; 
-    const cellArcLength = circumference / CONFIG.GRID_WIDTH; 
-    const blockWidth = cellArcLength * 0.92; 
-    const blockHeight = CELL_HEIGHT * 0.92; 
-
-    const geometry = new THREE.BoxGeometry(blockWidth, blockHeight, 0.5);
+    // [최적화] 매번 new 하지 않고 공유 자원 사용
+    let mat;
+    if (isGhost) {
+        mat = sharedMaterials[color + '_ghost'];
+    } else {
+        mat = CONFIG.TRANSPARENT_MODE ? sharedMaterials[color + '_trans'] : sharedMaterials[color];
+    }
     
-    const material = new THREE.MeshStandardMaterial({ 
-        color: color,
-        emissive: color,
-        emissiveIntensity: isGhost ? 0.3 : 0.8,
-        transparent: true,
-        opacity: isGhost ? 0.3 : 1.0, 
-        roughness: 0.2,
-        metalness: 0.1 
-    });
+    // 혹시라도 머티리얼이 없으면(안전장치) 생성해서 캐싱
+    if (!mat) {
+        mat = new THREE.MeshStandardMaterial({ 
+            color: color,
+            emissive: color,
+            emissiveIntensity: isGhost ? 0.3 : 0.8,
+            transparent: true,
+            opacity: isGhost ? 0.3 : (CONFIG.TRANSPARENT_MODE ? 0.9 : 1.0), 
+            roughness: 0.2,
+            metalness: 0.1 
+        });
+        // (캐싱 로직 생략, 비상용)
+    }
 
-    const mesh = new THREE.Mesh(geometry, material);
+    // Geometry도 재사용
+    const mesh = new THREE.Mesh(sharedGeometry, mat);
+    
     mesh.position.set(pos.x, pos.y, pos.z);
     mesh.rotation.y = pos.rotationY;
     mesh.lookAt(new THREE.Vector3(pos.x * 2, pos.y, pos.z * 2));
@@ -574,7 +627,12 @@ function addBlockToGroup(gx, gy, color, group, isGhost = false) {
 function renderActivePiece() {
     const activeGroupName = "active_piece_visuals";
     let activeGroup = worldGroup.getObjectByName(activeGroupName);
-    if (activeGroup) worldGroup.remove(activeGroup);
+    if (activeGroup) {
+        // [최적화] 삭제 전 내부 자식들만 제거 (Geometry/Material은 공유하므로 dispose 안함)
+        // 만약 activeGroup 자체를 remove한다면, 자식들의 참조만 끊어주면 됨.
+        // 여기서는 공유 자원을 쓰므로 별도의 dispose 호출 불필요 (메모리 누수 원인 제거됨)
+        worldGroup.remove(activeGroup);
+    }
     
     activeGroup = new THREE.Group();
     activeGroup.name = activeGroupName;
@@ -809,6 +867,28 @@ dropBtn.addEventListener("touchstart", (e) => {
 });
 dropBtn.addEventListener("click", (e) => {
     if (state.isPlaying) hardDrop();
+    e.target.blur();
+});
+
+// [추가] 좌우 이동 버튼 이벤트
+const leftBtn = document.getElementById("left-btn");
+const rightBtn = document.getElementById("right-btn");
+
+leftBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    if(state.isPlaying) moveHorizontal(-1);
+});
+rightBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    if(state.isPlaying) moveHorizontal(1);
+});
+// PC 테스트용 클릭
+leftBtn.addEventListener("click", (e) => {
+    if(state.isPlaying) moveHorizontal(-1);
+    e.target.blur();
+});
+rightBtn.addEventListener("click", (e) => {
+    if(state.isPlaying) moveHorizontal(1);
     e.target.blur();
 });
 
