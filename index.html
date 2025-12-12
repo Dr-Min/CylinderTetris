@@ -4,12 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cylinder Tetris 3D</title>
-    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#050510">
     <link rel="stylesheet" href="style.css">
-    <!-- Three.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Import Map -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+            }
+        }
+    </script>
 </head>
 <body>
 
@@ -26,7 +32,7 @@
             </div>
         </div>
 
-        <!-- 우측 상단 버튼들 (위치 조금 조정됨) -->
+        <!-- 우측 상단 버튼들 -->
         <div class="settings-area">
             <button id="toggle-btn">Transparency: ON</button>
             <button id="bgm-btn">BGM: ON</button>
@@ -49,10 +55,10 @@
         <button id="restart-btn">RETRY</button>
     </div>
 
-    <!-- Game Logic -->
-    <script src="game.js"></script>
+    <!-- Main Entry Point -->
+    <script type="module" src="./js/main.js"></script>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
