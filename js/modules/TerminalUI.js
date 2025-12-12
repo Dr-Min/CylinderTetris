@@ -2,6 +2,8 @@ export class TerminalUI {
     constructor() {
         this.contentDiv = document.getElementById('terminal-content');
         this.choiceArea = document.getElementById('choice-area');
+        // 초기화 시 확실히 숨김
+        if(this.choiceArea) this.choiceArea.classList.add('hidden');
         this.inputLine = document.querySelector('.input-line');
         this.terminalLayer = document.getElementById('terminal-layer');
         this.isTyping = false;
@@ -37,21 +39,23 @@ export class TerminalUI {
     showChoices(choices) {
         return new Promise(resolve => {
             this.choiceArea.innerHTML = '';
-            this.choiceArea.style.display = 'block';
-
+            
             choices.forEach((choice, index) => {
-                const btn = document.createElement('span');
-                btn.className = 'choice-item';
-                btn.textContent = `[ ${choice.text} ]`;
+                const btn = document.createElement('button'); // span -> button 변경
+                btn.className = 'choice-btn'; // choice-item -> choice-btn 변경 (css 일치)
+                btn.textContent = `> ${choice.text}`; // [ ] 대신 > 사용
                 
                 btn.onclick = () => {
-                    this.choiceArea.style.display = 'none';
+                    this.choiceArea.classList.add('hidden'); // style.display 직접 제어 대신 클래스 토글
                     this.printSystemMessage(`> ${choice.text}`);
                     resolve(choice.value);
                 };
 
                 this.choiceArea.appendChild(btn);
             });
+            
+            // 컨테이너 표시 (hidden 클래스 제거)
+            this.choiceArea.classList.remove('hidden');
         });
     }
 
