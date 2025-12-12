@@ -1,5 +1,5 @@
-// v18 - Mobile Controls Fixed
-const CACHE_NAME = 'hacker-tetris-v18';
+// v19 - Button Event Fix
+const CACHE_NAME = 'hacker-tetris-v19';
 const ASSETS = [
   './',
   './index.html',

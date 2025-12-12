@@ -189,34 +189,44 @@ export class TetrisGame {
     }
 
     initButtonControls() {
+        // 공통 이벤트 핸들러: 이벤트 전파 중단
+        const stopEvent = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
         // 좌우 이동 버튼
         const leftBtn = document.getElementById("left-btn");
         const rightBtn = document.getElementById("right-btn");
         
         if(leftBtn) {
+            // pointerdown과 touchstart/end 모두 막아서 상위 전파 차단
             leftBtn.addEventListener("pointerdown", (e) => {
-                e.preventDefault();
-                e.stopPropagation(); // 이벤트 전파 중단 (상위 터치/회전 로직 방지)
+                stopEvent(e);
                 this.moveHorizontal(-1);
             });
+            leftBtn.addEventListener("touchstart", stopEvent, {passive: false});
+            leftBtn.addEventListener("touchend", stopEvent, {passive: false});
         }
         
         if(rightBtn) {
             rightBtn.addEventListener("pointerdown", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent(e);
                 this.moveHorizontal(1);
             });
+            rightBtn.addEventListener("touchstart", stopEvent, {passive: false});
+            rightBtn.addEventListener("touchend", stopEvent, {passive: false});
         }
 
         // 드롭 버튼
         const dropBtn = document.getElementById("drop-btn");
         if(dropBtn) {
             dropBtn.addEventListener("pointerdown", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                stopEvent(e);
                 this.hardDrop();
             });
+            dropBtn.addEventListener("touchstart", stopEvent, {passive: false});
+            dropBtn.addEventListener("touchend", stopEvent, {passive: false});
         }
     }
 
@@ -228,7 +238,12 @@ export class TetrisGame {
 
         document.addEventListener("touchstart", e => {
             if (!this.state.isPlaying) return;
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            // 버튼 ID로 체크 (더 확실하게)
+            const target = e.target;
+            if (target.closest('#left-btn') || target.closest('#right-btn') || target.closest('#drop-btn') || 
+                target.closest('#bgm-btn') || target.closest('#toggle-btn')) {
+                return;
+            }
             
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
@@ -238,7 +253,10 @@ export class TetrisGame {
 
         document.addEventListener("touchmove", e => {
             if (!this.state.isPlaying) return;
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            // 버튼 체크
+            const target = e.target;
+            if (target.closest('#left-btn') || target.closest('#right-btn') || target.closest('#drop-btn')) return;
+
             e.preventDefault();
             
             const touchX = e.touches[0].clientX;
@@ -265,7 +283,12 @@ export class TetrisGame {
 
         document.addEventListener("touchend", e => {
             if (!this.state.isPlaying) return;
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            // 버튼 체크 (회전 로직 실행 방지)
+            const target = e.target;
+            if (target.closest('#left-btn') || target.closest('#right-btn') || target.closest('#drop-btn') || 
+                target.closest('#bgm-btn') || target.closest('#toggle-btn')) {
+                return;
+            }
 
             const touchEndX = e.changedTouches[0].clientX;
             const touchEndY = e.changedTouches[0].clientY;
