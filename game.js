@@ -24,6 +24,53 @@ const ARC_LENGTH = (2 * Math.PI * CONFIG.RADIUS) / CONFIG.GRID_WIDTH;
 const CELL_HEIGHT = ARC_LENGTH;
 const TOTAL_HEIGHT = CONFIG.GRID_HEIGHT * CELL_HEIGHT;
 
+// [추가] 특수 블록 타입 정의
+const SPECIAL_TYPES = {
+    NONE: 0,
+    BOMB: 1,   // 💣 3x3 폭발
+    FREEZE: 2, // ❄️ 속도 저하
+    LASER: 3,  // ⚡ 세로 줄 삭제
+    GOLD: 4    // 💰 점수 5배
+};
+
+// [추가] 아이콘 텍스처 생성기 (이모지를 텍스처로 변환)
+const IconTextureManager = {
+    textures: {},
+    init: function() {
+        this.createTexture(SPECIAL_TYPES.BOMB, '💣');
+        this.createTexture(SPECIAL_TYPES.FREEZE, '❄️');
+        this.createTexture(SPECIAL_TYPES.LASER, '⚡');
+        this.createTexture(SPECIAL_TYPES.GOLD, '💰');
+    },
+    createTexture: function(type, text) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        
+        // 배경 (약간 어둡게)
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, 64, 64);
+        
+        // 테두리
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(0, 0, 64, 64);
+
+        // 텍스트 (이모지)
+        ctx.font = '40px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 32, 36);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        this.textures[type] = texture;
+    },
+    getTexture: function(type) {
+        return this.textures[type];
+    }
+};
+
 const TETROMINOS = {
     I: { shape: [[1,1,1,1]], color: CONFIG.COLORS.I },
     O: { shape: [[1,1],[1,1]], color: CONFIG.COLORS.O },
@@ -126,20 +173,24 @@ const SoundManager = {
 };
 
 let state = {
-    grid: [],
+    grid: [], // grid[y][x] = { color: ..., type: ... } 객체로 저장
     currentPiece: null,
-    nextPiece: null, // [추가]
+    nextPiece: null, 
     score: 0,
-    level: 1,        // [추가]
-    linesClearedTotal: 0, // [추가]
+    level: 1,        
+    linesClearedTotal: 0, 
     isPlaying: false,
     dropTimer: 0,
     lastTime: 0,
     cameraAngle: 0,
-    targetCameraAngle: 0
+    targetCameraAngle: 0,
+    // [추가] 특수 효과 상태
+    slowModeTimer: 0, 
+    originalSpeed: 0
 };
 
-let effectGroup;
+// [추가] 공용 머티리얼 (특수 블록용)
+let specialMaterials = {};
 let explosions = [];
 let cameraShake = 0;
 
@@ -201,6 +252,9 @@ function initThree() {
     createStarfield();
     createCylinderGrid();
     createOccluder();
+    
+    // [추가] 아이콘 텍스처 초기화
+    IconTextureManager.init();
 
     // [최적화] 공용 지오메트리 및 머티리얼 미리 생성 (1회만)
     // 원기둥 둘레에 맞춰 블록 너비 계산
@@ -242,6 +296,21 @@ function initThree() {
             emissiveIntensity: 0.8,
             transparent: true,
             opacity: 0.9, 
+            roughness: 0.2,
+            metalness: 0.1
+        });
+    });
+    
+    // [추가] 특수 블록 머티리얼 생성
+    Object.keys(SPECIAL_TYPES).forEach(key => {
+        const type = SPECIAL_TYPES[key];
+        if (type === SPECIAL_TYPES.NONE) return;
+        
+        specialMaterials[type] = new THREE.MeshStandardMaterial({
+            map: IconTextureManager.getTexture(type),
+            transparent: true,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.5,
             roughness: 0.2,
             metalness: 0.1
         });
@@ -369,7 +438,8 @@ function initGame() {
     state.linesClearedTotal = 0;
     state.isPlaying = true;
     state.dropTimer = 0;
-    state.nextPiece = null; // 초기화
+    state.nextPiece = null; 
+    state.slowModeTimer = 0; // 초기화
     
     updateScore(0);
     updateLevel(1);
@@ -387,19 +457,33 @@ function generateNextPiece() {
     const types = Object.keys(TETROMINOS);
     const type = types[Math.floor(Math.random() * types.length)];
     const template = TETROMINOS[type];
+    
+    // [추가] 특수 블록 확률 (20%)
+    let specialType = SPECIAL_TYPES.NONE;
+    let specialIndex = -1; // 블록 4칸 중 몇 번째 칸이 특수인지
+    
+    if (Math.random() < 0.2) {
+        // 랜덤 특수 효과 선택 (1~4)
+        const keys = Object.keys(SPECIAL_TYPES);
+        const randomKey = keys[Math.floor(Math.random() * (keys.length - 1)) + 1]; // NONE 제외
+        specialType = SPECIAL_TYPES[randomKey];
+        // 블록 칸 중 하나 선택 (0~3)
+        specialIndex = Math.floor(Math.random() * 4);
+    }
+
     state.nextPiece = {
         type: type,
         shape: template.shape,
-        color: template.color
+        color: template.color,
+        specialType: specialType, // [추가]
+        specialIndex: specialIndex // [추가]
     };
     drawNextPiece();
 }
 
 function spawnPiece() {
-    // nextPiece가 없으면(첫 실행) 생성
     if (!state.nextPiece) generateNextPiece();
 
-    // nextPiece를 currentPiece로 가져옴
     const template = state.nextPiece;
     
     state.currentPiece = {
@@ -407,10 +491,11 @@ function spawnPiece() {
         shape: template.shape,
         color: template.color,
         x: Math.floor(CONFIG.GRID_WIDTH / 2) - Math.floor(template.shape[0].length / 2),
-        y: CONFIG.GRID_HEIGHT - 1 - template.shape.length
+        y: CONFIG.GRID_HEIGHT - 1 - template.shape.length,
+        specialType: template.specialType, // [추가]
+        specialIndex: template.specialIndex // [추가]
     };
 
-    // 새로운 Next Piece 생성
     generateNextPiece();
 
     if (checkCollision(state.currentPiece.x, state.currentPiece.y, state.currentPiece.shape)) {
@@ -427,20 +512,29 @@ function drawNextPiece() {
     const ctx = nextCtx;
     const shape = state.nextPiece.shape;
     const color = state.nextPiece.color;
-    const blockSize = 12; // 픽셀 단위
+    const specialType = state.nextPiece.specialType;
+    const specialIndex = state.nextPiece.specialIndex;
+    
+    const blockSize = 12; 
     
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     
-    // 중앙 정렬 계산
     const offsetX = (ctx.canvas.width - shape[0].length * blockSize) / 2;
     const offsetY = (ctx.canvas.height - shape.length * blockSize) / 2;
     
-    ctx.fillStyle = '#' + new THREE.Color(color).getHexString();
+    let blockCount = 0;
     
     for (let r = 0; r < shape.length; r++) {
         for (let c = 0; c < shape[r].length; c++) {
             if (shape[r][c]) {
+                // 특수 블록 표시
+                if (blockCount === specialIndex && specialType !== SPECIAL_TYPES.NONE) {
+                    ctx.fillStyle = '#ffffff'; // 특수는 흰색으로 강조
+                } else {
+                    ctx.fillStyle = '#' + new THREE.Color(color).getHexString();
+                }
                 ctx.fillRect(offsetX + c * blockSize, offsetY + r * blockSize, blockSize - 1, blockSize - 1);
+                blockCount++;
             }
         }
     }
@@ -473,15 +567,26 @@ function checkCollision(px, py, shape) {
 
 function lockPiece() {
     const p = state.currentPiece;
+    let blockCount = 0; // 블록 인덱스 카운터
+    
     for (let r = 0; r < p.shape.length; r++) {
         for (let c = 0; c < p.shape[r].length; c++) {
             if (p.shape[r][c]) {
                 const x = getWrapX(p.x + c);
                 const y = p.y - r;
-                if (y >= 0 && y < CONFIG.GRID_HEIGHT) {
-                    state.grid[y][x] = p.color;
-                    addBlockToGroup(x, y, p.color, piecesGroup);
+                
+                // 특수 블록인지 확인
+                let blockType = SPECIAL_TYPES.NONE;
+                if (blockCount === p.specialIndex) {
+                    blockType = p.specialType;
                 }
+                
+                if (y >= 0 && y < CONFIG.GRID_HEIGHT) {
+                    // [수정] 그리드에 색상과 타입을 함께 저장
+                    state.grid[y][x] = { color: p.color, type: blockType };
+                    addBlockToGroup(x, y, state.grid[y][x], piecesGroup);
+                }
+                blockCount++;
             }
         }
     }
@@ -492,9 +597,19 @@ function lockPiece() {
 
 function checkLines() {
     let linesCleared = []; 
+    let specialEffects = []; // 발동된 특수 효과들
+
     for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
+        // [수정] null 체크 방식 변경 (객체이므로)
         if (state.grid[y].every(cell => cell !== null)) {
             linesCleared.push(y);
+            
+            // [추가] 줄에 포함된 특수 블록 찾기
+            state.grid[y].forEach((cell, x) => {
+                if (cell.type !== SPECIAL_TYPES.NONE) {
+                    specialEffects.push({ type: cell.type, x: x, y: y });
+                }
+            });
         }
     }
     
@@ -502,6 +617,57 @@ function checkLines() {
         SoundManager.clear();
         linesCleared.forEach(y => createExplosion(y));
 
+        // [추가] 특수 효과 실행
+        specialEffects.forEach(effect => {
+            if (effect.type === SPECIAL_TYPES.BOMB) {
+                // 💣 폭탄: 3x3 범위 제거 (grid에서 null로 만듦)
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        const targetY = effect.y + dy;
+                        // X는 랩어라운드 처리
+                        const targetX = getWrapX(effect.x + dx);
+                        if (targetY >= 0 && targetY < CONFIG.GRID_HEIGHT) {
+                            state.grid[targetY][targetX] = null;
+                            createExplosion(targetY); // 폭발 이펙트 추가
+                        }
+                    }
+                }
+                SoundManager.playTone(100, 'sawtooth', 0.5, 0.5); // 폭발음
+            }
+            else if (effect.type === SPECIAL_TYPES.LASER) {
+                // ⚡ 레이저: 세로 줄 삭제
+                for (let ly = 0; ly < CONFIG.GRID_HEIGHT; ly++) {
+                    state.grid[ly][effect.x] = null;
+                }
+                createExplosion(effect.y);
+                SoundManager.playTone(800, 'square', 0.3, 0.2); // 쓩~
+            }
+            else if (effect.type === SPECIAL_TYPES.FREEZE) {
+                // ❄️ 시간 정지: 5초간 슬로우 모션
+                state.slowModeTimer = 5000;
+                // 기존 속도 저장 (없으면 현재값)
+                if(!state.originalSpeed) state.originalSpeed = CONFIG.DROP_SPEED;
+                CONFIG.DROP_SPEED = 2000; // 아주 느리게
+                document.getElementById("ui-layer").style.border = "2px solid #00ffff"; // 시각 효과
+                setTimeout(() => {
+                    CONFIG.DROP_SPEED = state.originalSpeed || 800;
+                    document.getElementById("ui-layer").style.border = "none";
+                    state.slowModeTimer = 0;
+                }, 5000);
+                SoundManager.playTone(1200, 'sine', 1.0, 0.1); 
+            }
+            else if (effect.type === SPECIAL_TYPES.GOLD) {
+                // 💰 골드: 점수 5배
+                state.score += 5000;
+                SoundManager.playTone(1500, 'triangle', 0.5, 0.2); // 띠링!
+            }
+        });
+
+        // 라인 삭제 및 정렬 (특수 효과로 인해 구멍이 숭숭 뚫릴 수 있으므로 재정렬 로직 필요할 수 있음)
+        // 여기서는 기본 라인 삭제 로직을 따르되, 폭탄 등으로 이미 지워진 칸은 null로 처리됨
+        
+        // 간소화된 중력 적용 (단순 라인 삭제만으로는 폭탄 구멍이 안 메워질 수 있음)
+        // 일단은 기존 라인 삭제 로직 수행
         for (let i = linesCleared.length - 1; i >= 0; i--) {
             const y = linesCleared[i];
             state.grid.splice(y, 1);
@@ -511,32 +677,29 @@ function checkLines() {
         refreshGridVisuals();
         updateScore(state.score + (linesCleared.length * 100 * linesCleared.length));
         
-        // [추가] 레벨업 로직
+        // 레벨업 로직
         state.linesClearedTotal += linesCleared.length;
-        const newLevel = Math.floor(state.linesClearedTotal / 5) + 1; // 5줄마다 레벨업
+        const newLevel = Math.floor(state.linesClearedTotal / 5) + 1; 
         if (newLevel > state.level) {
             state.level = newLevel;
             updateLevel(state.level);
-            // 속도 증가 (최소 100ms까지)
-            // 레벨당 50ms씩 빨라짐 (800 -> 750 -> 700 ...)
+            // 슬로우 모드가 아닐 때만 속도 갱신
             const newSpeed = Math.max(100, 800 - (state.level - 1) * 50);
-            CONFIG.DROP_SPEED = newSpeed;
-            
-            // 레벨업 사운드 (Clear 사운드를 피치 올려서 사용하거나 별도 구현)
+            if (state.slowModeTimer <= 0) {
+                CONFIG.DROP_SPEED = newSpeed;
+            }
+            state.originalSpeed = newSpeed; // 원래 속도 업데이트
             SoundManager.playTone(800, 'sine', 0.5, 0.1); 
         }
     }
-}
-
-function updateLevel(lv) {
-    document.getElementById("level").innerText = lv;
 }
 
 function refreshGridVisuals() {
     piecesGroup.clear();
     for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
         for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
-            if (state.grid[y][x]) {
+            // [수정] null 체크
+            if (state.grid[y][x] !== null) {
                 addBlockToGroup(x, y, state.grid[y][x], piecesGroup);
             }
         }
@@ -597,30 +760,34 @@ function getCylinderPosition(gridX, gridY) {
     return { x, y, z, rotationY: angle };
 }
 
-function addBlockToGroup(gx, gy, color, group, isGhost = false) {
+// [수정] addBlockToGroup: 특수 블록 렌더링 지원
+// 이제 color 인자는 { color: ..., type: ... } 객체이거나 단순 color 값일 수 있음
+function addBlockToGroup(gx, gy, blockInfo, group, isGhost = false) {
     const pos = getCylinderPosition(gx, gy);
+    
+    let color = blockInfo;
+    let type = SPECIAL_TYPES.NONE;
+    
+    // blockInfo가 객체인 경우 (그리드에 저장된 정보)
+    if (typeof blockInfo === 'object' && blockInfo !== null && blockInfo.color) {
+        color = blockInfo.color;
+        type = blockInfo.type || SPECIAL_TYPES.NONE;
+    }
     
     // [최적화] 매번 new 하지 않고 공유 자원 사용
     let mat;
+    
     if (isGhost) {
         mat = sharedMaterials[color + '_ghost'];
+    } else if (type !== SPECIAL_TYPES.NONE) {
+        // [추가] 특수 블록은 전용 머티리얼 사용
+        mat = specialMaterials[type];
     } else {
         mat = CONFIG.TRANSPARENT_MODE ? sharedMaterials[color + '_trans'] : sharedMaterials[color];
     }
     
-    // 혹시라도 머티리얼이 없으면(안전장치) 생성해서 캐싱
-    if (!mat) {
-        mat = new THREE.MeshStandardMaterial({ 
-            color: color,
-            emissive: color,
-            emissiveIntensity: isGhost ? 0.3 : 0.8,
-            transparent: true,
-            opacity: isGhost ? 0.3 : (CONFIG.TRANSPARENT_MODE ? 0.9 : 1.0), 
-            roughness: 0.2,
-            metalness: 0.1 
-        });
-        // (캐싱 로직 생략, 비상용)
-    }
+    // 안전장치
+    if (!mat) mat = sharedMaterials[Object.keys(CONFIG.COLORS)[0]]; // 기본값
 
     // Geometry도 재사용
     const mesh = new THREE.Mesh(sharedGeometry, mat);
@@ -636,9 +803,6 @@ function renderActivePiece() {
     const activeGroupName = "active_piece_visuals";
     let activeGroup = worldGroup.getObjectByName(activeGroupName);
     if (activeGroup) {
-        // [최적화] 삭제 전 내부 자식들만 제거 (Geometry/Material은 공유하므로 dispose 안함)
-        // 만약 activeGroup 자체를 remove한다면, 자식들의 참조만 끊어주면 됨.
-        // 여기서는 공유 자원을 쓰므로 별도의 dispose 호출 불필요 (메모리 누수 원인 제거됨)
         worldGroup.remove(activeGroup);
     }
     
@@ -668,12 +832,23 @@ function renderActivePiece() {
     }
 
     const p = state.currentPiece;
+    let blockCount = 0;
+    
     for (let r = 0; r < p.shape.length; r++) {
         for (let c = 0; c < p.shape[r].length; c++) {
             if (p.shape[r][c]) {
                 const gx = getWrapX(p.x + c);
                 const gy = p.y - r;
-                addBlockToGroup(gx, gy, p.color, activeGroup, false);
+                
+                // [수정] 특수 블록 렌더링
+                let blockType = SPECIAL_TYPES.NONE;
+                if (blockCount === p.specialIndex) {
+                    blockType = p.specialType;
+                }
+                
+                // addBlockToGroup에 타입 전달
+                addBlockToGroup(gx, gy, { color: p.color, type: blockType }, activeGroup, false);
+                blockCount++;
             }
         }
     }
