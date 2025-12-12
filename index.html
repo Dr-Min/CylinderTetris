@@ -48,24 +48,23 @@
             <button id="toggle-btn">VIEW<br>ON</button>
             <button id="bgm-btn">BGM<br>ON</button>
         </div>
-
-        <!-- 3. 모바일 컨트롤 (좌측 하단) -->
-        <div class="mobile-controls-left">
-            <button id="left-btn">◀</button>
-            <button id="right-btn">▶</button>
-        </div>
-
-        <!-- 4. 모바일 컨트롤 (우측 하단) -->
-        <button id="drop-btn">DROP</button>
         
         <!-- 5. 힌트 (버튼들 위쪽) -->
         <div class="controls-hint">
             Swipe ↔: Move | Drag ↓: Speed Up | Button: Drop
         </div>
         
-        <!-- [수정] v1.10 -->
-        <div class="version-info">v1.12</div>
+        <!-- [수정] v1.13 -->
+        <div class="version-info">v1.13</div>
     </div>
+
+    <!-- [수정] 모바일 컨트롤을 ui-layer 밖으로 이동 (position: fixed 보장) -->
+    <div class="mobile-controls-left">
+        <button id="left-btn">◀</button>
+        <button id="right-btn">▶</button>
+    </div>
+
+    <button id="drop-btn">DROP</button>
 
     <div id="start-screen">
         <h1>CYLINDER<br>TETRIS</h1>

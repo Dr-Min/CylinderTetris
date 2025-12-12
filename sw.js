@@ -1,5 +1,5 @@
-// [수정] v13
-const CACHE_NAME = 'tetris-3d-v13';
+// [수정] v14
+const CACHE_NAME = 'tetris-3d-v14';
 const ASSETS = [
   './',
   './index.html',
