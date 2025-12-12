@@ -37,37 +37,48 @@ const SPECIAL_TYPES = {
 const IconTextureManager = {
     textures: {},
     init: function() {
-        this.createTexture(SPECIAL_TYPES.BOMB, '💣');
-        this.createTexture(SPECIAL_TYPES.FREEZE, '❄️');
-        this.createTexture(SPECIAL_TYPES.LASER, '⚡');
-        this.createTexture(SPECIAL_TYPES.GOLD, '💰');
+        try {
+            this.createTexture(SPECIAL_TYPES.BOMB, '💣');
+            this.createTexture(SPECIAL_TYPES.FREEZE, '❄️');
+            this.createTexture(SPECIAL_TYPES.LASER, '⚡');
+            this.createTexture(SPECIAL_TYPES.GOLD, '💰');
+        } catch (e) {
+            console.error("Texture creation failed:", e);
+        }
     },
     createTexture: function(type, text) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        
-        // 배경 (약간 어둡게)
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, 64, 64);
-        
-        // 테두리
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(0, 0, 64, 64);
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            
+            // 배경
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 0, 64, 64);
+            
+            // 테두리
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, 64, 64);
 
-        // 텍스트 (이모지)
-        ctx.font = '40px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, 32, 36);
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        this.textures[type] = texture;
+            // 텍스트
+            ctx.font = '40px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffffff'; // [추가] 글자색 명시
+            ctx.fillText(text, 32, 36);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            this.textures[type] = texture;
+        } catch (e) {
+            console.error("Canvas error:", e);
+            // 실패 시 null (나중에 기본 재질 사용됨)
+            this.textures[type] = null; 
+        }
     },
     getTexture: function(type) {
-        return this.textures[type];
+        return this.textures[type] || null;
     }
 };
 
@@ -306,14 +317,24 @@ function initThree() {
         const type = SPECIAL_TYPES[key];
         if (type === SPECIAL_TYPES.NONE) return;
         
-        specialMaterials[type] = new THREE.MeshStandardMaterial({
-            map: IconTextureManager.getTexture(type),
-            transparent: true,
-            emissive: 0xffffff,
-            emissiveIntensity: 0.5,
-            roughness: 0.2,
-            metalness: 0.1
-        });
+        const tex = IconTextureManager.getTexture(type);
+        if (tex) {
+            specialMaterials[type] = new THREE.MeshStandardMaterial({
+                map: tex,
+                transparent: true,
+                emissive: 0xffffff,
+                emissiveIntensity: 0.5,
+                roughness: 0.2,
+                metalness: 0.1
+            });
+        } else {
+            // 텍스처 없으면 그냥 흰색 재질로 대체 (안전장치)
+            specialMaterials[type] = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                emissive: 0xffffff,
+                emissiveIntensity: 0.5
+            });
+        }
     });
 
     window.addEventListener("resize", onWindowResize, false);
@@ -486,14 +507,18 @@ function spawnPiece() {
 
     const template = state.nextPiece;
     
+    // [수정] 안전장치: specialType이 없는 경우 대비
+    const sType = template.specialType || SPECIAL_TYPES.NONE;
+    const sIndex = (template.specialIndex !== undefined) ? template.specialIndex : -1;
+
     state.currentPiece = {
         type: template.type,
         shape: template.shape,
         color: template.color,
         x: Math.floor(CONFIG.GRID_WIDTH / 2) - Math.floor(template.shape[0].length / 2),
         y: CONFIG.GRID_HEIGHT - 1 - template.shape.length,
-        specialType: template.specialType, // [추가]
-        specialIndex: template.specialIndex // [추가]
+        specialType: sType,
+        specialIndex: sIndex
     };
 
     generateNextPiece();
