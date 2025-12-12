@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cylinder Tetris 3D</title>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#050510">
+    <link rel="stylesheet" href="style.css">
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="game-container"></div>
+
+    <div id="ui-layer">
+        <!-- 상단 정보 영역 -->
+        <div class="top-bar">
+            <div class="level-box">LEVEL <span id="level">1</span></div>
+            <div class="score-board">SCORE <span id="score">0</span></div>
+            <div class="next-box">
+                <div class="label">NEXT</div>
+                <canvas id="next-canvas" width="60" height="60"></canvas>
+            </div>
+        </div>
+
+        <!-- 우측 상단 버튼들 (위치 조금 조정됨) -->
+        <div class="settings-area">
+            <button id="toggle-btn">Transparency: ON</button>
+            <button id="bgm-btn">BGM: ON</button>
+        </div>
+
+        <button id="drop-btn">DROP</button>
+        <div class="controls-hint">
+            Swipe ↔: Move | Drag ↓: Speed Up | Button: Drop
+        </div>
+    </div>
+
+    <div id="start-screen">
+        <h1>CYLINDER<br>TETRIS</h1>
+        <button id="start-btn">GAME START</button>
+    </div>
+
+    <div id="game-over-screen" class="hidden">
+        <h1>GAME OVER</h1>
+        <p style="color:white; font-size: 20px; margin-bottom: 20px;">Score: <span id="final-score">0</span></p>
+        <button id="restart-btn">RETRY</button>
+    </div>
+
+    <!-- Game Logic -->
+    <script src="game.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered!', reg))
+                    .catch(err => console.log('SW Failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
