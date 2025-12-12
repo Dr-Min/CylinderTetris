@@ -1,10 +1,10 @@
-// [수정] v10 (CSS 적용 문제 해결)
-const CACHE_NAME = 'tetris-3d-v10';
+// [수정] v11
+const CACHE_NAME = 'tetris-3d-v11';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=1.9', // [수정] v1.9
-  './game.js?v=1.9',   // [수정] v1.9
+  './style.css?v=1.10', // [수정] v1.10
+  './game.js?v=1.10',   // [수정] v1.10
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
 ];

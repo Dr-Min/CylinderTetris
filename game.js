@@ -33,52 +33,11 @@ const SPECIAL_TYPES = {
     GOLD: 4    // 💰 점수 5배
 };
 
-// [추가] 아이콘 텍스처 생성기 (이모지를 텍스처로 변환)
+// [수정] 텍스처 대신 색상/재질만 사용 (안전성 강화)
 const IconTextureManager = {
-    textures: {},
-    init: function() {
-        try {
-            this.createTexture(SPECIAL_TYPES.BOMB, '💣');
-            this.createTexture(SPECIAL_TYPES.FREEZE, '❄️');
-            this.createTexture(SPECIAL_TYPES.LASER, '⚡');
-            this.createTexture(SPECIAL_TYPES.GOLD, '💰');
-        } catch (e) {
-            console.error("Texture creation failed:", e);
-        }
-    },
-    createTexture: function(type, text) {
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            
-            // 배경
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(0, 0, 64, 64);
-            
-            // 테두리
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(0, 0, 64, 64);
-
-            // 텍스트
-            ctx.font = '40px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#ffffff'; // [추가] 글자색 명시
-            ctx.fillText(text, 32, 36);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            this.textures[type] = texture;
-        } catch (e) {
-            console.error("Canvas error:", e);
-            // 실패 시 null (나중에 기본 재질 사용됨)
-            this.textures[type] = null; 
-        }
-    },
+    // 텍스처 생성 기능 제거 (오류 원인 차단)
     getTexture: function(type) {
-        return this.textures[type] || null;
+        return null;
     }
 };
 
@@ -264,8 +223,7 @@ function initThree() {
     createCylinderGrid();
     createOccluder();
     
-    // [추가] 아이콘 텍스처 초기화
-    IconTextureManager.init();
+    // IconTextureManager.init(); // 제거
 
     // [최적화] 공용 지오메트리 및 머티리얼 미리 생성 (1회만)
     // 원기둥 둘레에 맞춰 블록 너비 계산
@@ -312,29 +270,29 @@ function initThree() {
         });
     });
     
-    // [추가] 특수 블록 머티리얼 생성
+    // [수정] 특수 블록 머티리얼 생성 (텍스처 없이 색상으로만 구분)
     Object.keys(SPECIAL_TYPES).forEach(key => {
         const type = SPECIAL_TYPES[key];
         if (type === SPECIAL_TYPES.NONE) return;
         
-        const tex = IconTextureManager.getTexture(type);
-        if (tex) {
-            specialMaterials[type] = new THREE.MeshStandardMaterial({
-                map: tex,
-                transparent: true,
-                emissive: 0xffffff,
-                emissiveIntensity: 0.5,
-                roughness: 0.2,
-                metalness: 0.1
-            });
-        } else {
-            // 텍스처 없으면 그냥 흰색 재질로 대체 (안전장치)
-            specialMaterials[type] = new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                emissive: 0xffffff,
-                emissiveIntensity: 0.5
-            });
+        let color = 0xffffff;
+        let emissive = 0xffffff;
+        
+        // 타입별 색상 지정
+        switch(type) {
+            case SPECIAL_TYPES.BOMB: color = 0xff0000; emissive = 0xff0000; break; // 빨강
+            case SPECIAL_TYPES.FREEZE: color = 0x00ffff; emissive = 0x00ffff; break; // 청록
+            case SPECIAL_TYPES.LASER: color = 0xffff00; emissive = 0xffff00; break; // 노랑
+            case SPECIAL_TYPES.GOLD: color = 0xffd700; emissive = 0xffd700; break; // 금색
         }
+
+        specialMaterials[type] = new THREE.MeshStandardMaterial({
+            color: color,
+            emissive: emissive,
+            emissiveIntensity: 1.0, // 강하게 발광
+            roughness: 0.1,
+            metalness: 0.8
+        });
     });
 
     window.addEventListener("resize", onWindowResize, false);

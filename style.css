@@ -123,13 +123,13 @@ body {
 
 /* 3. 모바일 컨트롤 (좌측 하단: 이동) */
 .mobile-controls-left {
-    position: absolute;
-    bottom: 30px;
-    left: 20px;
+    position: fixed; /* absolute -> fixed 변경 */
+    bottom: 30px !important;
+    left: 20px !important;
     display: flex;
     gap: 20px; /* 간격 조금 더 벌림 */
     pointer-events: auto;
-    z-index: 30;
+    z-index: 1000;
     display: flex; 
 }
 
@@ -174,9 +174,9 @@ body {
 
 /* 4. 모바일 컨트롤 (우측 하단: 드롭) */
 #drop-btn {
-    position: absolute;
-    bottom: 30px;
-    right: 20px;
+    position: fixed; /* absolute -> fixed 변경 */
+    bottom: 30px !important;
+    right: 20px !important;
     width: 60px; 
     height: 60px;
     
@@ -188,7 +188,7 @@ body {
     color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
     font-weight: bold;
-    z-index: 30;
+    z-index: 1000;
     pointer-events: auto;
     display: flex;
     justify-content: center;
