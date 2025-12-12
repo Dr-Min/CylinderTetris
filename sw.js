@@ -1,5 +1,5 @@
-// [수정] v12 (파일명 변경으로 강력한 갱신)
-const CACHE_NAME = 'tetris-3d-v12';
+// [수정] v13
+const CACHE_NAME = 'tetris-3d-v13';
 const ASSETS = [
   './',
   './index.html',

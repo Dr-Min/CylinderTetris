@@ -1008,6 +1008,10 @@ function updateScore(newScore) {
     document.getElementById("score").innerText = state.score;
 }
 
+function updateLevel(lv) {
+    document.getElementById("level").innerText = lv;
+}
+
 function gameOver() {
     SoundManager.gameOver(); 
     state.isPlaying = false;
