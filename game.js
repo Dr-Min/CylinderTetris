@@ -5,17 +5,18 @@ const CONFIG = {
     DROP_SPEED: 800,
     SWIPE_SENSITIVITY: 30,
     SHOW_GHOST: true, 
-    TRANSPARENT_MODE: true,
+    TRANSPARENT_MODE: false, // [수정] 기본값: OFF (불투명)
     COLORS: {
-        I: 0x00ffff,
-        O: 0xffff00,
-        T: 0xff00ff,
-        S: 0x00ff00,
-        Z: 0xff0000,
-        J: 0x0000ff,
-        L: 0xffa500,
-        GHOST: 0x333333,
-        GRID: 0x222222
+        // [수정] 사이버펑크 네온 컬러 팔레트
+        I: 0x00f0ff, // Cyber Cyan
+        O: 0xfff000, // Neon Yellow
+        T: 0xb026ff, // Electric Purple
+        S: 0x39ff14, // Acid Green
+        Z: 0xff073a, // Neon Red
+        J: 0x0044ff, // Deep Blue
+        L: 0xffa500, // Safety Orange -> Neon Orange
+        GHOST: 0x222222,
+        GRID: 0x111111
     }
 };
 
@@ -299,7 +300,14 @@ function createCylinderGrid() {
         geometry.rotateX(Math.PI / 2);
         geometry.translate(0, y * CELL_HEIGHT, 0);
         
-        const ring = new THREE.Line(geometry, material);
+        // [추가] 데드라인 (맨 위쪽 라인) 강조
+        let ringMat = material;
+        if (y === CONFIG.GRID_HEIGHT) {
+            // 붉은색 네온 데드라인
+            ringMat = new THREE.LineBasicMaterial({ color: 0xff0033, linewidth: 2 });
+        }
+        
+        const ring = new THREE.Line(geometry, ringMat);
         worldGroup.add(ring);
     }
 }
@@ -894,7 +902,8 @@ dropBtn.addEventListener("pointerdown", (e) => {
 });
 
 // [추가] 초기 텍스트 설정 (짧게)
-document.getElementById("toggle-btn").innerHTML = "VIEW<br>ON";
+// 기본값이 OFF이므로 텍스트도 OFF로 시작
+document.getElementById("toggle-btn").innerHTML = "VIEW<br>OFF";
 document.getElementById("bgm-btn").innerHTML = "BGM<br>ON";
 
 // 좌우 이동 버튼 이벤트 (pointerdown으로 통합)
