@@ -1,5 +1,5 @@
-// v23 - Perk System & Shop
-const CACHE_NAME = "hacker-tetris-v23";
+// v24 - Fix NaN Data & Custom UI
+const CACHE_NAME = "hacker-tetris-v24";
 const ASSETS = [
   "./",
   "./index.html",

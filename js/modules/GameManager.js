@@ -27,6 +27,7 @@ export class GameManager {
 
     const tutorialCompleted = localStorage.getItem("tutorial_completed");
     if (tutorialCompleted) {
+      this.currentMoney = 0; // 초기 자금 설정
       this.terminal.show();
       await this.terminal.typeText("System Reloaded.", 20);
       await this.terminal.typeText("Skipping initialization sequence...", 20);

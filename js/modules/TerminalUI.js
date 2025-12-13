@@ -103,22 +103,73 @@ export class TerminalUI {
         // 클릭 이벤트
         if (!isAcquired && canUnlock) {
           nodeEl.onclick = () => {
-            if (confirm(`Purchase ${perk.name} for ${perk.cost} MB?`)) {
-              perkManager.unlock(perk.id);
-              // 재화 차감은 GameManager에서 처리해야 하지만,
-              // 여기서는 UI 갱신을 위해 콜백이나 이벤트가 필요함.
-              // 일단 렌더링 갱신을 위해 커스텀 이벤트를 발생시키거나
-              // GameManager가 showShop에 콜백을 넘겨주는 방식이 좋음.
-              // 구조상 복잡해지므로, showShop이 콜백을 받도록 수정하는 것이 좋겠음.
-              // 하지만 이미 Promise 구조이므로, 여기서 내부적으로 처리하거나...
-              // -> GameManager에서 showShop 호출 시 buyCallback을 넘기도록 수정 예정.
+            // 커스텀 확인 창 생성
+            const confirmBox = document.createElement("div");
+            confirmBox.className = "confirm-box";
+            confirmBox.innerHTML = `
+              <div class="confirm-msg">Purchase <span style="color:var(--term-color)">${perk.name}</span>?</div>
+              <div class="confirm-cost">COST: ${perk.cost} MB</div>
+              <div class="confirm-btns">
+                <button id="confirm-yes">[ YES ]</button>
+                <button id="confirm-no">[ NO ]</button>
+              </div>
+            `;
 
-              // 임시: 클릭 시 바로 갱신 (돈 차감 로직은 별도 연결 필요)
+            // 스타일 주입 (임시)
+            confirmBox.style.position = "absolute";
+            confirmBox.style.top = "50%";
+            confirmBox.style.left = "50%";
+            confirmBox.style.transform = "translate(-50%, -50%)";
+            confirmBox.style.background = "#000";
+            confirmBox.style.border = "2px solid var(--term-color)";
+            confirmBox.style.padding = "20px";
+            confirmBox.style.zIndex = "200";
+            confirmBox.style.textAlign = "center";
+            confirmBox.style.boxShadow = "0 0 20px rgba(51, 255, 0, 0.3)";
+
+            // 버튼 스타일
+            const btns = confirmBox.querySelectorAll("button");
+            btns.forEach((btn) => {
+              btn.style.background = "transparent";
+              btn.style.border = "1px solid var(--term-color)";
+              btn.style.color = "var(--term-color)";
+              btn.style.margin = "10px";
+              btn.style.padding = "5px 15px";
+              btn.style.cursor = "pointer";
+              btn.style.fontFamily = "var(--term-font)";
+              btn.style.fontSize = "18px";
+            });
+
+            // 호버 효과 추가
+            btns.forEach((btn) => {
+              btn.onmouseenter = () => {
+                btn.style.background = "var(--term-color)";
+                btn.style.color = "#000";
+              };
+              btn.onmouseleave = () => {
+                btn.style.background = "transparent";
+                btn.style.color = "var(--term-color)";
+              };
+            });
+
+            container.appendChild(confirmBox);
+
+            // 이벤트 핸들링
+            confirmBox.querySelector("#confirm-yes").onclick = (e) => {
+              e.stopPropagation();
+              confirmBox.remove();
+
+              perkManager.unlock(perk.id);
               const event = new CustomEvent("perk-buy", {
                 detail: { perkId: perk.id, cost: perk.cost },
               });
               document.dispatchEvent(event);
-            }
+            };
+
+            confirmBox.querySelector("#confirm-no").onclick = (e) => {
+              e.stopPropagation();
+              confirmBox.remove();
+            };
           };
         }
 
