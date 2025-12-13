@@ -6,10 +6,11 @@ export class PerkManager {
     this.activeEffects = {
       scoreMultiplier: 1.0,
       speedModifier: 1.0,
-      bombChance: 0.05, // 기본 폭탄 확률
+      bombChance: 0.0, // 기본 0으로 변경 (해금 필요)
       goldChance: 0.0,
       startLinesCleared: 0,
       reviveCount: 0,
+      shopDiscount: 0.0,
     };
 
     // 퍽 데이터베이스 (트리 구조)
@@ -109,7 +110,7 @@ export class PerkManager {
     this.activeEffects = {
       scoreMultiplier: 1.0,
       speedModifier: 1.0,
-      bombChance: 0.05,
+      bombChance: 0.0,
       goldChance: 0.0,
       startLinesCleared: 0,
       reviveCount: 0,

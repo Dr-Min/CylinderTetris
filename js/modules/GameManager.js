@@ -18,7 +18,201 @@ export class GameManager {
       this.handleStageClear(linesCleared);
     this.game.onGameOver = (score) => this.handleGameOver(score);
     this.game.getPerkEffects = () => this.perkManager.getEffects(); // 게임 엔진이 퍽 효과를 참조하도록
-    this.game.consumeRevive = () => this.consumeRevive(); // 부활권 사용
+    // 디버그 모드 초기화
+    this.initDebugSystem();
+  }
+
+  initDebugSystem() {
+    // 디버그 패널 생성
+    const debugPanel = document.createElement("div");
+    debugPanel.id = "debug-panel";
+    debugPanel.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 300px;
+      background: rgba(0, 20, 0, 0.95);
+      border: 1px solid #0f0;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      padding: 15px;
+      z-index: 10000;
+      display: none;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+    `;
+
+    const title = document.createElement("h3");
+    title.innerText = "=== DEBUG_MODE ===";
+    title.style.margin = "0 0 15px 0";
+    title.style.borderBottom = "1px solid #0f0";
+    title.style.textAlign = "center";
+    debugPanel.appendChild(title);
+
+    const createInput = (label, id, value, type = "number", step = 0.01) => {
+      const container = document.createElement("div");
+      container.style.marginBottom = "10px";
+      container.style.display = "flex";
+      container.style.justifyContent = "space-between";
+      container.style.alignItems = "center";
+
+      const lbl = document.createElement("label");
+      lbl.innerText = label;
+      lbl.htmlFor = id;
+
+      const inp = document.createElement("input");
+      inp.id = id;
+      inp.type = type;
+      inp.value = value;
+      inp.step = step;
+      inp.style.width = "80px";
+      inp.style.background = "#000";
+      inp.style.color = "#0f0";
+      inp.style.border = "1px solid #0f0";
+
+      container.appendChild(lbl);
+      container.appendChild(inp);
+      debugPanel.appendChild(container);
+      return inp;
+    };
+
+    // --- Inputs ---
+    // 1. Bomb Chance
+    const bombInp = createInput(
+      "Bomb Chance (0-1)",
+      "dbg-bomb",
+      this.perkManager.activeEffects.bombChance
+    );
+    bombInp.onchange = (e) => {
+      this.perkManager.activeEffects.bombChance = parseFloat(e.target.value);
+      this.terminal.printSystemMessage(
+        `[DEBUG] Bomb Chance set to ${e.target.value}`
+      );
+    };
+
+    // 2. Gold Chance
+    const goldInp = createInput(
+      "Gold Chance (0-1)",
+      "dbg-gold",
+      this.perkManager.activeEffects.goldChance
+    );
+    goldInp.onchange = (e) => {
+      this.perkManager.activeEffects.goldChance = parseFloat(e.target.value);
+      this.terminal.printSystemMessage(
+        `[DEBUG] Gold Chance set to ${e.target.value}`
+      );
+    };
+
+    // 3. Current Money
+    const moneyInp = createInput(
+      "Data (Money)",
+      "dbg-money",
+      this.currentMoney,
+      "number",
+      100
+    );
+    moneyInp.onchange = (e) => {
+      this.currentMoney = parseInt(e.target.value);
+      this.terminal.printSystemMessage(
+        `[DEBUG] Money set to ${e.target.value}`
+      );
+    };
+
+    // 4. Reputation
+    const repInp = createInput(
+      "Reputation",
+      "dbg-rep",
+      this.reputation,
+      "number",
+      10
+    );
+    repInp.onchange = (e) => {
+      this.reputation = parseInt(e.target.value);
+      this.saveReputation();
+      this.terminal.printSystemMessage(
+        `[DEBUG] Reputation set to ${e.target.value}`
+      );
+    };
+
+    // 5. Score Multiplier
+    const scoreInp = createInput(
+      "Score Mult",
+      "dbg-score",
+      this.perkManager.activeEffects.scoreMultiplier
+    );
+    scoreInp.onchange = (e) => {
+      this.perkManager.activeEffects.scoreMultiplier = parseFloat(
+        e.target.value
+      );
+      this.terminal.printSystemMessage(
+        `[DEBUG] Score Mult set to ${e.target.value}`
+      );
+    };
+
+    // Buttons Container
+    const btnContainer = document.createElement("div");
+    btnContainer.style.marginTop = "15px";
+    btnContainer.style.display = "flex";
+    btnContainer.style.gap = "5px";
+    btnContainer.style.flexWrap = "wrap";
+    debugPanel.appendChild(btnContainer);
+
+    const createBtn = (text, onClick) => {
+      const btn = document.createElement("button");
+      btn.innerText = text;
+      btn.style.background = "#003300";
+      btn.style.color = "#0f0";
+      btn.style.border = "1px solid #0f0";
+      btn.style.cursor = "pointer";
+      btn.style.padding = "5px";
+      btn.style.flex = "1";
+      btn.onclick = onClick;
+      btnContainer.appendChild(btn);
+    };
+
+    createBtn("Skip Stage", () => {
+      this.game.stageClear(); // Force clear
+      this.terminal.printSystemMessage("[DEBUG] Stage Skipped");
+    });
+
+    createBtn("Game Over", () => {
+      this.game.gameOver();
+      this.terminal.printSystemMessage("[DEBUG] Forced Game Over");
+    });
+
+    createBtn("Unlock All Perks", () => {
+      // Unlock all non-root perks logic could go here, but complex due to tree.
+      // Instead, let's just max out stats
+      this.perkManager.activeEffects.bombChance = 0.5;
+      this.perkManager.activeEffects.goldChance = 0.5;
+      this.perkManager.activeEffects.speedModifier = 0.5;
+      this.terminal.printSystemMessage(
+        "[DEBUG] GOD MODE ACTIVATED (High Stats)"
+      );
+      // Update inputs
+      bombInp.value = 0.5;
+      goldInp.value = 0.5;
+    });
+
+    document.body.appendChild(debugPanel);
+
+    // Toggle Key (Backtick `)
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "`" || e.key === "~") {
+        const isHidden = debugPanel.style.display === "none";
+        debugPanel.style.display = isHidden ? "block" : "none";
+
+        // Refresh inputs values when opening
+        if (isHidden) {
+          bombInp.value = this.perkManager.activeEffects.bombChance;
+          goldInp.value = this.perkManager.activeEffects.goldChance;
+          moneyInp.value = this.currentMoney;
+          repInp.value = this.reputation;
+          scoreInp.value = this.perkManager.activeEffects.scoreMultiplier;
+        }
+      }
+    });
+
+    console.log("Debug System Initialized. Press '`' to toggle.");
   }
 
   async init() {
@@ -153,6 +347,18 @@ export class GameManager {
           text: `Increase Starting Data (+100MB) [Cost: 10 REP]`,
           value: "start_money",
         },
+        {
+          text: `Score Hack v2.0 (+10% Score) [Cost: 20 REP]`,
+          value: "score_mult",
+        },
+        {
+          text: `Market Discount (5% OFF) [Cost: 30 REP]`,
+          value: "discount",
+        },
+        {
+          text: `Unlock Special Blocks (Luck +2%) [Cost: 40 REP]`,
+          value: "luck",
+        },
         { text: `Exit System Upgrades`, value: "exit" },
       ];
 
@@ -161,15 +367,50 @@ export class GameManager {
       if (choice === "start_money") {
         if (this.reputation >= 10) {
           this.reputation -= 10;
-          let currentStartBonus = parseInt(
-            localStorage.getItem("perm_start_money") || "0"
-          );
-          localStorage.setItem(
-            "perm_start_money",
-            (currentStartBonus + 100).toString()
-          );
-
+          let val = parseInt(localStorage.getItem("perm_start_money") || "0");
+          localStorage.setItem("perm_start_money", (val + 100).toString());
           await this.terminal.typeText("Upgrade Installed.", 20);
+          this.saveReputation();
+          await new Promise((r) => setTimeout(r, 1000));
+        } else {
+          await this.terminal.typeText("Insufficient Reputation.", 20);
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      } else if (choice === "score_mult") {
+        if (this.reputation >= 20) {
+          this.reputation -= 20;
+          let val = parseFloat(
+            localStorage.getItem("perm_score_mult") || "0.0"
+          );
+          localStorage.setItem("perm_score_mult", (val + 0.1).toFixed(2));
+          await this.terminal.typeText("Upgrade Installed.", 20);
+          this.saveReputation();
+          await new Promise((r) => setTimeout(r, 1000));
+        } else {
+          await this.terminal.typeText("Insufficient Reputation.", 20);
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      } else if (choice === "discount") {
+        if (this.reputation >= 30) {
+          this.reputation -= 30;
+          let val = parseFloat(localStorage.getItem("perm_discount") || "0.0");
+          localStorage.setItem("perm_discount", (val + 0.05).toFixed(2));
+          await this.terminal.typeText("Upgrade Installed.", 20);
+          this.saveReputation();
+          await new Promise((r) => setTimeout(r, 1000));
+        } else {
+          await this.terminal.typeText("Insufficient Reputation.", 20);
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      } else if (choice === "luck") {
+        if (this.reputation >= 40) {
+          this.reputation -= 40;
+          let val = parseFloat(localStorage.getItem("perm_luck") || "0.0");
+          localStorage.setItem("perm_luck", (val + 0.02).toFixed(2));
+          await this.terminal.typeText(
+            "Special Blocks Unlocked / Probability Increased.",
+            20
+          );
           this.saveReputation();
           await new Promise((r) => setTimeout(r, 1000));
         } else {

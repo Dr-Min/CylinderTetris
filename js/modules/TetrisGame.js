@@ -501,34 +501,68 @@ export class TetrisGame {
 
       let color = 0xffffff;
       let emissive = 0xffffff;
+      let emoji = "";
 
       switch (type) {
         case this.SPECIAL_TYPES.BOMB:
           color = 0xff0000;
           emissive = 0xff0000;
+          emoji = "💣";
           break;
         case this.SPECIAL_TYPES.FREEZE:
           color = 0x00ffff;
           emissive = 0x00ffff;
+          emoji = "❄️";
           break;
         case this.SPECIAL_TYPES.LASER:
           color = 0xffff00;
           emissive = 0xffff00;
+          emoji = "⚡";
           break;
         case this.SPECIAL_TYPES.GOLD:
           color = 0xffd700;
           emissive = 0xffd700;
+          emoji = "💰";
           break;
       }
 
+      const texture = this.createEmojiTexture(emoji, color);
+
       this.specialMaterials[type] = new THREE.MeshStandardMaterial({
-        color: color,
+        color: 0xffffff, // 텍스처 색상 그대로 사용하기 위해 흰색
+        map: texture,
         emissive: emissive,
-        emissiveIntensity: 1.0,
+        emissiveIntensity: 0.5,
         roughness: 0.1,
-        metalness: 0.8,
+        metalness: 0.1,
       });
     });
+  }
+
+  createEmojiTexture(emoji, bgColor) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d");
+
+    // 배경색 (약간 투명하게 하거나 단색)
+    ctx.fillStyle = "#" + new THREE.Color(bgColor).getHexString();
+    ctx.fillRect(0, 0, 128, 128);
+
+    // 테두리
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(0, 0, 128, 128);
+
+    // 이모지
+    ctx.font = "80px Segoe UI Emoji, Arial"; // 윈도우 이모지 폰트 우선
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "white";
+    ctx.fillText(emoji, 64, 70); // 약간 아래로 조정
+
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
   }
 
   createCylinderGrid(CELL_HEIGHT, TOTAL_HEIGHT) {
@@ -672,24 +706,29 @@ export class TetrisGame {
 
     // 퍽 효과: 특수 블록 확률
     const effects = this.getPerkEffects();
-    const bombChance = effects.bombChance || 0.05; // 기본 5%
+    // 영구 강화나 퍽으로 해금되지 않으면 0 (기본값 제거)
+    const bombChance = effects.bombChance || 0.0;
     const goldChance = effects.goldChance || 0.0;
 
-    // 우선순위: 골드 -> 폭탄 -> 나머지 랜덤
-    if (Math.random() < goldChance) {
-      specialType = this.SPECIAL_TYPES.GOLD;
-      specialIndex = Math.floor(Math.random() * 4);
-    } else if (Math.random() < bombChance) {
-      specialType = this.SPECIAL_TYPES.BOMB;
-      specialIndex = Math.floor(Math.random() * 4);
-    } else if (Math.random() < 0.1) {
-      // 나머지 특수 블록 10%
-      const keys = Object.keys(this.SPECIAL_TYPES).filter(
-        (k) => k !== "NONE" && k !== "GOLD" && k !== "BOMB"
-      );
-      const randomKey = keys[Math.floor(Math.random() * keys.length)];
-      specialType = this.SPECIAL_TYPES[randomKey];
-      specialIndex = Math.floor(Math.random() * 4);
+    // 특수 블록이 해금되었는지 확인 (확률이 0보다 커야 함)
+    // 영구 강화나 퍽 획득 전에는 절대 나오지 않음
+    if (bombChance > 0 || goldChance > 0) {
+      // 우선순위: 골드 -> 폭탄 -> 나머지 랜덤
+      if (Math.random() < goldChance) {
+        specialType = this.SPECIAL_TYPES.GOLD;
+        specialIndex = Math.floor(Math.random() * 4);
+      } else if (Math.random() < bombChance) {
+        specialType = this.SPECIAL_TYPES.BOMB;
+        specialIndex = Math.floor(Math.random() * 4);
+      } else if (Math.random() < bombChance * 0.5) {
+        // 나머지 특수 블록도 bombChance에 비례해서 등장 (해금 시에만 등장)
+        const keys = Object.keys(this.SPECIAL_TYPES).filter(
+          (k) => k !== "NONE" && k !== "GOLD" && k !== "BOMB"
+        );
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        specialType = this.SPECIAL_TYPES[randomKey];
+        specialIndex = Math.floor(Math.random() * 4);
+      }
     }
 
     this.state.nextPiece = {
