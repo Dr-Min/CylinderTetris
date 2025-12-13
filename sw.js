@@ -1,5 +1,5 @@
-// v24 - Fix NaN Data & Custom UI
-const CACHE_NAME = "hacker-tetris-v24";
+// v25 - Fix NaN Data (Stage Clear)
+const CACHE_NAME = "hacker-tetris-v25";
 const ASSETS = [
   "./",
   "./index.html",

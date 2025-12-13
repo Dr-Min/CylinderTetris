@@ -936,7 +936,7 @@ export class TetrisGame {
     this.state.isPlaying = false;
     this.SoundManager.stopBGM();
     this.SoundManager.playTone({ start: 400, end: 800 }, "sine", 0.5, 0.3); // 승리 효과음
-    if (this.onStageClear) this.onStageClear();
+    if (this.onStageClear) this.onStageClear(this.state.linesClearedStage);
   }
 
   createExplosion(gridY) {

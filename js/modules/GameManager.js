@@ -97,7 +97,7 @@ export class GameManager {
 
   async handleStageClear(linesCleared) {
     // 획득한 데이터 계산 (기본 1줄당 100MB)
-    const earnedData = linesCleared * 100;
+    const earnedData = (linesCleared || 0) * 100;
     this.currentMoney += earnedData;
 
     // 게임 화면 페이드 아웃
