@@ -24,7 +24,19 @@ export class GameManager {
   async init() {
     this.loadReputation();
     this.game.init(); // 3D 씬 로드
-    await this.startIntro();
+
+    const tutorialCompleted = localStorage.getItem("tutorial_completed");
+    if (tutorialCompleted) {
+      this.terminal.show();
+      await this.terminal.typeText("System Reloaded.", 20);
+      await this.terminal.typeText("Skipping initialization sequence...", 20);
+      await new Promise((r) => setTimeout(r, 800));
+
+      this.currentStage = 1;
+      this.startStage();
+    } else {
+      await this.startIntro();
+    }
   }
 
   loadReputation() {
@@ -96,6 +108,7 @@ export class GameManager {
 
     if (this.currentStage === 0) {
       // 튜토리얼 클리어
+      localStorage.setItem("tutorial_completed", "true");
       await this.terminal.typeText("ACCESS GRANTED.", 30);
       await this.terminal.typeText(`Data Acquired: ${earnedData} MB`, 20);
       await new Promise((r) => setTimeout(r, 1000));
