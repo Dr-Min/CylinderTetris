@@ -1,267 +1,298 @@
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
 
 :root {
-    --term-color: #33ff00; /* P1 Phosphor Green */
-    --term-error: #ff3333; /* Error Red */
-    --term-bg: #000000;
-    --term-font: 'VT323', monospace;
+  --term-color: #33ff00; /* P1 Phosphor Green */
+  --term-error: #ff3333; /* Error Red */
+  --term-bg: #000000;
+  --term-font: "VT323", monospace;
 }
 
 body {
-    background-color: var(--term-bg);
-    margin: 0;
-    overflow: hidden;
-    color: var(--term-color);
-    font-family: var(--term-font); /* 전체 폰트 적용 */
+  background-color: var(--term-bg);
+  margin: 0;
+  overflow: hidden;
+  color: var(--term-color);
+  font-family: var(--term-font); /* 전체 폰트 적용 */
 }
 
 /* === CRT 효과 오버레이 (리얼함의 핵심) === */
 .crt-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 9999;
-    
-    background: 
-        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
-        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-    background-size: 100% 2px, 3px 100%;
-    
-    box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(
+      90deg,
+      rgba(255, 0, 0, 0.06),
+      rgba(0, 255, 0, 0.02),
+      rgba(0, 0, 255, 0.06)
+    );
+  background-size: 100% 2px, 3px 100%;
+
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
 }
 
 @keyframes flicker {
-    0% { opacity: 0.97; }
-    5% { opacity: 0.95; }
-    10% { opacity: 0.9; }
-    15% { opacity: 0.95; }
-    20% { opacity: 0.99; }
-    50% { opacity: 0.95; }
-    80% { opacity: 0.9; }
-    100% { opacity: 0.97; }
+  0% {
+    opacity: 0.97;
+  }
+  5% {
+    opacity: 0.95;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  20% {
+    opacity: 0.99;
+  }
+  50% {
+    opacity: 0.95;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.97;
+  }
 }
 
 #terminal-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    padding: 40px;
-    box-sizing: border-box;
-    font-size: 24px;
-    z-index: 100;
-    
-    text-shadow: 0 0 2px rgba(51, 255, 0, 0.7), 0 0 10px rgba(51, 255, 0, 0.5);
-    overflow-y: auto;
-    
-    animation: flicker 0.15s infinite;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 40px;
+  box-sizing: border-box;
+  font-size: 24px;
+  z-index: 100;
+
+  text-shadow: 0 0 2px rgba(51, 255, 0, 0.7), 0 0 10px rgba(51, 255, 0, 0.5);
+  overflow-y: auto;
+
+  animation: flicker 0.15s infinite;
 }
 
 #terminal-layer::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
 .terminal-line {
-    margin: 0;
-    line-height: 1.3;
-    white-space: pre-wrap;
-    display: block;
-    min-height: 24px;
+  margin: 0;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  display: block;
+  min-height: 24px;
 }
 
 /* === 커서 스타일 === */
 .cursor {
-    display: inline-block;
-    width: 12px;
-    height: 1.1em;
-    background-color: var(--term-color);
-    vertical-align: text-bottom;
-    box-shadow: 0 0 5px var(--term-color);
+  display: inline-block;
+  width: 12px;
+  height: 1.1em;
+  background-color: var(--term-color);
+  vertical-align: text-bottom;
+  box-shadow: 0 0 5px var(--term-color);
 }
 
 .cursor.blinking {
-    animation: blink 1s step-end infinite;
+  animation: blink 1s step-end infinite;
 }
 
 @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* === 선택지 스타일 === */
 #choice-area {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .choice-btn {
-    background: transparent;
-    border: none;
-    color: rgba(51, 255, 0, 0.7);
-    padding: 2px 0;
-    font-family: var(--term-font);
-    font-size: 24px;
-    cursor: pointer;
-    text-align: left;
-    width: 100%;
-    outline: none;
-    text-shadow: none;
-    transition: all 0.1s;
+  background: transparent;
+  border: none;
+  color: rgba(51, 255, 0, 0.7);
+  padding: 2px 0;
+  font-family: var(--term-font);
+  font-size: 24px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  outline: none;
+  text-shadow: none;
+  transition: all 0.1s;
 }
 
-.choice-btn:hover, .choice-btn:focus {
-    color: var(--term-color);
-    text-shadow: 0 0 8px var(--term-color);
-    padding-left: 10px;
+.choice-btn:hover,
+.choice-btn:focus {
+  color: var(--term-color);
+  text-shadow: 0 0 8px var(--term-color);
+  padding-left: 10px;
 }
 
 .choice-btn::before {
-    content: '[ ] ';
-    opacity: 0.5;
+  content: "[ ] ";
+  opacity: 0.5;
 }
 
-.choice-btn:hover::before, .choice-btn:focus::before {
-    content: '[*] ';
-    opacity: 1;
+.choice-btn:hover::before,
+.choice-btn:focus::before {
+  content: "[*] ";
+  opacity: 1;
 }
 
 .hidden {
-    display: none !important;
+  display: none !important;
 }
 
 .system-msg {
-    color: #4af;
-    text-shadow: 0 0 3px #4af;
+  color: #4af;
+  text-shadow: 0 0 3px #4af;
 }
 
 #game-container {
-    transition: opacity 1s;
+  transition: opacity 1s;
 }
 
 /* === GAME UI (HUD) 스타일 추가 === */
 #game-ui {
-    font-family: var(--term-font);
-    text-shadow: 0 0 5px var(--term-color);
-    pointer-events: none; /* UI 클릭 통과 방지 */
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+  font-family: var(--term-font);
+  text-shadow: 0 0 5px var(--term-color);
+  pointer-events: none; /* UI 클릭 통과 방지 */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .top-bar {
-    display: flex;
-    justify-content: space-between;
-    padding: 20px;
-    pointer-events: none;
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+  pointer-events: none;
 }
 
-.level-box, .score-board, .next-box {
-    border: 1px solid var(--term-color);
-    padding: 10px 20px;
-    background: rgba(0, 10, 0, 0.7);
-    box-shadow: 0 0 10px rgba(51, 255, 0, 0.2);
-    text-align: center;
+.level-box,
+.score-board,
+.next-box {
+  border: 1px solid var(--term-color);
+  padding: 10px 20px;
+  background: rgba(0, 10, 0, 0.7);
+  box-shadow: 0 0 10px rgba(51, 255, 0, 0.2);
+  text-align: center;
 }
 
 .settings-area {
-    position: absolute;
-    top: 80px;
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    pointer-events: auto;
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
 }
 
 .settings-area button {
-    background: rgba(0, 20, 0, 0.8);
-    border: 1px solid var(--term-color);
-    color: var(--term-color);
-    font-family: var(--term-font);
-    font-size: 16px;
-    padding: 10px;
-    cursor: pointer;
-    text-shadow: 0 0 3px var(--term-color);
-    transition: 0.2s;
+  background: rgba(0, 20, 0, 0.8);
+  border: 1px solid var(--term-color);
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: 16px;
+  padding: 10px;
+  cursor: pointer;
+  text-shadow: 0 0 3px var(--term-color);
+  transition: 0.2s;
 }
 
 .settings-area button:hover {
-    background: var(--term-color);
-    color: #000;
-    box-shadow: 0 0 15px var(--term-color);
+  background: var(--term-color);
+  color: #000;
+  box-shadow: 0 0 15px var(--term-color);
 }
 
 .version-info {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    font-size: 14px;
-    opacity: 0.5;
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  font-size: 14px;
+  opacity: 0.5;
 }
 
 /* === GAME OVER SCREEN (SYSTEM FAILURE) === */
 #game-over-screen {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    background: rgba(0, 0, 0, 0.95);
-    border: 2px solid var(--term-error);
-    padding: 40px;
-    box-shadow: 0 0 50px rgba(255, 51, 51, 0.3);
-    z-index: 2000;
-    width: 80%;
-    max-width: 500px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid var(--term-error);
+  padding: 40px;
+  box-shadow: 0 0 50px rgba(255, 51, 51, 0.3);
+  z-index: 2000;
+  width: 80%;
+  max-width: 500px;
 }
 
 #game-over-screen h1 {
-    color: var(--term-error);
-    text-shadow: 0 0 10px var(--term-error);
-    font-size: 48px;
-    margin-bottom: 30px;
-    letter-spacing: 5px;
-    animation: flicker 0.1s infinite;
-    border-bottom: 1px solid var(--term-error);
-    padding-bottom: 20px;
+  color: var(--term-error);
+  text-shadow: 0 0 10px var(--term-error);
+  font-size: 48px;
+  margin-bottom: 30px;
+  letter-spacing: 5px;
+  animation: flicker 0.1s infinite;
+  border-bottom: 1px solid var(--term-error);
+  padding-bottom: 20px;
 }
 
 #game-over-screen button {
-    background: transparent;
-    border: 1px solid var(--term-error);
-    color: var(--term-error);
-    font-family: var(--term-font);
-    font-size: 24px;
-    padding: 10px 30px;
-    cursor: pointer;
-    margin-top: 30px;
-    transition: all 0.2s;
+  background: transparent;
+  border: 1px solid var(--term-error);
+  color: var(--term-error);
+  font-family: var(--term-font);
+  font-size: 24px;
+  padding: 10px 30px;
+  cursor: pointer;
+  margin-top: 30px;
+  transition: all 0.2s;
 }
 
 #game-over-screen button:hover {
-    background: var(--term-error);
-    color: #000;
-    box-shadow: 0 0 20px var(--term-error);
+  background: var(--term-error);
+  color: #000;
+  box-shadow: 0 0 20px var(--term-error);
 }
 
 /* 모바일 컨트롤 버튼 스타일 통합 (CSS/style.css 대체) */
-.mobile-controls-left button, #drop-btn {
-    font-family: var(--term-font);
-    border: 1px solid var(--term-color) !important;
-    background: rgba(0, 20, 0, 0.5) !important;
-    color: var(--term-color) !important;
-    box-shadow: 0 0 10px var(--term-color) !important;
+.mobile-controls-left button,
+#drop-btn {
+  font-family: var(--term-font);
+  border: 1px solid var(--term-color) !important;
+  background: rgba(0, 20, 0, 0.5) !important;
+  color: var(--term-color) !important;
+  box-shadow: 0 0 10px var(--term-color) !important;
 }
 
-.mobile-controls-left button:active, #drop-btn:active {
-    background: var(--term-color) !important;
-    color: #000 !important;
+.mobile-controls-left button:active,
+#drop-btn:active {
+  background: var(--term-color) !important;
+  color: #000 !important;
 }
