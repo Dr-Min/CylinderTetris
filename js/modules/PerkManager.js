@@ -113,7 +113,13 @@ export class PerkManager {
       goldChance: 0.0,
       startLinesCleared: 0,
       reviveCount: 0,
+      shopDiscount: 0.0,
     };
+  }
+
+  getDiscountedPrice(cost) {
+    if (!this.activeEffects.shopDiscount) return cost;
+    return Math.floor(cost * (1 - this.activeEffects.shopDiscount));
   }
 
   // 퍽 구매 가능 여부 확인
@@ -123,7 +129,8 @@ export class PerkManager {
     const perk = this.getPerk(perkId);
     if (!perk) return false;
 
-    if (currentMoney < perk.cost) return false; // 돈 부족
+    const finalCost = this.getDiscountedPrice(perk.cost);
+    if (currentMoney < finalCost) return false; // 돈 부족
 
     // 루트 노드는 언제나 구매 가능
     if (!perk.parentId) return true;

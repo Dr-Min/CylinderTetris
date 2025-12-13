@@ -89,12 +89,14 @@ export class TerminalUI {
         nodeEl.style.left = `${col.x}%`;
         nodeEl.style.top = `${20 + index * 25}%`; // 20%, 45%, 70% ...
 
+        const finalCost = perkManager.getDiscountedPrice(perk.cost);
+
         nodeEl.innerHTML = `
                 <div class="perk-icon"></div>
                 <div class="perk-info">
                     <div class="perk-name">${perk.name}</div>
                     <div class="perk-cost">${
-                      isAcquired ? "INSTALLED" : perk.cost + " MB"
+                      isAcquired ? "INSTALLED" : finalCost + " MB"
                     }</div>
                 </div>
                 <div class="perk-desc">${perk.desc}</div>
@@ -108,7 +110,7 @@ export class TerminalUI {
             confirmBox.className = "confirm-box";
             confirmBox.innerHTML = `
               <div class="confirm-msg">Purchase <span style="color:var(--term-color)">${perk.name}</span>?</div>
-              <div class="confirm-cost">COST: ${perk.cost} MB</div>
+              <div class="confirm-cost">COST: ${finalCost} MB</div>
               <div class="confirm-btns">
                 <button id="confirm-yes">[ YES ]</button>
                 <button id="confirm-no">[ NO ]</button>
@@ -161,7 +163,7 @@ export class TerminalUI {
 
               perkManager.unlock(perk.id);
               const event = new CustomEvent("perk-buy", {
-                detail: { perkId: perk.id, cost: perk.cost },
+                detail: { perkId: perk.id, cost: finalCost },
               });
               document.dispatchEvent(event);
             };

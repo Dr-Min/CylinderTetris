@@ -27,11 +27,7 @@ export class GameManager {
 
     const tutorialCompleted = localStorage.getItem("tutorial_completed");
     if (tutorialCompleted) {
-      // 영구 강화 적용 (초기 자금 보너스)
-      const startMoneyBonus = parseInt(
-        localStorage.getItem("perm_start_money") || "0"
-      );
-      this.currentMoney = 0 + startMoneyBonus;
+      this.loadPermanentPerks();
 
       this.terminal.show();
       await this.terminal.typeText("System Reloaded.", 20);
@@ -57,6 +53,29 @@ export class GameManager {
     } else {
       await this.startIntro();
     }
+  }
+
+  loadPermanentPerks() {
+    // 1. 초기 자금
+    const startMoneyBonus = parseInt(
+      localStorage.getItem("perm_start_money") || "0"
+    );
+    this.currentMoney = 0 + startMoneyBonus;
+
+    // 2. 점수 배율
+    const scoreMult = parseFloat(
+      localStorage.getItem("perm_score_mult") || "0.0"
+    );
+    this.perkManager.activeEffects.scoreMultiplier += scoreMult;
+
+    // 3. 상점 할인 (PerkManager에 속성 추가 필요)
+    const discount = parseFloat(localStorage.getItem("perm_discount") || "0.0");
+    this.perkManager.activeEffects.shopDiscount = discount;
+
+    // 4. 행운 (특수 블록)
+    const luck = parseFloat(localStorage.getItem("perm_luck") || "0.0");
+    this.perkManager.activeEffects.bombChance += luck;
+    this.perkManager.activeEffects.goldChance += luck;
   }
 
   loadReputation() {
