@@ -549,17 +549,23 @@ export class TetrisGame {
     ctx.fillStyle = "#" + new THREE.Color(bgColor).getHexString();
     ctx.fillRect(0, 0, 128, 128);
 
+    // 내부를 약간 어둡게 해서 이모지 대비 높이기
+    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    ctx.fillRect(10, 10, 108, 108);
+
     // 테두리
     ctx.strokeStyle = "rgba(255,255,255,0.5)";
     ctx.lineWidth = 8;
     ctx.strokeRect(0, 0, 128, 128);
 
     // 이모지
-    ctx.font = "80px Segoe UI Emoji, Arial"; // 윈도우 이모지 폰트 우선
+    ctx.font = "bold 90px Segoe UI Emoji, Arial"; // 크기 증가 및 굵게
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.8)"; // 그림자 추가로 가독성 확보
+    ctx.shadowBlur = 15;
     ctx.fillStyle = "white";
-    ctx.fillText(emoji, 64, 70); // 약간 아래로 조정
+    ctx.fillText(emoji, 64, 68);
 
     const texture = new THREE.CanvasTexture(canvas);
     return texture;
