@@ -1,5 +1,5 @@
-// v26 - Reputation Info Update
-const CACHE_NAME = "hacker-tetris-v26";
+// v27 - Always Show Upgrade Menu
+const CACHE_NAME = "hacker-tetris-v27";
 const ASSETS = [
   "./",
   "./index.html",

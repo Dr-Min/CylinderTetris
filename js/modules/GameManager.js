@@ -38,6 +38,20 @@ export class GameManager {
       await this.terminal.typeText("Skipping initialization sequence...", 20);
       await new Promise((r) => setTimeout(r, 800));
 
+      // 영구 강화 메뉴 진입 여부 확인 (스킵 모드에서도 추가)
+      if (true) {
+        await this.terminal.typeText(`REP LEVEL: ${this.reputation}`, 20);
+        await this.terminal.typeText("Access System Upgrades?", 30);
+        const choice = await this.terminal.showChoices([
+          { text: "YES (Spend Reputation)", value: "yes" },
+          { text: "NO (Start Operation)", value: "no" },
+        ]);
+
+        if (choice === "yes") {
+          await this.enterPermanentShop();
+        }
+      }
+
       this.currentStage = 1;
       this.startStage();
     } else {
@@ -72,7 +86,7 @@ export class GameManager {
     await this.terminal.typeText("Connecting to local proxy...", 20);
     await new Promise((r) => setTimeout(r, 500));
 
-    if (this.reputation > 0) {
+    if (true) {
       await this.terminal.typeText(`REP LEVEL: ${this.reputation}`, 20);
 
       // 영구 강화 메뉴 진입 여부 확인
