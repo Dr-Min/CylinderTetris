@@ -1,5 +1,5 @@
-// v22 - Roguelike Stages & Font Update Re-apply
-const CACHE_NAME = "hacker-tetris-v22";
+// v23 - Perk System & Shop
+const CACHE_NAME = "hacker-tetris-v23";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const ASSETS = [
   "./js/modules/GameManager.js",
   "./js/modules/TerminalUI.js",
   "./js/modules/TetrisGame.js",
+  "./js/modules/PerkManager.js",
   "./manifest.json",
   "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js",
   "https://fonts.googleapis.com/css2?family=VT323&display=swap",

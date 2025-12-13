@@ -101,6 +101,7 @@ export class TetrisGame {
 
     this.onStageClear = null; // 콜백 함수
     this.onGameOver = null; // 콜백 함수
+    this.getPerkEffects = () => ({}); // 기본값 (GameManager에서 덮어씀)
 
     // Three.js objects
     this.scene = null;
@@ -632,6 +633,20 @@ export class TetrisGame {
     this.state.dropTimer = 0;
     this.state.slowModeTimer = 0;
 
+    // 퍽 효과: 스테이지 시작 시 미리 라인 지우기
+    const effects = this.getPerkEffects();
+    if (effects.startLinesCleared > 0) {
+      // 나중에 구현: 바닥 N줄 삭제하고 시작하는게 아니라, 그냥 카운트를 먹고 시작하는 것?
+      // 아니면 진짜로 빈 줄을 만드는 건 테트리스에선 의미가 없음.
+      // 여기서는 "클리어해야 할 목표 줄 수 감소"로 해석하는 게 좋음.
+      // 혹은 이미 쓰레기 줄이 있는 상태가 아니라, '유리한 상태'여야 하므로.
+      // -> 목표 달성 수에 미리 추가해줌.
+      this.state.linesClearedStage += effects.startLinesCleared;
+      console.log(
+        `Perk applied: ${effects.startLinesCleared} lines pre-hacked.`
+      );
+    }
+
     this.updateScore(0);
     this.updateLevel(1);
 
@@ -655,9 +670,24 @@ export class TetrisGame {
     let specialType = this.SPECIAL_TYPES.NONE;
     let specialIndex = -1;
 
-    if (Math.random() < 0.2) {
-      const keys = Object.keys(this.SPECIAL_TYPES);
-      const randomKey = keys[Math.floor(Math.random() * (keys.length - 1)) + 1];
+    // 퍽 효과: 특수 블록 확률
+    const effects = this.getPerkEffects();
+    const bombChance = effects.bombChance || 0.05; // 기본 5%
+    const goldChance = effects.goldChance || 0.0;
+
+    // 우선순위: 골드 -> 폭탄 -> 나머지 랜덤
+    if (Math.random() < goldChance) {
+      specialType = this.SPECIAL_TYPES.GOLD;
+      specialIndex = Math.floor(Math.random() * 4);
+    } else if (Math.random() < bombChance) {
+      specialType = this.SPECIAL_TYPES.BOMB;
+      specialIndex = Math.floor(Math.random() * 4);
+    } else if (Math.random() < 0.1) {
+      // 나머지 특수 블록 10%
+      const keys = Object.keys(this.SPECIAL_TYPES).filter(
+        (k) => k !== "NONE" && k !== "GOLD" && k !== "BOMB"
+      );
+      const randomKey = keys[Math.floor(Math.random() * keys.length)];
       specialType = this.SPECIAL_TYPES[randomKey];
       specialIndex = Math.floor(Math.random() * 4);
     }
@@ -867,9 +897,16 @@ export class TetrisGame {
       }
 
       this.refreshGridVisuals();
-      this.updateScore(
-        this.state.score + linesCleared.length * 100 * linesCleared.length
-      );
+
+      // 퍽 효과: 점수 배율 적용은 GameManager의 gameOver나 stageClear에서 최종 정산 때 하거나,
+      // 여기서 실시간 표시에 반영할 수도 있음.
+      // 여기서는 실시간 표시에 반영.
+      const effects = this.getPerkEffects();
+      const scoreMultiplier = effects.scoreMultiplier || 1.0;
+      const baseScore = linesCleared.length * 100 * linesCleared.length;
+      const finalScore = Math.floor(baseScore * scoreMultiplier);
+
+      this.updateScore(this.state.score + finalScore);
 
       this.state.linesClearedTotal += linesCleared.length;
       this.state.linesClearedStage += linesCleared.length;
@@ -1033,6 +1070,48 @@ export class TetrisGame {
   }
 
   gameOver() {
+    // 퍽 효과: 부활 (Revive)
+    if (this.consumeRevive && this.consumeRevive()) {
+      console.log("Backup Protocol Activated! Reviving...");
+      this.SoundManager.playTone(
+        { start: 200, end: 600 },
+        "sawtooth",
+        0.8,
+        0.5
+      ); // 부활 사운드
+
+      // 바닥 5줄 삭제
+      const rowsToRemove = 5;
+      // 바닥이 index 0이므로, 0번 인덱스를 5번 삭제하고 위를 채워넣음
+      for (let i = 0; i < rowsToRemove; i++) {
+        this.state.grid.splice(0, 1);
+        this.state.grid.push(Array(this.CONFIG.GRID_WIDTH).fill(null));
+      }
+
+      this.refreshGridVisuals();
+
+      // 부활 메시지 (GameManager가 처리해주면 좋겠지만 여기서 처리)
+      const ui = document.getElementById("game-ui");
+      if (ui) {
+        const msg = document.createElement("div");
+        msg.innerText = "SYSTEM RECOVERED";
+        msg.style.position = "absolute";
+        msg.style.top = "50%";
+        msg.style.width = "100%";
+        msg.style.textAlign = "center";
+        msg.style.color = "#00ffff";
+        msg.style.fontSize = "40px";
+        msg.style.textShadow = "0 0 10px #00ffff";
+        msg.style.zIndex = "999";
+        msg.style.fontFamily = "var(--term-font)";
+        ui.appendChild(msg);
+
+        setTimeout(() => msg.remove(), 2000);
+      }
+
+      return; // 게임 오버 취소
+    }
+
     this.SoundManager.gameOver();
     this.state.isPlaying = false;
 

@@ -1,27 +1,50 @@
 import { TerminalUI } from "./TerminalUI.js";
 import { TetrisGame } from "./TetrisGame.js";
+import { PerkManager } from "./PerkManager.js";
 
 export class GameManager {
   constructor() {
     this.terminal = new TerminalUI();
     this.game = new TetrisGame("game-container");
+    this.perkManager = new PerkManager();
 
     // 게임 상태
     this.currentStage = 0; // 0: Tutorial, 1+: Real Stages
-    this.playerStats = {
-      speedModifier: 1.0, // 속도 배율 (낮을수록 느림/유리)
-      scoreMultiplier: 1.0,
-      preClearedLines: 0, // 시작 시 미리 지워진 라인 수
-    };
+    this.currentMoney = 0; // 현재 보유 데이터 (MB)
+    this.reputation = 0; // 영구 평판 (Reputation)
 
     // 게임 이벤트 연결
-    this.game.onStageClear = () => this.handleStageClear();
+    this.game.onStageClear = (linesCleared) =>
+      this.handleStageClear(linesCleared);
     this.game.onGameOver = (score) => this.handleGameOver(score);
+    this.game.getPerkEffects = () => this.perkManager.getEffects(); // 게임 엔진이 퍽 효과를 참조하도록
+    this.game.consumeRevive = () => this.consumeRevive(); // 부활권 사용
   }
 
   async init() {
+    this.loadReputation();
     this.game.init(); // 3D 씬 로드
     await this.startIntro();
+  }
+
+  loadReputation() {
+    const saved = localStorage.getItem("hacker_reputation");
+    if (saved) {
+      this.reputation = parseInt(saved, 10);
+    }
+  }
+
+  saveReputation() {
+    localStorage.setItem("hacker_reputation", this.reputation.toString());
+  }
+
+  consumeRevive() {
+    if (this.perkManager.activeEffects.reviveCount > 0) {
+      this.perkManager.activeEffects.reviveCount--;
+      // UI 메시지 표시 등은 게임 엔진에서 처리하거나 여기서 터미널로 쏠 수 있음
+      return true;
+    }
+    return false;
   }
 
   async startIntro() {
@@ -30,6 +53,10 @@ export class GameManager {
     await new Promise((r) => setTimeout(r, 500));
     await this.terminal.typeText("Connecting to local proxy...", 20);
     await new Promise((r) => setTimeout(r, 500));
+
+    if (this.reputation > 0) {
+      await this.terminal.typeText(`REP LEVEL: ${this.reputation}`, 20);
+    }
 
     this.terminal.clear();
     await this.terminal.typeText("반갑다. 신입.", 50);
@@ -46,13 +73,20 @@ export class GameManager {
 
   startTutorial() {
     this.currentStage = 0;
+    this.currentMoney = 0;
+    this.perkManager.reset();
+
     this.terminal.printSystemMessage("Entering Simulation Mode...");
 
-    // 튜토리얼: 목표 3줄, 속도 1000ms (아주 느림)
+    // 튜토리얼: 목표 3줄, 속도 1000ms
     this.transitionToGame(3, 1000);
   }
 
-  async handleStageClear() {
+  async handleStageClear(linesCleared) {
+    // 획득한 데이터 계산 (기본 1줄당 100MB)
+    const earnedData = linesCleared * 100;
+    this.currentMoney += earnedData;
+
     // 게임 화면 페이드 아웃
     document.getElementById("game-container").style.opacity = 0;
     document.getElementById("game-ui").style.display = "none";
@@ -63,64 +97,64 @@ export class GameManager {
     if (this.currentStage === 0) {
       // 튜토리얼 클리어
       await this.terminal.typeText("ACCESS GRANTED.", 30);
+      await this.terminal.typeText(`Data Acquired: ${earnedData} MB`, 20);
       await new Promise((r) => setTimeout(r, 1000));
       await this.terminal.typeText("나쁘지 않군. 시뮬레이션 종료.", 40);
       await this.terminal.typeText(
         "이제 진짜다. 보안 시스템 메인프레임에 접속한다.",
         40
       );
-      await this.terminal.typeText("경고: 추적 프로그램이 가동될 것이다.", 30);
 
       await this.terminal.waitForEnter();
       this.currentStage = 1;
       this.startStage();
     } else {
-      // 일반 스테이지 클리어 -> 업그레이드 메뉴
+      // 일반 스테이지 클리어 -> 분기점 (상점 or 다음 스테이지)
       await this.terminal.typeText(`STAGE ${this.currentStage} COMPLETE.`, 30);
+      await this.terminal.typeText(`Data Acquired: ${earnedData} MB`, 20);
       await this.terminal.typeText(
-        "보안 레벨이 상승했다. 시스템을 업그레이드하라.",
-        30
+        `Total Available: ${this.currentMoney} MB`,
+        20
       );
-      await this.showUpgradeMenu();
+      await this.terminal.typeText("다음 경로를 선택하라.", 30);
+
+      const choice = await this.terminal.showChoices([
+        { text: "/inject_sequence (Next Stage)", value: "next" },
+        { text: "/access_darknet (Open Shop)", value: "shop" },
+      ]);
+
+      if (choice === "shop") {
+        await this.enterShop();
+      } else {
+        this.currentStage++;
+        this.startStage();
+      }
     }
   }
 
-  async showUpgradeMenu() {
-    const upgrades = [
-      {
-        text: "Time Dilation [속도 -10%]",
-        value: "slow",
-        desc: "데이터 흐름을 늦춥니다.",
-      },
-      {
-        text: "Data Compression [점수 +20%]",
-        value: "score",
-        desc: "탈취 효율을 높입니다.",
-      },
-      {
-        text: "System Reboot [재정비]",
-        value: "heal",
-        desc: "다음 스테이지 난이도 완화",
-      },
-    ];
+  async enterShop() {
+    // 상점 이벤트 리스너 임시 등록 (구매 처리)
+    const buyHandler = (e) => {
+      const { perkId, cost } = e.detail;
+      if (this.currentMoney >= cost) {
+        this.currentMoney -= cost;
+        this.perkManager.unlock(perkId);
+        // UI 갱신을 위해 상점을 다시 그림 (간단한 방법)
+        // 실제로는 DOM 조작만 하는게 낫지만, 여기선 재호출
+        this.terminal.showShop(this.perkManager, this.currentMoney).then(() => {
+          this.currentStage++;
+          this.startStage();
+          document.removeEventListener("perk-buy", buyHandler);
+        });
+      }
+    };
+    document.addEventListener("perk-buy", buyHandler);
 
-    const choice = await this.terminal.showChoices(upgrades);
+    // 상점 UI 표시
+    await this.terminal.showShop(this.perkManager, this.currentMoney);
 
-    // 업그레이드 적용
-    if (choice === "slow") {
-      this.playerStats.speedModifier *= 0.9;
-      await this.terminal.typeText(">> Time Dilation activated.", 20);
-    } else if (choice === "score") {
-      this.playerStats.scoreMultiplier += 0.2;
-      await this.terminal.typeText(">> Compression algorithm loaded.", 20);
-    } else if (choice === "heal") {
-      // 힐링은 단순히 멘트만? 혹은 다음 스테이지 속도 리셋?
-      // 여기서는 단순히 기분 좋은 메시지로 처리하거나, 플레이어 스탯을 다르게 조정
-      await this.terminal.typeText(">> System cache cleared.", 20);
-    }
-
-    await new Promise((r) => setTimeout(r, 1000));
-
+    // 상점이 닫히면(Promise resolve) 다음 스테이지로
+    document.removeEventListener("perk-buy", buyHandler);
     this.currentStage++;
     this.startStage();
   }
@@ -131,14 +165,16 @@ export class GameManager {
       `Injecting Payload... Stage ${this.currentStage}`
     );
 
+    // 퍽 효과 적용
+    const effects = this.perkManager.getEffects();
+
     // 난이도 계산
-    // 기본 속도 800ms, 스테이지마다 50ms씩 빨라짐 (최소 100ms)
     let baseSpeed = Math.max(100, 800 - (this.currentStage - 1) * 60);
+    // 속도 퍽 적용 (speedModifier가 낮을수록 느려짐/좋음)
+    // PerkManager의 speedModifier는 기본 1.0, 감소시 -0.1 등.
+    let finalSpeed = baseSpeed * effects.speedModifier;
 
-    // 플레이어 업그레이드(속도 감속) 적용
-    let finalSpeed = baseSpeed * this.playerStats.speedModifier;
-
-    // 목표 라인: 스테이지 * 5 (5, 10, 15...)
+    // 목표 라인: 스테이지 * 5
     let targetLines = this.currentStage * 5;
 
     this.transitionToGame(targetLines, finalSpeed);
@@ -156,20 +192,33 @@ export class GameManager {
   }
 
   async handleGameOver(score) {
-    // 게임 오버 처리
     document.getElementById("game-ui").style.display = "none";
-
-    // 기존 게임 오버 화면 대신 터미널로 복귀하거나,
-    // 전용 게임 오버 터미널 연출
     this.terminal.setTransparentMode(false);
     this.terminal.show();
     this.terminal.clear();
 
-    document.getElementById("game-over-screen").classList.remove("hidden");
-    document.getElementById("final-score").innerText = Math.floor(
-      score * this.playerStats.scoreMultiplier
-    );
+    const effects = this.perkManager.getEffects();
+    const finalScore = Math.floor(score * effects.scoreMultiplier);
 
-    // 재시작 버튼 로직은 index.html의 onclick="location.reload()"가 담당
+    // 평판 획득 (점수 1000점당 1, 스테이지당 10)
+    const earnedRep = Math.floor(finalScore / 1000) + this.currentStage * 10;
+    this.reputation += earnedRep;
+    this.saveReputation();
+
+    document.getElementById("game-over-screen").classList.remove("hidden");
+    document.getElementById("final-score").innerText = finalScore;
+
+    // 게임 오버 화면에 평판 정보 표시
+    let repEl = document.getElementById("earned-rep");
+    if (!repEl) {
+      repEl = document.createElement("div");
+      repEl.id = "earned-rep";
+      repEl.style.color = "#33ff00";
+      repEl.style.marginTop = "10px";
+      const btn = document.querySelector("#game-over-screen button");
+      if (btn) btn.parentNode.insertBefore(repEl, btn);
+      else document.getElementById("game-over-screen").appendChild(repEl);
+    }
+    repEl.innerText = `REPUTATION GAINED: ${earnedRep} (TOTAL: ${this.reputation})`;
   }
 }
