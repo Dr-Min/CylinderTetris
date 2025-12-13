@@ -170,10 +170,12 @@ export class TerminalUI {
       // 게임 중에는 텍스트 그림자 더 강하게
       this.terminalLayer.style.textShadow =
         "0 0 3px #000, 0 0 5px var(--term-color)";
+      this.cursor.style.display = "none";
     } else {
       this.terminalLayer.style.background = "rgba(0, 0, 0, 0.8)"; // 약간의 투명도
       this.terminalLayer.style.pointerEvents = "auto";
       this.terminalLayer.style.textShadow = "0 0 5px var(--term-color)";
+      this.cursor.style.display = "inline-block";
     }
   }
 }

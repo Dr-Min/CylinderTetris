@@ -1,5 +1,5 @@
-// v20 - Retro UI Overhaul
-const CACHE_NAME = "hacker-tetris-v20";
+// v21 - UI Layout Fixes & Mobile Controls
+const CACHE_NAME = "hacker-tetris-v21";
 const ASSETS = [
   "./",
   "./index.html",

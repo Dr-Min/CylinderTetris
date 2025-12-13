@@ -202,7 +202,7 @@ body {
 
 .settings-area {
   position: absolute;
-  top: 80px;
+  top: 160px; /* NEXT 박스 아래로 이동 (80px -> 160px) */
   right: 20px;
   display: flex;
   flex-direction: column;
@@ -289,6 +289,11 @@ body {
   background: rgba(0, 20, 0, 0.5) !important;
   color: var(--term-color) !important;
   box-shadow: 0 0 10px var(--term-color) !important;
+
+  /* 터치 영역 확대 */
+  min-width: 60px;
+  min-height: 60px;
+  font-size: 24px;
 }
 
 .mobile-controls-left button:active,
