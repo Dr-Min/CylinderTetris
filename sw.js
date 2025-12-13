@@ -1,5 +1,5 @@
-// v21 - UI Layout Fixes & Mobile Controls
-const CACHE_NAME = "hacker-tetris-v21";
+// v22 - Roguelike Stages & Font Update Re-apply
+const CACHE_NAME = "hacker-tetris-v22";
 const ASSETS = [
   "./",
   "./index.html",

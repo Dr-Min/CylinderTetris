@@ -1,10 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
+@import url("https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css");
 
 :root {
   --term-color: #33ff00; /* P1 Phosphor Green */
   --term-error: #ff3333; /* Error Red */
   --term-bg: #000000;
-  --term-font: "VT323", monospace;
+  /* 한글은 갈무리, 영문은 VT323 혼용 혹은 갈무리 단일 사용 */
+  --term-font: "Galmuri11", "VT323", monospace;
 }
 
 body {
