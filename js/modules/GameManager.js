@@ -27,7 +27,12 @@ export class GameManager {
 
     const tutorialCompleted = localStorage.getItem("tutorial_completed");
     if (tutorialCompleted) {
-      this.currentMoney = 0; // 초기 자금 설정
+      // 영구 강화 적용 (초기 자금 보너스)
+      const startMoneyBonus = parseInt(
+        localStorage.getItem("perm_start_money") || "0"
+      );
+      this.currentMoney = 0 + startMoneyBonus;
+
       this.terminal.show();
       await this.terminal.typeText("System Reloaded.", 20);
       await this.terminal.typeText("Skipping initialization sequence...", 20);
@@ -69,6 +74,17 @@ export class GameManager {
 
     if (this.reputation > 0) {
       await this.terminal.typeText(`REP LEVEL: ${this.reputation}`, 20);
+
+      // 영구 강화 메뉴 진입 여부 확인
+      await this.terminal.typeText("Access System Upgrades?", 30);
+      const choice = await this.terminal.showChoices([
+        { text: "YES (Spend Reputation)", value: "yes" },
+        { text: "NO (Start Operation)", value: "no" },
+      ]);
+
+      if (choice === "yes") {
+        await this.enterPermanentShop();
+      }
     }
 
     this.terminal.clear();
@@ -82,6 +98,56 @@ export class GameManager {
 
     await this.terminal.waitForEnter();
     this.startTutorial();
+  }
+
+  async enterPermanentShop() {
+    // 영구 강화 상점 구현 (간단한 텍스트 메뉴)
+    while (true) {
+      this.terminal.clear();
+      await this.terminal.typeText("=== SYSTEM UPGRADE (PERMANENT) ===", 0);
+      await this.terminal.typeText(
+        `Available Reputation: ${this.reputation}`,
+        0
+      );
+      // 설명 추가
+      await this.terminal.typeText(
+        "[INFO] Earn Rep via High Scores (1k=1) & Clearing Stages (1=10).",
+        0
+      );
+
+      const choices = [
+        {
+          text: `Increase Starting Data (+100MB) [Cost: 10 REP]`,
+          value: "start_money",
+        },
+        { text: `Exit System Upgrades`, value: "exit" },
+      ];
+
+      const choice = await this.terminal.showChoices(choices);
+
+      if (choice === "start_money") {
+        if (this.reputation >= 10) {
+          this.reputation -= 10;
+          let currentStartBonus = parseInt(
+            localStorage.getItem("perm_start_money") || "0"
+          );
+          localStorage.setItem(
+            "perm_start_money",
+            (currentStartBonus + 100).toString()
+          );
+
+          await this.terminal.typeText("Upgrade Installed.", 20);
+          this.saveReputation();
+          await new Promise((r) => setTimeout(r, 1000));
+        } else {
+          await this.terminal.typeText("Insufficient Reputation.", 20);
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      } else {
+        break;
+      }
+    }
+    this.terminal.clear();
   }
 
   startTutorial() {

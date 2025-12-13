@@ -1,5 +1,5 @@
-// v25 - Fix NaN Data (Stage Clear)
-const CACHE_NAME = "hacker-tetris-v25";
+// v26 - Reputation Info Update
+const CACHE_NAME = "hacker-tetris-v26";
 const ASSETS = [
   "./",
   "./index.html",
