@@ -709,10 +709,11 @@ export class TetrisGame {
     // 영구 강화나 퍽으로 해금되지 않으면 0 (기본값 제거)
     const bombChance = effects.bombChance || 0.0;
     const goldChance = effects.goldChance || 0.0;
+    const miscChance = effects.miscChance || 0.0;
 
     // 특수 블록이 해금되었는지 확인 (확률이 0보다 커야 함)
     // 영구 강화나 퍽 획득 전에는 절대 나오지 않음
-    if (bombChance > 0 || goldChance > 0) {
+    if (bombChance > 0 || goldChance > 0 || miscChance > 0) {
       // 우선순위: 골드 -> 폭탄 -> 나머지 랜덤
       if (Math.random() < goldChance) {
         specialType = this.SPECIAL_TYPES.GOLD;
@@ -720,8 +721,8 @@ export class TetrisGame {
       } else if (Math.random() < bombChance) {
         specialType = this.SPECIAL_TYPES.BOMB;
         specialIndex = Math.floor(Math.random() * 4);
-      } else if (Math.random() < bombChance * 0.5) {
-        // 나머지 특수 블록도 bombChance에 비례해서 등장 (해금 시에만 등장)
+      } else if (Math.random() < miscChance) {
+        // 나머지 특수 블록도 miscChance에 따라 등장
         const keys = Object.keys(this.SPECIAL_TYPES).filter(
           (k) => k !== "NONE" && k !== "GOLD" && k !== "BOMB"
         );

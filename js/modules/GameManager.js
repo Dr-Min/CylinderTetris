@@ -102,6 +102,19 @@ export class GameManager {
       );
     };
 
+    // 2.5 Misc Chance (Freeze, Laser)
+    const miscInp = createInput(
+      "Misc Chance (0-1)",
+      "dbg-misc",
+      this.perkManager.activeEffects.miscChance
+    );
+    miscInp.onchange = (e) => {
+      this.perkManager.activeEffects.miscChance = parseFloat(e.target.value);
+      this.terminal.printSystemMessage(
+        `[DEBUG] Misc Chance set to ${e.target.value}`
+      );
+    };
+
     // 3. Current Money
     const moneyInp = createInput(
       "Data (Money)",
@@ -184,6 +197,7 @@ export class GameManager {
       // Instead, let's just max out stats
       this.perkManager.activeEffects.bombChance = 0.5;
       this.perkManager.activeEffects.goldChance = 0.5;
+      this.perkManager.activeEffects.miscChance = 0.5;
       this.perkManager.activeEffects.speedModifier = 0.5;
       this.terminal.printSystemMessage(
         "[DEBUG] GOD MODE ACTIVATED (High Stats)"
@@ -191,6 +205,7 @@ export class GameManager {
       // Update inputs
       bombInp.value = 0.5;
       goldInp.value = 0.5;
+      miscInp.value = 0.5;
     });
 
     document.body.appendChild(debugPanel);
@@ -205,6 +220,7 @@ export class GameManager {
         if (isHidden) {
           bombInp.value = this.perkManager.activeEffects.bombChance;
           goldInp.value = this.perkManager.activeEffects.goldChance;
+          miscInp.value = this.perkManager.activeEffects.miscChance;
           moneyInp.value = this.currentMoney;
           repInp.value = this.reputation;
           scoreInp.value = this.perkManager.activeEffects.scoreMultiplier;
@@ -270,6 +286,7 @@ export class GameManager {
     const luck = parseFloat(localStorage.getItem("perm_luck") || "0.0");
     this.perkManager.activeEffects.bombChance += luck;
     this.perkManager.activeEffects.goldChance += luck;
+    this.perkManager.activeEffects.miscChance += luck * 0.5; // 행운의 절반만큼 기타 블록 확률 증가
   }
 
   loadReputation() {

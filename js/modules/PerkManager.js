@@ -8,6 +8,7 @@ export class PerkManager {
       speedModifier: 1.0,
       bombChance: 0.0, // 기본 0으로 변경 (해금 필요)
       goldChance: 0.0,
+      miscChance: 0.0, // 기타 특수 블록(Freeze, Laser) 확률
       startLinesCleared: 0,
       reviveCount: 0,
       shopDiscount: 0.0,
@@ -112,6 +113,7 @@ export class PerkManager {
       speedModifier: 1.0,
       bombChance: 0.0,
       goldChance: 0.0,
+      miscChance: 0.0,
       startLinesCleared: 0,
       reviveCount: 0,
       shopDiscount: 0.0,
@@ -154,7 +156,11 @@ export class PerkManager {
       this.activeEffects.scoreMultiplier += effect.scoreMultiplier;
     if (effect.speedModifier)
       this.activeEffects.speedModifier += effect.speedModifier;
-    if (effect.bombChance) this.activeEffects.bombChance += effect.bombChance;
+    if (effect.bombChance) {
+      this.activeEffects.bombChance += effect.bombChance;
+      // 기존 밸런스 유지: 폭탄 확률의 50%만큼 기타 특수 블록 확률 증가
+      this.activeEffects.miscChance += effect.bombChance * 0.5;
+    }
     if (effect.goldChance) this.activeEffects.goldChance += effect.goldChance;
     if (effect.startLinesCleared)
       this.activeEffects.startLinesCleared += effect.startLinesCleared;
