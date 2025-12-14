@@ -1254,9 +1254,9 @@ export class TetrisGame {
   }
 
   update(deltaTime) {
-    // 매트릭스 이펙트 애니메이션 (게임 로직 정지 여부와 상관없이 계속 돔)
-    if (this.matrixTexture) {
-      this.matrixTexture.offset.y += deltaTime * 0.0003; // 흘러내리는 효과
+    // 매트릭스 이펙트 업데이트 (게임 로직 정지 여부와 상관없이 계속 돔)
+    if (this.matrixMesh && this.matrixMesh.visible) {
+      this.updateMatrixEffect(deltaTime);
     }
 
     if (!this.state.isLogicActive) return; // 로직 정지 시 하단 코드 실행 안함
@@ -1313,109 +1313,122 @@ export class TetrisGame {
     this.updateCamera();
   }
 
-  // 게임 클리어 연출 (아스키 매트릭스)
+  // 게임 클리어 연출 (아스키 매트릭스 - 그리드 기반 Fill Up)
   playClearEffect() {
     console.log("Playing Clear Effect...");
 
-    // 1. 기존 요소 숨기기
+    // 1. 기존 블록 숨기기
     this.piecesGroup.visible = false;
     this.ghostGroup.visible = false;
 
-    // 오클루더도 숨겨야 뒤쪽 매트릭스도 보임 (투명 연출 극대화)
-    if (this.occluderCylinder) {
-      this.occluderCylinder.visible = false;
-    }
+    // 2. 오클루더(기둥 가림막) 유지 (사용자 요청: 투명해질 필요 없음)
+    // if (this.occluderCylinder) this.occluderCylinder.visible = false;
 
-    // 2. 매트릭스 실린더 생성 (없는 경우)
+    // 3. 매트릭스 실린더 생성
     if (!this.matrixMesh) {
-      const height =
-        ((this.CONFIG.GRID_HEIGHT * (2 * Math.PI * this.CONFIG.RADIUS)) /
-          this.CONFIG.GRID_WIDTH) *
-        1.5; // 높이를 좀 더 키움
-      const radius = this.CONFIG.RADIUS * 1.1; // 반경도 약간 더 키움
+      const CELL_HEIGHT =
+        (2 * Math.PI * this.CONFIG.RADIUS) / this.CONFIG.GRID_WIDTH;
+      const TOTAL_HEIGHT = this.CONFIG.GRID_HEIGHT * CELL_HEIGHT;
+      const radius = this.CONFIG.RADIUS * 1.05; // 블록보다 약간 앞
 
       const geometry = new THREE.CylinderGeometry(
         radius,
         radius,
-        height,
+        TOTAL_HEIGHT,
         32,
         1,
-        true
+        true // openEnded
       );
 
-      // 텍스처 생성
-      this.matrixTexture = this.createMatrixTexture();
-      this.matrixTexture.wrapS = THREE.RepeatWrapping;
-      this.matrixTexture.wrapT = THREE.RepeatWrapping;
-      this.matrixTexture.repeat.set(2, 1); // 반복 횟수 조정
+      // 캔버스 생성 (그리드 비율에 맞춤: 12 x 20 -> 600 x 1000)
+      this.matrixCanvas = document.createElement("canvas");
+      this.matrixCanvas.width = 600;
+      this.matrixCanvas.height = 1000;
+      this.matrixCtx = this.matrixCanvas.getContext("2d");
+
+      this.matrixTexture = new THREE.CanvasTexture(this.matrixCanvas);
+      this.matrixTexture.minFilter = THREE.LinearFilter;
+      this.matrixTexture.magFilter = THREE.LinearFilter;
+      // 텍스처 반복 설정 불필요 (1:1 매핑)
 
       const material = new THREE.MeshBasicMaterial({
         map: this.matrixTexture,
         transparent: true,
-        opacity: 1.0, // 불투명도 최대
+        opacity: 1.0,
         side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        depthTest: false, // 항상 맨 위에 그려지도록 (오버레이 효과)
+        depthWrite: false, // 겹침 허용
+        depthTest: true, // 오클루더에 의해 가려짐 (기둥 뒤로 안 보이게)
       });
 
       this.matrixMesh = new THREE.Mesh(geometry, material);
-      // TOTAL_HEIGHT는 (GRID_HEIGHT * CELL_HEIGHT)
-      // height는 1.5배임. 중심을 맞추려면?
-      // CylinderGeometry의 중심은 0,0,0. 높이는 height. y범위는 -h/2 ~ h/2.
-      // 월드 좌표계에서 기둥은 0 ~ TOTAL_HEIGHT. 중심은 TOTAL_HEIGHT/2.
-      // 따라서 mesh.position.y = TOTAL_HEIGHT / 2.
-      const CELL_HEIGHT =
-        (2 * Math.PI * this.CONFIG.RADIUS) / this.CONFIG.GRID_WIDTH;
-      const TOTAL_HEIGHT = this.CONFIG.GRID_HEIGHT * CELL_HEIGHT;
-
       this.matrixMesh.position.y = TOTAL_HEIGHT / 2;
       this.scene.add(this.matrixMesh);
     }
 
     this.matrixMesh.visible = true;
-
-    // 이펙트 시작 시 카메라 줌 아웃 연출 (약간 뒤로)
-    const originalZ = this.camera.position.z;
-    // this.camera.position.z += 20; // 너무 멀어지면 안보일 수 있으니 생략하거나 부드럽게
+    this.matrixEffectTime = 0; // 타이머 리셋
   }
 
-  createMatrixTexture() {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512; // 해상도 타협 (1024 -> 512) 성능 최적화
-    canvas.height = 1024;
-    const ctx = canvas.getContext("2d");
+  updateMatrixEffect(deltaTime) {
+    if (!this.matrixCtx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    this.matrixEffectTime += deltaTime;
+    const ctx = this.matrixCtx;
+    const w = this.matrixCanvas.width;
+    const h = this.matrixCanvas.height;
 
-    ctx.font = "bold 30px 'Courier New', monospace"; // 폰트 더 키움
+    // 화면 지우기
+    ctx.clearRect(0, 0, w, h);
+
+    const cols = 12; // GRID_WIDTH
+    const rows = 20; // GRID_HEIGHT
+    const cellW = w / cols;
+    const cellH = h / rows;
+
+    // 폰트 설정
+    ctx.font = "bold 40px 'Courier New', monospace";
     ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
 
-    const columns = 20; // 컬럼 수 감소 (40 -> 20)
-    const colWidth = canvas.width / columns;
+    // 애니메이션: 아래에서 위로 차오름 (2초 동안 20칸)
+    // speed = 10칸/초 = 0.01칸/ms
+    const speed = 0.01;
+    const progress = this.matrixEffectTime * speed;
+    const visibleRows = Math.floor(progress); // 정수 단위로 끊어서 "한칸한칸" 느낌
 
-    for (let i = 0; i < columns; i++) {
-      const x = i * colWidth;
-      const drops = Math.floor(Math.random() * 15) + 10; // 드롭 수 감소 (30~50 -> 10~25)
+    for (let r = 0; r < rows; r++) {
+      // r=0이 바닥, r=19가 꼭대기.
+      // 현재 차오른 높이(visibleRows)보다 높은 곳은 그리지 않음
+      if (r > visibleRows) continue;
 
-      for (let j = 0; j < drops; j++) {
-        const y = Math.random() * canvas.height;
+      for (let c = 0; c < cols; c++) {
+        // 각 칸마다 랜덤 아스키 그리기
         const char = String.fromCharCode(0x30a0 + Math.random() * 96);
 
-        const isWhite = Math.random() < 0.1;
-        const alpha = 0.6 + Math.random() * 0.4; // 더 진하게
+        // 맨 윗줄(방금 켜진 줄)은 흰색 강조, 그 아래는 초록색
+        const isHead = r === visibleRows;
+        const alpha = 0.5 + Math.random() * 0.5;
 
-        ctx.fillStyle = isWhite
-          ? `rgba(255, 255, 255, ${alpha})`
-          : `rgba(0, 255, 50, ${alpha})`;
+        if (isHead) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = "white";
+        } else {
+          ctx.fillStyle = `rgba(0, 255, 50, ${alpha})`;
+          ctx.shadowBlur = 0;
+        }
 
-        ctx.fillText(char, x, y);
+        // 좌표 변환: 캔버스 y는 위에서 아래로 증가, 게임 r은 아래에서 위로 증가
+        // r=0 -> y = h - cellH/2
+        const cx = c * cellW + cellW / 2;
+        const cy = h - (r * cellH + cellH / 2);
+
+        ctx.fillText(char, cx, cy);
       }
     }
 
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.needsUpdate = true;
-    return tex;
+    this.matrixTexture.needsUpdate = true;
   }
 
   resetScene() {
