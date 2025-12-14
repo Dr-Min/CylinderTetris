@@ -1,84 +1,85 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>HACKER_TETRIS_PROTOCOL_V1</title>
     <!-- 게임 UI 스타일 -->
-    <link rel="stylesheet" href="css/style.css">
-    <!-- 터미널 스타일 (우선순위를 위해 뒤에 배치) -->
-    <link rel="stylesheet" href="css/terminal.css">
+    <link rel="stylesheet" href="css/style.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <!-- CRT 효과 오버레이 (전체 적용) -->
     <div class="crt-overlay"></div>
     <div class="scanline"></div>
 
     <!-- 터미널 레이어 (인트로 및 스토리 진행) -->
     <div id="terminal-layer">
-        <div id="terminal-content"></div>
-        <div class="input-line hidden">
-            <span class="prompt">root@hack_sys:~#</span>
-            <span id="user-input"></span><span class="cursor"></span>
-        </div>
-        
-        <div id="choice-area" class="choice-container hidden">
-            <!-- 선택지 버튼들이 여기 생성됨 -->
-        </div>
+      <div id="terminal-content"></div>
+      <div class="input-line hidden">
+        <span class="prompt">root@hack_sys:~#</span>
+        <span id="user-input"></span><span class="cursor"></span>
+      </div>
+
+      <div id="choice-area" class="choice-container hidden">
+        <!-- 선택지 버튼들이 여기 생성됨 -->
+      </div>
     </div>
 
     <!-- 3D 게임 컨테이너 -->
-    <div id="game-container" style="opacity: 0;"></div>
+    <div id="game-container" style="opacity: 0"></div>
 
     <!-- 게임 UI 레이어 (게임 시작 후 표시) -->
-    <div id="game-ui" style="display: none;">
-        <!-- 상단 정보 바 -->
-        <div class="top-bar">
-            <div class="level-box">
-                <div>LEVEL</div>
-                <div id="level-display">1</div>
-            </div>
-            
-            <div class="score-board">
-                <div style="font-size: 14px; color: #aaa;">DATA MINED</div>
-                <div id="score-display">0</div>
-            </div>
-
-            <div class="next-box">
-                <div class="label">NEXT</div>
-                <canvas id="next-canvas" width="60" height="60"></canvas>
-            </div>
+    <div id="game-ui" style="display: none">
+      <!-- 상단 정보 바 -->
+      <div class="top-bar">
+        <div class="level-box">
+          <div>LEVEL</div>
+          <div id="level-display">1</div>
         </div>
 
-        <!-- 우측 상단 설정 버튼 -->
-        <div class="settings-area">
-            <button id="bgm-btn">BGM<br>ON</button>
-            <button id="toggle-btn">VIEW<br>OFF</button>
+        <div class="score-board">
+          <div style="font-size: 14px; color: #aaa">DATA MINED</div>
+          <div id="score-display">0</div>
         </div>
 
-        <!-- 모바일 컨트롤 (좌측 이동) -->
-        <div class="mobile-controls-left">
-            <button id="left-btn">◀</button>
-            <button id="right-btn">▶</button>
+        <div class="next-box">
+          <div class="label">NEXT</div>
+          <canvas id="next-canvas" width="60" height="60"></canvas>
         </div>
+      </div>
 
-        <!-- 모바일 컨트롤 (우측 드롭) -->
-        <button id="drop-btn">DROP</button>
-        
-        <div class="version-info" id="app-version">PROTOCOL V1.0</div>
+      <!-- 우측 상단 설정 버튼 -->
+      <div class="settings-area">
+        <button id="bgm-btn">BGM<br />ON</button>
+        <button id="toggle-btn">VIEW<br />OFF</button>
+      </div>
+
+      <!-- 모바일 컨트롤 (좌측 이동) -->
+      <div class="mobile-controls-left">
+        <button id="left-btn">◀</button>
+        <button id="right-btn">▶</button>
+      </div>
+
+      <!-- 모바일 컨트롤 (우측 드롭) -->
+      <button id="drop-btn">DROP</button>
+
+      <div class="version-info" id="app-version">PROTOCOL V1.0</div>
     </div>
 
     <!-- 게임 오버 스크린 -->
     <div id="game-over-screen" class="hidden">
-        <h1>CONNECTION<br>LOST</h1>
-        <div style="color: #00ff00; margin-bottom: 20px;">
-            FINAL DATA: <span id="final-score">0</span>
-        </div>
-        <button id="restart-btn" onclick="location.reload()">RECONNECT</button>
+      <h1>CONNECTION<br />LOST</h1>
+      <div style="color: #00ff00; margin-bottom: 20px">
+        FINAL DATA: <span id="final-score">0</span>
+      </div>
+      <button id="restart-btn" onclick="location.reload()">RECONNECT</button>
     </div>
 
     <!-- 진입점 -->
     <script type="module" src="js/main.js"></script>
-</body>
+  </body>
 </html>
