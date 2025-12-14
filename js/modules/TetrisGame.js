@@ -292,6 +292,63 @@ export class TetrisGame {
       dropBtn.addEventListener("touchstart", stopEvent, { passive: false });
       dropBtn.addEventListener("touchend", stopEvent, { passive: false });
     }
+
+    // BGM 버튼
+    const bgmBtn = document.getElementById("bgm-btn");
+    if (bgmBtn) {
+      bgmBtn.addEventListener("pointerdown", (e) => {
+        stopEvent(e);
+        this.toggleBGM(bgmBtn);
+      });
+      bgmBtn.addEventListener("touchstart", stopEvent, { passive: false });
+      bgmBtn.addEventListener("touchend", stopEvent, { passive: false });
+    }
+
+    // View 버튼
+    const viewBtn = document.getElementById("toggle-btn");
+    if (viewBtn) {
+      viewBtn.addEventListener("pointerdown", (e) => {
+        stopEvent(e);
+        this.toggleViewMode(viewBtn);
+      });
+      viewBtn.addEventListener("touchstart", stopEvent, { passive: false });
+      viewBtn.addEventListener("touchend", stopEvent, { passive: false });
+    }
+  }
+
+  toggleBGM(btn) {
+    const isOn = this.SoundManager.toggleBGM();
+    if (btn) {
+      btn.innerHTML = `BGM<br>${isOn ? "ON" : "OFF"}`;
+      btn.style.color = isOn ? "var(--term-color)" : "#555";
+    }
+  }
+
+  toggleViewMode(btn) {
+    this.CONFIG.TRANSPARENT_MODE = !this.CONFIG.TRANSPARENT_MODE;
+    const isOn = this.CONFIG.TRANSPARENT_MODE;
+
+    // 1. 오클루더 토글 (뒷면 가림막 제거)
+    if (this.occluderCylinder) {
+      this.occluderCylinder.visible = !isOn;
+    }
+
+    // 2. 블록 투명도 조정 (선택적)
+    // 앞면 블록이 너무 불투명하면 뒷면이 안보이므로, 모드 켜지면 약간 투명하게
+    Object.values(this.sharedMaterials).forEach((mat) => {
+      if (mat.opacity !== undefined && mat !== this.sharedMaterials.ghost) {
+        // 고스트 제외
+        mat.opacity = isOn ? 0.6 : 1.0;
+      }
+    });
+
+    // 3. 버튼 UI 업데이트
+    if (btn) {
+      btn.innerHTML = `VIEW<br>${isOn ? "ON" : "OFF"}`;
+      btn.style.color = isOn ? "var(--term-color)" : "#555";
+      // 켜졌을 때 버튼 자체도 시각적 피드백
+      btn.style.boxShadow = isOn ? "0 0 10px var(--term-color)" : "none";
+    }
   }
 
   initTouchControls() {
@@ -659,6 +716,8 @@ export class TetrisGame {
   }
 
   startGame(targetLines = Infinity, initialSpeed = 800) {
+    this.resetScene(); // 씬 초기화 (이펙트 제거, 블록 표시)
+
     this.state.grid = Array(this.CONFIG.GRID_HEIGHT)
       .fill()
       .map(() => Array(this.CONFIG.GRID_WIDTH).fill(null));
@@ -981,7 +1040,10 @@ export class TetrisGame {
   stageClear() {
     this.state.isPlaying = false;
     this.SoundManager.stopBGM();
-    this.SoundManager.playTone({ start: 400, end: 800 }, "sine", 0.5, 0.3); // 승리 효과음
+    this.SoundManager.playTone({ start: 400, end: 800 }, "sine", 0.5, 0.3);
+
+    this.playClearEffect(); // 클리어 연출 시작
+
     if (this.onStageClear) this.onStageClear(this.state.linesClearedStage);
   }
 
@@ -1235,6 +1297,111 @@ export class TetrisGame {
     }
 
     this.updateCamera();
+
+    // 매트릭스 이펙트 애니메이션
+    if (this.matrixTexture) {
+      this.matrixTexture.offset.y += deltaTime * 0.0003; // 흘러내리는 효과
+    }
+  }
+
+  // 게임 클리어 연출 (아스키 매트릭스)
+  playClearEffect() {
+    console.log("Playing Clear Effect...");
+
+    // 1. 기존 요소 숨기기
+    this.piecesGroup.visible = false;
+    this.ghostGroup.visible = false;
+
+    // 2. 매트릭스 실린더 생성 (없는 경우)
+    if (!this.matrixMesh) {
+      const height =
+        ((this.CONFIG.GRID_HEIGHT * (2 * Math.PI * this.CONFIG.RADIUS)) /
+          this.CONFIG.GRID_WIDTH) *
+        1.2;
+      const radius = this.CONFIG.RADIUS * 1.05; // 블록보다 약간 바깥
+
+      const geometry = new THREE.CylinderGeometry(
+        radius,
+        radius,
+        height,
+        32,
+        1,
+        true
+      );
+
+      // 텍스처 생성
+      this.matrixTexture = this.createMatrixTexture();
+      this.matrixTexture.wrapS = THREE.RepeatWrapping;
+      this.matrixTexture.wrapT = THREE.RepeatWrapping;
+      this.matrixTexture.repeat.set(4, 1); // 가로로 4번 반복
+
+      const material = new THREE.MeshBasicMaterial({
+        map: this.matrixTexture,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+
+      this.matrixMesh = new THREE.Mesh(geometry, material);
+      this.matrixMesh.position.y = height / 2.2;
+      this.scene.add(this.matrixMesh);
+    }
+
+    this.matrixMesh.visible = true;
+
+    // 3. 카메라 연출 (약간 줌아웃 및 회전)
+    // updateCamera가 계속 돌고 있으므로 targetAngle을 계속 변경해주거나 해야 함.
+    // 여기서는 간단히 자동 회전 모드로 전환한다고 가정 (GameManager가 제어하지 않는다면)
+    // 일단 시각적 이펙트에 집중.
+  }
+
+  createMatrixTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 1024;
+    const ctx = canvas.getContext("2d");
+
+    // 배경 투명
+    ctx.fillStyle = "rgba(0,0,0,0)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = "20px monospace";
+    ctx.textAlign = "center";
+
+    const columns = 30;
+    const colWidth = canvas.width / columns;
+
+    for (let i = 0; i < columns; i++) {
+      const x = i * colWidth;
+      const drops = Math.floor(Math.random() * 20) + 10; // 줄마다 글자 수
+      const speed = Math.random() * 0.5 + 0.5;
+
+      for (let j = 0; j < drops; j++) {
+        const y = Math.random() * canvas.height;
+        const char = String.fromCharCode(0x30a0 + Math.random() * 96); // 가타카나 or 랜덤
+        // const char = Math.random() > 0.5 ? "1" : "0"; // 0/1 바이너리
+
+        // 아래로 갈수록 투명하게 (그라데이션)
+        const alpha = Math.random();
+        ctx.fillStyle = `rgba(0, 255, 50, ${alpha})`;
+        if (Math.random() < 0.1) ctx.fillStyle = "#fff"; // 가끔 흰색 (반짝임)
+
+        ctx.fillText(char, x, y);
+      }
+    }
+
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  resetScene() {
+    // 게임 재시작 시 호출 필요
+    if (this.matrixMesh) {
+      this.matrixMesh.visible = false;
+    }
+    this.piecesGroup.visible = true;
+    this.ghostGroup.visible = true;
   }
 
   updateCamera() {

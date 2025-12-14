@@ -489,25 +489,34 @@ body {
   position: fixed;
   bottom: 30px;
   right: 20px;
-  width: 60px;
-  height: 60px;
-  z-index: 9999; /* 최상단 보장 */
+  width: 70px;
+  height: 70px;
+  z-index: 9999;
   pointer-events: auto;
 
-  /* 기존 스타일 유지 */
-  background: rgba(255, 7, 58, 0.15);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 7, 58, 0.5);
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
+  /* 해커 컨셉 스타일 변경 */
+  background: rgba(0, 20, 0, 0.8);
+  border: 2px solid var(--term-color);
+  border-radius: 5px; /* 원형 -> 사각형 */
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: 16px;
   font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   touch-action: manipulation;
-  box-shadow: 0 0 10px rgba(255, 7, 58, 0.2);
+  box-shadow: 0 0 15px var(--term-color);
+  text-shadow: 0 0 5px var(--term-color);
+  transition: all 0.1s;
+}
+
+#drop-btn:active {
+  background: var(--term-color);
+  color: #000;
+  box-shadow: 0 0 25px var(--term-color);
+  transform: scale(0.95);
 }
 
 .mobile-controls-left button {

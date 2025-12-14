@@ -56,7 +56,7 @@ export class TerminalUI {
       overlay.style.left = "0";
       overlay.style.width = "100%";
       overlay.style.height = "100%";
-      overlay.style.background = "rgba(0, 0, 0, 0.8)";
+      overlay.style.background = "rgba(0, 0, 0, 0.5)";
       overlay.style.display = "flex";
       overlay.style.flexDirection = "column";
       overlay.style.justifyContent = "center";
@@ -109,7 +109,252 @@ export class TerminalUI {
     });
   }
 
-  // 아스키 트리 렌더링
+  // 영구 상점 UI (노드 맵 스타일) 표시
+  showPermanentShop(permTree, acquiredMap, reputation) {
+    return new Promise((resolve) => {
+      this.contentDiv.innerHTML = "";
+
+      const shopContainer = document.createElement("div");
+      shopContainer.className = "shop-container";
+
+      // 상단 정보
+      const header = document.createElement("div");
+      header.className = "shop-header";
+      header.innerHTML = `
+        <div class="shop-title">SYSTEM_KERNEL_ACCESS</div>
+        <div class="shop-money">REP LEVEL: <span id="shop-money-val">${reputation}</span></div>
+      `;
+      shopContainer.appendChild(header);
+
+      // 노드 맵 컨테이너
+      const mapContainer = document.createElement("div");
+      mapContainer.className = "node-map";
+      // 트리 구조 데이터가 플랫 배열로 오므로, 렌더링 로직에서 분류해야 함
+      shopContainer.appendChild(mapContainer);
+
+      // 나가기 버튼
+      const exitBtn = document.createElement("button");
+      exitBtn.className = "choice-btn shop-exit";
+      exitBtn.textContent = "> DISCONNECT (SAVE & EXIT)";
+      exitBtn.onclick = () => {
+        shopContainer.remove();
+        resolve();
+      };
+      shopContainer.appendChild(exitBtn);
+
+      this.contentDiv.appendChild(shopContainer);
+      this.renderPermanentNodeMap(
+        mapContainer,
+        permTree,
+        acquiredMap,
+        reputation
+      );
+    });
+  }
+
+  // 영구 퍽 노드 맵 렌더링
+  renderPermanentNodeMap(container, permTree, acquiredMap, reputation) {
+    const isMobile = window.innerWidth <= 768;
+
+    // 데이터 분류 (id prefix 기반: res, eff, luck)
+    // 트리 구조 시각화를 위해 그룹핑
+    const columns = {
+      res: { title: "RESOURCE", nodes: [] },
+      eff: { title: "EFFICIENCY", nodes: [] },
+      luck: { title: "LUCK", nodes: [] },
+    };
+
+    // 루트는 별도 처리하거나 첫 번째 컬럼에 포함? -> 루트는 공통이므로 상단 중앙에 배치하는게 좋지만
+    // 여기서는 간단하게 각 컬럼의 부모로 간주하거나, 별도 섹션으로 뺌.
+    // 하지만 현재 데이터 구조상 root가 부모임.
+    // 시각적으로 Root를 맨 위에 두고 3갈래로 뻗는게 멋짐.
+
+    // root 찾기
+    const rootNode = permTree.find((n) => n.id === "root");
+
+    // 나머지 분류
+    permTree.forEach((node) => {
+      if (node.id === "root") return;
+      if (node.id.startsWith("res")) columns.res.nodes.push(node);
+      else if (node.id.startsWith("eff")) columns.eff.nodes.push(node);
+      else if (node.id.startsWith("luck")) columns.luck.nodes.push(node);
+    });
+
+    // 1. Root 노드 렌더링
+    if (rootNode) {
+      const rootContainer = document.createElement("div");
+      rootContainer.style.display = "flex";
+      rootContainer.style.justifyContent = "center";
+      rootContainer.style.marginBottom = "40px";
+      rootContainer.style.width = "100%";
+
+      const rootEl = this.createPermNodeEl(
+        rootNode,
+        acquiredMap,
+        reputation,
+        isMobile
+      );
+      rootContainer.appendChild(rootEl);
+      container.appendChild(rootContainer);
+    }
+
+    // 2. 3개 컬럼 컨테이너 (Flex)
+    const columnsContainer = document.createElement("div");
+    columnsContainer.style.display = "flex";
+    columnsContainer.style.justifyContent = isMobile
+      ? "flex-start"
+      : "space-around";
+    columnsContainer.style.width = "100%";
+    columnsContainer.style.gap = "20px";
+
+    if (isMobile) {
+      columnsContainer.style.overflowX = "auto";
+      columnsContainer.style.paddingBottom = "20px";
+      columnsContainer.style.scrollSnapType = "x mandatory";
+    }
+
+    // 3. 각 컬럼 렌더링
+    Object.values(columns).forEach((col) => {
+      const colEl = document.createElement("div");
+      colEl.className = "tree-column"; // 기존 CSS 활용
+      colEl.innerHTML = `<div class="column-title">${col.title}</div>`;
+      colEl.style.display = "flex";
+      colEl.style.flexDirection = "column";
+      colEl.style.alignItems = "center";
+      colEl.style.gap = "30px";
+      colEl.style.minWidth = isMobile ? "80vw" : "30%";
+
+      if (isMobile) {
+        colEl.style.scrollSnapAlign = "center";
+        colEl.style.flexShrink = "0";
+      }
+
+      col.nodes.forEach((node, index) => {
+        const nodeEl = this.createPermNodeEl(
+          node,
+          acquiredMap,
+          reputation,
+          isMobile
+        );
+
+        // 연결선 (자식 -> 부모) 시각화는 복잡하므로 간단히 아래 화살표만
+        if (index < col.nodes.length - 1) {
+          const arrow = document.createElement("div");
+          arrow.className = "connector-arrow";
+          arrow.innerText = "▼";
+          colEl.appendChild(nodeEl);
+          colEl.appendChild(arrow);
+        } else {
+          colEl.appendChild(nodeEl);
+        }
+      });
+
+      columnsContainer.appendChild(colEl);
+    });
+
+    container.appendChild(columnsContainer);
+  }
+
+  createPermNodeEl(node, acquiredMap, reputation, isMobile) {
+    const nodeEl = document.createElement("div");
+    const currentLevel = acquiredMap.get(node.id) || 0;
+    const maxLevel = node.maxLevel || 1;
+
+    const isAcquired = currentLevel > 0;
+    const isMaxed = currentLevel >= maxLevel;
+    // 부모 해금 여부
+    const parentAcquired = node.parentId
+      ? (acquiredMap.get(node.parentId) || 0) > 0
+      : true;
+    const isUnlockable = !isMaxed && parentAcquired;
+
+    // 스타일 클래스
+    let statusClass = "locked";
+    if (isMaxed) statusClass = "acquired"; // 마스터는 acquired 스타일 (초록)
+    else if (isAcquired) statusClass = "acquired"; // 진행 중도 초록
+    else if (isUnlockable) statusClass = "unlockable"; // 해금 가능 (점멸)
+
+    // 잠겨있으면 locked
+    if (!isUnlockable && !isAcquired) statusClass = "locked";
+
+    nodeEl.className = `perk-node ${statusClass}`;
+
+    // CSS 직접 주입 (node-map 그리드 무시)
+    nodeEl.style.position = "relative";
+    nodeEl.style.width = isMobile ? "90%" : "220px";
+    nodeEl.style.left = "auto";
+    nodeEl.style.top = "auto";
+    nodeEl.style.transform = "none";
+    nodeEl.style.marginBottom = "0";
+
+    // 내용 구성
+    nodeEl.innerHTML = `
+        <div class="perk-info">
+            <div class="perk-name">${
+              node.name
+            } <span style="font-size:0.8em; color:#fff;">(Lv.${currentLevel}/${maxLevel})</span></div>
+            <div class="perk-cost">${
+              isMaxed ? "MASTERED" : node.cost + " REP"
+            }</div>
+        </div>
+        <div class="perk-desc">${node.desc}</div>
+    `;
+
+    // 클릭 이벤트 (구매)
+    if (isUnlockable) {
+      nodeEl.onclick = () => {
+        // Confirm Box
+        const container =
+          document.querySelector(".shop-container") || this.contentDiv;
+        const confirmBox = document.createElement("div");
+        confirmBox.className = "confirm-box"; // 기존 스타일 활용
+
+        confirmBox.innerHTML = `
+              <div class="confirm-msg">Upgrade <span style="color:var(--term-color)">${node.name}</span>?</div>
+              <div class="confirm-desc" style="color:#aaa; margin:10px 0;">${node.desc}</div>
+              <div class="confirm-cost">COST: ${node.cost} REP</div>
+              <div class="confirm-btns">
+                <button id="confirm-yes">[ UPGRADE ]</button>
+                <button id="confirm-no">[ CANCEL ]</button>
+              </div>
+            `;
+
+        // 스타일 (JS로 강제 주입하여 위치 잡기)
+        confirmBox.style.position = "fixed";
+        confirmBox.style.top = "50%";
+        confirmBox.style.left = "50%";
+        confirmBox.style.transform = "translate(-50%, -50%)";
+        confirmBox.style.background = "rgba(0,10,0,0.95)";
+        confirmBox.style.border = "2px solid var(--term-color)";
+        confirmBox.style.padding = "20px";
+        confirmBox.style.zIndex = "300";
+        confirmBox.style.textAlign = "center";
+        confirmBox.style.width = isMobile ? "90%" : "400px";
+
+        container.appendChild(confirmBox);
+
+        confirmBox.querySelector("#confirm-yes").onclick = (e) => {
+          e.stopPropagation();
+          confirmBox.remove();
+
+          // 구매 이벤트 발송 (GameManager가 수신)
+          const event = new CustomEvent("perm-upgrade", {
+            detail: { nodeId: node.id, cost: node.cost },
+          });
+          document.dispatchEvent(event);
+        };
+
+        confirmBox.querySelector("#confirm-no").onclick = (e) => {
+          e.stopPropagation();
+          confirmBox.remove();
+        };
+      };
+    }
+
+    return nodeEl;
+  }
+
+  // 아스키 트리 렌더링 (삭제 예정이나 하위 호환 위해 남김)
   async showPermanentTree(treeData, acquiredSet, reputation) {
     // 트리 구조화
     const columns = {
