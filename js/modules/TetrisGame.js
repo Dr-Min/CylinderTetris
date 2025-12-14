@@ -1312,13 +1312,18 @@ export class TetrisGame {
     this.piecesGroup.visible = false;
     this.ghostGroup.visible = false;
 
+    // 오클루더도 숨겨야 뒤쪽 매트릭스도 보임 (투명 연출 극대화)
+    if (this.occluderCylinder) {
+      this.occluderCylinder.visible = false;
+    }
+
     // 2. 매트릭스 실린더 생성 (없는 경우)
     if (!this.matrixMesh) {
       const height =
         ((this.CONFIG.GRID_HEIGHT * (2 * Math.PI * this.CONFIG.RADIUS)) /
           this.CONFIG.GRID_WIDTH) *
-        1.2;
-      const radius = this.CONFIG.RADIUS * 1.05; // 블록보다 약간 바깥
+        1.5; // 높이를 좀 더 키움
+      const radius = this.CONFIG.RADIUS * 1.1; // 반경도 약간 더 키움
 
       const geometry = new THREE.CylinderGeometry(
         radius,
@@ -1333,66 +1338,71 @@ export class TetrisGame {
       this.matrixTexture = this.createMatrixTexture();
       this.matrixTexture.wrapS = THREE.RepeatWrapping;
       this.matrixTexture.wrapT = THREE.RepeatWrapping;
-      this.matrixTexture.repeat.set(4, 1); // 가로로 4번 반복
+      this.matrixTexture.repeat.set(2, 1); // 반복 횟수 조정
 
       const material = new THREE.MeshBasicMaterial({
         map: this.matrixTexture,
         transparent: true,
-        opacity: 0.9,
+        opacity: 1.0, // 불투명도 최대
         side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
+        depthTest: false, // 항상 맨 위에 그려지도록 (오버레이 효과)
       });
 
       this.matrixMesh = new THREE.Mesh(geometry, material);
-      this.matrixMesh.position.y = height / 2.2;
+      this.matrixMesh.position.y = height / 2.0; // 위치 중앙 정렬
       this.scene.add(this.matrixMesh);
     }
 
     this.matrixMesh.visible = true;
 
-    // 3. 카메라 연출 (약간 줌아웃 및 회전)
-    // updateCamera가 계속 돌고 있으므로 targetAngle을 계속 변경해주거나 해야 함.
-    // 여기서는 간단히 자동 회전 모드로 전환한다고 가정 (GameManager가 제어하지 않는다면)
-    // 일단 시각적 이펙트에 집중.
+    // 이펙트 시작 시 카메라 줌 아웃 연출 (약간 뒤로)
+    const originalZ = this.camera.position.z;
+    // this.camera.position.z += 20; // 너무 멀어지면 안보일 수 있으니 생략하거나 부드럽게
   }
 
   createMatrixTexture() {
     const canvas = document.createElement("canvas");
-    canvas.width = 512;
+    canvas.width = 1024; // 해상도 증가
     canvas.height = 1024;
     const ctx = canvas.getContext("2d");
 
-    // 배경 투명
-    ctx.fillStyle = "rgba(0,0,0,0)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // 배경 완전 투명
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.font = "20px monospace";
+    // 폰트 설정 (크고 진하게)
+    ctx.font = "bold 24px 'Courier New', monospace";
     ctx.textAlign = "center";
 
-    const columns = 30;
+    const columns = 40;
     const colWidth = canvas.width / columns;
 
     for (let i = 0; i < columns; i++) {
       const x = i * colWidth;
-      const drops = Math.floor(Math.random() * 20) + 10; // 줄마다 글자 수
-      const speed = Math.random() * 0.5 + 0.5;
+      // 한 줄에 그릴 글자 수
+      const drops = Math.floor(Math.random() * 30) + 20;
 
       for (let j = 0; j < drops; j++) {
         const y = Math.random() * canvas.height;
-        const char = String.fromCharCode(0x30a0 + Math.random() * 96); // 가타카나 or 랜덤
-        // const char = Math.random() > 0.5 ? "1" : "0"; // 0/1 바이너리
+        // 랜덤 아스키/가타카나 문자
+        const char = String.fromCharCode(0x30a0 + Math.random() * 96);
 
-        // 아래로 갈수록 투명하게 (그라데이션)
-        const alpha = Math.random();
-        ctx.fillStyle = `rgba(0, 255, 50, ${alpha})`;
-        if (Math.random() < 0.1) ctx.fillStyle = "#fff"; // 가끔 흰색 (반짝임)
+        // 밝은 녹색 계열 + 가끔 흰색
+        const isWhite = Math.random() < 0.1;
+        const alpha = 0.5 + Math.random() * 0.5; // 최소 0.5 이상 불투명도
+
+        ctx.fillStyle = isWhite
+          ? `rgba(255, 255, 255, ${alpha})`
+          : `rgba(0, 255, 50, ${alpha})`;
 
         ctx.fillText(char, x, y);
       }
     }
 
-    return new THREE.CanvasTexture(canvas);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
   }
 
   resetScene() {
