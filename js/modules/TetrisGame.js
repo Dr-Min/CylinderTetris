@@ -559,11 +559,11 @@ export class TetrisGame {
     ctx.strokeRect(0, 0, 128, 128);
 
     // 이모지
-    ctx.font = "bold 90px Segoe UI Emoji, Arial"; // 크기 증가 및 굵게
+    ctx.font = "bold 80px Segoe UI Emoji, Arial"; // 90px -> 80px 약간 축소
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.8)"; // 그림자 추가로 가독성 확보
-    ctx.shadowBlur = 15;
+    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowBlur = 10;
     ctx.fillStyle = "white";
     ctx.fillText(emoji, 64, 68);
 

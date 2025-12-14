@@ -108,8 +108,17 @@ export class TerminalUI {
             // 커스텀 확인 창 생성
             const confirmBox = document.createElement("div");
             confirmBox.className = "confirm-box";
+            const boxWidth = isMobile ? "90%" : "auto";
+
             confirmBox.innerHTML = `
-              <div class="confirm-msg">Purchase <span style="color:var(--term-color)">${perk.name}</span>?</div>
+              <div class="confirm-msg">Purchase <span style="color:var(--term-color)">${
+                perk.name
+              }</span>?</div>
+              ${
+                isMobile
+                  ? `<div class="confirm-desc" style="font-size: 14px; color: #aaa; margin: 10px 0;">${perk.desc}</div>`
+                  : ""
+              }
               <div class="confirm-cost">COST: ${finalCost} MB</div>
               <div class="confirm-btns">
                 <button id="confirm-yes">[ YES ]</button>
@@ -117,12 +126,13 @@ export class TerminalUI {
               </div>
             `;
 
-            // 스타일 주입 (임시)
-            confirmBox.style.position = "absolute";
+            // 스타일 주입
+            confirmBox.style.position = "fixed"; // absolute -> fixed
             confirmBox.style.top = "50%";
             confirmBox.style.left = "50%";
             confirmBox.style.transform = "translate(-50%, -50%)";
-            confirmBox.style.background = "#000";
+            confirmBox.style.width = boxWidth;
+            confirmBox.style.background = "rgba(0, 10, 0, 0.95)";
             confirmBox.style.border = "2px solid var(--term-color)";
             confirmBox.style.padding = "20px";
             confirmBox.style.zIndex = "200";
@@ -136,10 +146,10 @@ export class TerminalUI {
               btn.style.border = "1px solid var(--term-color)";
               btn.style.color = "var(--term-color)";
               btn.style.margin = "10px";
-              btn.style.padding = "5px 15px";
+              btn.style.padding = isMobile ? "10px 20px" : "5px 15px";
               btn.style.cursor = "pointer";
               btn.style.fontFamily = "var(--term-font)";
-              btn.style.fontSize = "18px";
+              btn.style.fontSize = isMobile ? "16px" : "18px";
             });
 
             // 호버 효과 추가
