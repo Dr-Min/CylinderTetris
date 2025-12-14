@@ -267,7 +267,7 @@ body {
   color: rgba(51, 255, 0, 0.7);
   padding: 2px 0;
   font-family: var(--term-font);
-  font-size: 24px;
+  font-size: inherit; /* 부모 폰트 사이즈 상속 (PC 18px, Mobile 12px) */
   cursor: pointer;
   text-align: left;
   width: 100%;
