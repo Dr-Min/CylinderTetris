@@ -444,7 +444,12 @@ body {
 @media (max-width: 768px) {
   #terminal-layer {
     padding: 10px; /* 패딩 축소 */
-    font-size: 16px;
+    font-size: 12px; /* 폰트 사이즈 대폭 축소 (16px -> 12px) */
+  }
+
+  .terminal-line {
+    min-height: 16px; /* 줄 높이도 축소 */
+    line-height: 1.3;
   }
 
   /* 상점 UI 모바일 최적화 (강제 리스트 뷰) */
