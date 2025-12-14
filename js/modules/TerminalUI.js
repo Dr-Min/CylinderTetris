@@ -46,6 +46,69 @@ export class TerminalUI {
     });
   }
 
+  // 데이터 마이닝 완료 연출
+  async showMiningCompleteSequence() {
+    return new Promise((resolve) => {
+      // 1. 오버레이 생성
+      const overlay = document.createElement("div");
+      overlay.style.position = "absolute";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.width = "100%";
+      overlay.style.height = "100%";
+      overlay.style.background = "rgba(0, 0, 0, 0.8)";
+      overlay.style.display = "flex";
+      overlay.style.flexDirection = "column";
+      overlay.style.justifyContent = "center";
+      overlay.style.alignItems = "center";
+      overlay.style.zIndex = "2000";
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.5s";
+
+      const text = document.createElement("div");
+      text.innerText = "DATA MINING COMPLETE";
+      text.style.color = "var(--term-color)";
+      text.style.fontSize = "40px";
+      text.style.fontWeight = "bold";
+      text.style.textShadow = "0 0 20px var(--term-color)";
+      text.style.letterSpacing = "5px";
+      text.style.textAlign = "center";
+
+      const subText = document.createElement("div");
+      subText.innerText = "UPLOADING TO SERVER...";
+      subText.style.color = "#fff";
+      subText.style.fontSize = "16px";
+      subText.style.marginTop = "20px";
+      subText.className = "blinking";
+
+      overlay.appendChild(text);
+      overlay.appendChild(subText);
+
+      // 모바일 폰트 조정
+      if (window.innerWidth <= 768) {
+        text.style.fontSize = "24px";
+        subText.style.fontSize = "12px";
+      }
+
+      document.body.appendChild(overlay);
+
+      // 2. 페이드 인
+      requestAnimationFrame(() => {
+        overlay.style.opacity = "1";
+      });
+
+      // 3. 2초 대기 후 종료
+      setTimeout(() => {
+        overlay.style.transition = "opacity 0.5s";
+        overlay.style.opacity = "0";
+        setTimeout(() => {
+          overlay.remove();
+          resolve();
+        }, 500);
+      }, 2500);
+    });
+  }
+
   // 상점 UI (네트워크 맵) 표시
   showShop(perkManager, currentMoney) {
     return new Promise((resolve) => {

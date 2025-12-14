@@ -457,7 +457,14 @@ export class GameManager {
     const earnedData = (linesCleared || 0) * 100;
     this.currentMoney += earnedData;
 
-    // 게임 화면 페이드 아웃
+    // --- 클리어 연출 시작 ---
+    // 1. 게임 조작 차단 (일시정지 느낌)
+    // (TetrisGame에 pause 기능이 있다면 좋겠지만, 여기선 단순히 UI로 덮음)
+
+    // 2. "DATA MINING COMPLETE" 연출 출력
+    await this.terminal.showMiningCompleteSequence();
+
+    // 3. 게임 화면 페이드 아웃 및 터미널 복귀
     document.getElementById("game-container").style.opacity = 0;
     document.getElementById("game-ui").style.display = "none";
     this.terminal.setTransparentMode(false);
@@ -481,13 +488,14 @@ export class GameManager {
       this.startStage();
     } else {
       // 일반 스테이지 클리어 -> 분기점 (상점 or 다음 스테이지)
-      await this.terminal.typeText(`STAGE ${this.currentStage} COMPLETE.`, 30);
-      await this.terminal.typeText(`Data Acquired: ${earnedData} MB`, 20);
+      await this.terminal.typeText(`System Log: Upload complete.`, 10);
+      await this.terminal.typeText(`STAGE ${this.currentStage} CLEARED.`, 30);
+      await this.terminal.typeText(`Data Mined: ${earnedData} MB`, 20);
       await this.terminal.typeText(
-        `Total Available: ${this.currentMoney} MB`,
+        `Total Storage: ${this.currentMoney} MB`,
         20
       );
-      await this.terminal.typeText("다음 경로를 선택하라.", 30);
+      await this.terminal.typeText("Waiting for next command...", 30);
 
       const choice = await this.terminal.showChoices([
         { text: "/inject_sequence (Next Stage)", value: "next" },
