@@ -59,6 +59,7 @@ export class TerminalUI {
   }
 
   renderNodeMap(container, perkManager, currentMoney) {
+    const isMobile = window.innerWidth <= 768;
     const tree = perkManager.getTreeStructure();
 
     // 간단한 그리드 배치 로직 (실제로는 더 복잡한 레이아웃 알고리즘이 필요할 수 있음)

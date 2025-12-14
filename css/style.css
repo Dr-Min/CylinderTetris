@@ -447,21 +447,22 @@ body {
     font-size: 16px;
   }
 
-  /* 상점 UI 모바일 최적화 */
+  /* 상점 UI 모바일 최적화 (강제 리스트 뷰) */
   .shop-container {
     padding: 10px;
     overflow-y: auto;
+    height: 100vh;
   }
 
   .shop-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 5px;
+    margin-bottom: 10px;
   }
 
   .shop-title {
-    font-size: 20px;
+    font-size: 20px; /* 제목 크기 축소 */
   }
 
   .shop-money {
@@ -469,36 +470,54 @@ body {
   }
 
   .node-map {
-    background-size: 20px 20px;
-    min-height: 400px;
-    overflow-x: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* 노드 간 간격 */
+    background: none; /* 그리드 배경 제거 (깔끔하게) */
+    background-color: rgba(0, 10, 0, 0.5);
+    border: none;
+    padding: 10px 5px;
+    height: auto !important; /* 고정 높이 제거 */
+    overflow-y: visible; /* 스크롤은 부모(shop-container)에 맡김 */
   }
 
   .perk-node {
-    /* 노드 크기만 살짝 축소 */
-    width: 140px;
-    padding: 8px;
+    position: relative !important; /* 절대 위치 강제 해제 */
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 100% !important; /* 가로 꽉 채우기 */
+    box-sizing: border-box;
+    margin: 0;
+    min-height: auto;
   }
 
   .perk-name {
-    font-size: 14px;
+    font-size: 16px;
+    margin-bottom: 2px;
   }
 
-  .perk-icon {
-    width: 30px;
-    height: 30px;
+  .perk-desc {
+    font-size: 12px; /* 설명 폰트 더 작게 */
+    line-height: 1.2;
+    display: block !important; /* 모바일에서도 설명 보이게 (리스트 뷰이므로 공간 충분) */
+  }
+
+  .perk-cost {
+    font-size: 12px;
   }
 
   .shop-exit {
     font-size: 16px !important;
-    padding: 10px 20px !important;
+    padding: 10px 0 !important;
     width: 100%;
+    margin-top: 20px;
+    text-align: center;
   }
 
   /* 게임 UI 모바일 최적화 */
   .top-bar {
     padding: 10px 5px;
-    /* 줄바꿈 금지 (한 줄 유지) */
     flex-wrap: nowrap;
     gap: 5px;
   }
@@ -507,20 +526,15 @@ body {
   .score-board,
   .next-box {
     padding: 5px;
-    font-size: 14px;
-    min-width: auto; /* 최소 너비 제한 해제 */
-  }
-
-  .next-box canvas {
-    /* 캔버스 크기는 건드리지 않음 */
+    font-size: 12px; /* 폰트 축소 */
+    min-width: auto;
   }
 
   /* 설정 버튼 위치 조정 */
   .settings-area {
     top: auto;
-    bottom: 120px; /* 하단 컨트롤 위에 배치 */
+    bottom: 120px;
     right: 10px;
-    flex-direction: column; /* 세로 배치 유지 */
     gap: 10px;
   }
 
@@ -536,10 +550,10 @@ body {
   }
 
   #game-over-screen h1 {
-    font-size: 32px;
+    font-size: 28px;
   }
 
-  /* 모바일 컨트롤 버튼 위치 및 크기 조정 */
+  /* 모바일 컨트롤 버튼 위치 및 크기 조정 (확실하게 고정) */
   .mobile-controls-left {
     bottom: 20px;
     left: 10px;
@@ -551,7 +565,6 @@ body {
     right: 20px;
   }
 
-  /* 버튼 크기만 살짝 키움 (터치 편의) */
   .mobile-controls-left button,
   #drop-btn {
     min-width: 60px;
