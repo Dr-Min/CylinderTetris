@@ -27,6 +27,7 @@ export class GameManager {
         name: "ROOT_ACCESS",
         cost: 0,
         parentId: null,
+        maxLevel: 1,
         desc: "System Root Permission",
         effect: {},
       },
@@ -37,7 +38,8 @@ export class GameManager {
         name: "Packet_Sniffer.v1",
         cost: 10,
         parentId: "root",
-        desc: "Start with +100MB",
+        maxLevel: 5,
+        desc: "Start Money +100MB/Lv",
         effect: { startMoney: 100 },
       },
       {
@@ -45,7 +47,8 @@ export class GameManager {
         name: "Data_Mining_Rig.v2",
         cost: 30,
         parentId: "res_1",
-        desc: "Start with +300MB",
+        maxLevel: 5,
+        desc: "Start Money +200MB/Lv",
         effect: { startMoney: 200 },
       },
       {
@@ -53,7 +56,8 @@ export class GameManager {
         name: "Botnet_Wallet.v3",
         cost: 60,
         parentId: "res_2",
-        desc: "Start with +600MB",
+        maxLevel: 5,
+        desc: "Start Money +300MB/Lv",
         effect: { startMoney: 300 },
       },
 
@@ -63,7 +67,8 @@ export class GameManager {
         name: "Score_Injector.dll",
         cost: 20,
         parentId: "root",
-        desc: "Score +10%",
+        maxLevel: 5,
+        desc: "Score +10%/Lv",
         effect: { scoreMult: 0.1 },
       },
       {
@@ -71,7 +76,8 @@ export class GameManager {
         name: "Combo_Breaker.exe",
         cost: 50,
         parentId: "eff_1",
-        desc: "Score +25%",
+        maxLevel: 5,
+        desc: "Score +15%/Lv",
         effect: { scoreMult: 0.15 },
       },
       {
@@ -79,7 +85,8 @@ export class GameManager {
         name: "Global_Leaderboard.hack",
         cost: 100,
         parentId: "eff_2",
-        desc: "Score +50%",
+        maxLevel: 5,
+        desc: "Score +25%/Lv",
         effect: { scoreMult: 0.25 },
       },
 
@@ -89,7 +96,8 @@ export class GameManager {
         name: "RNG_Manipulator.init",
         cost: 40,
         parentId: "root",
-        desc: "Unlock Special Blocks (Luck +2%)",
+        maxLevel: 5,
+        desc: "Luck +2%/Lv",
         effect: { luck: 0.02 },
       },
       {
@@ -97,15 +105,14 @@ export class GameManager {
         name: "Probability_Drive.sys",
         cost: 80,
         parentId: "luck_1",
-        desc: "Luck +3% & Shop Discount 5%",
+        maxLevel: 5,
+        desc: "Luck +3% & Discount 5%/Lv",
         effect: { luck: 0.03, discount: 0.05 },
       },
-
-      // Branch D: Survival (Revive - Future)
-      // { id: "surv_1", name: "Backup_Protocol", cost: 100, parentId: "root", desc: "Revive once per game (Coming Soon)", effect: {} }
     ];
 
-    this.acquiredPermPerks = new Set(["root"]); // 기본 루트 해금
+    this.acquiredPermPerks = new Map();
+    this.acquiredPermPerks.set("root", 1); // 기본 루트 해금 (Level 1)
 
     // 디버그 모드 초기화
     this.initDebugSystem();
@@ -355,18 +362,37 @@ export class GameManager {
   }
 
   loadPermanentPerks() {
-    // 저장된 영구 퍽 ID 목록 로드
-    const saved = localStorage.getItem("acquired_perm_perks");
+    // 저장된 영구 퍽 ID 목록 로드 (v2 Map 구조)
+    const saved = localStorage.getItem("acquired_perm_perks_v2");
     if (saved) {
       try {
-        const ids = JSON.parse(saved);
-        ids.forEach((id) => this.acquiredPermPerks.add(id));
+        const obj = JSON.parse(saved);
+        this.acquiredPermPerks = new Map(Object.entries(obj));
       } catch (e) {
         console.error("Failed to load perks", e);
+        this.acquiredPermPerks = new Map();
+        this.acquiredPermPerks.set("root", 1);
       }
     } else {
-      // 마이그레이션: 기존 데이터가 있다면 변환 시도 (생략하고 초기화 유도)
-      // 평판은 유지되므로 다시 구매하면 됨.
+      // 구버전 데이터 마이그레이션
+      const oldSaved = localStorage.getItem("acquired_perm_perks");
+      if (oldSaved) {
+        try {
+          const ids = JSON.parse(oldSaved);
+          this.acquiredPermPerks = new Map();
+          this.acquiredPermPerks.set("root", 1);
+          if (Array.isArray(ids)) {
+            ids.forEach((id) => this.acquiredPermPerks.set(id, 1));
+          }
+          this.savePermanentPerks();
+        } catch (e) {
+          this.acquiredPermPerks = new Map();
+          this.acquiredPermPerks.set("root", 1);
+        }
+      } else {
+        this.acquiredPermPerks = new Map();
+        this.acquiredPermPerks.set("root", 1);
+      }
     }
 
     // 효과 적용
@@ -374,10 +400,8 @@ export class GameManager {
   }
 
   savePermanentPerks() {
-    localStorage.setItem(
-      "acquired_perm_perks",
-      JSON.stringify(Array.from(this.acquiredPermPerks))
-    );
+    const obj = Object.fromEntries(this.acquiredPermPerks);
+    localStorage.setItem("acquired_perm_perks_v2", JSON.stringify(obj));
   }
 
   applyPermanentEffects() {
@@ -401,13 +425,33 @@ export class GameManager {
     let bonusLuck = 0;
     let bonusDiscount = 0;
 
-    this.acquiredPermPerks.forEach((id) => {
-      const node = this.permTree.find((n) => n.id === id);
+    this.acquiredPermPerks.forEach((level, id) => {
+      // Map의 경우 (value, key) 순서이므로 level, id
+      // Set의 경우 (value, value) 순서이므로 id, id (하지만 변수명이 level이 됨)
+
+      // Map인지 확인
+      let nodeId = id;
+      let nodeLevel = level;
+
+      if (typeof id === "string") {
+        // Map: key가 id(string), value가 level(number)
+        nodeId = id;
+        nodeLevel = level;
+      } else if (typeof level === "string") {
+        // Set: value가 id(string)
+        nodeId = level;
+        nodeLevel = 1;
+      }
+
+      const node = this.permTree.find((n) => n.id === nodeId);
       if (node && node.effect) {
-        if (node.effect.startMoney) bonusMoney += node.effect.startMoney;
-        if (node.effect.scoreMult) bonusScore += node.effect.scoreMult;
-        if (node.effect.luck) bonusLuck += node.effect.luck;
-        if (node.effect.discount) bonusDiscount += node.effect.discount;
+        if (node.effect.startMoney)
+          bonusMoney += node.effect.startMoney * nodeLevel;
+        if (node.effect.scoreMult)
+          bonusScore += node.effect.scoreMult * nodeLevel;
+        if (node.effect.luck) bonusLuck += node.effect.luck * nodeLevel;
+        if (node.effect.discount)
+          bonusDiscount += node.effect.discount * nodeLevel;
       }
     });
 
@@ -475,67 +519,54 @@ export class GameManager {
   }
 
   async enterPermanentShop() {
-    while (true) {
-      this.terminal.clear();
-      // 아스키 트리 UI 표시
-      await this.terminal.showPermanentTree(
-        this.permTree,
-        this.acquiredPermPerks,
-        this.reputation
-      );
+    // 이벤트 리스너 (업그레이드 처리)
+    const upgradeHandler = async (e) => {
+      const { nodeId, cost } = e.detail;
+      const node = this.permTree.find((n) => n.id === nodeId);
 
-      // 명령어 입력 대기
-      await this.terminal.typeText("Enter Node ID to upgrade or 'exit':", 0);
+      if (node && this.reputation >= cost) {
+        this.reputation -= cost;
+        const currentLvl = this.acquiredPermPerks.get(nodeId) || 0;
+        this.acquiredPermPerks.set(nodeId, currentLvl + 1);
 
-      // showChoices 대신 입력 대기 (커스텀 입력)
-      // showChoices는 버튼을 생성하므로, 여기서는 텍스트 입력을 받고 싶음.
-      // 하지만 모바일 편의를 위해 showChoices를 활용하되, 선택지를 동적으로 생성?
-      // 아스키 트리는 시각용이고, 조작은 '선택지'나 '입력'으로.
+        this.saveReputation();
+        this.savePermanentPerks();
 
-      // 구매 가능한 목록만 추출
-      const availableNodes = this.permTree.filter((node) => {
-        if (this.acquiredPermPerks.has(node.id)) return false; // 이미 보유
-        if (node.parentId && !this.acquiredPermPerks.has(node.parentId))
-          return false; // 부모 미보유
-        return true;
-      });
-
-      const choices = availableNodes.map((node) => ({
-        text: `[${node.id}] ${node.name} (${node.cost} REP)`,
-        value: node.id,
-      }));
-
-      choices.push({ text: "EXIT SYSTEM", value: "exit" });
-
-      const choice = await this.terminal.showChoices(choices);
-
-      if (choice === "exit") break;
-
-      const selectedNode = this.permTree.find((n) => n.id === choice);
-      if (selectedNode) {
-        if (this.reputation >= selectedNode.cost) {
-          this.reputation -= selectedNode.cost;
-          this.acquiredPermPerks.add(selectedNode.id);
-          this.saveReputation();
-          this.savePermanentPerks();
-          await this.terminal.typeText(
-            `> UPGRADE COMPLETE: ${selectedNode.name}`,
-            20
+        // UI 갱신 (다시 그리기)
+        const mapContainer = document.querySelector(".node-map");
+        if (mapContainer) {
+          mapContainer.innerHTML = ""; // 비우기
+          this.terminal.renderPermanentNodeMap(
+            mapContainer,
+            this.permTree,
+            this.acquiredPermPerks,
+            this.reputation
           );
-          await new Promise((r) => setTimeout(r, 800));
-        } else {
-          await this.terminal.typeText(
-            `> ERROR: INSUFFICIENT REPUTATION. NEED ${selectedNode.cost}`,
-            20
-          );
-          await new Promise((r) => setTimeout(r, 1000));
+          // 상단 REP 갱신
+          const repEl = document.getElementById("shop-money-val");
+          if (repEl) repEl.innerText = this.reputation;
         }
+      } else {
+        // 돈 부족 등 피드백
+        // alert("INSUFFICIENT REPUTATION");
       }
-    }
-    this.terminal.clear();
+    };
+
+    document.addEventListener("perm-upgrade", upgradeHandler);
+
+    // showPermanentTree -> showPermanentShop 변경
+    await this.terminal.showPermanentShop(
+      this.permTree,
+      this.acquiredPermPerks,
+      this.reputation
+    );
+
+    // 상점 종료 시
+    document.removeEventListener("perm-upgrade", upgradeHandler);
+
     // 효과 재적용
-    this.perkManager.reset(); // 초기화 후
-    this.applyPermanentEffects(); // 영구 효과 적용
+    this.perkManager.reset();
+    this.applyPermanentEffects();
   }
 
   startTutorial() {

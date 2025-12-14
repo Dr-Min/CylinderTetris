@@ -354,73 +354,12 @@ export class TerminalUI {
     return nodeEl;
   }
 
-  // 아스키 트리 렌더링 (삭제 예정이나 하위 호환 위해 남김)
+  // 아스키 트리 렌더링 (삭제됨 - 하위 호환 없음)
   async showPermanentTree(treeData, acquiredSet, reputation) {
-    // 트리 구조화
-    const columns = {
-      root: [],
-      res: [],
-      eff: [],
-      luck: [],
-    };
-
-    // 데이터 분류 (간단히 id prefix로)
-    treeData.forEach((node) => {
-      if (node.id === "root") columns.root.push(node);
-      else if (node.id.startsWith("res")) columns.res.push(node);
-      else if (node.id.startsWith("eff")) columns.eff.push(node);
-      else if (node.id.startsWith("luck")) columns.luck.push(node);
-    });
-
-    // 텍스트 생성
-    let output = "";
-    output += "=== SYSTEM ARCHITECTURE (REP: " + reputation + ") ===\n\n";
-
-    const drawNode = (node) => {
-      const isAcquired = acquiredSet.has(node.id);
-      const isUnlockable =
-        !isAcquired && (node.parentId ? acquiredSet.has(node.parentId) : true);
-      const symbol = isAcquired ? "[X]" : isUnlockable ? "[!]" : "[ ]";
-      const styleClass = isAcquired
-        ? "tree-node-acquired"
-        : isUnlockable
-        ? "tree-node-available"
-        : "tree-node-locked";
-      // HTML 태그를 사용해 색상 입힘 (TerminalUI가 innerHTML로 처리한다고 가정하면 안되지만, typeText는 텍스트만 처리함)
-      // 여기서는 그냥 div에 innerHTML로 넣을 예정
-      return `<span class="${styleClass}">${symbol} ${node.name} (${node.cost})</span>`;
-    };
-
-    // Root
-    output += "      " + drawNode(columns.root[0]) + "\n";
-    output += "           |\n";
-    output += "    +------+------+-----------------+\n";
-    output += "    |             |                 |\n";
-
-    // Level 1
-    output += `${drawNode(columns.res[0])}   ${drawNode(
-      columns.eff[0]
-    )}   ${drawNode(columns.luck[0])}\n`;
-    output += "    |             |                 |\n";
-
-    // Level 2
-    output += `${drawNode(columns.res[1])} ${drawNode(
-      columns.eff[1]
-    )} ${drawNode(columns.luck[1])}\n`;
-    output += "    |             |                 \n";
-
-    // Level 3
-    output += `${drawNode(columns.res[2])} ${drawNode(
-      columns.eff[2]
-    )}                  \n`;
-
-    // 화면에 출력 (기존 contentDiv 활용)
-    const treeDiv = document.createElement("div");
-    treeDiv.className = "ascii-tree";
-    treeDiv.innerHTML = output;
-
-    this.contentDiv.appendChild(treeDiv);
-    this.scrollToBottom();
+    console.warn(
+      "showPermanentTree is deprecated. Redirecting to showPermanentShop."
+    );
+    return this.showPermanentShop(treeData, acquiredSet, reputation);
   }
 
   // 상점 UI (네트워크 맵) 표시
