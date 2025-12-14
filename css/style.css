@@ -43,6 +43,41 @@ body {
   }
 }
 
+.ascii-tree {
+  font-family: "Courier New", monospace !important; /* 고정폭 폰트 필수 */
+  white-space: pre; /* 줄바꿈 방지, 공백 유지 */
+  overflow-x: auto; /* 가로 스크롤 허용 */
+  line-height: 1.2;
+  font-size: 14px;
+  color: var(--term-color);
+  background: rgba(0, 20, 0, 0.3);
+  padding: 10px;
+  border: 1px solid var(--term-dim);
+  margin-bottom: 20px;
+}
+
+/* 모바일에서는 폰트 더 작게 */
+@media (max-width: 768px) {
+  .ascii-tree {
+    font-size: 11px;
+    padding: 5px;
+  }
+}
+
+.tree-node-acquired {
+  color: #00ff00;
+  font-weight: bold;
+}
+
+.tree-node-available {
+  color: #ffff00;
+  animation: blink 2s infinite;
+}
+
+.tree-node-locked {
+  color: #555555;
+}
+
 /* === 상점 UI 스타일 === */
 .shop-container {
   position: absolute;

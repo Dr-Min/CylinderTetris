@@ -18,6 +18,95 @@ export class GameManager {
       this.handleStageClear(linesCleared);
     this.game.onGameOver = (score) => this.handleGameOver(score);
     this.game.getPerkEffects = () => this.perkManager.getEffects(); // 게임 엔진이 퍽 효과를 참조하도록
+
+    // 영구 퍽 트리 데이터 정의
+    this.permTree = [
+      // Root (기본 제공)
+      {
+        id: "root",
+        name: "ROOT_ACCESS",
+        cost: 0,
+        parentId: null,
+        desc: "System Root Permission",
+        effect: {},
+      },
+
+      // Branch A: Resources (Start Money)
+      {
+        id: "res_1",
+        name: "Packet_Sniffer.v1",
+        cost: 10,
+        parentId: "root",
+        desc: "Start with +100MB",
+        effect: { startMoney: 100 },
+      },
+      {
+        id: "res_2",
+        name: "Data_Mining_Rig.v2",
+        cost: 30,
+        parentId: "res_1",
+        desc: "Start with +300MB",
+        effect: { startMoney: 200 },
+      },
+      {
+        id: "res_3",
+        name: "Botnet_Wallet.v3",
+        cost: 60,
+        parentId: "res_2",
+        desc: "Start with +600MB",
+        effect: { startMoney: 300 },
+      },
+
+      // Branch B: Efficiency (Score Multiplier)
+      {
+        id: "eff_1",
+        name: "Score_Injector.dll",
+        cost: 20,
+        parentId: "root",
+        desc: "Score +10%",
+        effect: { scoreMult: 0.1 },
+      },
+      {
+        id: "eff_2",
+        name: "Combo_Breaker.exe",
+        cost: 50,
+        parentId: "eff_1",
+        desc: "Score +25%",
+        effect: { scoreMult: 0.15 },
+      },
+      {
+        id: "eff_3",
+        name: "Global_Leaderboard.hack",
+        cost: 100,
+        parentId: "eff_2",
+        desc: "Score +50%",
+        effect: { scoreMult: 0.25 },
+      },
+
+      // Branch C: Luck (Special Blocks)
+      {
+        id: "luck_1",
+        name: "RNG_Manipulator.init",
+        cost: 40,
+        parentId: "root",
+        desc: "Unlock Special Blocks (Luck +2%)",
+        effect: { luck: 0.02 },
+      },
+      {
+        id: "luck_2",
+        name: "Probability_Drive.sys",
+        cost: 80,
+        parentId: "luck_1",
+        desc: "Luck +3% & Shop Discount 5%",
+        effect: { luck: 0.03, discount: 0.05 },
+      },
+
+      // Branch D: Survival (Revive - Future)
+      // { id: "surv_1", name: "Backup_Protocol", cost: 100, parentId: "root", desc: "Revive once per game (Coming Soon)", effect: {} }
+    ];
+
+    this.acquiredPermPerks = new Set(["root"]); // 기본 루트 해금
+
     // 디버그 모드 초기화
     this.initDebugSystem();
   }
@@ -266,27 +355,68 @@ export class GameManager {
   }
 
   loadPermanentPerks() {
-    // 1. 초기 자금
-    const startMoneyBonus = parseInt(
-      localStorage.getItem("perm_start_money") || "0"
+    // 저장된 영구 퍽 ID 목록 로드
+    const saved = localStorage.getItem("acquired_perm_perks");
+    if (saved) {
+      try {
+        const ids = JSON.parse(saved);
+        ids.forEach((id) => this.acquiredPermPerks.add(id));
+      } catch (e) {
+        console.error("Failed to load perks", e);
+      }
+    } else {
+      // 마이그레이션: 기존 데이터가 있다면 변환 시도 (생략하고 초기화 유도)
+      // 평판은 유지되므로 다시 구매하면 됨.
+    }
+
+    // 효과 적용
+    this.applyPermanentEffects();
+  }
+
+  savePermanentPerks() {
+    localStorage.setItem(
+      "acquired_perm_perks",
+      JSON.stringify(Array.from(this.acquiredPermPerks))
     );
-    this.currentMoney = 0 + startMoneyBonus;
+  }
 
-    // 2. 점수 배율
-    const scoreMult = parseFloat(
-      localStorage.getItem("perm_score_mult") || "0.0"
-    );
-    this.perkManager.activeEffects.scoreMultiplier += scoreMult;
+  applyPermanentEffects() {
+    // 효과 초기화
+    this.currentMoney = 0; // 시작 머니는 0에서 보너스 합산
+    this.perkManager.activeEffects.scoreMultiplier = 1.0;
+    this.perkManager.activeEffects.shopDiscount = 0.0;
+    // Luck 초기화는 perkManager.reset()에서 기본값 0이 됨. 여기선 영구 효과만 더함.
+    // 주의: PerkManager는 게임 시작 시 reset()되므로, init() 시점에 이 함수를 호출해야 함.
+    // 하지만 현재 구조상 init()에서 loadPermanentPerks를 부르고 있음.
 
-    // 3. 상점 할인 (PerkManager에 속성 추가 필요)
-    const discount = parseFloat(localStorage.getItem("perm_discount") || "0.0");
-    this.perkManager.activeEffects.shopDiscount = discount;
+    // reset()이 호출된 직후에 더해줄 변수가 필요하거나, activeEffects에 직접 더해야 함.
+    // 여기서는 init 시점 기준 activeEffects에 더함. (PerkManager 초기값 + 영구 효과)
 
-    // 4. 행운 (특수 블록)
-    const luck = parseFloat(localStorage.getItem("perm_luck") || "0.0");
-    this.perkManager.activeEffects.bombChance += luck;
-    this.perkManager.activeEffects.goldChance += luck;
-    this.perkManager.activeEffects.miscChance += luck * 0.5; // 행운의 절반만큼 기타 블록 확률 증가
+    // PerkManager.reset()을 먼저 호출해서 초기화 필요
+    // this.perkManager.reset(); // -> startStage에서 하므로 여기선 금지?
+    // 아니, 영구 효과는 'base' 값이어야 함.
+
+    let bonusMoney = 0;
+    let bonusScore = 0;
+    let bonusLuck = 0;
+    let bonusDiscount = 0;
+
+    this.acquiredPermPerks.forEach((id) => {
+      const node = this.permTree.find((n) => n.id === id);
+      if (node && node.effect) {
+        if (node.effect.startMoney) bonusMoney += node.effect.startMoney;
+        if (node.effect.scoreMult) bonusScore += node.effect.scoreMult;
+        if (node.effect.luck) bonusLuck += node.effect.luck;
+        if (node.effect.discount) bonusDiscount += node.effect.discount;
+      }
+    });
+
+    this.currentMoney += bonusMoney;
+    this.perkManager.activeEffects.scoreMultiplier += bonusScore;
+    this.perkManager.activeEffects.bombChance += bonusLuck;
+    this.perkManager.activeEffects.goldChance += bonusLuck;
+    this.perkManager.activeEffects.miscChance += bonusLuck * 0.5;
+    this.perkManager.activeEffects.shopDiscount += bonusDiscount;
   }
 
   loadReputation() {
@@ -345,100 +475,67 @@ export class GameManager {
   }
 
   async enterPermanentShop() {
-    // 영구 강화 상점 구현 (간단한 텍스트 메뉴)
     while (true) {
       this.terminal.clear();
-      await this.terminal.typeText("=== SYSTEM UPGRADE (PERMANENT) ===", 0);
-      await this.terminal.typeText(
-        `Available Reputation: ${this.reputation}`,
-        0
-      );
-      // 설명 추가
-      await this.terminal.typeText(
-        "[INFO] Earn Rep via High Scores (1k=1) & Clearing Stages (1=10).",
-        0
+      // 아스키 트리 UI 표시
+      await this.terminal.showPermanentTree(
+        this.permTree,
+        this.acquiredPermPerks,
+        this.reputation
       );
 
-      const choices = [
-        {
-          text: `Increase Starting Data (+100MB) [Cost: 10 REP]`,
-          value: "start_money",
-        },
-        {
-          text: `Score Hack v2.0 (+10% Score) [Cost: 20 REP]`,
-          value: "score_mult",
-        },
-        {
-          text: `Market Discount (5% OFF) [Cost: 30 REP]`,
-          value: "discount",
-        },
-        {
-          text: `Unlock Special Blocks (Luck +2%) [Cost: 40 REP]`,
-          value: "luck",
-        },
-        { text: `Exit System Upgrades`, value: "exit" },
-      ];
+      // 명령어 입력 대기
+      await this.terminal.typeText("Enter Node ID to upgrade or 'exit':", 0);
+
+      // showChoices 대신 입력 대기 (커스텀 입력)
+      // showChoices는 버튼을 생성하므로, 여기서는 텍스트 입력을 받고 싶음.
+      // 하지만 모바일 편의를 위해 showChoices를 활용하되, 선택지를 동적으로 생성?
+      // 아스키 트리는 시각용이고, 조작은 '선택지'나 '입력'으로.
+
+      // 구매 가능한 목록만 추출
+      const availableNodes = this.permTree.filter((node) => {
+        if (this.acquiredPermPerks.has(node.id)) return false; // 이미 보유
+        if (node.parentId && !this.acquiredPermPerks.has(node.parentId))
+          return false; // 부모 미보유
+        return true;
+      });
+
+      const choices = availableNodes.map((node) => ({
+        text: `[${node.id}] ${node.name} (${node.cost} REP)`,
+        value: node.id,
+      }));
+
+      choices.push({ text: "EXIT SYSTEM", value: "exit" });
 
       const choice = await this.terminal.showChoices(choices);
 
-      if (choice === "start_money") {
-        if (this.reputation >= 10) {
-          this.reputation -= 10;
-          let val = parseInt(localStorage.getItem("perm_start_money") || "0");
-          localStorage.setItem("perm_start_money", (val + 100).toString());
-          await this.terminal.typeText("Upgrade Installed.", 20);
+      if (choice === "exit") break;
+
+      const selectedNode = this.permTree.find((n) => n.id === choice);
+      if (selectedNode) {
+        if (this.reputation >= selectedNode.cost) {
+          this.reputation -= selectedNode.cost;
+          this.acquiredPermPerks.add(selectedNode.id);
           this.saveReputation();
-          await new Promise((r) => setTimeout(r, 1000));
-        } else {
-          await this.terminal.typeText("Insufficient Reputation.", 20);
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-      } else if (choice === "score_mult") {
-        if (this.reputation >= 20) {
-          this.reputation -= 20;
-          let val = parseFloat(
-            localStorage.getItem("perm_score_mult") || "0.0"
-          );
-          localStorage.setItem("perm_score_mult", (val + 0.1).toFixed(2));
-          await this.terminal.typeText("Upgrade Installed.", 20);
-          this.saveReputation();
-          await new Promise((r) => setTimeout(r, 1000));
-        } else {
-          await this.terminal.typeText("Insufficient Reputation.", 20);
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-      } else if (choice === "discount") {
-        if (this.reputation >= 30) {
-          this.reputation -= 30;
-          let val = parseFloat(localStorage.getItem("perm_discount") || "0.0");
-          localStorage.setItem("perm_discount", (val + 0.05).toFixed(2));
-          await this.terminal.typeText("Upgrade Installed.", 20);
-          this.saveReputation();
-          await new Promise((r) => setTimeout(r, 1000));
-        } else {
-          await this.terminal.typeText("Insufficient Reputation.", 20);
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-      } else if (choice === "luck") {
-        if (this.reputation >= 40) {
-          this.reputation -= 40;
-          let val = parseFloat(localStorage.getItem("perm_luck") || "0.0");
-          localStorage.setItem("perm_luck", (val + 0.02).toFixed(2));
+          this.savePermanentPerks();
           await this.terminal.typeText(
-            "Special Blocks Unlocked / Probability Increased.",
+            `> UPGRADE COMPLETE: ${selectedNode.name}`,
             20
           );
-          this.saveReputation();
-          await new Promise((r) => setTimeout(r, 1000));
+          await new Promise((r) => setTimeout(r, 800));
         } else {
-          await this.terminal.typeText("Insufficient Reputation.", 20);
+          await this.terminal.typeText(
+            `> ERROR: INSUFFICIENT REPUTATION. NEED ${selectedNode.cost}`,
+            20
+          );
           await new Promise((r) => setTimeout(r, 1000));
         }
-      } else {
-        break;
       }
     }
     this.terminal.clear();
+    // 효과 재적용
+    this.perkManager.reset(); // 초기화 후
+    this.applyPermanentEffects(); // 영구 효과 적용
   }
 
   startTutorial() {
