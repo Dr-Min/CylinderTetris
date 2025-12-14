@@ -490,6 +490,12 @@ export class TetrisGame {
     this.piecesGroup = new THREE.Group();
     this.worldGroup.add(this.piecesGroup);
 
+    // Active Piece (Object Pooling)
+    this.activeGroup = new THREE.Group();
+    this.activeGroup.name = "active_piece_visuals";
+    this.worldGroup.add(this.activeGroup);
+    this.activeMeshPool = [];
+
     this.ghostGroup = new THREE.Group();
     this.worldGroup.add(this.ghostGroup);
 
@@ -729,6 +735,7 @@ export class TetrisGame {
     this.CONFIG.DROP_SPEED = initialSpeed;
 
     this.state.isPlaying = true;
+    this.state.isLogicActive = true; // 게임 로직(이동/낙하) 활성화 플래그
     this.state.dropTimer = 0;
     this.state.slowModeTimer = 0;
 
@@ -1038,7 +1045,7 @@ export class TetrisGame {
   }
 
   stageClear() {
-    this.state.isPlaying = false;
+    this.state.isLogicActive = false; // 로직만 정지, 렌더링(isPlaying)은 유지
     this.SoundManager.stopBGM();
     this.SoundManager.playTone({ start: 400, end: 800 }, "sine", 0.5, 0.3);
 
@@ -1106,7 +1113,7 @@ export class TetrisGame {
   }
 
   handleInput(e) {
-    if (!this.state.isPlaying) return;
+    if (!this.state.isPlaying || !this.state.isLogicActive) return;
     if (e.key === "ArrowLeft") this.moveHorizontal(-1);
     if (e.key === "ArrowRight") this.moveHorizontal(1);
     if (e.key === "ArrowUp") this.rotatePiece();
@@ -1247,6 +1254,13 @@ export class TetrisGame {
   }
 
   update(deltaTime) {
+    // 매트릭스 이펙트 애니메이션 (게임 로직 정지 여부와 상관없이 계속 돔)
+    if (this.matrixTexture) {
+      this.matrixTexture.offset.y += deltaTime * 0.0003; // 흘러내리는 효과
+    }
+
+    if (!this.state.isLogicActive) return; // 로직 정지 시 하단 코드 실행 안함
+
     // 폭발 이펙트 업데이트
     for (let i = this.explosions.length - 1; i >= 0; i--) {
       const p = this.explosions[i];
@@ -1297,11 +1311,6 @@ export class TetrisGame {
     }
 
     this.updateCamera();
-
-    // 매트릭스 이펙트 애니메이션
-    if (this.matrixTexture) {
-      this.matrixTexture.offset.y += deltaTime * 0.0003; // 흘러내리는 효과
-    }
   }
 
   // 게임 클리어 연출 (아스키 매트릭스)
@@ -1451,17 +1460,78 @@ export class TetrisGame {
   }
 
   renderActivePiece() {
-    const activeGroupName = "active_piece_visuals";
-    let activeGroup = this.worldGroup.getObjectByName(activeGroupName);
-    if (activeGroup) this.worldGroup.remove(activeGroup);
-
-    activeGroup = new THREE.Group();
-    activeGroup.name = activeGroupName;
-    this.worldGroup.add(activeGroup);
+    // 풀링된 메쉬들 일단 모두 숨김 (재사용을 위해)
+    // 최적화: 사용된 것만 visible=true로 하고, 나머지는 false로 둠.
+    // 일단 전체 false 처리 후 필요한 것만 켠다.
+    for (let i = 0; i < this.activeMeshPool.length; i++) {
+      this.activeMeshPool[i].visible = false;
+    }
 
     if (!this.state.currentPiece) return;
 
-    // Ghost
+    let poolIndex = 0;
+
+    // 내부 헬퍼: 풀에서 메쉬 가져오기
+    const getMesh = () => {
+      if (poolIndex >= this.activeMeshPool.length) {
+        // 풀 확장
+        const mesh = new THREE.Mesh(
+          this.sharedGeometry,
+          this.sharedMaterials[Object.keys(this.CONFIG.COLORS)[0]]
+        );
+        this.activeGroup.add(mesh);
+        this.activeMeshPool.push(mesh);
+      }
+      return this.activeMeshPool[poolIndex++];
+    };
+
+    // 내부 헬퍼: 메쉬 업데이트 (좌표 및 재질 설정)
+    const updateMesh = (gx, gy, blockInfo, isGhost) => {
+      const mesh = getMesh();
+      mesh.visible = true;
+
+      const CELL_HEIGHT =
+        (2 * Math.PI * this.CONFIG.RADIUS) / this.CONFIG.GRID_WIDTH;
+      const angle = (gx / this.CONFIG.GRID_WIDTH) * Math.PI * 2;
+      const r = this.CONFIG.RADIUS;
+      const x = Math.sin(angle) * r;
+      const z = Math.cos(angle) * r;
+      const y = gy * CELL_HEIGHT;
+
+      mesh.position.set(x, y, z);
+      mesh.rotation.y = angle;
+      mesh.lookAt(new THREE.Vector3(x * 2, y, z * 2));
+
+      // Material 설정
+      let color = blockInfo;
+      let type = this.SPECIAL_TYPES.NONE;
+
+      if (
+        typeof blockInfo === "object" &&
+        blockInfo !== null &&
+        blockInfo.color
+      ) {
+        color = blockInfo.color;
+        type = blockInfo.type || this.SPECIAL_TYPES.NONE;
+      }
+
+      let mat;
+
+      if (isGhost) {
+        mat = this.sharedMaterials[color + "_ghost"];
+      } else if (type !== this.SPECIAL_TYPES.NONE) {
+        mat = this.specialMaterials[type];
+      } else {
+        mat = this.CONFIG.TRANSPARENT_MODE
+          ? this.sharedMaterials[color + "_trans"]
+          : this.sharedMaterials[color];
+      }
+
+      if (!mat) mat = this.sharedMaterials[Object.keys(this.CONFIG.COLORS)[0]];
+      mesh.material = mat;
+    };
+
+    // 1. Ghost 렌더링
     if (this.CONFIG.SHOW_GHOST) {
       let ghostY = this.state.currentPiece.y;
       while (
@@ -1481,13 +1551,13 @@ export class TetrisGame {
             const gx =
               (p.x + c + this.CONFIG.GRID_WIDTH * 10) % this.CONFIG.GRID_WIDTH;
             const gy = ghostY - r;
-            this.addBlockToGroup(gx, gy, p.color, activeGroup, true);
+            updateMesh(gx, gy, p.color, true); // Ghost
           }
         }
       }
     }
 
-    // Active Block
+    // 2. Active Block 렌더링
     const p = this.state.currentPiece;
     let blockCount = 0;
 
@@ -1503,12 +1573,7 @@ export class TetrisGame {
             blockType = p.specialType;
           }
 
-          this.addBlockToGroup(
-            gx,
-            gy,
-            { color: p.color, type: blockType },
-            activeGroup
-          );
+          updateMesh(gx, gy, { color: p.color, type: blockType }, false); // Active
           blockCount++;
         }
       }
