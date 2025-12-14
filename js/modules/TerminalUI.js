@@ -5,19 +5,44 @@ export class TerminalUI {
     this.inputLine = document.querySelector(".input-line");
     this.terminalLayer = document.getElementById("terminal-layer");
 
-    // 커서 엘리먼트 생성 (하나의 커서를 계속 재사용)
+    // 실제 입력 필드 생성 (기존 hidden input-line 대체 또는 활용)
+    // HTML에 이미 구조가 있다면 찾아서 쓰고, 없으면 만든다.
+    let inputLine = document.querySelector(".input-line");
+    if (!inputLine || !inputLine.querySelector("input")) {
+      // 기존 span 구조 대신 input 태그로 교체
+      if (inputLine) inputLine.remove();
+      inputLine = document.createElement("div");
+      inputLine.className = "input-line hidden";
+      inputLine.innerHTML = `
+            <span class="prompt">[USER]></span>
+            <input type="text" id="cmd-input" autocomplete="off" spellcheck="false">
+        `;
+      this.terminalLayer.appendChild(inputLine);
+    }
+
+    this.inputLine = inputLine;
+    this.cmdInput = this.inputLine.querySelector("input");
+
+    // 커서 엘리먼트 생성 (타이핑 효과용)
     this.cursor = document.createElement("span");
     this.cursor.className = "cursor blinking";
 
     // 초기화
     if (this.choiceArea) this.choiceArea.classList.add("hidden");
-    if (this.inputLine) this.inputLine.classList.add("hidden"); // 기존 하드코딩된 input 라인 숨김
 
-    this.isTyping = false;
-
-    // 클릭하면 마지막으로 스크롤 이동 (편의성)
+    // 전역 클릭 시 입력창 포커스 (터미널 모드일 때만)
     this.terminalLayer.addEventListener("click", () => {
-      this.inputLine?.querySelector("input")?.focus();
+      if (!this.inputLine.classList.contains("hidden")) {
+        this.cmdInput.focus();
+      }
+    });
+
+    // 엔터키 리스너 (showChoices나 waitForEnter에서 사용)
+    this.cmdInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && this.onInputEnter) {
+        this.onInputEnter(this.cmdInput.value.trim());
+        this.cmdInput.value = ""; // 입력 후 초기화
+      }
     });
   }
 
@@ -250,30 +275,79 @@ export class TerminalUI {
     });
   }
 
-  // 선택지 표시 (리스트 형태)
+  // 선택지 표시 (버튼 + 텍스트 입력 지원)
   showChoices(choices) {
     return new Promise((resolve) => {
       this.choiceArea.innerHTML = "";
-      // 커서를 선택지 영역 이전으로 옮기지 않고, 마지막 텍스트에 둠.
 
+      // 1. 선택지 버튼 렌더링
       choices.forEach((choice, index) => {
         const btn = document.createElement("button");
         btn.className = "choice-btn";
-        btn.textContent = choice.text; // CSS ::before로 [ ] 처리
+        // 인덱스를 1부터 시작하도록 표시 (1. Option)
+        const displayIndex = index + 1;
+        btn.innerHTML = `<span style="color:var(--term-dim)">[${displayIndex}]</span> ${choice.text}`;
 
         btn.onclick = () => {
-          this.choiceArea.classList.add("hidden");
-          // 선택한 내용은 시스템 로그처럼 남김
-          this.printSystemMessage(`Selection confirmed: ${choice.text}`);
-          resolve(choice.value);
+          this.finalizeChoice(choice, resolve);
         };
-
         this.choiceArea.appendChild(btn);
       });
 
       this.choiceArea.classList.remove("hidden");
       this.scrollToBottom();
+
+      // 2. 입력 필드 활성화
+      this.inputLine.classList.remove("hidden");
+
+      // 모바일이 아닐 때만 자동 포커스 (모바일은 키보드가 화면 가림 방지)
+      if (window.innerWidth > 768) {
+        this.cmdInput.focus();
+      }
+      this.scrollToBottom();
+
+      // 3. 입력 처리 핸들러 설정
+      this.onInputEnter = (text) => {
+        // 인덱스 매칭 (1, 2, 3...)
+        const idx = parseInt(text);
+        if (!isNaN(idx) && idx >= 1 && idx <= choices.length) {
+          this.finalizeChoice(choices[idx - 1], resolve);
+          return;
+        }
+
+        // 텍스트 매칭 (yes, no, start 등 value 또는 text 일부)
+        const lowerText = text.toLowerCase();
+        const matched = choices.find(
+          (c) =>
+            c.value.toString().toLowerCase() === lowerText ||
+            c.text.toLowerCase().includes(lowerText)
+        );
+
+        if (matched) {
+          this.finalizeChoice(matched, resolve);
+        } else {
+          // 잘못된 명령어 피드백
+          this.printSystemMessage(`Command not found: ${text}`);
+          this.printSystemMessage(
+            `Please type a number (1-${choices.length}) or keyword.`
+          );
+        }
+      };
     });
+  }
+
+  finalizeChoice(choice, resolve) {
+    this.choiceArea.classList.add("hidden");
+    this.inputLine.classList.add("hidden"); // 입력창 숨김
+    this.onInputEnter = null; // 핸들러 해제
+
+    // 선택한 내용은 유저 입력처럼 출력
+    const line = document.createElement("div");
+    line.className = "terminal-line";
+    line.innerHTML = `<span style="color:var(--term-color)">[USER]> ${choice.text}</span>`;
+    this.contentDiv.appendChild(line);
+
+    resolve(choice.value);
   }
 
   // 시스템 메시지 (즉시 출력)
@@ -285,37 +359,37 @@ export class TerminalUI {
     this.scrollToBottom();
   }
 
-  // 엔터 대기 (깜빡이는 커서와 함께)
+  // 엔터 대기 (깜빡이는 커서와 함께) - 이제 아무 키나 누르는게 아니라 엔터 입력 대기
   waitForEnter() {
     return new Promise(async (resolve) => {
       // 메시지 타이핑 먼저
       await this.typeText("Press [ENTER] key to initialize connection...", 10);
 
-      const handler = (e) => {
-        if (e.key === "Enter") {
-          cleanup();
-          resolve();
-        }
-      };
+      // 입력창 활성화
+      this.inputLine.classList.remove("hidden");
 
-      const touchHandler = () => {
-        cleanup();
-        resolve();
-      };
+      // 모바일이 아닐 때만 자동 포커스
+      if (window.innerWidth > 768) {
+        this.cmdInput.focus();
+      }
+      this.scrollToBottom();
 
-      const cleanup = () => {
-        document.removeEventListener("keydown", handler);
-        document.removeEventListener("touchstart", touchHandler);
-        // 엔터 누르면 해당 라인에 ' OK' 추가
+      this.onInputEnter = (text) => {
+        // 엔터키 입력 시 (내용 상관 없음, 혹은 특정 커맨드 요구 가능)
+        this.inputLine.classList.add("hidden");
+        this.onInputEnter = null;
+
+        // [OK] 추가
         const lastLine = this.contentDiv.lastElementChild;
         if (lastLine) {
-          lastLine.insertBefore(document.createTextNode(" [OK]"), this.cursor);
+          lastLine.insertAdjacentHTML(
+            "beforeend",
+            " <span style='color:#0f0'>[OK]</span>"
+          );
         }
         this.printSystemMessage("Connection established.");
+        resolve();
       };
-
-      document.addEventListener("keydown", handler);
-      document.addEventListener("touchstart", touchHandler);
     });
   }
 
@@ -344,6 +418,10 @@ export class TerminalUI {
       this.terminalLayer.style.textShadow =
         "0 0 3px #000, 0 0 5px var(--term-color)";
       this.cursor.style.display = "none";
+
+      // 게임 중에는 입력창 확실히 숨김 및 포커스 해제
+      this.inputLine.classList.add("hidden");
+      this.cmdInput.blur();
     } else {
       this.terminalLayer.style.background = "rgba(0, 0, 0, 0.8)"; // 약간의 투명도
       this.terminalLayer.style.pointerEvents = "auto";

@@ -186,11 +186,37 @@ body {
   height: 100%;
   padding: 40px;
   box-sizing: border-box;
-  font-size: 24px;
+  font-size: 18px; /* PC 기본 폰트 사이즈 축소 (24px -> 18px) */
   z-index: 100;
   text-shadow: 0 0 2px rgba(51, 255, 0, 0.7), 0 0 10px rgba(51, 255, 0, 0.5);
   overflow-y: auto;
   animation: flicker 0.15s infinite;
+}
+
+/* 터미널 입력 라인 스타일 */
+.input-line {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.prompt {
+  color: var(--term-color);
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+#cmd-input {
+  background: transparent;
+  border: none;
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: inherit;
+  flex: 1;
+  outline: none;
+  text-shadow: 0 0 5px var(--term-color);
+  caret-color: var(--term-color); /* 커서 색상 */
 }
 
 #terminal-layer::-webkit-scrollbar {
