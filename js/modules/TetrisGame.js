@@ -1351,7 +1351,16 @@ export class TetrisGame {
       });
 
       this.matrixMesh = new THREE.Mesh(geometry, material);
-      this.matrixMesh.position.y = height / 2.0; // 위치 중앙 정렬
+      // TOTAL_HEIGHT는 (GRID_HEIGHT * CELL_HEIGHT)
+      // height는 1.5배임. 중심을 맞추려면?
+      // CylinderGeometry의 중심은 0,0,0. 높이는 height. y범위는 -h/2 ~ h/2.
+      // 월드 좌표계에서 기둥은 0 ~ TOTAL_HEIGHT. 중심은 TOTAL_HEIGHT/2.
+      // 따라서 mesh.position.y = TOTAL_HEIGHT / 2.
+      const CELL_HEIGHT =
+        (2 * Math.PI * this.CONFIG.RADIUS) / this.CONFIG.GRID_WIDTH;
+      const TOTAL_HEIGHT = this.CONFIG.GRID_HEIGHT * CELL_HEIGHT;
+
+      this.matrixMesh.position.y = TOTAL_HEIGHT / 2;
       this.scene.add(this.matrixMesh);
     }
 
@@ -1364,33 +1373,28 @@ export class TetrisGame {
 
   createMatrixTexture() {
     const canvas = document.createElement("canvas");
-    canvas.width = 1024; // 해상도 증가
+    canvas.width = 512; // 해상도 타협 (1024 -> 512) 성능 최적화
     canvas.height = 1024;
     const ctx = canvas.getContext("2d");
 
-    // 배경 완전 투명
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 폰트 설정 (크고 진하게)
-    ctx.font = "bold 24px 'Courier New', monospace";
+    ctx.font = "bold 30px 'Courier New', monospace"; // 폰트 더 키움
     ctx.textAlign = "center";
 
-    const columns = 40;
+    const columns = 20; // 컬럼 수 감소 (40 -> 20)
     const colWidth = canvas.width / columns;
 
     for (let i = 0; i < columns; i++) {
       const x = i * colWidth;
-      // 한 줄에 그릴 글자 수
-      const drops = Math.floor(Math.random() * 30) + 20;
+      const drops = Math.floor(Math.random() * 15) + 10; // 드롭 수 감소 (30~50 -> 10~25)
 
       for (let j = 0; j < drops; j++) {
         const y = Math.random() * canvas.height;
-        // 랜덤 아스키/가타카나 문자
         const char = String.fromCharCode(0x30a0 + Math.random() * 96);
 
-        // 밝은 녹색 계열 + 가끔 흰색
         const isWhite = Math.random() < 0.1;
-        const alpha = 0.5 + Math.random() * 0.5; // 최소 0.5 이상 불투명도
+        const alpha = 0.6 + Math.random() * 0.4; // 더 진하게
 
         ctx.fillStyle = isWhite
           ? `rgba(255, 255, 255, ${alpha})`

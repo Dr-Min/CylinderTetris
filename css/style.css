@@ -124,13 +124,32 @@ body {
 
 .perk-node {
   position: absolute;
-  width: 180px;
-  padding: 10px;
+  width: 100px;
+  height: 100px;
+  padding: 5px;
   border: 2px solid var(--term-color);
   background: #000;
   cursor: pointer;
   transition: all 0.2s;
-  transform: translate(-50%, 0); /* 중앙 정렬 보정 */
+  transform: translate(-50%, 0);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+/* Compact Mode에서는 상세 정보 숨김 (팝업으로 대체) */
+.perk-info,
+.perk-desc,
+.perk-cost {
+  /* JS에서 HTML 구조를 바꿨으므로 CSS는 크게 의미 없지만, 기존 구조 잔재 처리 */
+}
+
+.perk-node:hover {
+  transform: scale(1.1); /* 호버 시 약간 확대 */
+  box-shadow: 0 0 15px var(--term-color);
+  z-index: 10;
 }
 
 .perk-node.locked {

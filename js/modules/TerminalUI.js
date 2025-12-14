@@ -279,43 +279,63 @@ export class TerminalUI {
 
     nodeEl.className = `perk-node ${statusClass}`;
 
-    // CSS 직접 주입 (node-map 그리드 무시)
+    // CSS 직접 주입 (Compact Mode)
     nodeEl.style.position = "relative";
-    nodeEl.style.width = isMobile ? "90%" : "220px";
+    nodeEl.style.width = isMobile ? "80px" : "100px";
+    nodeEl.style.height = isMobile ? "80px" : "100px";
     nodeEl.style.left = "auto";
     nodeEl.style.top = "auto";
     nodeEl.style.transform = "none";
     nodeEl.style.marginBottom = "0";
+    nodeEl.style.display = "flex";
+    nodeEl.style.flexDirection = "column";
+    nodeEl.style.justifyContent = "center";
+    nodeEl.style.alignItems = "center";
+    nodeEl.style.textAlign = "center";
 
-    // 내용 구성
+    // 내용 구성 (간소화)
+    const shortName = node.name.split("_")[0].substring(0, 8);
     nodeEl.innerHTML = `
-        <div class="perk-info">
-            <div class="perk-name">${
-              node.name
-            } <span style="font-size:0.8em; color:#fff;">(Lv.${currentLevel}/${maxLevel})</span></div>
-            <div class="perk-cost">${
-              isMaxed ? "MASTERED" : node.cost + " REP"
-            }</div>
-        </div>
-        <div class="perk-desc">${node.desc}</div>
+        <div style="font-size: 24px; margin-bottom: 5px;">⚡</div>
+        <div style="font-size: 12px; font-weight: bold;">${shortName}</div>
+        <div style="font-size: 10px; color: #aaa;">Lv.${currentLevel}/${maxLevel}</div>
     `;
 
-    // 클릭 이벤트 (구매)
-    if (isUnlockable) {
+    // 클릭 이벤트 (구매 팝업)
+    // 잠겨있어도 정보는 볼 수 있게 할까? -> 일단 해금 가능한 것만 클릭되게 (기존 로직 유지)
+    // 하지만 사용자가 "그걸 누르면 그때 뭔지 설명만 나오는거야"라고 했으므로,
+    // 잠긴 것도 눌러서 정보는 볼 수 있게 하는게 좋음.
+    // 여기선 일단 isUnlockable이거나 isAcquired인 경우만.
+
+    if (isUnlockable || isAcquired) {
       nodeEl.onclick = () => {
         // Confirm Box
         const container =
           document.querySelector(".shop-container") || this.contentDiv;
         const confirmBox = document.createElement("div");
-        confirmBox.className = "confirm-box"; // 기존 스타일 활용
+        confirmBox.className = "confirm-box";
 
+        // 상세 정보 표시
         confirmBox.innerHTML = `
-              <div class="confirm-msg">Upgrade <span style="color:var(--term-color)">${node.name}</span>?</div>
-              <div class="confirm-desc" style="color:#aaa; margin:10px 0;">${node.desc}</div>
-              <div class="confirm-cost">COST: ${node.cost} REP</div>
+              <div class="confirm-msg" style="font-size: 20px; border-bottom: 1px solid var(--term-color); padding-bottom: 10px; margin-bottom: 10px;">${
+                node.name
+              }</div>
+              <div class="confirm-desc" style="font-size: 16px; color: #ddd; margin: 20px 0; line-height: 1.5;">
+                ${node.desc}
+              </div>
+              <div class="confirm-level" style="margin-bottom: 10px; color: #aaa;">
+                Level: ${currentLevel} / ${maxLevel}
+              </div>
+              <div class="confirm-cost" style="font-size: 18px; color: var(--term-color);">
+                COST: ${isMaxed ? "MASTERED" : node.cost + " REP"}
+              </div>
               <div class="confirm-btns">
-                <button id="confirm-yes">[ UPGRADE ]</button>
-                <button id="confirm-no">[ CANCEL ]</button>
+                ${
+                  isUnlockable
+                    ? '<button id="confirm-yes">[ UPGRADE ]</button>'
+                    : ""
+                }
+                <button id="confirm-no">[ CLOSE ]</button>
               </div>
             `;
 
@@ -324,25 +344,28 @@ export class TerminalUI {
         confirmBox.style.top = "50%";
         confirmBox.style.left = "50%";
         confirmBox.style.transform = "translate(-50%, -50%)";
-        confirmBox.style.background = "rgba(0,10,0,0.95)";
+        confirmBox.style.background = "rgba(0,10,0,0.98)";
         confirmBox.style.border = "2px solid var(--term-color)";
-        confirmBox.style.padding = "20px";
+        confirmBox.style.padding = "30px";
         confirmBox.style.zIndex = "300";
         confirmBox.style.textAlign = "center";
         confirmBox.style.width = isMobile ? "90%" : "400px";
+        confirmBox.style.boxShadow = "0 0 30px rgba(51, 255, 0, 0.5)";
 
         container.appendChild(confirmBox);
 
-        confirmBox.querySelector("#confirm-yes").onclick = (e) => {
-          e.stopPropagation();
-          confirmBox.remove();
+        if (isUnlockable) {
+          confirmBox.querySelector("#confirm-yes").onclick = (e) => {
+            e.stopPropagation();
+            confirmBox.remove();
 
-          // 구매 이벤트 발송 (GameManager가 수신)
-          const event = new CustomEvent("perm-upgrade", {
-            detail: { nodeId: node.id, cost: node.cost },
-          });
-          document.dispatchEvent(event);
-        };
+            // 구매 이벤트 발송 (GameManager가 수신)
+            const event = new CustomEvent("perm-upgrade", {
+              detail: { nodeId: node.id, cost: node.cost },
+            });
+            document.dispatchEvent(event);
+          };
+        }
 
         confirmBox.querySelector("#confirm-no").onclick = (e) => {
           e.stopPropagation();
@@ -455,112 +478,92 @@ export class TerminalUI {
           canUnlock ? "unlockable" : "locked"
         }`;
 
-        // 절대 위치 제거하고 상대 위치로
+        // 절대 위치 제거하고 상대 위치로 (Compact Mode)
         nodeEl.style.position = "relative";
         nodeEl.style.left = "auto";
         nodeEl.style.top = "auto";
         nodeEl.style.transform = "none";
-        nodeEl.style.width = isMobile ? "90%" : "200px";
+        nodeEl.style.width = isMobile ? "80px" : "100px";
+        nodeEl.style.height = isMobile ? "80px" : "100px";
+        nodeEl.style.display = "flex";
+        nodeEl.style.flexDirection = "column";
+        nodeEl.style.justifyContent = "center";
+        nodeEl.style.alignItems = "center";
+        nodeEl.style.textAlign = "center";
 
         const finalCost = perkManager.getDiscountedPrice(perk.cost);
 
+        // 간소화된 내용 (아이콘/이름 약어)
+        const shortName = perk.name.split("_")[0].substring(0, 8); // 이름 축약
         nodeEl.innerHTML = `
-            <div class="perk-info">
-                <div class="perk-name">${perk.name}</div>
-                <div class="perk-cost">${
-                  isAcquired ? "INSTALLED" : finalCost + " MB"
-                }</div>
-            </div>
-            <div class="perk-desc">${perk.desc}</div>
+            <div style="font-size: 24px; margin-bottom: 5px;">📦</div>
+            <div style="font-size: 12px; font-weight: bold;">${shortName}</div>
             ${
-              index < colData.nodes.length - 1
-                ? '<div class="connector-arrow">▼</div>'
+              isAcquired
+                ? '<div style="color:#0f0; font-size:10px;">[ON]</div>'
                 : ""
             }
         `;
 
-        // 클릭 이벤트 (기존 로직 유지)
-        if (!isAcquired && canUnlock) {
-          nodeEl.onclick = () => {
-            // 커스텀 확인 창 생성
-            const confirmBox = document.createElement("div");
-            confirmBox.className = "confirm-box";
-            const boxWidth = isMobile ? "90%" : "auto";
+        // 클릭 이벤트 (상세 정보 팝업)
+        nodeEl.onclick = () => {
+          // 커스텀 확인 창 생성 (상세 정보 포함)
+          const confirmBox = document.createElement("div");
+          confirmBox.className = "confirm-box";
+          const boxWidth = isMobile ? "90%" : "400px";
 
-            confirmBox.innerHTML = `
-              <div class="confirm-msg">Purchase <span style="color:var(--term-color)">${
+          confirmBox.innerHTML = `
+              <div class="confirm-msg" style="font-size: 20px; border-bottom: 1px solid var(--term-color); padding-bottom: 10px; margin-bottom: 10px;">${
                 perk.name
-              }</span>?</div>
-              ${
-                isMobile
-                  ? `<div class="confirm-desc" style="font-size: 14px; color: #aaa; margin: 10px 0;">${perk.desc}</div>`
-                  : ""
-              }
-              <div class="confirm-cost">COST: ${finalCost} MB</div>
+              }</div>
+              <div class="confirm-desc" style="font-size: 16px; color: #ddd; margin: 20px 0; line-height: 1.5;">
+                ${perk.desc}
+              </div>
+              <div class="confirm-cost" style="font-size: 18px; color: var(--term-color);">
+                COST: ${isAcquired ? "ACQUIRED" : finalCost + " MB"}
+              </div>
               <div class="confirm-btns">
-                <button id="confirm-yes">[ YES ]</button>
-                <button id="confirm-no">[ NO ]</button>
+                ${
+                  !isAcquired && canUnlock
+                    ? '<button id="confirm-yes">[ PURCHASE ]</button>'
+                    : ""
+                }
+                <button id="confirm-no">[ CLOSE ]</button>
               </div>
             `;
 
-            // 스타일 주입
-            confirmBox.style.position = "fixed"; // absolute -> fixed
-            confirmBox.style.top = "50%";
-            confirmBox.style.left = "50%";
-            confirmBox.style.transform = "translate(-50%, -50%)";
-            confirmBox.style.width = boxWidth;
-            confirmBox.style.background = "rgba(0, 10, 0, 0.95)";
-            confirmBox.style.border = "2px solid var(--term-color)";
-            confirmBox.style.padding = "20px";
-            confirmBox.style.zIndex = "200";
-            confirmBox.style.textAlign = "center";
-            confirmBox.style.boxShadow = "0 0 20px rgba(51, 255, 0, 0.3)";
+          // 스타일 주입
+          confirmBox.style.position = "fixed";
+          confirmBox.style.top = "50%";
+          confirmBox.style.left = "50%";
+          confirmBox.style.transform = "translate(-50%, -50%)";
+          confirmBox.style.width = boxWidth;
+          confirmBox.style.background = "rgba(0, 10, 0, 0.98)";
+          confirmBox.style.border = "2px solid var(--term-color)";
+          confirmBox.style.padding = "30px";
+          confirmBox.style.zIndex = "300";
+          confirmBox.style.textAlign = "center";
+          confirmBox.style.boxShadow = "0 0 30px rgba(51, 255, 0, 0.5)";
 
-            // 버튼 스타일
-            const btns = confirmBox.querySelectorAll("button");
-            btns.forEach((btn) => {
-              btn.style.background = "transparent";
-              btn.style.border = "1px solid var(--term-color)";
-              btn.style.color = "var(--term-color)";
-              btn.style.margin = "10px";
-              btn.style.padding = isMobile ? "10px 20px" : "5px 15px";
-              btn.style.cursor = "pointer";
-              btn.style.fontFamily = "var(--term-font)";
-              btn.style.fontSize = isMobile ? "16px" : "18px";
-            });
+          container.appendChild(confirmBox);
 
-            // 호버 효과 추가
-            btns.forEach((btn) => {
-              btn.onmouseenter = () => {
-                btn.style.background = "var(--term-color)";
-                btn.style.color = "#000";
-              };
-              btn.onmouseleave = () => {
-                btn.style.background = "transparent";
-                btn.style.color = "var(--term-color)";
-              };
-            });
-
-            container.appendChild(confirmBox);
-
-            // 이벤트 핸들링
+          if (!isAcquired && canUnlock) {
             confirmBox.querySelector("#confirm-yes").onclick = (e) => {
               e.stopPropagation();
               confirmBox.remove();
-
               perkManager.unlock(perk.id);
               const event = new CustomEvent("perk-buy", {
                 detail: { perkId: perk.id, cost: finalCost },
               });
               document.dispatchEvent(event);
             };
+          }
 
-            confirmBox.querySelector("#confirm-no").onclick = (e) => {
-              e.stopPropagation();
-              confirmBox.remove();
-            };
+          confirmBox.querySelector("#confirm-no").onclick = (e) => {
+            e.stopPropagation();
+            confirmBox.remove();
           };
-        }
+        };
 
         colEl.appendChild(nodeEl);
       });
