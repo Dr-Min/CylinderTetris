@@ -1,122 +1,71 @@
 /* Mobile Optimization */
 @media (max-width: 768px) {
   #terminal-layer {
-    padding: 20px;
-    font-size: 16px; /* 기본 폰트 크기 축소 */
-  }
-
-  /* 상점 UI 모바일 최적화 */
-  .shop-container {
-    padding: 10px;
-    overflow-y: auto; /* 세로 스크롤 허용 */
-  }
-
-  .shop-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 15px;
-  }
-
-  .shop-title {
-    font-size: 20px;
-  }
-
-  .shop-money {
+    padding: 10px; /* 패딩 축소 */
     font-size: 16px;
   }
 
-  .node-map {
-    background-size: 20px 20px; /* 격자 무늬 축소 */
-    min-height: 400px; /* 최소 높이 확보 */
-    overflow-x: auto; /* 가로 스크롤 허용 */
-  }
-
-  /* 노드 크기 및 배치 조정 */
-  .perk-node {
-    width: 120px;
-    padding: 8px;
-    font-size: 12px;
-  }
-
-  .perk-name {
-    font-size: 14px;
-  }
-
-  .perk-icon {
-    width: 30px;
-    height: 30px;
-  }
-
-  .shop-exit {
-    font-size: 16px !important;
-    padding: 10px 20px !important;
-    width: 100%;
-  }
-
-  /* 게임 UI 모바일 최적화 */
-  .top-bar {
+  /* 상점 UI: 기존대로 유지하되 스크롤만 허용 */
+  .shop-container {
     padding: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
+    overflow-y: auto;
+  }
+
+  .node-map {
+    background-size: 20px 20px;
+    min-height: 400px;
+    overflow-x: auto;
+  }
+
+  .perk-node {
+    /* 노드 크기만 살짝 축소 */
+    width: 140px;
+    padding: 8px;
+  }
+
+  /* 게임 UI 복구 및 안정화 */
+  .top-bar {
+    padding: 10px 5px;
+    /* 줄바꿈 금지 (한 줄 유지) */
+    flex-wrap: nowrap;
+    gap: 5px;
   }
 
   .level-box,
   .score-board,
   .next-box {
-    padding: 5px 10px;
+    padding: 5px;
     font-size: 14px;
-    flex: 1 1 auto; /* 유연한 크기 조절 */
-    min-width: 80px;
+    min-width: auto; /* 최소 너비 제한 해제 */
+    /* 캔버스 크기는 건드리지 않음 */
   }
 
-  .next-box canvas {
-    width: 60px !important; /* Next 블록 캔버스 크기 축소 */
-    height: 60px !important;
-  }
-
-  /* 설정 버튼 위치 조정 */
+  /* 설정 버튼 위치만 하단으로 이동 (게임 방해 안되게) */
   .settings-area {
     top: auto;
-    bottom: 100px; /* 하단 컨트롤 위에 배치 */
+    bottom: 120px;
     right: 10px;
-    flex-direction: row; /* 가로 배치 */
-  }
-
-  .settings-area button {
-    padding: 8px;
-    font-size: 14px;
-  }
-
-  /* 게임 오버 화면 조정 */
-  #game-over-screen {
-    width: 90%;
-    padding: 20px;
-  }
-
-  #game-over-screen h1 {
-    font-size: 32px;
-  }
-
-  /* 모바일 컨트롤 버튼 위치 및 크기 조정 */
-  .mobile-controls-left {
-    bottom: 20px !important;
-    left: 10px !important;
+    flex-direction: column; /* 세로 배치 유지 */
     gap: 10px;
   }
 
-  #drop-btn {
+  /* 모바일 컨트롤: 위치만 잡고 스타일은 건드리지 않음 */
+  .mobile-controls-left {
     bottom: 20px !important;
-    right: 10px !important;
-    width: 70px;
-    height: 70px;
+    left: 10px !important;
+    gap: 15px;
   }
 
+  #drop-btn {
+    bottom: 20px !important;
+    right: 20px !important;
+  }
+
+  /* 버튼 크기만 살짝 키움 (터치 편의) */
   .mobile-controls-left button,
   #drop-btn {
-    min-width: 50px;
-    min-height: 50px;
-    font-size: 20px;
+    min-width: 60px;
+    min-height: 60px;
+    font-size: 24px;
   }
 }
