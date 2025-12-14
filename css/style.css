@@ -17,6 +17,32 @@ body {
   font-family: var(--term-font);
 }
 
+.column-title {
+  color: var(--term-color);
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 0 10px var(--term-color);
+  margin-bottom: 20px;
+  text-align: center;
+  border-bottom: 1px dashed var(--term-dim);
+  padding-bottom: 10px;
+  width: 100%;
+}
+
+.connector-arrow {
+  color: var(--term-dim);
+  font-size: 20px;
+  text-align: center;
+  margin-top: 10px;
+  animation: pulse 2s infinite;
+}
+
+@media (max-width: 768px) {
+  .column-title {
+    font-size: 18px;
+  }
+}
+
 /* === 상점 UI 스타일 === */
 .shop-container {
   position: absolute;

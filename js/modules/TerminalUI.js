@@ -87,23 +87,50 @@ export class TerminalUI {
     const isMobile = window.innerWidth <= 768;
     const tree = perkManager.getTreeStructure();
 
-    // 간단한 그리드 배치 로직 (실제로는 더 복잡한 레이아웃 알고리즘이 필요할 수 있음)
-    // Root 노드들을 기준으로 3개 컬럼으로 나눔
+    // 1. 트리 데이터 분류 (타입별로)
     const columns = {
-      attack: { x: 20, nodes: [] },
-      defense: { x: 50, nodes: [] },
-      utility: { x: 80, nodes: [] },
+      attack: { title: "EXPLOIT (ATK)", nodes: [] },
+      defense: { title: "SECURITY (DEF)", nodes: [] },
+      utility: { title: "UTILITY (MSC)", nodes: [] },
     };
 
-    // 트리 분류
     tree.forEach((perk) => {
       if (columns[perk.type]) columns[perk.type].nodes.push(perk);
     });
 
-    // 노드 그리기
+    // 2. Flexbox 기반 레이아웃 생성
+    // 전체 컨테이너는 Flex Row (PC) 또는 Scrollable Row (Mobile)
+    container.style.display = "flex";
+    container.style.justifyContent = isMobile ? "flex-start" : "space-around";
+    container.style.gap = "20px";
+    if (isMobile) {
+      container.style.overflowX = "auto";
+      container.style.scrollSnapType = "x mandatory";
+      container.style.paddingBottom = "20px"; // 스크롤바 공간
+    }
+
     Object.keys(columns).forEach((type) => {
-      const col = columns[type];
-      col.nodes.forEach((perk, index) => {
+      const colData = columns[type];
+
+      // 컬럼 컨테이너
+      const colEl = document.createElement("div");
+      colEl.className = "tree-column";
+      colEl.innerHTML = `<div class="column-title">${colData.title}</div>`;
+
+      // 스타일 직접 주입 (CSS 클래스로 뺄 수도 있음)
+      colEl.style.display = "flex";
+      colEl.style.flexDirection = "column";
+      colEl.style.alignItems = "center";
+      colEl.style.minWidth = isMobile ? "80vw" : "30%";
+      colEl.style.gap = "40px"; // 노드 간 간격 (화살표 공간)
+      if (isMobile) {
+        colEl.style.scrollSnapAlign = "center";
+        colEl.style.flexShrink = "0"; // 줄어들지 않음
+      }
+
+      // 노드 렌더링 (순서대로)
+      // 부모-자식 관계가 있으므로 순서가 보장되어야 함 (현재 데이터는 순서대로임)
+      colData.nodes.forEach((perk, index) => {
         const nodeEl = document.createElement("div");
         const isAcquired = perkManager.acquiredPerks.has(perk.id);
         const canUnlock = perkManager.canUnlock(perk.id, currentMoney);
@@ -111,24 +138,32 @@ export class TerminalUI {
         nodeEl.className = `perk-node ${type} ${isAcquired ? "acquired" : ""} ${
           canUnlock ? "unlockable" : "locked"
         }`;
-        // 위치 계산 (CSS top/left %)
-        nodeEl.style.left = `${col.x}%`;
-        nodeEl.style.top = `${20 + index * 25}%`; // 20%, 45%, 70% ...
+
+        // 절대 위치 제거하고 상대 위치로
+        nodeEl.style.position = "relative";
+        nodeEl.style.left = "auto";
+        nodeEl.style.top = "auto";
+        nodeEl.style.transform = "none";
+        nodeEl.style.width = isMobile ? "90%" : "200px";
 
         const finalCost = perkManager.getDiscountedPrice(perk.cost);
 
         nodeEl.innerHTML = `
-                <div class="perk-icon"></div>
-                <div class="perk-info">
-                    <div class="perk-name">${perk.name}</div>
-                    <div class="perk-cost">${
-                      isAcquired ? "INSTALLED" : finalCost + " MB"
-                    }</div>
-                </div>
-                <div class="perk-desc">${perk.desc}</div>
-            `;
+            <div class="perk-info">
+                <div class="perk-name">${perk.name}</div>
+                <div class="perk-cost">${
+                  isAcquired ? "INSTALLED" : finalCost + " MB"
+                }</div>
+            </div>
+            <div class="perk-desc">${perk.desc}</div>
+            ${
+              index < colData.nodes.length - 1
+                ? '<div class="connector-arrow">▼</div>'
+                : ""
+            }
+        `;
 
-        // 클릭 이벤트
+        // 클릭 이벤트 (기존 로직 유지)
         if (!isAcquired && canUnlock) {
           nodeEl.onclick = () => {
             // 커스텀 확인 창 생성
@@ -211,13 +246,10 @@ export class TerminalUI {
           };
         }
 
-        container.appendChild(nodeEl);
-
-        // 연결선 그리기 (SVG) - 부모가 있다면
-        if (perk.parentId) {
-          // 부모 좌표 찾기 로직 필요 (생략 가능하거나, 간단히 수직선)
-        }
+        colEl.appendChild(nodeEl);
       });
+
+      container.appendChild(colEl);
     });
   }
   async typeText(text, speed = 20) {
