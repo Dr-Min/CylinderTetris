@@ -208,9 +208,12 @@ export class TerminalUI {
     columnsContainer.style.gap = "20px";
 
     if (isMobile) {
-      columnsContainer.style.overflowX = "auto";
-      columnsContainer.style.paddingBottom = "20px";
-      columnsContainer.style.scrollSnapType = "x mandatory";
+      // Mobile: Vertical Layout + Wrap (Compact Grid)
+      container.style.flexDirection = "column";
+      container.style.alignItems = "stretch"; // 너비 꽉 채우기
+      container.style.overflowX = "hidden"; // 가로 스크롤 제거
+      container.style.overflowY = "auto";   // 세로 스크롤 허용
+      container.style.paddingBottom = "20px";
     }
 
     // 3. 각 컬럼 렌더링
@@ -219,15 +222,13 @@ export class TerminalUI {
       colEl.className = "tree-column"; // 기존 CSS 활용
       colEl.innerHTML = `<div class="column-title">${col.title}</div>`;
       colEl.style.display = "flex";
-      colEl.style.flexDirection = "column";
+      colEl.style.flexDirection = isMobile ? "row" : "column"; // 모바일은 가로(Row) + Wrap
+      colEl.style.flexWrap = isMobile ? "wrap" : "nowrap";     // 모바일은 줄바꿈
+      colEl.style.justifyContent = isMobile ? "center" : "flex-start"; // 중앙 정렬
       colEl.style.alignItems = "center";
-      colEl.style.gap = "30px";
-      colEl.style.minWidth = isMobile ? "80vw" : "30%";
-
-      if (isMobile) {
-        colEl.style.scrollSnapAlign = "center";
-        colEl.style.flexShrink = "0";
-      }
+      colEl.style.gap = isMobile ? "10px" : "30px"; // 간격 축소
+      colEl.style.minWidth = isMobile ? "100%" : "30%";
+      colEl.style.marginBottom = isMobile ? "20px" : "0";
 
       col.nodes.forEach((node, index) => {
         const nodeEl = this.createPermNodeEl(
@@ -237,8 +238,8 @@ export class TerminalUI {
           isMobile
         );
 
-        // 연결선 (자식 -> 부모) 시각화는 복잡하므로 간단히 아래 화살표만
-        if (index < col.nodes.length - 1) {
+        // 연결선 (자식 -> 부모) 시각화는 PC에서만 표시하거나 모바일은 생략
+        if (!isMobile && index < col.nodes.length - 1) {
           const arrow = document.createElement("div");
           arrow.className = "connector-arrow";
           arrow.innerText = "▼";
@@ -438,14 +439,18 @@ export class TerminalUI {
     });
 
     // 2. Flexbox 기반 레이아웃 생성
-    // 전체 컨테이너는 Flex Row (PC) 또는 Scrollable Row (Mobile)
+    // 전체 컨테이너는 Flex Row (PC) 또는 Column (Mobile)
     container.style.display = "flex";
+    container.style.flexDirection = isMobile ? "column" : "row"; // 모바일 세로 배치
     container.style.justifyContent = isMobile ? "flex-start" : "space-around";
     container.style.gap = "20px";
+    
     if (isMobile) {
-      container.style.overflowX = "auto";
-      container.style.scrollSnapType = "x mandatory";
-      container.style.paddingBottom = "20px"; // 스크롤바 공간
+      container.style.overflowY = "auto";   // 세로 스크롤 허용
+      container.style.overflowX = "hidden"; // 가로 스크롤 금지
+      container.style.paddingBottom = "50px"; // 하단 여백 확보
+      container.style.width = "100%";
+      container.style.height = "100%"; // 컨테이너 높이 확보
     }
 
     Object.keys(columns).forEach((type) => {
@@ -458,14 +463,14 @@ export class TerminalUI {
 
       // 스타일 직접 주입 (CSS 클래스로 뺄 수도 있음)
       colEl.style.display = "flex";
-      colEl.style.flexDirection = "column";
+      // 모바일에서는 내부 아이템들을 가로로 나열(Wrap)하여 그리드처럼 보이게 함
+      colEl.style.flexDirection = isMobile ? "row" : "column"; 
+      colEl.style.flexWrap = isMobile ? "wrap" : "nowrap";
+      colEl.style.justifyContent = isMobile ? "center" : "flex-start";
       colEl.style.alignItems = "center";
-      colEl.style.minWidth = isMobile ? "80vw" : "30%";
-      colEl.style.gap = "40px"; // 노드 간 간격 (화살표 공간)
-      if (isMobile) {
-        colEl.style.scrollSnapAlign = "center";
-        colEl.style.flexShrink = "0"; // 줄어들지 않음
-      }
+      colEl.style.minWidth = isMobile ? "100%" : "30%";
+      colEl.style.gap = isMobile ? "10px" : "40px"; // 모바일 간격 축소
+      colEl.style.marginBottom = isMobile ? "20px" : "0";
 
       // 노드 렌더링 (순서대로)
       // 부모-자식 관계가 있으므로 순서가 보장되어야 함 (현재 데이터는 순서대로임)

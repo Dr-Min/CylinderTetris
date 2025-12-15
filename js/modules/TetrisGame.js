@@ -962,19 +962,22 @@ export class TetrisGame {
 
       specialEffects.forEach((effect) => {
         if (effect.type === this.SPECIAL_TYPES.BOMB) {
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              const targetY = effect.y + dy;
-              const targetX =
-                (effect.x + dx + this.CONFIG.GRID_WIDTH * 10) %
-                this.CONFIG.GRID_WIDTH;
-              if (targetY >= 0 && targetY < this.CONFIG.GRID_HEIGHT) {
-                this.state.grid[targetY][targetX] = null;
-                this.createExplosion(targetY);
-              }
-            }
+          // [수정] 3x3 -> 가로/세로 전체 줄 삭제 (십자 폭발)
+          const targetY = effect.y;
+          const targetX = effect.x;
+
+          // 1. 가로 줄 전체 삭제
+          for (let x = 0; x < this.CONFIG.GRID_WIDTH; x++) {
+             this.state.grid[targetY][x] = null;
           }
-          this.SoundManager.playTone(100, "sawtooth", 0.5, 0.5);
+          this.createExplosion(targetY);
+
+          // 2. 세로 줄 전체 삭제
+          for (let y = 0; y < this.CONFIG.GRID_HEIGHT; y++) {
+             this.state.grid[y][targetX] = null;
+          }
+          
+          this.SoundManager.playTone(100, "sawtooth", 0.6, 0.6);
         } else if (effect.type === this.SPECIAL_TYPES.LASER) {
           for (let ly = 0; ly < this.CONFIG.GRID_HEIGHT; ly++) {
             this.state.grid[ly][effect.x] = null;
