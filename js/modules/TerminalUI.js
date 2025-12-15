@@ -779,10 +779,23 @@ export class TerminalUI {
       this.inputLine.classList.add("hidden");
       this.cmdInput.blur();
     } else {
-      this.terminalLayer.style.background = "rgba(0, 0, 0, 0.8)"; // 약간의 투명도
+      this.terminalLayer.style.background = "rgba(0, 0, 0, 0.95)"; // 기본은 진하게
       this.terminalLayer.style.pointerEvents = "auto";
       this.terminalLayer.style.textShadow = "0 0 5px var(--term-color)";
       this.cursor.style.display = "inline-block";
+    }
+  }
+
+  // 디펜스 모드용 (배경은 투명하게, 하지만 UI 클릭은 가능하게)
+  setDefenseMode(enabled) {
+    if (enabled) {
+        this.terminalLayer.style.background = "rgba(0, 0, 0, 0)"; // 완전 투명
+        this.terminalLayer.style.pointerEvents = "auto"; // 클릭 가능 (선택지 등)
+        this.terminalLayer.style.textShadow = "0 0 2px #000, 0 0 5px var(--term-color)";
+        this.cursor.style.display = "inline-block";
+    } else {
+        // 비활성화 시 기본 터미널 모드로 복귀
+        this.setTransparentMode(false);
     }
   }
 }

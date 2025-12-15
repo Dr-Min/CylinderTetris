@@ -1,23 +1,32 @@
 import { TerminalUI } from "./TerminalUI.js";
 import { TetrisGame } from "./TetrisGame.js";
+import { DefenseGame } from "./DefenseGame.js";
 import { PerkManager } from "./PerkManager.js";
 
 export class GameManager {
   constructor() {
     this.terminal = new TerminalUI();
-    this.game = new TetrisGame("game-container");
+    this.tetrisGame = new TetrisGame("game-container");
+    this.defenseGame = new DefenseGame("game-container");
     this.perkManager = new PerkManager();
 
-    // 게임 상태
-    this.currentStage = 0; // 0: Tutorial, 1+: Real Stages
-    this.currentMoney = 0; // 현재 보유 데이터 (MB)
-    this.reputation = 0; // 영구 평판 (Reputation)
+    // 디펜스 게임 이벤트 연결
+    this.defenseGame.onResourceGained = (amount) => {
+        this.currentMoney += amount;
+    };
+    this.defenseGame.onGameOver = () => this.handleDefenseGameOver();
 
-    // 게임 이벤트 연결
-    this.game.onStageClear = (linesCleared) =>
-      this.handleStageClear(linesCleared);
-    this.game.onGameOver = (score) => this.handleGameOver(score);
-    this.game.getPerkEffects = () => this.perkManager.getEffects(); // 게임 엔진이 퍽 효과를 참조하도록
+    // 게임 상태
+    this.activeMode = "none"; // 'defense', 'mining', 'raid'
+    this.currentStage = 0; // Mining Stage
+    this.currentMoney = 0; // Data (Money)
+    this.reputation = 0; // Reputation
+
+    // 테트리스 게임 이벤트 연결
+    this.tetrisGame.onStageClear = (linesCleared) =>
+      this.handleMiningClear(linesCleared);
+    this.tetrisGame.onGameOver = (score) => this.handleMiningGameOver(score);
+    this.tetrisGame.getPerkEffects = () => this.perkManager.getEffects();
 
     // 영구 퍽 트리 데이터 정의
     this.permTree = [
@@ -278,19 +287,23 @@ export class GameManager {
       btnContainer.appendChild(btn);
     };
 
-    createBtn("Skip Stage", () => {
-      this.game.stageClear(); // Force clear
-      this.terminal.printSystemMessage("[DEBUG] Stage Skipped");
+    createBtn("Skip Mining", () => {
+      if (this.activeMode === "mining") {
+        this.tetrisGame.stageClear(); // Force clear
+        this.terminal.printSystemMessage("[DEBUG] Mining Skipped");
+      }
     });
 
-    createBtn("Game Over", () => {
-      this.game.gameOver();
-      this.terminal.printSystemMessage("[DEBUG] Forced Game Over");
+    createBtn("Switch Mode", () => {
+      if (this.activeMode === "mining") {
+        this.switchMode("defense");
+      } else {
+        this.switchMode("mining");
+      }
+      this.terminal.printSystemMessage(`[DEBUG] Switched to ${this.activeMode}`);
     });
 
     createBtn("Unlock All Perks", () => {
-      // Unlock all non-root perks logic could go here, but complex due to tree.
-      // Instead, let's just max out stats
       this.perkManager.activeEffects.bombChance = 0.5;
       this.perkManager.activeEffects.goldChance = 0.5;
       this.perkManager.activeEffects.miscChance = 0.5;
@@ -298,7 +311,6 @@ export class GameManager {
       this.terminal.printSystemMessage(
         "[DEBUG] GOD MODE ACTIVATED (High Stats)"
       );
-      // Update inputs
       bombInp.value = 0.5;
       goldInp.value = 0.5;
       miscInp.value = 0.5;
@@ -329,7 +341,7 @@ export class GameManager {
 
   async init() {
     this.loadReputation();
-    this.game.init(); // 3D 씬 로드
+    this.tetrisGame.init(); // 3D 씬 로드 (항상 로드해둠)
 
     const tutorialCompleted = localStorage.getItem("tutorial_completed");
     if (tutorialCompleted) {
@@ -354,10 +366,57 @@ export class GameManager {
         }
       }
 
-      this.currentStage = 1;
-      this.startStage();
+      // 게임 시작 시 기본 모드는 Defense
+      this.switchMode("defense");
     } else {
       await this.startIntro();
+    }
+  }
+
+  switchMode(mode) {
+    console.log(`Switching mode: ${this.activeMode} -> ${mode}`);
+    this.activeMode = mode;
+
+    if (mode === "defense") {
+      // 1. 테트리스 정지 및 숨김 (UI만 숨기고 컨테이너는 보이게)
+      this.tetrisGame.state.isPlaying = false;
+      document.getElementById("game-ui").style.display = "none";
+      document.getElementById("game-container").style.opacity = "1"; // [수정] 화면 다시 켜기
+      
+      // 2. 터미널 UI 조정 (디펜스 모드용)
+      this.terminal.setDefenseMode(true); // 배경 투명 + 클릭 가능
+      this.terminal.show(); // 터미널 메시지창 활성화 (로그용)
+      this.terminal.clear();
+      this.terminal.printSystemMessage("DEFENSE_PROTOCOL_INITIATED");
+
+      // 3. 디펜스 게임 시작
+      this.defenseGame.start();
+      // [추가] 자원 UI 동기화
+      this.defenseGame.updateResourceDisplay(this.currentMoney);
+
+      // 임시: 채굴 버튼 표시 (터미널 선택지로 구현)
+      setTimeout(async () => {
+        this.terminal.printSystemMessage("System Idle. Ready to Mine.");
+        const choice = await this.terminal.showChoices([
+          { text: "/exec_mining (Start Tetris)", value: "mine" }
+        ]);
+        if (choice === "mine") {
+          this.switchMode("mining");
+        }
+      }, 1000);
+
+    } else if (mode === "mining") {
+      // 1. 디펜스 정지 및 숨김
+      this.defenseGame.stop();
+
+      // 2. 터미널 및 UI 조정
+      this.terminal.setTransparentMode(true); // 배경 투명하게
+      this.terminal.clear();
+      this.terminal.printSystemMessage("MINING_SEQUENCE_STARTED");
+
+      // 3. 테트리스 시작 (스테이지 로직)
+      this.currentStage++; // 스테이지(채굴 레벨) 증가
+      this.startMiningStage();
     }
   }
 
@@ -409,36 +468,20 @@ export class GameManager {
     this.currentMoney = 0; // 시작 머니는 0에서 보너스 합산
     this.perkManager.activeEffects.scoreMultiplier = 1.0;
     this.perkManager.activeEffects.shopDiscount = 0.0;
-    // Luck 초기화는 perkManager.reset()에서 기본값 0이 됨. 여기선 영구 효과만 더함.
-    // 주의: PerkManager는 게임 시작 시 reset()되므로, init() 시점에 이 함수를 호출해야 함.
-    // 하지만 현재 구조상 init()에서 loadPermanentPerks를 부르고 있음.
-
-    // reset()이 호출된 직후에 더해줄 변수가 필요하거나, activeEffects에 직접 더해야 함.
-    // 여기서는 init 시점 기준 activeEffects에 더함. (PerkManager 초기값 + 영구 효과)
-
-    // PerkManager.reset()을 먼저 호출해서 초기화 필요
-    // this.perkManager.reset(); // -> startStage에서 하므로 여기선 금지?
-    // 아니, 영구 효과는 'base' 값이어야 함.
-
+    
     let bonusMoney = 0;
     let bonusScore = 0;
     let bonusLuck = 0;
     let bonusDiscount = 0;
 
     this.acquiredPermPerks.forEach((level, id) => {
-      // Map의 경우 (value, key) 순서이므로 level, id
-      // Set의 경우 (value, value) 순서이므로 id, id (하지만 변수명이 level이 됨)
-
-      // Map인지 확인
       let nodeId = id;
       let nodeLevel = level;
 
       if (typeof id === "string") {
-        // Map: key가 id(string), value가 level(number)
         nodeId = id;
         nodeLevel = level;
       } else if (typeof level === "string") {
-        // Set: value가 id(string)
         nodeId = level;
         nodeLevel = 1;
       }
@@ -477,7 +520,6 @@ export class GameManager {
   consumeRevive() {
     if (this.perkManager.activeEffects.reviveCount > 0) {
       this.perkManager.activeEffects.reviveCount--;
-      // UI 메시지 표시 등은 게임 엔진에서 처리하거나 여기서 터미널로 쏠 수 있음
       return true;
     }
     return false;
@@ -546,25 +588,19 @@ export class GameManager {
           const repEl = document.getElementById("shop-money-val");
           if (repEl) repEl.innerText = this.reputation;
         }
-      } else {
-        // 돈 부족 등 피드백
-        // alert("INSUFFICIENT REPUTATION");
       }
     };
 
     document.addEventListener("perm-upgrade", upgradeHandler);
 
-    // showPermanentTree -> showPermanentShop 변경
     await this.terminal.showPermanentShop(
       this.permTree,
       this.acquiredPermPerks,
       this.reputation
     );
 
-    // 상점 종료 시
     document.removeEventListener("perm-upgrade", upgradeHandler);
 
-    // 효과 재적용
     this.perkManager.reset();
     this.applyPermanentEffects();
   }
@@ -576,20 +612,17 @@ export class GameManager {
 
     this.terminal.printSystemMessage("Entering Simulation Mode...");
 
-    // 튜토리얼: 목표 3줄, 속도 1000ms
+    // 튜토리얼은 예외적으로 바로 테트리스 시작
+    this.activeMode = "mining";
     this.transitionToGame(3, 1000);
   }
 
-  async handleStageClear(linesCleared) {
-    // 획득한 데이터 계산 (기본 1줄당 100MB)
+  async handleMiningClear(linesCleared) {
+    // 획득한 데이터 계산
     const earnedData = (linesCleared || 0) * 100;
     this.currentMoney += earnedData;
 
     // --- 클리어 연출 시작 ---
-    // 1. 게임 조작 차단 (일시정지 느낌)
-    // (TetrisGame에 pause 기능이 있다면 좋겠지만, 여기선 단순히 UI로 덮음)
-
-    // 2. "DATA MINING COMPLETE" 연출 출력
     await this.terminal.showMiningCompleteSequence();
 
     // 3. 게임 화면 페이드 아웃 및 터미널 복귀
@@ -612,12 +645,11 @@ export class GameManager {
       );
 
       await this.terminal.waitForEnter();
-      this.currentStage = 1;
-      this.startStage();
+      this.switchMode("defense");
     } else {
-      // 일반 스테이지 클리어 -> 분기점 (상점 or 다음 스테이지)
-      await this.terminal.typeText(`System Log: Upload complete.`, 10);
-      await this.terminal.typeText(`STAGE ${this.currentStage} CLEARED.`, 30);
+      // 일반 스테이지 클리어 -> 분기점 (상점 or Defense 복귀)
+      await this.terminal.typeText(`System Log: Mining complete.`, 10);
+      await this.terminal.typeText(`BATCH ${this.currentStage} CLEARED.`, 30);
       await this.terminal.typeText(`Data Mined: ${earnedData} MB`, 20);
       await this.terminal.typeText(
         `Total Storage: ${this.currentMoney} MB`,
@@ -626,15 +658,19 @@ export class GameManager {
       await this.terminal.typeText("Waiting for next command...", 30);
 
       const choice = await this.terminal.showChoices([
-        { text: "/inject_sequence (Next Stage)", value: "next" },
+        { text: "/return_base (Defense Mode)", value: "defense" },
         { text: "/access_darknet (Open Shop)", value: "shop" },
+        { text: "/continue_mining (Next Batch)", value: "next" }
       ]);
 
       if (choice === "shop") {
         await this.enterShop();
+      } else if (choice === "defense") {
+        this.switchMode("defense");
       } else {
-        this.currentStage++;
-        this.startStage();
+        this.switchMode("mining"); // 다시 채굴 시작 (스테이지 증가는 switchMode 내부에서 처리하거나 여기서?)
+        // switchMode('mining')은 이미 activeMode가 mining이면 스테이지 증가 로직을 타야 함.
+        // 현재 로직상 switchMode('mining')이 내부적으로 startMiningStage를 부르므로 OK.
       }
     }
   }
@@ -646,30 +682,24 @@ export class GameManager {
       if (this.currentMoney >= cost) {
         this.currentMoney -= cost;
         this.perkManager.unlock(perkId);
-        // UI 갱신을 위해 상점을 다시 그림 (간단한 방법)
-        // 실제로는 DOM 조작만 하는게 낫지만, 여기선 재호출
         this.terminal.showShop(this.perkManager, this.currentMoney).then(() => {
-          this.currentStage++;
-          this.startStage();
+          this.switchMode("defense"); // 상점 나가면 디펜스로 복귀
           document.removeEventListener("perk-buy", buyHandler);
         });
       }
     };
     document.addEventListener("perk-buy", buyHandler);
 
-    // 상점 UI 표시
     await this.terminal.showShop(this.perkManager, this.currentMoney);
 
-    // 상점이 닫히면(Promise resolve) 다음 스테이지로
     document.removeEventListener("perk-buy", buyHandler);
-    this.currentStage++;
-    this.startStage();
+    this.switchMode("defense");
   }
 
-  startStage() {
+  startMiningStage() {
     this.terminal.clear();
     this.terminal.printSystemMessage(
-      `Injecting Payload... Stage ${this.currentStage}`
+      `Injecting Payload... Batch ${this.currentStage}`
     );
 
     // 퍽 효과 적용
@@ -677,8 +707,6 @@ export class GameManager {
 
     // 난이도 계산
     let baseSpeed = Math.max(100, 800 - (this.currentStage - 1) * 60);
-    // 속도 퍽 적용 (speedModifier가 낮을수록 느려짐/좋음)
-    // PerkManager의 speedModifier는 기본 1.0, 감소시 -0.1 등.
     let finalSpeed = baseSpeed * effects.speedModifier;
 
     // 목표 라인: 스테이지 * 5
@@ -694,11 +722,11 @@ export class GameManager {
       this.terminal.setTransparentMode(true);
       this.terminal.clear();
 
-      this.game.startGame(targetLines, speed);
+      this.tetrisGame.startGame(targetLines, speed);
     }, 1000);
   }
 
-  async handleGameOver(score) {
+  async handleMiningGameOver(score) {
     document.getElementById("game-ui").style.display = "none";
     this.terminal.setTransparentMode(false);
     this.terminal.show();
@@ -715,7 +743,6 @@ export class GameManager {
     document.getElementById("game-over-screen").classList.remove("hidden");
     document.getElementById("final-score").innerText = finalScore;
 
-    // 게임 오버 화면에 평판 정보 표시
     let repEl = document.getElementById("earned-rep");
     if (!repEl) {
       repEl = document.createElement("div");
@@ -727,5 +754,38 @@ export class GameManager {
       else document.getElementById("game-over-screen").appendChild(repEl);
     }
     repEl.innerText = `REPUTATION GAINED: ${earnedRep} (TOTAL: ${this.reputation})`;
+    
+    // 게임오버 시 리셋 버튼 동작을 가로채서 GameManager가 처리해야 함.
+    // 현재는 location.reload()가 걸려있을 수 있음. -> index.html 확인 필요.
+    // 하지만 여기서 Defense 모드로 복귀시켜주는게 더 자연스러움.
+    // "SYSTEM FAILURE. RETURNING TO SAFE MODE..."
+    
+    // 일단 기존 구조 유지 (재시작 버튼 클릭 시 페이지 리로드)
+  }
+
+  async handleDefenseGameOver() {
+    // 1. UI 연출 (붉은색 경고)
+    this.terminal.setDefenseMode(false); // 다시 배경 어둡게
+    this.terminal.clear();
+    
+    // 붉은색 텍스트 스타일
+    const errorStyle = "color: #ff3333; font-weight: bold; text-shadow: 0 0 10px #f00;";
+    
+    // 긴급 메시지 출력
+    await this.terminal.typeText("!!! WARNING !!!", 10);
+    await this.terminal.typeText("CORE INTEGRITY REACHED 0%", 10);
+    await this.terminal.typeText("SYSTEM CRITICAL FAILURE.", 30);
+    await this.terminal.typeText("ALL PROCESSES TERMINATED.", 20);
+    
+    await new Promise(r => setTimeout(r, 1000));
+    
+    // 재시작 선택지
+    const choice = await this.terminal.showChoices([
+        { text: "SYSTEM REBOOT (Restart Game)", value: "reboot" }
+    ]);
+
+    if (choice === "reboot") {
+        location.reload(); // 페이지 새로고침
+    }
   }
 }
