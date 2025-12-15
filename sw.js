@@ -1,5 +1,5 @@
 // v27 - Always Show Upgrade Menu
-const CACHE_NAME = "hacker-tetris-v49";
+const CACHE_NAME = "hacker-tetris-v50";
 const ASSETS = [
   "./",
   "./index.html",

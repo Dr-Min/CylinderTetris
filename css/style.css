@@ -591,7 +591,9 @@ body {
 
   .node-map {
     display: flex;
-    flex-direction: column;
+    flex-direction: row; /* 세로 -> 가로 변경 */
+    flex-wrap: wrap; /* 줄바꿈 허용 */
+    justify-content: center; /* 중앙 정렬 */
     gap: 15px; /* 노드 간 간격 */
     background: none; /* 그리드 배경 제거 (깔끔하게) */
     background-color: rgba(0, 10, 0, 0.5);
@@ -606,7 +608,9 @@ body {
     top: auto !important;
     left: auto !important;
     transform: none !important;
-    width: 100% !important; /* 가로 꽉 채우기 */
+    /* width: 100% !important;  <-- 가로 꽉 채우기 제거 */
+    width: 80px !important; /* 정사각형 아이콘 */
+    height: 80px !important;
     box-sizing: border-box;
     margin: 0;
     min-height: auto;
