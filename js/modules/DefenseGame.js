@@ -5,8 +5,7 @@ export class DefenseGame {
     // 캔버스 생성 (body에 직접 부착하여 game-container와 분리)
     this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d");
-    this.canvas.style.width = "100vw";
-    this.canvas.style.height = "100vh";
+    // CSS 크기는 설정하지 않음 - resize()에서 내부 해상도만 설정
     this.canvas.style.display = "none";
     this.canvas.style.position = "fixed"; // absolute -> fixed
     this.canvas.style.top = "0";

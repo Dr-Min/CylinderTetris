@@ -1,5 +1,5 @@
-// v4.8 - Remove unnecessary terminal.clear() to preserve messages
-const CACHE_NAME = "hacker-tetris-v4.8";
+// v4.9 - Fix canvas stretch on mobile (remove CSS size)
+const CACHE_NAME = "hacker-tetris-v4.9";
 const ASSETS = [
   "./",
   "./index.html",
