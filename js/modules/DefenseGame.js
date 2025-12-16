@@ -466,12 +466,13 @@ export class DefenseGame {
                 this.updateWaveDisplay();
             } else {
                 // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘)
-                if (this.conquerBtn.style.display === "none") {
-                    this.conquerBtn.style.display = "block";
-                    this.pageDisplay.innerText = "∞ READY";
-                    this.pageDisplay.style.color = "#ffff00"; // 노란색
-                    this.pageDisplay.style.borderColor = "#ffff00";
-                }
+                // conquerBtn은 이제 터미널에서 표시하므로 숨김
+                // if (this.conquerBtn.style.display === "none") {
+                //     this.conquerBtn.style.display = "block";
+                // }
+                this.pageDisplay.innerText = "∞ READY";
+                this.pageDisplay.style.color = "#ff3333"; // 빨간색으로 변경
+                this.pageDisplay.style.borderColor = "#ff3333";
             }
         }
     }

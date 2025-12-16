@@ -1,5 +1,5 @@
-// v5.1 - MAX PAGE button in debug panel (` key)
-const CACHE_NAME = "hacker-tetris-v5.1";
+// v5.2 - Conquer option in terminal (red, large font)
+const CACHE_NAME = "hacker-tetris-v5.2";
 const ASSETS = [
   "./",
   "./index.html",

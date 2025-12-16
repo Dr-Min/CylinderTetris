@@ -448,19 +448,49 @@ export class GameManager {
   async showCommandMenu() {
     const currentStage = this.stageManager.getCurrentStage();
     
-    const choice = await this.terminal.showChoices([
+    // 최대 페이지 도달 시 점령 옵션 추가
+    const isConquerReady = this.defenseGame && 
+      !this.defenseGame.isSafeZone && 
+      this.defenseGame.currentPage >= (this.defenseGame.maxPages || 12);
+    
+    const choices = [
       { text: "/map (Open Stage Map)", value: "map" },
       { text: "/inventory (Equipment & Items)", value: "inventory" },
       { text: "/upgrade (System Upgrades)", value: "upgrade" }
-    ]);
+    ];
     
-    if (choice === "map") {
+    // 점령 가능 시 빨간색 큰 선택지 추가
+    if (isConquerReady) {
+      choices.unshift({ 
+        text: ">>> CONQUER THIS SECTOR <<<", 
+        value: "conquer",
+        style: "conquer" // 특별 스타일
+      });
+    }
+    
+    const choice = await this.terminal.showChoices(choices);
+    
+    if (choice === "conquer") {
+      await this.handleConquerFromTerminal();
+    } else if (choice === "map") {
       await this.showMap();
     } else if (choice === "inventory") {
       await this.showInventory();
     } else if (choice === "upgrade") {
       await this.showUpgrades();
     }
+  }
+  
+  // 터미널에서 점령 선택 시
+  async handleConquerFromTerminal() {
+    // DefenseGame의 점령 처리 호출
+    this.defenseGame.handleConquerClick();
+    
+    // 점령 완료 메시지
+    await this.terminal.printSystemMessage("INITIATING CONQUEST PROTOCOL...");
+    
+    // TODO: 여기서 테트리스 + 미니 디펜스 동시 진행 모드로 전환
+    // 일단은 기존 점령 완료 처리
   }
 
   /**

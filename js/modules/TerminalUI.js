@@ -651,6 +651,20 @@ export class TerminalUI {
         const btn = document.createElement("button");
         btn.className = "choice-btn";
         
+        // 점령 스타일 (빨간색, 큰 폰트)
+        if (choice.style === "conquer") {
+          btn.style.cssText = `
+            color: #ff3333 !important;
+            border-color: #ff3333 !important;
+            font-size: 1.3em !important;
+            font-weight: bold !important;
+            text-shadow: 0 0 10px #ff0000 !important;
+            animation: pulse-red 0.5s infinite alternate !important;
+            padding: 10px !important;
+            margin-bottom: 5px !important;
+          `;
+        }
+        
         const displayIndex = index + 1;
         const fullText = `[${displayIndex}] ${choice.text}`;
         btn.textContent = ""; // 빈 상태로 시작
