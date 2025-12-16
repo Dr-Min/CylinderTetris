@@ -583,6 +583,7 @@ export class TerminalUI {
     const line = document.createElement("div");
     line.className = "terminal-line";
     this.contentDiv.appendChild(line);
+    this.limitLines(3); // 최대 3줄로 제한
     this.scrollToBottom();
 
     return new Promise((resolve) => {
@@ -624,27 +625,32 @@ export class TerminalUI {
     });
   }
 
-  // 선택지 표시 (버튼 + 텍스트 입력 지원)
+  // 선택지 표시 (버튼 + 텍스트 입력 지원, 순차 등장)
   showChoices(choices) {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       this.choiceArea.innerHTML = "";
+      this.choiceArea.classList.remove("hidden");
 
-      // 1. 선택지 버튼 렌더링
-      choices.forEach((choice, index) => {
+      // 1. 선택지 버튼을 순차적으로 타이핑하며 렌더링
+      for (let index = 0; index < choices.length; index++) {
+        const choice = choices[index];
         const btn = document.createElement("button");
         btn.className = "choice-btn";
-        // 인덱스를 1부터 시작하도록 표시 (1. Option)
+        
         const displayIndex = index + 1;
-        btn.innerHTML = `<span style="color:var(--term-dim)">[${displayIndex}]</span> ${choice.text}`;
-
+        const fullText = `[${displayIndex}] ${choice.text}`;
+        btn.textContent = ""; // 빈 상태로 시작
+        
         btn.onclick = () => {
           this.finalizeChoice(choice, resolve);
         };
         this.choiceArea.appendChild(btn);
-      });
-
-      this.choiceArea.classList.remove("hidden");
-      this.scrollToBottom();
+        
+        // 타이핑 효과 (보이는 상태에서 타이핑)
+        await this.typeInElement(btn, fullText, 15);
+        
+        this.scrollToBottom();
+      }
 
       // 2. 입력 필드 활성화
       this.inputLine.classList.remove("hidden");
@@ -695,17 +701,68 @@ export class TerminalUI {
     line.className = "terminal-line";
     line.innerHTML = `<span style="color:var(--term-color)">[USER]> ${choice.text}</span>`;
     this.contentDiv.appendChild(line);
+    this.limitLines(3); // 최대 3줄로 제한
 
     resolve(choice.value);
   }
 
   // 시스템 메시지 (즉시 출력)
-  printSystemMessage(text) {
-    const line = document.createElement("div");
-    line.className = "terminal-line system-msg";
-    line.textContent = `[SYSTEM] ${text}`;
-    this.contentDiv.appendChild(line);
-    this.scrollToBottom();
+  /**
+   * 시스템 메시지 출력 (타이핑 효과)
+   * @param {string} text 출력할 텍스트
+   * @param {number} speed 타이핑 속도 (ms, 기본값 25)
+   * @returns {Promise} 타이핑 완료 시 resolve
+   */
+  printSystemMessage(text, speed = 25) {
+    return new Promise(resolve => {
+      const line = document.createElement("div");
+      line.className = "terminal-line system-msg";
+      line.textContent = "[SYSTEM] ";
+      this.contentDiv.appendChild(line);
+      this.limitLines(3);
+      this.scrollToBottom();
+
+      let i = 0;
+      const fullText = text;
+      const typeChar = () => {
+        if (i < fullText.length) {
+          line.textContent = `[SYSTEM] ${fullText.substring(0, i + 1)}`;
+          i++;
+          this.scrollToBottom();
+          setTimeout(typeChar, speed);
+        } else {
+          resolve();
+        }
+      };
+      typeChar();
+    });
+  }
+
+  // 요소 내에 타이핑 효과
+  typeInElement(element, text, speed = 30) {
+    return new Promise(resolve => {
+      let i = 0;
+      const typeChar = () => {
+        if (i < text.length) {
+          element.textContent = text.substring(0, i + 1);
+          i++;
+          setTimeout(typeChar, speed);
+        } else {
+          resolve();
+        }
+      };
+      typeChar();
+    });
+  }
+
+  // 터미널 라인을 최대 N줄로 제한
+  limitLines(maxLines) {
+    const lines = this.contentDiv.querySelectorAll(".terminal-line");
+    while (lines.length > maxLines) {
+      const firstLine = this.contentDiv.querySelector(".terminal-line");
+      if (firstLine) firstLine.remove();
+      else break;
+    }
   }
 
   // 엔터 대기 (깜빡이는 커서와 함께) - 이제 아무 키나 누르는게 아니라 엔터 입력 대기

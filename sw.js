@@ -1,5 +1,5 @@
-// v3.1 - Aggressive spacing fix: remove all min-height
-const CACHE_NAME = "hacker-tetris-v3.1";
+// v4.3 - Ally spawn from core with elastic pop animation
+const CACHE_NAME = "hacker-tetris-v4.3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,6 +15,7 @@ const ASSETS = [
   "./js/modules/ConquestManager.js",
   "./js/modules/EquipmentManager.js",
   "./js/modules/StageManager.js",
+  "./js/modules/InventoryManager.js",
   "./manifest.json",
   "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
   "https://fonts.googleapis.com/css2?family=VT323&display=swap",

@@ -3,7 +3,6 @@ export class ConquestManager {
         this.conqueredStages = 0; // 총 점령 횟수
         this.mergedStacks = 0;    // 병합된 스택 수
         this.alliedVirusLevel = 1; // 아군 바이러스 체력/등급 (1부터 시작)
-        this.alliedVirusCount = 30; // 주둔 바이러스 수 (기본 30마리 유지)
         
         // 시간 당 자동 채굴량 (점령지 보상)
         this.miningRate = 0; 
@@ -58,20 +57,17 @@ export class ConquestManager {
 
     // 현재 아군 바이러스 정보 반환 (디펜스 모드에서 시각화용)
     getAlliedInfo() {
+        // 아군 수 = 점령지 + 병합 스택 * 2 (병합하면 더 많은 아군)
+        // 기본값: 점령 전에는 3마리 (테스트용)
+        const baseCount = 3;
+        const conquestBonus = this.conqueredStages * 2 + this.mergedStacks * 4;
+        
         return {
             level: this.alliedVirusLevel,
-            count: this.alliedVirusCount,
-            hp: this.alliedVirusLevel * 10, // 레벨당 체력 증가
-            color: this.getVirusColor(this.alliedVirusLevel)
+            count: baseCount + conquestBonus,
+            hp: this.alliedVirusLevel * 10,
+            color: "#00aaff" // 파란색으로 고정
         };
-    }
-
-    getVirusColor(level) {
-        if (level === 1) return "#00ff00"; // Green
-        if (level === 2) return "#0088ff"; // Blue
-        if (level === 3) return "#aa00ff"; // Purple
-        if (level >= 4) return "#ffaa00"; // Orange
-        return "#ffffff";
     }
 
     // 저장/로드 지원

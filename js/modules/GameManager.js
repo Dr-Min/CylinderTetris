@@ -5,6 +5,7 @@ import { PerkManager } from "./PerkManager.js";
 import { ConquestManager } from "./ConquestManager.js";
 import { EquipmentManager } from "./EquipmentManager.js";
 import { StageManager } from "./StageManager.js";
+import { InventoryManager } from "./InventoryManager.js";
 
 export class GameManager {
   constructor() {
@@ -14,7 +15,8 @@ export class GameManager {
     this.perkManager = new PerkManager();
     this.conquestManager = new ConquestManager();
     this.equipmentManager = new EquipmentManager();
-    this.stageManager = new StageManager(); // 스테이지 관리자 추가
+    this.stageManager = new StageManager();
+    this.inventoryManager = new InventoryManager(); // 인벤토리 매니저 추가
 
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
@@ -359,31 +361,17 @@ export class GameManager {
 
       this.terminal.show();
       await this.terminal.typeText("System Reloaded.", 20);
-      await this.terminal.typeText("Skipping initialization sequence...", 20);
-      await new Promise((r) => setTimeout(r, 800));
+      await this.terminal.typeText("Initiating Defense Protocol...", 20);
+      await new Promise((r) => setTimeout(r, 500));
 
-      // 영구 강화 메뉴 진입 여부 확인 (스킵 모드에서도 추가)
-      if (true) {
-        await this.terminal.typeText(`REP LEVEL: ${this.reputation}`, 20);
-        await this.terminal.typeText("Access System Upgrades?", 30);
-        const choice = await this.terminal.showChoices([
-          { text: "YES (Spend Reputation)", value: "yes" },
-          { text: "NO (Start Operation)", value: "no" },
-        ]);
-
-        if (choice === "yes") {
-          await this.enterPermanentShop();
-        }
-      }
-
-      // 게임 시작 시 기본 모드는 Defense
+      // 바로 게임 시작 (평판 시스템 스킵)
       this.switchMode("defense");
     } else {
       await this.startIntro();
     }
   }
 
-  switchMode(mode) {
+  async switchMode(mode) {
     console.log(`Switching mode: ${this.activeMode} -> ${mode}`);
     this.activeMode = mode;
 
@@ -397,7 +385,7 @@ export class GameManager {
       this.terminal.setDefenseMode(true); // 배경 투명 + 클릭 가능
       this.terminal.show(); // 터미널 메시지창 활성화 (로그용)
       this.terminal.clear();
-      this.terminal.printSystemMessage("DEFENSE_PROTOCOL_INITIATED");
+      await this.terminal.printSystemMessage("DEFENSE_PROTOCOL_INITIATED");
 
       // 3. 디펜스 게임 시작
       this.defenseGame.start();
@@ -414,7 +402,7 @@ export class GameManager {
 
       // 터미널 명령어 옵션 표시
       setTimeout(async () => {
-        this.terminal.printSystemMessage("System Idle. Ready for Operations.");
+        await this.terminal.printSystemMessage("System Idle. Ready for Operations.");
         await this.showCommandMenu();
       }, 1000);
 
@@ -425,8 +413,8 @@ export class GameManager {
       // 2. 터미널 및 UI 조정
       this.terminal.setTransparentMode(true);
       this.terminal.clear();
-      this.terminal.printSystemMessage("BREACH_PROTOCOL_INITIATED");
-      this.terminal.printSystemMessage("Objective: Clear lines to acquire Equipment.");
+      await this.terminal.printSystemMessage("BREACH_PROTOCOL_INITIATED");
+      await this.terminal.printSystemMessage("Objective: Clear lines to acquire Equipment.");
 
       // 3. 테트리스 시작 (장비 획득 목표)
       this.startBreachMode();
@@ -441,13 +429,13 @@ export class GameManager {
     
     const choice = await this.terminal.showChoices([
       { text: "/map (Open Stage Map)", value: "map" },
-      { text: "/breach_defense (Enter Tetris - Get Equipment)", value: "breach" }
+      { text: "/inventory (Equipment & Items)", value: "inventory" }
     ]);
     
     if (choice === "map") {
       await this.showMap();
-    } else if (choice === "breach") {
-      this.switchMode("breach");
+    } else if (choice === "inventory") {
+      await this.showInventory();
     }
   }
 
@@ -457,26 +445,33 @@ export class GameManager {
   async showMap() {
     this.defenseGame.pause(); // 디펜스 일시정지
     
+    // 터미널 애니메이션 (오버레이 유지)
+    const bgOverlay = await this.playTerminalAnimation("ACCESSING STAGE MAP...", true);
+    
     const mapData = this.stageManager.getMapData();
     
-    // 맵 오버레이 생성
-    const overlay = document.createElement("div");
-    overlay.id = "map-overlay";
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 3000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-      box-sizing: border-box;
-      overflow-y: auto;
+    // 맵 컨테이너 (기존 오버레이 위에 생성하거나 교체)
+    // 여기서는 bgOverlay를 재활용하여 자연스럽게 전환
+    bgOverlay.id = "map-overlay";
+    bgOverlay.style.background = "rgba(0, 0, 0, 0.95)";
+    bgOverlay.style.flexDirection = "column";
+    bgOverlay.style.justifyContent = "flex-start"; // 상단 정렬로 변경
+    bgOverlay.style.padding = "20px";
+    bgOverlay.style.boxSizing = "border-box";
+    bgOverlay.style.overflowY = "auto";
+    
+    // 스캔 라인 효과 추가
+    const scanline = document.createElement("div");
+    scanline.style.cssText = `
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 5px;
+      background: rgba(0, 255, 0, 0.5);
+      opacity: 0.5;
+      animation: scan 2s linear infinite;
+      pointer-events: none;
     `;
+    bgOverlay.appendChild(scanline);
 
     // 헤더
     const header = document.createElement("div");
@@ -488,7 +483,7 @@ export class GameManager {
       text-shadow: 0 0 10px #00ff00;
     `;
     header.innerText = "[ STAGE MAP ]";
-    overlay.appendChild(header);
+    bgOverlay.appendChild(header);
 
     // 맵 컨테이너
     const mapContainer = document.createElement("div");
@@ -499,9 +494,12 @@ export class GameManager {
       gap: 10px;
       justify-content: center;
       align-content: center;
+      flex: 1; /* 남은 공간 차지 */
     `;
 
-    // 스테이지 버튼 생성
+    // 스테이지 버튼 생성 (새 색상 규칙)
+    const accessibleIds = this.stageManager.getAccessibleStages().map(s => s.id);
+    
     mapData.stages.forEach(stage => {
       const btn = document.createElement("button");
       btn.className = "map-stage-btn";
@@ -510,28 +508,42 @@ export class GameManager {
       const gridRow = stage.position.row + 1;
       const gridCol = stage.position.col + 1;
       
-      // 스타일 설정
-      let bgColor, borderColor, textColor;
-      if (stage.id === mapData.currentStageId) {
-        bgColor = "rgba(0, 255, 0, 0.3)";
+      // 상태 확인
+      const isCurrent = stage.id === mapData.currentStageId;
+      const isAccessible = accessibleIds.includes(stage.id);
+      const isConquered = stage.conquered;
+      const isLocked = !isAccessible && !isConquered;
+      
+      // 색상 설정 (우선순위: 현재 > 갈수있음 > 점령됨 > 보스 > 파밍 > 잠김)
+      let bgColor, borderColor, textColor, extraStyle = "";
+      
+      if (isCurrent) {
+        // 🟢 현재 위치: 밝은 초록 + glow
+        bgColor = "rgba(0, 255, 0, 0.4)";
         borderColor = "#00ff00";
         textColor = "#00ff00";
-      } else if (stage.conquered) {
+        extraStyle = "box-shadow: 0 0 20px #00ff00, inset 0 0 10px rgba(0,255,0,0.3);";
+      } else if (isAccessible && !isConquered) {
+        // 🟡 갈 수 있는 곳 (미점령): 노란색 + 깜빡임
+        bgColor = "rgba(255, 200, 0, 0.3)";
+        borderColor = "#ffcc00";
+        textColor = "#ffcc00";
+        extraStyle = "animation: pulse 1.5s infinite;";
+      } else if (isConquered) {
+        // 🔵 점령 완료: 파란색
         bgColor = "rgba(0, 150, 255, 0.3)";
         borderColor = "#00aaff";
         textColor = "#00aaff";
       } else if (stage.type === "boss") {
-        bgColor = "rgba(255, 0, 0, 0.3)";
-        borderColor = "#ff0000";
-        textColor = "#ff0000";
-      } else if (stage.type === "farming") {
-        bgColor = "rgba(255, 200, 0, 0.3)";
-        borderColor = "#ffcc00";
-        textColor = "#ffcc00";
+        // 🔴 보스 (잠김): 어두운 빨간색
+        bgColor = "rgba(100, 0, 0, 0.3)";
+        borderColor = "#660000";
+        textColor = "#880000";
       } else {
-        bgColor = "rgba(100, 100, 100, 0.3)";
-        borderColor = "#666";
-        textColor = "#999";
+        // ⚫ 잠김: 어두운 회색
+        bgColor = "rgba(50, 50, 50, 0.3)";
+        borderColor = "#333";
+        textColor = "#555";
       }
 
       btn.style.cssText = `
@@ -543,37 +555,60 @@ export class GameManager {
         font-family: var(--term-font);
         font-size: 11px;
         padding: 5px;
-        cursor: pointer;
+        cursor: ${isAccessible ? "pointer" : "not-allowed"};
         text-align: center;
         transition: all 0.2s;
+        ${extraStyle}
       `;
       
-      // 현재 위치 표시
-      const currentMarker = stage.id === mapData.currentStageId ? ">> " : "";
-      const conqueredMarker = stage.conquered ? " ✓" : "";
+      // 마커 표시
+      const currentMarker = isCurrent ? "▶ " : "";
+      const conqueredMarker = isConquered ? " ✓" : "";
+      const lockedMarker = isLocked ? " 🔒" : "";
       
       btn.innerHTML = `
-        <div style="font-weight:bold;">${currentMarker}${stage.name}${conqueredMarker}</div>
+        <div style="font-weight:bold;">${currentMarker}${stage.name}${conqueredMarker}${lockedMarker}</div>
         <div style="font-size:9px;margin-top:3px;">${stage.type.toUpperCase()}</div>
       `;
 
-      // 클릭 이벤트
-      btn.onclick = () => this.handleMapStageClick(stage, overlay);
-
-      // 호버 효과
-      btn.onmouseenter = () => {
-        btn.style.transform = "scale(1.05)";
-        btn.style.boxShadow = `0 0 15px ${borderColor}`;
-      };
-      btn.onmouseleave = () => {
-        btn.style.transform = "scale(1)";
-        btn.style.boxShadow = "none";
-      };
+      // 클릭 이벤트 (접근 가능한 경우만)
+      if (isAccessible) {
+        btn.onclick = () => this.handleMapStageClick(stage, bgOverlay);
+        
+        // 호버 효과
+        btn.onmouseenter = () => {
+          btn.style.transform = "scale(1.05)";
+          btn.style.boxShadow = `0 0 20px ${borderColor}`;
+        };
+        btn.onmouseleave = () => {
+          btn.style.transform = "scale(1)";
+          btn.style.boxShadow = isCurrent ? `0 0 20px #00ff00` : "none";
+        };
+      }
 
       mapContainer.appendChild(btn);
     });
 
-    overlay.appendChild(mapContainer);
+    bgOverlay.appendChild(mapContainer);
+
+    // 범례 (Legend)
+    const legend = document.createElement("div");
+    legend.style.cssText = `
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 15px;
+      font-family: var(--term-font);
+      font-size: 10px;
+    `;
+    legend.innerHTML = `
+      <span style="color:#00ff00;">● 현재 위치</span>
+      <span style="color:#ffcc00;">● 이동 가능</span>
+      <span style="color:#00aaff;">● 점령 완료</span>
+      <span style="color:#555;">● 잠김 🔒</span>
+    `;
+    bgOverlay.appendChild(legend);
 
     // 현재 스테이지 정보
     const currentStage = this.stageManager.getCurrentStage();
@@ -591,7 +626,7 @@ export class GameManager {
       <div>${currentStage.description}</div>
       <div style="margin-top:10px;color:#666;">Conquered: ${mapData.conqueredCount}/4</div>
     `;
-    overlay.appendChild(info);
+    bgOverlay.appendChild(info);
 
     // 닫기 버튼
     const closeBtn = document.createElement("button");
@@ -607,13 +642,29 @@ export class GameManager {
     `;
     closeBtn.innerText = "[CLOSE MAP]";
     closeBtn.onclick = () => {
-      overlay.remove();
+      bgOverlay.remove();
       this.defenseGame.resume();
       this.showCommandMenu();
     };
-    overlay.appendChild(closeBtn);
+    bgOverlay.appendChild(closeBtn);
 
-    document.body.appendChild(overlay);
+    // CSS 애니메이션 추가 (스캔라인 + 깜빡임)
+    if (!document.getElementById("map-animations")) {
+      const style = document.createElement("style");
+      style.id = "map-animations";
+      style.innerHTML = `
+        @keyframes scan {
+          0% { top: 0; opacity: 0; }
+          50% { opacity: 0.5; }
+          100% { top: 100%; opacity: 0; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; border-color: #ffcc00; }
+          50% { opacity: 0.6; border-color: #ff8800; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
   }
 
   /**
@@ -623,21 +674,109 @@ export class GameManager {
     const result = this.stageManager.moveToStage(stage.id);
     
     if (result.success) {
+      // 1. 장비 선택 (안전영역 제외) - 맵 위에서 바로 진행
+      if (stage.type !== "safe") {
+        await this.showEquipmentSelection(stage);
+      }
+      
       overlay.remove();
       
-      // 스테이지 설정 적용
+      // 2. 스테이지 설정 적용
       this.applyStageSettings(result.stage);
       
-      // 디펜스 게임 재시작
+      // 3. 아군 바이러스 정보 업데이트 (playIntroAnimation 전에!)
+      const alliedInfo = this.conquestManager.getAlliedInfo();
+      this.defenseGame.updateAlliedInfo(alliedInfo);
+      
+      // 4. 기존 아군 제거 (겹침 방지) 후 게임 시작
+      this.defenseGame.alliedViruses = [];
       this.defenseGame.resume();
       
-      this.terminal.printSystemMessage(`Moved to: ${result.stage.name}`);
-      this.terminal.printSystemMessage(result.stage.description);
+      // 5. 코어 강림 연출 (Canvas 내에서 처리)
+      await this.defenseGame.playIntroAnimation();
+      
+      // 6. 연출 종료 후 시스템 메시지 (타이핑 효과)
+      this.terminal.clear();
+      await this.terminal.printSystemMessage(`DEPLOYED: ${result.stage.name}`);
       
       await this.showCommandMenu();
     } else {
-      this.terminal.printSystemMessage(`ACCESS DENIED: ${result.message}`);
+      await this.terminal.printSystemMessage(`ACCESS DENIED: ${result.message}`);
     }
+  }
+
+  /**
+   * 스테이지 진입 전 장비 선택 UI
+   */
+  async showEquipmentSelection(stage) {
+    return new Promise(resolve => {
+      const data = this.inventoryManager.getData();
+      
+      const overlay = document.createElement("div");
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 5000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
+      `;
+
+      const header = document.createElement("div");
+      header.style.cssText = `
+        color: #ffcc00;
+        font-family: var(--term-font);
+        font-size: 16px;
+        margin-bottom: 15px;
+        text-shadow: 0 0 10px #ffcc00;
+        text-align: center;
+      `;
+      header.innerHTML = `ENTERING: ${stage.name}<br><span style="font-size:12px;color:#aaa;">Select Equipment for this Mission</span>`;
+      overlay.appendChild(header);
+
+      // 장비 슬롯 표시
+      const equipRow = document.createElement("div");
+      equipRow.style.cssText = `
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 2px solid #00ff00;
+        background: rgba(0, 50, 0, 0.3);
+      `;
+
+      data.slotTypes.forEach((type, idx) => {
+        const slot = this.createSlotElement(data.equipSlots[idx], type, idx, true);
+        equipRow.appendChild(slot);
+      });
+      overlay.appendChild(equipRow);
+
+      // 출발 버튼
+      const deployBtn = document.createElement("button");
+      deployBtn.style.cssText = `
+        padding: 12px 40px;
+        background: rgba(0, 100, 0, 0.5);
+        border: 2px solid #00ff00;
+        color: #00ff00;
+        font-family: var(--term-font);
+        font-size: 16px;
+        cursor: pointer;
+        text-shadow: 0 0 5px #00ff00;
+      `;
+      deployBtn.innerText = "[ DEPLOY ]";
+      deployBtn.onclick = () => {
+        overlay.remove();
+        resolve();
+      };
+      overlay.appendChild(deployBtn);
+
+      document.body.appendChild(overlay);
+    });
   }
 
   /**
@@ -662,6 +801,275 @@ export class GameManager {
     
     // 적 초기화
     this.defenseGame.enemies = [];
+  }
+
+  /**
+   * 인벤토리/장비 UI 표시
+   */
+  async showInventory() {
+    this.defenseGame.pause();
+    
+    const data = this.inventoryManager.getData();
+    
+    // 터미널 애니메이션
+    await this.playTerminalAnimation("LOADING INVENTORY...");
+    
+    // 인벤토리 오버레이 생성
+    const overlay = document.createElement("div");
+    overlay.id = "inventory-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 3000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    `;
+
+    // 헤더
+    const header = document.createElement("div");
+    header.style.cssText = `
+      color: #00ff00;
+      font-family: var(--term-font);
+      font-size: 20px;
+      margin-bottom: 15px;
+      text-shadow: 0 0 10px #00ff00;
+    `;
+    header.innerText = "[ EQUIPMENT & INVENTORY ]";
+    overlay.appendChild(header);
+
+    // 장비 슬롯 영역 (상단 4칸)
+    const equipSection = document.createElement("div");
+    equipSection.style.cssText = `
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 2px solid #00ff00;
+      background: rgba(0, 50, 0, 0.3);
+    `;
+
+    data.slotTypes.forEach((type, idx) => {
+      const slot = this.createSlotElement(data.equipSlots[idx], type, idx, true);
+      equipSection.appendChild(slot);
+    });
+    overlay.appendChild(equipSection);
+
+    // 라벨
+    const invLabel = document.createElement("div");
+    invLabel.style.cssText = `
+      color: #aaa;
+      font-family: var(--term-font);
+      font-size: 12px;
+      margin-bottom: 5px;
+    `;
+    invLabel.innerText = "INVENTORY (20 SLOTS)";
+    overlay.appendChild(invLabel);
+
+    // 인벤토리 그리드 (20칸: 5x4)
+    const invGrid = document.createElement("div");
+    invGrid.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(5, 50px);
+      grid-template-rows: repeat(4, 50px);
+      gap: 5px;
+      padding: 10px;
+      border: 1px solid #555;
+      background: rgba(0, 0, 0, 0.5);
+    `;
+
+    data.inventory.forEach((item, idx) => {
+      const slot = this.createSlotElement(item, null, idx, false);
+      invGrid.appendChild(slot);
+    });
+    overlay.appendChild(invGrid);
+
+    // 닫기 버튼
+    const closeBtn = document.createElement("button");
+    closeBtn.style.cssText = `
+      margin-top: 15px;
+      padding: 10px 30px;
+      background: transparent;
+      border: 2px solid #ff0000;
+      color: #ff0000;
+      font-family: var(--term-font);
+      font-size: 14px;
+      cursor: pointer;
+    `;
+    closeBtn.innerText = "[CLOSE]";
+    closeBtn.onclick = () => {
+      overlay.remove();
+      this.defenseGame.resume();
+      this.showCommandMenu();
+    };
+    overlay.appendChild(closeBtn);
+
+    document.body.appendChild(overlay);
+  }
+
+  /**
+   * 슬롯 요소 생성
+   */
+  createSlotElement(item, slotType, index, isEquipSlot) {
+    const slot = document.createElement("div");
+    slot.style.cssText = `
+      width: 50px;
+      height: 50px;
+      border: 1px solid ${isEquipSlot ? '#00ff00' : '#555'};
+      background: ${item ? 'rgba(0, 100, 50, 0.5)' : 'rgba(0, 0, 0, 0.3)'};
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: var(--term-font);
+      font-size: 8px;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+    `;
+
+    if (isEquipSlot) {
+      const typeLabel = document.createElement("div");
+      typeLabel.style.cssText = "font-size: 6px; color: #00ff00; margin-bottom: 2px;";
+      typeLabel.innerText = slotType;
+      slot.appendChild(typeLabel);
+    }
+
+    if (item) {
+      const itemName = document.createElement("div");
+      itemName.style.cssText = "font-size: 7px; text-align: center;";
+      itemName.innerText = item.name || "ITEM";
+      slot.appendChild(itemName);
+    } else {
+      const empty = document.createElement("div");
+      empty.style.cssText = "color: #333;";
+      empty.innerText = "-";
+      slot.appendChild(empty);
+    }
+
+    slot.onmouseenter = () => {
+      slot.style.borderColor = "#00ff00";
+      slot.style.boxShadow = "0 0 10px #00ff00";
+    };
+    slot.onmouseleave = () => {
+      slot.style.borderColor = isEquipSlot ? "#00ff00" : "#555";
+      slot.style.boxShadow = "none";
+    };
+
+    return slot;
+  }
+
+  /**
+   * 터미널 애니메이션 재생
+   * @param {string} text 표시할 텍스트
+   * @param {boolean} keepOverlay 애니메이션 후 오버레이 유지 여부 (기본값 false)
+   * @returns {Promise<HTMLElement|void>} keepOverlay가 true면 오버레이 요소 반환
+   */
+  async playTerminalAnimation(text, keepOverlay = false) {
+    return new Promise(resolve => {
+      const overlay = document.createElement("div");
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: #000;
+        z-index: 4000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: var(--term-font);
+        color: #00ff00;
+        font-size: 18px;
+      `;
+
+      const textEl = document.createElement("div");
+      textEl.style.textShadow = "0 0 10px #00ff00";
+      overlay.appendChild(textEl);
+      document.body.appendChild(overlay);
+
+      let i = 0;
+      const typeInterval = setInterval(() => {
+        if (i < text.length) {
+          textEl.innerText = text.substring(0, i + 1) + "_";
+          i++;
+        } else {
+          clearInterval(typeInterval);
+          setTimeout(() => {
+            if (keepOverlay) {
+              textEl.remove(); // 텍스트만 지우고 배경 유지
+              resolve(overlay);
+            } else {
+              overlay.style.opacity = "0";
+              overlay.style.transition = "opacity 0.3s";
+              setTimeout(() => {
+                overlay.remove();
+                resolve();
+              }, 300);
+            }
+          }, 200);
+        }
+      }, 30);
+    });
+  }
+
+  /**
+   * 스테이지 진입 애니메이션 (코어 낙하)
+   */
+  async playCoreDropAnimation() {
+    return new Promise(resolve => {
+      const overlay = document.createElement("div");
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: transparent;
+        z-index: 4000;
+        pointer-events: none;
+      `;
+
+      const core = document.createElement("div");
+      core.style.cssText = `
+        position: absolute;
+        left: 50%;
+        top: -100px;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #00ffff, #0066ff);
+        box-shadow: 0 0 30px #00ffff, 0 0 60px #0066ff;
+        transition: top 0.8s ease-in;
+      `;
+      overlay.appendChild(core);
+      document.body.appendChild(overlay);
+
+      // 코어 낙하
+      setTimeout(() => {
+        core.style.top = "50%";
+        core.style.transform = "translate(-50%, -50%)";
+      }, 50);
+
+      // 착지 효과
+      setTimeout(() => {
+        core.style.boxShadow = "0 0 50px #00ffff, 0 0 100px #0066ff, 0 0 150px #00ffff";
+        
+        setTimeout(() => {
+          overlay.style.opacity = "0";
+          overlay.style.transition = "opacity 0.5s";
+          setTimeout(() => {
+            overlay.remove();
+            resolve();
+          }, 500);
+        }, 300);
+      }, 850);
+    });
   }
 
   loadPermanentPerks() {

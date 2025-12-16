@@ -27,8 +27,14 @@ export class DefenseGame {
       shieldHp: 100,
       shieldMaxHp: 100,
       shieldRadius: 70,
-      shieldTimer: 0
+      shieldTimer: 0,
+      scale: 1 // 원근감 애니메이션용
     };
+    
+    // HP 표시 상태
+    this.showCoreHP = true;
+    this.glitchText = false;
+    this.glitchOffset = { x: 0, y: 0 };
 
     // UI 레이어 생성 (DOM 기반, 모바일 터치 최적화)
     this.uiLayer = document.createElement("div");
@@ -198,25 +204,11 @@ export class DefenseGame {
       this.resourceDisplay.innerText = `DATA: ${this.currentData} MB`;
   }
 
-  // 외부에서 아군 정보 업데이트
+  // 외부에서 아군 정보 업데이트 (정보만 저장, 생성은 playIntroAnimation에서)
   updateAlliedInfo(info) {
       this.alliedInfo = info;
-      // 아군 바이러스 생성 (전투 가능한 유닛)
-      this.alliedViruses = [];
-      for(let i=0; i<info.count; i++) {
-          const angle = (Math.PI * 2 / info.count) * i;
-          const r = 60; // 코어 주변
-          this.alliedViruses.push({
-              x: this.core.x + Math.cos(angle) * r,
-              y: this.core.y + Math.sin(angle) * r,
-              angle: angle,
-              radius: 4 + (info.level * 1), // 레벨업 시 크기 증가
-              color: info.color,
-              hp: info.hp || (info.level * 10), // 체력
-              maxHp: info.hp || (info.level * 10),
-              damage: info.level * 5 // 레벨당 데미지 증가
-          });
-      }
+      console.log("[updateAlliedInfo] Info saved:", info);
+      // 아군 바이러스 생성은 playIntroAnimation에서 처리
   }
 
   handleConquerClick() {
@@ -369,41 +361,37 @@ export class DefenseGame {
         }
     }
 
-    // 0.8 아군 바이러스 로직 (회전 + 적과 전투)
+    // 0.8 아군 바이러스 로직 (적 추적 + 몸통박치기)
     this.alliedViruses.forEach((v, idx) => {
-        // 회전
-        v.angle += dt * 0.5;
-        const r = 50 + Math.sin(now * 2 + v.angle) * 5;
-        v.x = this.core.x + Math.cos(v.angle) * r;
-        v.y = this.core.y + Math.sin(v.angle) * r;
-        
         // HP가 없으면 제거 (사망)
         if (v.hp <= 0) {
+            this.createExplosion(v.x, v.y, v.color, 8);
             this.alliedViruses.splice(idx, 1);
             return;
         }
         
-        // 가장 가까운 적 찾기
+        // 가장 가까운 적 찾기 (사거리 200)
         let nearestEnemy = null;
         let minDist = Infinity;
         
         this.enemies.forEach(enemy => {
             const dist = Math.hypot(enemy.x - v.x, enemy.y - v.y);
-            if (dist < 80 && dist < minDist) { // 사거리 80
+            if (dist < 200 && dist < minDist) { // 사거리 200으로 확대
                 minDist = dist;
                 nearestEnemy = enemy;
             }
         });
         
-        // 적과 충돌 시 전투
+        // 적과 충돌 시 전투 (몸통박치기)
         if (nearestEnemy) {
             const dist = Math.hypot(nearestEnemy.x - v.x, nearestEnemy.y - v.y);
-            if (dist < v.radius + nearestEnemy.radius) {
-                // 충돌: 서로 데미지
-                nearestEnemy.hp -= v.damage || 5; // 아군 데미지
-                v.hp -= nearestEnemy.damage || 10; // 적 데미지
+            if (dist < v.radius + nearestEnemy.radius + 5) {
+                // 충돌: 서로 동일한 데미지 (몸통박치기)
+                const damage = v.damage || 10;
+                nearestEnemy.hp -= damage;
+                v.hp -= damage; // 동일한 데미지
                 
-                this.createExplosion((v.x + nearestEnemy.x) / 2, (v.y + nearestEnemy.y) / 2, v.color, 3);
+                this.createExplosion((v.x + nearestEnemy.x) / 2, (v.y + nearestEnemy.y) / 2, v.color, 5);
                 
                 // 적 처치
                 if (nearestEnemy.hp <= 0) {
@@ -420,13 +408,23 @@ export class DefenseGame {
                     }
                 }
             } else {
-                // 사거리 내 적에게 이동
+                // 사거리 내 적에게 이동 (빠르게)
                 const dx = nearestEnemy.x - v.x;
                 const dy = nearestEnemy.y - v.y;
-                const moveSpeed = 30 * dt;
+                const moveSpeed = 80 * dt; // 이동속도 증가
                 v.x += (dx / dist) * moveSpeed;
                 v.y += (dy / dist) * moveSpeed;
             }
+        } else {
+            // 적이 없으면 코어 주변 순찰 (회전)
+            v.angle += dt * 0.8;
+            const patrolRadius = 50;
+            const targetX = this.core.x + Math.cos(v.angle) * patrolRadius;
+            const targetY = this.core.y + Math.sin(v.angle) * patrolRadius;
+            
+            // 부드럽게 이동
+            v.x += (targetX - v.x) * dt * 3;
+            v.y += (targetY - v.y) * dt * 3;
         }
     });
 
@@ -640,13 +638,44 @@ export class DefenseGame {
     // 발사대 그리기 삭제됨
     this.ctx.restore();
 
+    // 코어 스케일 적용 (원근감 효과)
+    const coreScale = this.core.scale || 1;
+    const scaledRadius = this.core.radius * coreScale;
+    
     this.ctx.beginPath();
-    this.ctx.arc(this.core.x, this.core.y, this.core.radius, 0, Math.PI * 2);
+    this.ctx.arc(this.core.x, this.core.y, scaledRadius, 0, Math.PI * 2);
     this.ctx.fillStyle = this.core.color;
     this.ctx.fill();
-    this.ctx.lineWidth = 3;
+    this.ctx.lineWidth = 3 * coreScale;
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.stroke();
+    
+    // 코어 체력 퍼센트 표시 (글리치 효과 적용)
+    if (this.showCoreHP !== false) {
+      const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
+      
+      // 글리치 오프셋
+      const offsetX = this.glitchText ? (this.glitchOffset?.x || 0) : 0;
+      const offsetY = this.glitchText ? (this.glitchOffset?.y || 0) : 0;
+      
+      this.ctx.font = `bold ${14 * coreScale}px monospace`;
+      this.ctx.textAlign = "center";
+      this.ctx.textBaseline = "middle";
+      
+      // 글리치 효과: 색상 분리
+      if (this.glitchText) {
+        // 빨간색 오프셋
+        this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+        this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX - 2, this.core.y - scaledRadius - 15 + offsetY);
+        // 파란색 오프셋
+        this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
+        this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX + 2, this.core.y - scaledRadius - 15 + offsetY);
+      }
+      
+      // 메인 텍스트
+      this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
+      this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX, this.core.y - scaledRadius - 15 + offsetY);
+    }
 
     // 4. 파티클
     this.particles.forEach(p => {
@@ -729,5 +758,327 @@ export class DefenseGame {
     this.update(deltaTime);
     this.render();
     requestAnimationFrame((t) => this.animate(t));
+  }
+
+  /**
+   * 스테이지 진입 연출 (극적인 원근법 + 글리치)
+   */
+  playIntroAnimation() {
+    return new Promise(resolve => {
+      // 중앙 좌표 저장
+      const centerX = this.canvas.width / 2;
+      const centerY = this.canvas.height / 2;
+      
+      // 1. 초기화 (모든 요소 완전히 제거)
+      this.enemies = [];
+      this.projectiles = [];
+      this.particles = [];
+      this.alliedViruses = [];
+      this.core.shieldRadius = 0;
+      this.core.x = centerX;
+      this.core.y = centerY;
+      
+      // 체력 표시 숨김 (착지 후 글리치로 나타남)
+      this.showCoreHP = false;
+      
+      // 원근법: 화면 전체를 덮을 정도로 크게 (50x)
+      const startScale = 50.0;
+      const duration = 300; // 0.3초 (더 빠르게!)
+      const startTime = performance.now();
+      
+      this.core.scale = startScale;
+      
+      console.log("[IntroAnimation] Starting with scale:", startScale);
+      
+      const animateDrop = (now) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // ease-in quint (더 급격하게)
+        const easeInQuint = t => t * t * t * t * t;
+        
+        // 스케일: 50x → 1x (급격히)
+        this.core.scale = startScale - (startScale - 1) * easeInQuint(progress);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animateDrop);
+        } else {
+          // 착지!
+          this.core.scale = 1;
+          
+          // 착지 효과
+          this.impactEffect();
+          
+          // 글리치 효과로 체력 표시
+          this.glitchShowHP().then(() => {
+            // 아군 순차 생성
+            this.spawnAlliesSequentially().then(() => {
+              this.expandShield().then(resolve);
+            });
+          });
+        }
+      };
+      
+      requestAnimationFrame(animateDrop);
+    });
+  }
+
+  // 착지 충격 효과 (화면 번쩍 + 흔들림 + 충격파)
+  impactEffect() {
+    // 1. 화면 번쩍 (흰색 플래시)
+    const flash = document.createElement("div");
+    flash.style.cssText = `
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: white;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.8;
+    `;
+    document.body.appendChild(flash);
+    
+    setTimeout(() => {
+      flash.style.transition = "opacity 0.2s";
+      flash.style.opacity = "0";
+      setTimeout(() => flash.remove(), 200);
+    }, 50);
+    
+    // 2. 화면 흔들림
+    this.shakeScreen();
+    
+    // 3. 충격파 파티클
+    this.spawnShockwave();
+  }
+
+  // 글리치 효과로 HP 표시
+  glitchShowHP() {
+    return new Promise(resolve => {
+      let glitchCount = 0;
+      const maxGlitches = 8;
+      
+      const doGlitch = () => {
+        if (glitchCount >= maxGlitches) {
+          this.showCoreHP = true;
+          this.glitchText = false;
+          resolve();
+          return;
+        }
+        
+        // 랜덤하게 표시/숨김 (치지직)
+        this.showCoreHP = Math.random() > 0.3;
+        this.glitchText = true;
+        this.glitchOffset = {
+          x: (Math.random() - 0.5) * 10,
+          y: (Math.random() - 0.5) * 5
+        };
+        
+        glitchCount++;
+        setTimeout(doGlitch, 40 + Math.random() * 30);
+      };
+      
+      doGlitch();
+    });
+  }
+
+  // 화면 흔들림 효과
+  shakeScreen() {
+    const container = document.getElementById("game-container");
+    if (!container) return;
+    
+    container.style.transition = "none";
+    let shakeCount = 0;
+    const maxShakes = 8;
+    const shakeIntensity = 15; // 더 강하게
+    
+    const doShake = () => {
+      if (shakeCount >= maxShakes) {
+        container.style.transform = "translate(0, 0)";
+        return;
+      }
+      
+      const decay = 1 - shakeCount / maxShakes;
+      const x = (Math.random() - 0.5) * shakeIntensity * decay;
+      const y = (Math.random() - 0.5) * shakeIntensity * decay;
+      container.style.transform = `translate(${x}px, ${y}px)`;
+      
+      shakeCount++;
+      setTimeout(doShake, 40);
+    };
+    
+    doShake();
+  }
+
+  // 착지 충격 파티클
+  spawnImpactParticles(intensity) {
+    for(let i = 0; i < intensity * 3; i++) {
+      this.particles.push({
+        x: this.core.x + (Math.random() - 0.5) * 30,
+        y: this.core.y,
+        vx: (Math.random() - 0.5) * 8,
+        vy: -Math.random() * 5 - 2,
+        life: 0.5,
+        alpha: 1,
+        color: "#00ffff",
+        size: Math.random() * 3 + 1
+      });
+    }
+  }
+
+  spawnShockwave() {
+    // 충격파 파티클 생성
+    for(let i=0; i<20; i++) {
+      this.particles.push({
+        x: this.core.x,
+        y: this.core.y,
+        vx: (Math.random() - 0.5) * 10,
+        vy: (Math.random() - 0.5) * 10,
+        life: 1.0,
+        alpha: 1,
+        color: "#00ffff",
+        size: Math.random() * 5 + 2
+      });
+    }
+  }
+
+  async spawnAlliesSequentially() {
+    const count = this.alliedInfo.count;
+    console.log("[spawnAllies] Starting, count:", count);
+    
+    if (!count || count === 0) {
+      console.log("[spawnAllies] No allies to spawn");
+      return;
+    }
+
+    // 확실한 초기화
+    this.alliedViruses = [];
+    
+    const delay = 250; // 0.25초 간격
+    const targetRadius = 55; // 최종 위치 (코어에서 거리)
+
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 / count) * i; // 시계 방향
+      
+      // 아군 바이러스 추가 (코어 중앙에서 시작)
+      const ally = {
+        x: this.core.x, // 코어 중앙에서 시작
+        y: this.core.y,
+        targetX: this.core.x + Math.cos(angle) * targetRadius,
+        targetY: this.core.y + Math.sin(angle) * targetRadius,
+        hp: 10 + (this.alliedInfo.level - 1) * 5,
+        maxHp: 10 + (this.alliedInfo.level - 1) * 5,
+        damage: 10,
+        angle: angle,
+        radius: 6,
+        color: this.alliedInfo.color || "#00aaff",
+        target: null,
+        attackTimer: 0,
+        // 튀어나오기 애니메이션용
+        spawning: true,
+        spawnProgress: 0
+      };
+      
+      this.alliedViruses.push(ally);
+      console.log("[spawnAllies] 푝! Ally", i + 1, "of", count);
+      
+      // 튀어나오기 애니메이션 (비동기로 실행)
+      this.animateAllySpawn(ally, targetRadius, angle);
+      
+      // 다음 아군까지 대기
+      await new Promise(r => setTimeout(r, delay));
+    }
+    
+    console.log("[spawnAllies] Complete! Total:", this.alliedViruses.length);
+  }
+
+  // 아군 튀어나오기 애니메이션
+  animateAllySpawn(ally, targetRadius, angle) {
+    const duration = 300; // 0.3초
+    const startTime = performance.now();
+    const overshoot = 1.3; // 목표보다 30% 더 나갔다가 되돌아옴
+    
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // elastic ease-out (튀어나갔다가 되돌아옴)
+      const elasticOut = (t) => {
+        if (t === 0 || t === 1) return t;
+        return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI) / 3) + 1;
+      };
+      
+      const eased = elasticOut(progress);
+      
+      // 현재 반지름 계산 (overshoot 적용)
+      const currentRadius = targetRadius * eased;
+      
+      ally.x = this.core.x + Math.cos(angle) * currentRadius;
+      ally.y = this.core.y + Math.sin(angle) * currentRadius;
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        ally.spawning = false;
+        ally.x = this.core.x + Math.cos(angle) * targetRadius;
+        ally.y = this.core.y + Math.sin(angle) * targetRadius;
+        
+        // 착지 파티클
+        for (let p = 0; p < 6; p++) {
+          const pAngle = (Math.PI * 2 / 6) * p;
+          this.particles.push({
+            x: ally.x,
+            y: ally.y,
+            vx: Math.cos(pAngle) * 3,
+            vy: Math.sin(pAngle) * 3,
+            life: 0.3,
+            alpha: 1,
+            color: ally.color,
+            size: 3
+          });
+        }
+      }
+    };
+    
+    // 시작 파티클 (코어에서 푝!)
+    for (let p = 0; p < 4; p++) {
+      this.particles.push({
+        x: this.core.x,
+        y: this.core.y,
+        vx: Math.cos(angle) * 2 + (Math.random() - 0.5) * 2,
+        vy: Math.sin(angle) * 2 + (Math.random() - 0.5) * 2,
+        life: 0.2,
+        alpha: 1,
+        color: "#ffffff",
+        size: 4
+      });
+    }
+    
+    requestAnimationFrame(animate);
+  }
+
+  expandShield() {
+    return new Promise(resolve => {
+      const targetRadius = 70;
+      const duration = 300; // 0.3초 (더 빠르게)
+      const start = performance.now();
+      
+      const animateShield = (now) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // ease-out elastic 효과
+        const elastic = x => x === 0 ? 0 : x === 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * (2 * Math.PI) / 3) + 1;
+        
+        this.core.shieldRadius = targetRadius * elastic(progress);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animateShield);
+        } else {
+          this.core.shieldRadius = targetRadius;
+          resolve();
+        }
+      };
+      requestAnimationFrame(animateShield);
+    });
   }
 }

@@ -110,22 +110,50 @@ export class StageManager {
     }
 
     /**
-     * 이동 가능한 스테이지 목록
+     * 이동 가능한 스테이지 목록 (새 규칙)
+     * - 안전 영역에서 직접 연결된 스테이지: 항상 접근 가능
+     * - 점령한 스테이지에서 연결된 스테이지: 접근 가능
+     * - 점령하지 않은 스테이지를 통한 이동: 불가
      */
     getAccessibleStages() {
-        const current = this.getCurrentStage();
-        // 현재 스테이지와 연결된 스테이지들
-        const connectedIds = current.connections;
+        const accessible = new Set();
         
-        // 점령한 스테이지들은 어디서든 이동 가능
-        const conqueredIds = this.stages
-            .filter(s => s.conquered)
-            .map(s => s.id);
+        // 1. 안전 영역 항상 접근 가능
+        accessible.add(0);
         
-        // 합집합
-        const accessibleIds = [...new Set([...connectedIds, ...conqueredIds])];
+        // 2. 안전 영역에서 직접 연결된 스테이지 (항상 접근 가능)
+        const safeZone = this.getStage(0);
+        safeZone.connections.forEach(id => accessible.add(id));
         
-        return accessibleIds.map(id => this.getStage(id));
+        // 3. 점령한 스테이지와 그 연결 스테이지
+        this.stages.filter(s => s.conquered).forEach(stage => {
+            accessible.add(stage.id);
+            stage.connections.forEach(id => accessible.add(id));
+        });
+        
+        return [...accessible].map(id => this.getStage(id));
+    }
+
+    /**
+     * 특정 스테이지가 접근 가능한지 확인
+     */
+    isAccessible(stageId) {
+        const accessible = this.getAccessibleStages();
+        return accessible.some(s => s.id === stageId);
+    }
+
+    /**
+     * 맵 렌더링용 상세 데이터 (색상 정보 포함)
+     */
+    getMapDataWithStatus() {
+        const accessible = this.getAccessibleStages().map(s => s.id);
+        
+        return this.stages.map(stage => ({
+            ...stage,
+            isCurrent: stage.id === this.currentStageId,
+            isAccessible: accessible.includes(stage.id),
+            isLocked: !accessible.includes(stage.id) && !stage.conquered
+        }));
     }
 
     /**
