@@ -38,6 +38,11 @@ export class DefenseGame {
     
     // 게임 스케일 (모바일 줌 아웃용)
     this.gameScale = 1.0;
+    
+    // 모바일 성능 최적화
+    this.isMobile = window.innerWidth <= 768;
+    this.maxParticles = this.isMobile ? 30 : 100; // 파티클 수 제한
+    this.particleMultiplier = this.isMobile ? 0.3 : 1.0; // 파티클 생성량 감소
 
     // UI 레이어 생성 (DOM 기반, 모바일 터치 최적화)
     this.uiLayer = document.createElement("div");
@@ -197,6 +202,11 @@ export class DefenseGame {
   resize() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+    
+    // 모바일 감지 및 성능 설정 업데이트
+    this.isMobile = window.innerWidth <= 768;
+    this.maxParticles = this.isMobile ? 30 : 100;
+    this.particleMultiplier = this.isMobile ? 0.3 : 1.0;
     
     // 모바일에서 줌 아웃 효과 (더 멀리서 보기)
     if (window.innerWidth <= 768) {
@@ -374,26 +384,29 @@ export class DefenseGame {
         }
     }
 
-    // 0.8 아군 바이러스 로직 (적 추적 + 몸통박치기)
-    this.alliedViruses.forEach((v, idx) => {
+    // 0.8 아군 바이러스 로직 (적 추적 + 몸통박치기) - for 루프로 안전하게 처리
+    for (let idx = this.alliedViruses.length - 1; idx >= 0; idx--) {
+        const v = this.alliedViruses[idx];
+        
         // HP가 없으면 제거 (사망)
         if (v.hp <= 0) {
             this.createExplosion(v.x, v.y, v.color, 8);
             this.alliedViruses.splice(idx, 1);
-            return;
+            continue;
         }
         
         // 가장 가까운 적 찾기 (사거리 200)
         let nearestEnemy = null;
         let minDist = Infinity;
         
-        this.enemies.forEach(enemy => {
+        for (let j = 0; j < this.enemies.length; j++) {
+            const enemy = this.enemies[j];
             const dist = Math.hypot(enemy.x - v.x, enemy.y - v.y);
             if (dist < 200 && dist < minDist) { // 사거리 200으로 확대
                 minDist = dist;
                 nearestEnemy = enemy;
             }
-        });
+        }
         
         // 적과 충돌 시 전투 (몸통박치기)
         if (nearestEnemy) {
@@ -439,7 +452,7 @@ export class DefenseGame {
             v.x += (targetX - v.x) * dt * 3;
             v.y += (targetY - v.y) * dt * 3;
         }
-    });
+    }
 
     // 1. 적 생성
     // 적 생성 (안전영역이면 느리게)
@@ -759,16 +772,27 @@ export class DefenseGame {
   }
 
   createExplosion(x, y, color, count = 10) {
-      for(let i=0; i<count; i++) {
+      // 모바일 최적화: 파티클 수 감소
+      const actualCount = Math.ceil(count * this.particleMultiplier);
+      
+      // 파티클 수 제한 체크
+      if (this.particles.length >= this.maxParticles) {
+          // 오래된 파티클 제거
+          this.particles.splice(0, actualCount);
+      }
+      
+      for(let i=0; i<actualCount; i++) {
           const angle = Math.random() * Math.PI * 2;
           const speed = Math.random() * 100;
+          const life = 0.3 + Math.random() * 0.3; // 수명 단축
           this.particles.push({
               x: x,
               y: y,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed,
-              life: 0.5 + Math.random() * 0.5,
-              maxLife: 1.0,
+              life: life,
+              maxLife: life,
+              alpha: 1,
               color: color,
               size: 2 + Math.random() * 2
           });
@@ -942,6 +966,7 @@ export class DefenseGame {
         vx: (Math.random() - 0.5) * 8,
         vy: -Math.random() * 5 - 2,
         life: 0.5,
+        maxLife: 0.5,
         alpha: 1,
         color: "#00ffff",
         size: Math.random() * 3 + 1
@@ -950,14 +975,16 @@ export class DefenseGame {
   }
 
   spawnShockwave() {
-    // 충격파 파티클 생성
-    for(let i=0; i<20; i++) {
+    // 충격파 파티클 생성 (모바일 최적화)
+    const count = this.isMobile ? 8 : 20;
+    for(let i=0; i<count; i++) {
       this.particles.push({
         x: this.core.x,
         y: this.core.y,
         vx: (Math.random() - 0.5) * 10,
         vy: (Math.random() - 0.5) * 10,
-        life: 1.0,
+        life: 0.6,
+        maxLife: 0.6,
         alpha: 1,
         color: "#00ffff",
         size: Math.random() * 5 + 2
@@ -1046,15 +1073,17 @@ export class DefenseGame {
         ally.x = this.core.x + Math.cos(angle) * targetRadius;
         ally.y = this.core.y + Math.sin(angle) * targetRadius;
         
-        // 착지 파티클
-        for (let p = 0; p < 6; p++) {
-          const pAngle = (Math.PI * 2 / 6) * p;
+        // 착지 파티클 (모바일에선 줄임)
+        const particleCount = this.isMobile ? 3 : 6;
+        for (let p = 0; p < particleCount; p++) {
+          const pAngle = (Math.PI * 2 / particleCount) * p;
           this.particles.push({
             x: ally.x,
             y: ally.y,
             vx: Math.cos(pAngle) * 3,
             vy: Math.sin(pAngle) * 3,
             life: 0.3,
+            maxLife: 0.3,
             alpha: 1,
             color: ally.color,
             size: 3
@@ -1063,14 +1092,16 @@ export class DefenseGame {
       }
     };
     
-    // 시작 파티클 (코어에서 푝!)
-    for (let p = 0; p < 4; p++) {
+    // 시작 파티클 (코어에서 푝!) - 모바일에선 줄임
+    const startParticles = this.isMobile ? 2 : 4;
+    for (let p = 0; p < startParticles; p++) {
       this.particles.push({
         x: this.core.x,
         y: this.core.y,
         vx: Math.cos(angle) * 2 + (Math.random() - 0.5) * 2,
         vy: Math.sin(angle) * 2 + (Math.random() - 0.5) * 2,
         life: 0.2,
+        maxLife: 0.2,
         alpha: 1,
         color: "#ffffff",
         size: 4

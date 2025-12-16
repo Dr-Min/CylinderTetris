@@ -1,5 +1,5 @@
-// v4.5 - Mobile zoom out effect (gameScale 0.65)
-const CACHE_NAME = "hacker-tetris-v4.5";
+// v4.6 - Mobile performance optimization (particle limits, for loops)
+const CACHE_NAME = "hacker-tetris-v4.6";
 const ASSETS = [
   "./",
   "./index.html",
