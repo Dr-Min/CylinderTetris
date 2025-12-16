@@ -1,21 +1,37 @@
 {
-  "name": "HACKER TETRIS PROTOCOL",
+  "name": "HACKER TETRIS PROTOCOL v2.0",
   "short_name": "HACKER_TRIS",
+  "description": "Shield Stage Breach Tetris - Defense & Equipment Farming",
   "start_url": "./index.html",
-  "display": "fullscreen",
+  "scope": "./",
+  "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#33ff00",
-  "orientation": "portrait",
+  "orientation": "any",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["games", "entertainment"],
+  "shortcuts": [
+    {
+      "name": "Start Defense",
+      "short_name": "Defense",
+      "description": "Start Defense Mode",
+      "url": "./index.html?mode=defense",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

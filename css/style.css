@@ -701,4 +701,126 @@ body {
     min-height: 60px;
     font-size: 24px;
   }
+
+  /* 디펜스 모드 모바일 최적화 */
+  #defense-ui button {
+    min-height: 50px;
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  #defense-ui #shield-btn {
+    width: 180px;
+    height: 55px;
+    bottom: 80px;
+    font-size: 14px;
+  }
+
+  #defense-ui #conquer-btn {
+    width: 160px;
+    padding: 8px;
+    font-size: 14px;
+    top: 60px;
+  }
+
+  #defense-ui #resource-display {
+    font-size: 18px;
+    padding: 8px 15px;
+    top: 10px;
+    right: 10px;
+  }
+
+  #defense-ui #wave-info {
+    font-size: 14px;
+    top: 10px;
+    left: 10px;
+  }
+
+  /* 터미널 선택지 모바일 최적화 */
+  .choice-container {
+    gap: 10px;
+  }
+
+  .choice-btn {
+    padding: 12px 16px;
+    font-size: 14px;
+    min-height: 44px; /* iOS 권장 터치 영역 */
+  }
+
+  /* 게임 오버 스크린 모바일 */
+  #game-over-screen {
+    width: 90%;
+    padding: 30px 20px;
+  }
+
+  #game-over-screen h1 {
+    font-size: 32px;
+  }
+
+  #game-over-screen button {
+    font-size: 18px;
+    padding: 12px 24px;
+    min-height: 44px;
+  }
+
+  /* 업데이트 알림 모바일 */
+  #update-notification {
+    width: 95%;
+    padding: 12px 15px;
+    font-size: 14px;
+    bottom: 10px;
+  }
+
+  #update-notification button {
+    padding: 8px 16px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+}
+
+/* 매우 작은 화면 (세로 모드) */
+@media (max-width: 480px) {
+  #terminal-layer {
+    font-size: 11px;
+    padding: 8px;
+  }
+
+  .mobile-controls-left button,
+  #drop-btn {
+    min-width: 55px;
+    min-height: 55px;
+    font-size: 20px;
+  }
+
+  #defense-ui #shield-btn {
+    width: 160px;
+    height: 50px;
+    font-size: 12px;
+  }
+
+  .top-bar {
+    padding: 10px;
+  }
+
+  .level-box,
+  .score-board,
+  .next-box {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+}
+
+/* 가로 모드 최적화 */
+@media (max-height: 500px) and (orientation: landscape) {
+  #defense-ui #shield-btn {
+    bottom: 60px;
+  }
+
+  .mobile-controls-left {
+    bottom: 10px;
+  }
+
+  #drop-btn {
+    bottom: 10px;
+  }
 }

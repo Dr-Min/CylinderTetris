@@ -2,6 +2,8 @@ import { TerminalUI } from "./TerminalUI.js";
 import { TetrisGame } from "./TetrisGame.js";
 import { DefenseGame } from "./DefenseGame.js";
 import { PerkManager } from "./PerkManager.js";
+import { ConquestManager } from "./ConquestManager.js";
+import { EquipmentManager } from "./EquipmentManager.js";
 
 export class GameManager {
   constructor() {
@@ -9,24 +11,27 @@ export class GameManager {
     this.tetrisGame = new TetrisGame("game-container");
     this.defenseGame = new DefenseGame("game-container");
     this.perkManager = new PerkManager();
+    this.conquestManager = new ConquestManager();
+    this.equipmentManager = new EquipmentManager();
 
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
         this.currentMoney += amount;
     };
     this.defenseGame.onGameOver = () => this.handleDefenseGameOver();
-
-    // 게임 상태
-    this.activeMode = "none"; // 'defense', 'mining', 'raid'
-    this.currentStage = 0; // Mining Stage
-    this.currentMoney = 0; // Data (Money)
-    this.reputation = 0; // Reputation
+    
+    // 점령 이벤트 연결
+    this.defenseGame.onConquer = () => this.handleConquest();
 
     // 테트리스 게임 이벤트 연결
-    this.tetrisGame.onStageClear = (linesCleared) =>
-      this.handleMiningClear(linesCleared);
-    this.tetrisGame.onGameOver = (score) => this.handleMiningGameOver(score);
+    this.tetrisGame.onStageClear = (lines) => this.handleBreachClear(lines);
+    this.tetrisGame.onGameOver = (score) => this.handleBreachFail(score);
     this.tetrisGame.getPerkEffects = () => this.perkManager.getEffects();
+
+    // 게임 상태
+    this.activeMode = "none"; // 'defense', 'breach'
+    this.currentMoney = 0; // Data (Money)
+    this.reputation = 0; // Reputation
 
     // 영구 퍽 트리 데이터 정의
     this.permTree = [
@@ -393,30 +398,38 @@ export class GameManager {
       this.defenseGame.start();
       // [추가] 자원 UI 동기화
       this.defenseGame.updateResourceDisplay(this.currentMoney);
+      
+      // 아군 바이러스 정보 업데이트
+      const alliedInfo = this.conquestManager.getAlliedInfo();
+      this.defenseGame.updateAlliedInfo(alliedInfo);
+      
+      // 장비 효과 적용
+      const stats = this.equipmentManager.getTotalStats();
+      this.defenseGame.turret.damage = 10 + stats.damage;
 
-      // 임시: 채굴 버튼 표시 (터미널 선택지로 구현)
+      // 테트리스 모드 진입 옵션 (능동적 선택)
       setTimeout(async () => {
-        this.terminal.printSystemMessage("System Idle. Ready to Mine.");
+        this.terminal.printSystemMessage("System Idle. Ready for Operations.");
         const choice = await this.terminal.showChoices([
-          { text: "/exec_mining (Start Tetris)", value: "mine" }
+          { text: "/breach_defense (Enter Tetris - Get Equipment)", value: "breach" }
         ]);
-        if (choice === "mine") {
-          this.switchMode("mining");
+        if (choice === "breach") {
+          this.switchMode("breach");
         }
       }, 1000);
 
-    } else if (mode === "mining") {
+    } else if (mode === "breach") {
       // 1. 디펜스 정지 및 숨김
       this.defenseGame.stop();
 
       // 2. 터미널 및 UI 조정
-      this.terminal.setTransparentMode(true); // 배경 투명하게
+      this.terminal.setTransparentMode(true);
       this.terminal.clear();
-      this.terminal.printSystemMessage("MINING_SEQUENCE_STARTED");
+      this.terminal.printSystemMessage("BREACH_PROTOCOL_INITIATED");
+      this.terminal.printSystemMessage("Objective: Clear lines to acquire Equipment.");
 
-      // 3. 테트리스 시작 (스테이지 로직)
-      this.currentStage++; // 스테이지(채굴 레벨) 증가
-      this.startMiningStage();
+      // 3. 테트리스 시작 (장비 획득 목표)
+      this.startBreachMode();
     }
   }
 
@@ -696,6 +709,20 @@ export class GameManager {
     this.switchMode("defense");
   }
 
+  startBreachMode() {
+    const targetLines = 10; // 고정 목표 라인 수
+    const speed = 600; // 적당한 속도
+    
+    setTimeout(() => {
+      document.getElementById("game-container").style.opacity = 1;
+      document.getElementById("game-ui").style.display = "block";
+      this.terminal.setTransparentMode(true);
+      this.terminal.clear();
+
+      this.tetrisGame.startGame(targetLines, speed);
+    }, 500);
+  }
+
   startMiningStage() {
     this.terminal.clear();
     this.terminal.printSystemMessage(
@@ -761,6 +788,83 @@ export class GameManager {
     // "SYSTEM FAILURE. RETURNING TO SAFE MODE..."
     
     // 일단 기존 구조 유지 (재시작 버튼 클릭 시 페이지 리로드)
+  }
+
+  async handleBreachClear(lines) {
+      // 장비 획득
+      const item = this.equipmentManager.generateEquipment(this.defenseGame.currentPage || 1);
+      this.equipmentManager.addItem(item);
+      
+      // 연출
+      this.tetrisGame.state.isPlaying = false;
+      document.getElementById("game-ui").style.display = "none";
+      this.terminal.setTransparentMode(false);
+      this.terminal.show();
+      this.terminal.clear();
+      
+      await this.terminal.typeText("THREAT ELIMINATED.", 30);
+      await this.terminal.typeText("Security Systems Restored.", 20);
+      await this.terminal.typeText(`[LOOT ACQUIRED]`, 30);
+      
+      await this.terminal.typeText(`> ${item.name}`, 30); 
+      await this.terminal.typeText(`Power: ${item.stats.power}`, 20);
+      
+      if (this.equipmentManager.autoEquip(item)) {
+           await this.terminal.typeText("(Auto Equipped!)", 20);
+      }
+      
+      await this.terminal.waitForEnter();
+      
+      // 디펜스로 복귀 (장비 효과 적용)
+      this.switchMode("defense");
+  }
+
+  async handleBreachFail(score) {
+      // 패배 시 빈털터리로 복귀
+      this.tetrisGame.state.isPlaying = false;
+      document.getElementById("game-ui").style.display = "none";
+      this.terminal.setTransparentMode(false);
+      this.terminal.show();
+      this.terminal.clear();
+      
+      await this.terminal.typeText("DEFENSE FAILED.", 50);
+      await this.terminal.typeText("Systems compromised...", 30);
+      await this.terminal.typeText("Returning to core defense (Vulnerable).", 30);
+      
+      await new Promise(r => setTimeout(r, 1500));
+      
+      this.switchMode("defense");
+  }
+
+  async handleConquest() {
+      // 1. 점령 로직 실행 (병합 등 계산)
+      const result = this.conquestManager.conquerStage();
+      
+      // 2. 터미널 연출
+      this.terminal.setDefenseMode(false); 
+      this.terminal.clear();
+      
+      await this.terminal.typeText("!!! SYSTEM CONQUERED !!!", 30);
+      await this.terminal.typeText(`Total Conquered: ${result.total}`, 20);
+      await this.terminal.typeText(`Mining Rate: ${result.miningRate}/sec`, 20);
+      
+      if (result.total % 2 === 0) {
+           await this.terminal.typeText(">> SECTORS MERGED <<", 30);
+           await this.terminal.typeText(`Allied Virus Level Up: ${result.level}`, 30);
+      }
+      
+      await this.terminal.waitForEnter();
+      
+      // 3. 디펜스 게임에 아군 정보 업데이트
+      const alliedInfo = this.conquestManager.getAlliedInfo();
+      this.defenseGame.updateAlliedInfo(alliedInfo);
+      
+      // 4. 다시 디펜스 모드로 복귀 (다음 스테이지 느낌으로)
+      this.terminal.setDefenseMode(true);
+      this.terminal.clear();
+      this.terminal.printSystemMessage("ADVANCING TO NEXT SECTOR...");
+      
+      // 난이도 상승 등 추가 처리가 필요하다면 여기서
   }
 
   async handleDefenseGameOver() {
