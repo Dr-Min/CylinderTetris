@@ -1,5 +1,5 @@
-// v2.0 - Shield Stage Breach Tetris
-const CACHE_NAME = "hacker-tetris-v2.0";
+// v2.1 - Mobile Font Optimization & PWA Updates
+const CACHE_NAME = "hacker-tetris-v2.1";
 const ASSETS = [
   "./",
   "./index.html",
