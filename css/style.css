@@ -39,7 +39,7 @@ body {
 
 @media (max-width: 768px) {
   .column-title {
-    font-size: 18px;
+    font-size: 14px; /* 컬럼 제목 폰트 축소 (18px -> 14px) */
   }
 }
 
@@ -564,13 +564,13 @@ body {
 /* === Mobile Optimization (미디어 쿼리) === */
 @media (max-width: 768px) {
   #terminal-layer {
-    padding: 10px; /* 패딩 축소 */
-    font-size: 12px; /* 폰트 사이즈 대폭 축소 (16px -> 12px) */
+    padding: 10px;
+    font-size: 10px; /* 모바일 폰트 크기 축소 (12px -> 10px) */
   }
 
   .terminal-line {
-    min-height: 16px; /* 줄 높이도 축소 */
-    line-height: 1.3;
+    min-height: 14px; /* 줄 높이 축소 */
+    line-height: 1.2;
   }
 
   /* 상점 UI 모바일 최적화 (강제 리스트 뷰) */
@@ -588,11 +588,11 @@ body {
   }
 
   .shop-title {
-    font-size: 20px; /* 제목 크기 축소 */
+    font-size: 16px; /* 상점 제목 폰트 축소 (20px -> 16px) */
   }
 
   .shop-money {
-    font-size: 16px;
+    font-size: 13px; /* 상점 자금 폰트 축소 (16px -> 13px) */
   }
 
   .node-map {
@@ -623,22 +623,22 @@ body {
   }
 
   .perk-name {
-    font-size: 16px;
+    font-size: 13px; /* 퍽 이름 폰트 축소 (16px -> 13px) */
     margin-bottom: 2px;
   }
 
   .perk-desc {
-    font-size: 12px; /* 설명 폰트 더 작게 */
+    font-size: 10px; /* 퍽 설명 폰트 축소 (12px -> 10px) */
     line-height: 1.2;
-    display: block !important; /* 모바일에서도 설명 보이게 (리스트 뷰이므로 공간 충분) */
+    display: block !important;
   }
 
   .perk-cost {
-    font-size: 12px;
+    font-size: 11px; /* 퍽 비용 폰트 축소 (12px -> 11px) */
   }
 
   .shop-exit {
-    font-size: 16px !important;
+    font-size: 12px !important; /* 상점 나가기 버튼 폰트 축소 */
     padding: 10px 0 !important;
     width: 100%;
     margin-top: 20px;
@@ -656,7 +656,7 @@ body {
   .score-board,
   .next-box {
     padding: 5px;
-    font-size: 12px; /* 폰트 축소 */
+    font-size: 10px; /* 게임 UI 폰트 축소 (12px -> 10px) */
     min-width: auto;
   }
 
@@ -670,7 +670,7 @@ body {
 
   .settings-area button {
     padding: 8px;
-    font-size: 14px;
+    font-size: 11px; /* 설정 버튼 폰트 축소 (14px -> 11px) */
   }
 
   /* 게임 오버 화면 조정 */
@@ -705,7 +705,7 @@ body {
   /* 디펜스 모드 모바일 최적화 */
   #defense-ui button {
     min-height: 50px;
-    font-size: 14px;
+    font-size: 11px; /* 버튼 폰트 축소 (14px -> 11px) */
     padding: 8px 12px;
   }
 
@@ -713,38 +713,42 @@ body {
     width: 180px;
     height: 55px;
     bottom: 80px;
-    font-size: 14px;
+    font-size: 11px; /* 쉴드 버튼 폰트 축소 */
+  }
+
+  #defense-ui #shield-btn span {
+    font-size: 10px !important; /* 하위 텍스트 더 작게 */
   }
 
   #defense-ui #conquer-btn {
     width: 160px;
     padding: 8px;
-    font-size: 14px;
+    font-size: 12px; /* 점령 버튼 폰트 축소 */
     top: 60px;
   }
 
   #defense-ui #resource-display {
-    font-size: 18px;
-    padding: 8px 15px;
+    font-size: 14px; /* 자원 표시 폰트 축소 (18px -> 14px) */
+    padding: 6px 12px;
     top: 10px;
     right: 10px;
   }
 
   #defense-ui #wave-info {
-    font-size: 14px;
+    font-size: 11px; /* 웨이브 정보 폰트 축소 (14px -> 11px) */
     top: 10px;
     left: 10px;
   }
 
   /* 터미널 선택지 모바일 최적화 */
   .choice-container {
-    gap: 10px;
+    gap: 8px;
   }
 
   .choice-btn {
-    padding: 12px 16px;
-    font-size: 14px;
-    min-height: 44px; /* iOS 권장 터치 영역 */
+    padding: 10px 14px;
+    font-size: 11px; /* 선택지 버튼 폰트 축소 (14px -> 11px) */
+    min-height: 40px; /* 터치 영역 유지하되 높이 약간 축소 */
   }
 
   /* 게임 오버 스크린 모바일 */
@@ -754,59 +758,82 @@ body {
   }
 
   #game-over-screen h1 {
-    font-size: 32px;
+    font-size: 24px; /* 게임오버 제목 폰트 축소 (32px -> 24px) */
   }
 
   #game-over-screen button {
-    font-size: 18px;
-    padding: 12px 24px;
-    min-height: 44px;
+    font-size: 14px; /* 게임오버 버튼 폰트 축소 (18px -> 14px) */
+    padding: 10px 20px;
+    min-height: 40px;
   }
 
   /* 업데이트 알림 모바일 */
   #update-notification {
     width: 95%;
-    padding: 12px 15px;
-    font-size: 14px;
+    padding: 10px 12px;
+    font-size: 11px; /* 업데이트 알림 폰트 축소 */
     bottom: 10px;
   }
 
   #update-notification button {
-    padding: 8px 16px;
-    font-size: 12px;
-    min-height: 40px;
+    padding: 8px 14px;
+    font-size: 10px; /* 업데이트 버튼 폰트 축소 */
+    min-height: 36px;
   }
 }
 
 /* 매우 작은 화면 (세로 모드) */
 @media (max-width: 480px) {
   #terminal-layer {
-    font-size: 11px;
+    font-size: 9px; /* 작은 화면 폰트 더 축소 (11px -> 9px) */
     padding: 8px;
+  }
+
+  .terminal-line {
+    min-height: 12px;
+    line-height: 1.1;
   }
 
   .mobile-controls-left button,
   #drop-btn {
     min-width: 55px;
     min-height: 55px;
-    font-size: 20px;
+    font-size: 18px; /* 컨트롤 버튼 폰트 축소 (20px -> 18px) */
   }
 
   #defense-ui #shield-btn {
     width: 160px;
     height: 50px;
-    font-size: 12px;
+    font-size: 10px; /* 쉴드 버튼 폰트 더 축소 */
+  }
+
+  #defense-ui #shield-btn span {
+    font-size: 9px !important;
+  }
+
+  #defense-ui #resource-display {
+    font-size: 12px; /* 자원 표시 더 축소 */
+    padding: 5px 10px;
+  }
+
+  #defense-ui #wave-info {
+    font-size: 10px; /* 웨이브 정보 더 축소 */
   }
 
   .top-bar {
-    padding: 10px;
+    padding: 8px;
   }
 
   .level-box,
   .score-board,
   .next-box {
-    padding: 5px 10px;
-    font-size: 12px;
+    padding: 4px 8px;
+    font-size: 10px; /* 게임 UI 폰트 축소 (12px -> 10px) */
+  }
+
+  .choice-btn {
+    font-size: 10px; /* 선택지 버튼 더 축소 */
+    padding: 8px 12px;
   }
 }
 
