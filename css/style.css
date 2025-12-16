@@ -1,3 +1,10 @@
+/* ============================================
+   CSS 우선순위 가이드:
+   1. 기본 스타일 (PC)
+   2. 미디어 쿼리 (모바일) - 더 구체적인 선택자로 오버라이드
+   3. !important는 최후의 수단으로만 사용
+   ============================================ */
+
 @import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
 @import url("https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css");
 
@@ -140,17 +147,7 @@ body {
 }
 
 /* Compact Mode에서는 상세 정보 숨김 (팝업으로 대체) */
-.perk-info,
-.perk-desc,
-.perk-cost {
-  /* JS에서 HTML 구조를 바꿨으므로 CSS는 크게 의미 없지만, 기존 구조 잔재 처리 */
-}
-
-.perk-node:hover {
-  transform: scale(1.1); /* 호버 시 약간 확대 */
-  box-shadow: 0 0 15px var(--term-color);
-  z-index: 10;
-}
+/* JS에서 HTML 구조를 바꿨으므로 .perk-info, .perk-desc, .perk-cost는 JS에서 처리 */
 
 .perk-node.locked {
   border-color: #555;
@@ -782,7 +779,10 @@ body {
   }
 }
 
-/* 매우 작은 화면 (세로 모드) */
+/* ============================================
+   작은 화면 최적화 (480px 이하)
+   우선순위: 768px 미디어 쿼리 < 480px 미디어 쿼리
+   ============================================ */
 @media (max-width: 480px) {
   #terminal-layer {
     font-size: 9px; /* 작은 화면 폰트 더 축소 (11px -> 9px) */
@@ -837,7 +837,9 @@ body {
   }
 }
 
-/* 가로 모드 최적화 */
+/* ============================================
+   가로 모드 최적화 (높이 500px 이하 + 가로 모드)
+   ============================================ */
 @media (max-height: 500px) and (orientation: landscape) {
   #defense-ui #shield-btn {
     bottom: 60px;
