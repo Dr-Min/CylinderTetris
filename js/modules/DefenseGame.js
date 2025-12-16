@@ -57,24 +57,24 @@ export class DefenseGame {
     this.uiLayer.style.display = "none";
     document.body.appendChild(this.uiLayer); // [수정] container가 아닌 body에 직접 부착
 
-    // 1. 우측 상단 자원 표시기
-    this.resourceDisplay = document.createElement("div");
-    this.resourceDisplay.id = "resource-display";
-    this.resourceDisplay.style.position = "absolute";
-    this.resourceDisplay.style.top = "20px";
-    this.resourceDisplay.style.right = "20px";
-    this.resourceDisplay.style.color = "#00f0ff";
-    this.resourceDisplay.style.fontFamily = "var(--term-font)";
-    this.resourceDisplay.style.fontSize = "24px";
-    this.resourceDisplay.style.fontWeight = "bold";
-    this.resourceDisplay.style.textShadow = "0 0 10px #00f0ff";
-    this.resourceDisplay.style.backgroundColor = "rgba(0, 20, 0, 0.7)";
-    this.resourceDisplay.style.padding = "10px 20px";
-    this.resourceDisplay.style.border = "1px solid #00f0ff";
-    this.resourceDisplay.style.pointerEvents = "auto";
-    this.resourceDisplay.style.userSelect = "none";
-    this.resourceDisplay.innerText = "DATA: 0 MB";
-    this.uiLayer.appendChild(this.resourceDisplay);
+    // 1. 우측 상단 PAGE 표시기 (기존 resourceDisplay -> pageDisplay로 용도 변경)
+    this.pageDisplay = document.createElement("div");
+    this.pageDisplay.id = "page-display";
+    this.pageDisplay.style.position = "absolute";
+    this.pageDisplay.style.top = "20px";
+    this.pageDisplay.style.right = "20px";
+    this.pageDisplay.style.color = "#00ff00";
+    this.pageDisplay.style.fontFamily = "var(--term-font)";
+    this.pageDisplay.style.fontSize = "20px";
+    this.pageDisplay.style.fontWeight = "bold";
+    this.pageDisplay.style.textShadow = "0 0 10px #00ff00";
+    this.pageDisplay.style.backgroundColor = "rgba(0, 20, 0, 0.7)";
+    this.pageDisplay.style.padding = "8px 15px";
+    this.pageDisplay.style.border = "1px solid #00ff00";
+    this.pageDisplay.style.pointerEvents = "auto";
+    this.pageDisplay.style.userSelect = "none";
+    this.pageDisplay.innerText = "SAFE ZONE";
+    this.uiLayer.appendChild(this.pageDisplay);
 
     // 2. 배리어 토글 버튼 (모바일 친화적 위치: 하단 중앙)
     this.shieldBtn = document.createElement("button");
@@ -128,21 +128,7 @@ export class DefenseGame {
     this.conquerBtn.onclick = () => this.handleConquerClick();
     this.uiLayer.appendChild(this.conquerBtn);
 
-    // 웨이브 정보 표시 (DATA 아래에 위치)
-    this.waveInfo = document.createElement("div");
-    this.waveInfo.id = "wave-info";
-    this.waveInfo.style.position = "absolute";
-    this.waveInfo.style.top = "55px"; // DATA(top:20 + height:~30) 아래
-    this.waveInfo.style.right = "20px"; // 우측 정렬 (DATA와 같은 위치)
-    this.waveInfo.style.color = "#fff";
-    this.waveInfo.style.fontFamily = "var(--term-font)";
-    this.waveInfo.style.fontSize = "16px";
-    this.waveInfo.style.textShadow = "0 0 5px rgba(255,255,255,0.5)";
-    this.waveInfo.style.background = "rgba(0,0,0,0.5)";
-    this.waveInfo.style.padding = "4px 10px";
-    this.waveInfo.innerText = "SAFE ZONE"; // 시작은 안전영역
-    this.waveInfo.style.color = "#00ff00";
-    this.uiLayer.appendChild(this.waveInfo);
+    // 웨이브 정보 표시는 pageDisplay로 통합됨 (waveInfo 삭제)
 
     // 게임 상태 변수
     this.isRunning = false;
@@ -189,8 +175,8 @@ export class DefenseGame {
     
     // 모바일 스타일 조정
     if (window.innerWidth <= 768) {
-        this.resourceDisplay.style.fontSize = "16px";
-        this.resourceDisplay.style.padding = "5px 10px";
+        this.pageDisplay.style.fontSize = "14px";
+        this.pageDisplay.style.padding = "5px 10px";
         this.shieldBtn.style.bottom = "80px";
         this.shieldBtn.style.width = "160px";
         this.shieldBtn.style.height = "50px";
@@ -221,10 +207,13 @@ export class DefenseGame {
     this.core.y = this.canvas.height / 2;
   }
 
-  // 자원 업데이트 (GameManager에서 호출)
+  // 자원 업데이트 (GameManager에서 호출) - DATA는 터미널에 표시됨
   updateResourceDisplay(amount) {
       this.currentData = amount;
-      this.resourceDisplay.innerText = `DATA: ${this.currentData} MB`;
+      // DATA 표시는 GameManager의 터미널에서 처리
+      if (this.onDataUpdate) {
+          this.onDataUpdate(this.currentData);
+      }
   }
 
   // 외부에서 아군 정보 업데이트 (정보만 저장, 생성은 playIntroAnimation에서)
@@ -246,7 +235,8 @@ export class DefenseGame {
       // 이미 전환 중이거나 파괴된 상태면 무시
       if (this.core.shieldState === "CHARGING" || 
           this.core.shieldState === "DISCHARGING" || 
-          this.core.shieldState === "BROKEN") {
+          this.core.shieldState === "BROKEN" ||
+          this.core.shieldState === "RECHARGING") {
           return;
       }
 
@@ -263,16 +253,33 @@ export class DefenseGame {
       }
   }
 
-  updateShieldBtnUI(text, color) {
+  updateShieldBtnUI(text, color, loadingProgress = null) {
       const hpPct = Math.floor((this.core.shieldHp / this.core.shieldMaxHp) * 100);
       
+      // 로딩 중일 때 (BROKEN 상태)
+      let topDisplay = `(${hpPct}%)`;
+      if (loadingProgress !== null) {
+          // 로딩 동글동글 원형 표시
+          const circumference = 2 * Math.PI * 12;
+          const dashOffset = circumference * (1 - loadingProgress);
+          topDisplay = `
+              <svg width="30" height="30" style="vertical-align: middle;">
+                  <circle cx="15" cy="15" r="12" fill="none" stroke="#333" stroke-width="3"/>
+                  <circle cx="15" cy="15" r="12" fill="none" stroke="${color}" stroke-width="3"
+                      stroke-dasharray="${circumference}" 
+                      stroke-dashoffset="${dashOffset}"
+                      transform="rotate(-90 15 15)"/>
+              </svg>
+          `;
+      }
+      
       // 버튼 내부: 상태 텍스트
-      // 버튼 위: 체력 텍스트 (position: absolute로 버튼 기준 상단 배치)
+      // 버튼 위: 체력 텍스트 또는 로딩 표시
       this.shieldBtn.innerHTML = `
           SHIELD: ${text}
           <div style='
               position: absolute; 
-              top: -25px; 
+              top: -30px; 
               left: 50%; 
               transform: translateX(-50%); 
               font-size: 14px; 
@@ -280,7 +287,7 @@ export class DefenseGame {
               text-shadow: 0 0 5px ${color};
               white-space: nowrap;
           '>
-              (${hpPct}%)
+              ${topDisplay}
           </div>
       `;
       this.shieldBtn.style.borderColor = color;
@@ -345,10 +352,27 @@ export class DefenseGame {
         }
     } else if (this.core.shieldState === "BROKEN") {
         this.core.shieldTimer -= dt;
+        // 로딩 동글동글 애니메이션 (5초)
+        const loadingProgress = 1 - (this.core.shieldTimer / 5.0);
+        const dots = ".".repeat(Math.floor((Date.now() / 300) % 4));
+        this.updateShieldBtnUI(`REPAIRING${dots}`, "#ff6600", loadingProgress);
+        
         if (this.core.shieldTimer <= 0) {
-            this.core.shieldState = "OFF"; // 수리 완료, 하지만 꺼진 상태
-            this.core.shieldHp = this.core.shieldMaxHp * 0.1; // 10% 복구
-            this.updateShieldBtnUI("OFFLINE", "#f00");
+            // 수리 완료 -> 충전 시작
+            this.core.shieldState = "RECHARGING";
+            this.core.shieldHp = 1; // 1%부터 시작
+            this.updateShieldBtnUI("RECHARGING", "#ffff00");
+        }
+    } else if (this.core.shieldState === "RECHARGING") {
+        // 충전 중: 1% -> 100% (초당 20% 충전)
+        this.core.shieldHp += 20 * dt;
+        if (this.core.shieldHp >= this.core.shieldMaxHp) {
+            this.core.shieldHp = this.core.shieldMaxHp;
+            this.core.shieldState = "OFF";
+            this.updateShieldBtnUI("OFFLINE", "#00ff00"); // 충전 완료!
+        } else {
+            const pct = Math.floor((this.core.shieldHp / this.core.shieldMaxHp) * 100);
+            this.updateShieldBtnUI(`CHARGING ${pct}%`, "#ffff00");
         }
     }
 
@@ -378,7 +402,9 @@ export class DefenseGame {
                 // 12페이지 완료 -> 점령 가능 상태
                 if (this.conquerBtn.style.display === "none") {
                     this.conquerBtn.style.display = "block";
-                    this.waveInfo.innerText = "PAGE: MAX (CONQUER READY)";
+                    this.pageDisplay.innerText = "CONQUER READY";
+                    this.pageDisplay.style.color = "#ffff00"; // 노란색
+                    this.pageDisplay.style.borderColor = "#ffff00";
                 }
             }
         }
@@ -597,11 +623,13 @@ export class DefenseGame {
 
   updateWaveDisplay() {
       if (this.isSafeZone) {
-          this.waveInfo.innerText = "SAFE ZONE";
-          this.waveInfo.style.color = "#00ff00"; // 녹색
+          this.pageDisplay.innerText = "SAFE ZONE";
+          this.pageDisplay.style.color = "#00ff00"; // 녹색
+          this.pageDisplay.style.borderColor = "#00ff00";
       } else {
-          this.waveInfo.innerText = `PAGE: ${this.currentPage} / 12`;
-          this.waveInfo.style.color = "#fff"; // 흰색
+          this.pageDisplay.innerText = `PAGE: ${this.currentPage} / 12`;
+          this.pageDisplay.style.color = "#00f0ff"; // 시안
+          this.pageDisplay.style.borderColor = "#00f0ff";
       }
   }
 

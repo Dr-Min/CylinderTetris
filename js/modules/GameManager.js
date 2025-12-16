@@ -21,6 +21,12 @@ export class GameManager {
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
         this.currentMoney += amount;
+        // 터미널에 DATA 표시 업데이트
+        this.terminal.updateData(this.currentMoney);
+    };
+    this.defenseGame.onDataUpdate = (amount) => {
+        // 터미널에 DATA 표시 업데이트
+        this.terminal.updateData(amount);
     };
     this.defenseGame.onGameOver = () => this.handleDefenseGameOver();
     
@@ -429,13 +435,16 @@ export class GameManager {
     
     const choice = await this.terminal.showChoices([
       { text: "/map (Open Stage Map)", value: "map" },
-      { text: "/inventory (Equipment & Items)", value: "inventory" }
+      { text: "/inventory (Equipment & Items)", value: "inventory" },
+      { text: "/upgrade (System Upgrades)", value: "upgrade" }
     ]);
     
     if (choice === "map") {
       await this.showMap();
     } else if (choice === "inventory") {
       await this.showInventory();
+    } else if (choice === "upgrade") {
+      await this.showUpgrades();
     }
   }
 
@@ -696,7 +705,7 @@ export class GameManager {
       await this.defenseGame.playIntroAnimation();
       
       // 6. 연출 종료 후 시스템 메시지 (타이핑 효과)
-      this.terminal.clear();
+      // terminal.clear() 제거 - 메시지 축적 유지
       await this.terminal.printSystemMessage(`DEPLOYED: ${result.stage.name}`);
       
       await this.showCommandMenu();
@@ -811,13 +820,12 @@ export class GameManager {
     
     const data = this.inventoryManager.getData();
     
-    // 터미널 애니메이션
-    await this.playTerminalAnimation("LOADING INVENTORY...");
+    // 터미널 애니메이션 (오버레이 유지 - 디펜스 화면 안 보이게)
+    const bgOverlay = await this.playTerminalAnimation("LOADING INVENTORY...", true);
     
-    // 인벤토리 오버레이 생성
-    const overlay = document.createElement("div");
-    overlay.id = "inventory-overlay";
-    overlay.style.cssText = `
+    // 인벤토리 오버레이로 변환 (기존 오버레이 재활용)
+    bgOverlay.id = "inventory-overlay";
+    bgOverlay.style.cssText = `
       position: fixed;
       top: 0;
       left: 0;
@@ -832,6 +840,8 @@ export class GameManager {
       box-sizing: border-box;
       overflow-y: auto;
     `;
+    
+    const overlay = bgOverlay; // 변수명 통일
 
     // 헤더
     const header = document.createElement("div");
@@ -912,6 +922,143 @@ export class GameManager {
     overlay.appendChild(closeBtn);
 
     document.body.appendChild(overlay);
+  }
+
+  /**
+   * 업그레이드 UI 표시
+   */
+  async showUpgrades() {
+    this.defenseGame.pause();
+    
+    // 터미널 애니메이션 (오버레이 유지)
+    const bgOverlay = await this.playTerminalAnimation("LOADING UPGRADE TERMINAL...", true);
+    
+    // 업그레이드 오버레이로 변환
+    bgOverlay.id = "upgrade-overlay";
+    bgOverlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 3000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    `;
+    
+    const overlay = bgOverlay;
+
+    // 헤더
+    const header = document.createElement("div");
+    header.style.cssText = `
+      color: #ffcc00;
+      font-family: var(--term-font);
+      font-size: 20px;
+      margin-bottom: 15px;
+      text-shadow: 0 0 10px #ffcc00;
+    `;
+    header.innerText = "[ SYSTEM UPGRADES ]";
+    overlay.appendChild(header);
+
+    // 현재 DATA 표시
+    const dataInfo = document.createElement("div");
+    dataInfo.style.cssText = `
+      color: #00f0ff;
+      font-family: var(--term-font);
+      font-size: 16px;
+      margin-bottom: 20px;
+    `;
+    dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
+    overlay.appendChild(dataInfo);
+
+    // 업그레이드 목록 컨테이너
+    const upgradeList = document.createElement("div");
+    upgradeList.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 400px;
+    `;
+
+    // 업그레이드 옵션들 (기본 구현)
+    const upgrades = [
+      { id: "turret_damage", name: "Turret Damage +5", cost: 100, effect: () => { this.defenseGame.turret.damage += 5; } },
+      { id: "shield_hp", name: "Shield HP +20", cost: 150, effect: () => { this.defenseGame.core.shieldMaxHp += 20; this.defenseGame.core.shieldHp += 20; } },
+      { id: "core_hp", name: "Core HP +20", cost: 200, effect: () => { this.defenseGame.core.maxHp += 20; this.defenseGame.core.hp += 20; } },
+      { id: "fire_rate", name: "Fire Rate +0.5", cost: 250, effect: () => { this.defenseGame.turret.fireRate += 0.5; } }
+    ];
+
+    upgrades.forEach(upgrade => {
+      const btn = document.createElement("button");
+      const canAfford = this.currentMoney >= upgrade.cost;
+      
+      btn.style.cssText = `
+        background: ${canAfford ? 'rgba(0, 100, 50, 0.5)' : 'rgba(50, 50, 50, 0.5)'};
+        border: 1px solid ${canAfford ? '#00ff00' : '#555'};
+        color: ${canAfford ? '#00ff00' : '#666'};
+        padding: 15px;
+        font-family: var(--term-font);
+        font-size: 14px;
+        cursor: ${canAfford ? 'pointer' : 'not-allowed'};
+        text-align: left;
+      `;
+      
+      btn.innerHTML = `
+        <div>${upgrade.name}</div>
+        <div style="font-size: 12px; color: #ffcc00;">Cost: ${upgrade.cost} MB</div>
+      `;
+      
+      if (canAfford) {
+        btn.onclick = () => {
+          this.currentMoney -= upgrade.cost;
+          upgrade.effect();
+          this.terminal.updateData(this.currentMoney);
+          dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
+          
+          // 버튼 상태 업데이트
+          upgradeList.querySelectorAll('button').forEach((b, i) => {
+            const u = upgrades[i];
+            const afford = this.currentMoney >= u.cost;
+            b.style.background = afford ? 'rgba(0, 100, 50, 0.5)' : 'rgba(50, 50, 50, 0.5)';
+            b.style.borderColor = afford ? '#00ff00' : '#555';
+            b.style.color = afford ? '#00ff00' : '#666';
+            b.style.cursor = afford ? 'pointer' : 'not-allowed';
+          });
+          
+          this.terminal.printSystemMessage(`UPGRADED: ${upgrade.name}`);
+        };
+      }
+      
+      upgradeList.appendChild(btn);
+    });
+
+    overlay.appendChild(upgradeList);
+
+    // 닫기 버튼
+    const closeBtn = document.createElement("button");
+    closeBtn.style.cssText = `
+      margin-top: 20px;
+      background: transparent;
+      border: 1px solid #ff6666;
+      color: #ff6666;
+      padding: 10px 30px;
+      font-family: var(--term-font);
+      font-size: 14px;
+      cursor: pointer;
+    `;
+    closeBtn.innerText = "[CLOSE]";
+    closeBtn.onclick = () => {
+      overlay.remove();
+      this.defenseGame.resume();
+      this.showCommandMenu();
+    };
+    overlay.appendChild(closeBtn);
   }
 
   /**

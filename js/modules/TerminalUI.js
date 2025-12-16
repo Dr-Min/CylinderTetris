@@ -28,6 +28,20 @@ export class TerminalUI {
 
     // 초기화
     if (this.choiceArea) this.choiceArea.classList.add("hidden");
+    
+    // DATA 표시 ([USER] 밑에)
+    this.dataDisplay = document.createElement("div");
+    this.dataDisplay.id = "terminal-data-display";
+    this.dataDisplay.style.cssText = `
+      color: #00f0ff;
+      font-family: var(--term-font);
+      font-size: inherit;
+      margin-top: 5px;
+      text-shadow: 0 0 5px #00f0ff;
+    `;
+    this.dataDisplay.innerText = "DATA: 0 MB";
+    // inputLine 바로 뒤에 추가
+    this.inputLine.after(this.dataDisplay);
 
     // 전역 클릭 시 입력창 포커스 (터미널 모드일 때만)
     this.terminalLayer.addEventListener("click", () => {
@@ -801,6 +815,13 @@ export class TerminalUI {
 
   scrollToBottom() {
     this.terminalLayer.scrollTop = this.terminalLayer.scrollHeight;
+  }
+  
+  // DATA 표시 업데이트
+  updateData(amount) {
+    if (this.dataDisplay) {
+      this.dataDisplay.innerText = `DATA: ${amount} MB`;
+    }
   }
 
   clear() {

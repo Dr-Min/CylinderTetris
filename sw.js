@@ -1,5 +1,5 @@
-// v4.6 - Mobile performance optimization (particle limits, for loops)
-const CACHE_NAME = "hacker-tetris-v4.6";
+// v4.8 - Remove unnecessary terminal.clear() to preserve messages
+const CACHE_NAME = "hacker-tetris-v4.8";
 const ASSETS = [
   "./",
   "./index.html",
