@@ -1,5 +1,5 @@
-// v2.1 - Mobile Font Optimization & PWA Updates
-const CACHE_NAME = "hacker-tetris-v2.1";
+// v3.1 - Aggressive spacing fix: remove all min-height
+const CACHE_NAME = "hacker-tetris-v3.1";
 const ASSETS = [
   "./",
   "./index.html",
@@ -14,6 +14,7 @@ const ASSETS = [
   "./js/modules/PerkManager.js",
   "./js/modules/ConquestManager.js",
   "./js/modules/EquipmentManager.js",
+  "./js/modules/StageManager.js",
   "./manifest.json",
   "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
   "https://fonts.googleapis.com/css2?family=VT323&display=swap",

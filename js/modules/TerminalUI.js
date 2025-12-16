@@ -23,9 +23,8 @@ export class TerminalUI {
     this.inputLine = inputLine;
     this.cmdInput = this.inputLine.querySelector("input");
 
-    // 커서 엘리먼트 생성 (타이핑 효과용)
-    this.cursor = document.createElement("span");
-    this.cursor.className = "cursor blinking";
+    // 커서 엘리먼트 제거됨 (사용하지 않음)
+    this.cursor = null;
 
     // 초기화
     if (this.choiceArea) this.choiceArea.classList.add("hidden");
@@ -579,15 +578,11 @@ export class TerminalUI {
   async typeText(text, speed = 20) {
     if (this.isTyping) await this.waitForTypingEnd();
     this.isTyping = true;
-    this.cursor.classList.remove("blinking"); // 타이핑 중엔 깜빡임 중지
 
     // 새 라인 생성
     const line = document.createElement("div");
     line.className = "terminal-line";
     this.contentDiv.appendChild(line);
-
-    // 커서를 현재 라인으로 이동
-    line.appendChild(this.cursor);
     this.scrollToBottom();
 
     return new Promise((resolve) => {
@@ -598,9 +593,8 @@ export class TerminalUI {
           // 현재 글자
           const char = text.charAt(i);
 
-          // 텍스트 노드로 추가 (HTML 태그가 아닌 순수 텍스트 처리)
-          // 커서 바로 앞에 글자 삽입
-          line.insertBefore(document.createTextNode(char), this.cursor);
+          // 텍스트 노드로 추가
+          line.appendChild(document.createTextNode(char));
 
           i++;
           this.scrollToBottom();
@@ -610,7 +604,6 @@ export class TerminalUI {
           setTimeout(typeChar, randomSpeed);
         } else {
           this.isTyping = false;
-          this.cursor.classList.add("blinking"); // 타이핑 끝, 다시 깜빡임
           resolve();
         }
       };
@@ -755,7 +748,6 @@ export class TerminalUI {
 
   clear() {
     this.contentDiv.innerHTML = "";
-    this.contentDiv.appendChild(this.cursor); // 커서는 유지
   }
 
   hide() {
@@ -773,7 +765,6 @@ export class TerminalUI {
       // 게임 중에는 텍스트 그림자 더 강하게
       this.terminalLayer.style.textShadow =
         "0 0 3px #000, 0 0 5px var(--term-color)";
-      this.cursor.style.display = "none";
 
       // 게임 중에는 입력창 확실히 숨김 및 포커스 해제
       this.inputLine.classList.add("hidden");
@@ -782,7 +773,6 @@ export class TerminalUI {
       this.terminalLayer.style.background = "rgba(0, 0, 0, 0.95)"; // 기본은 진하게
       this.terminalLayer.style.pointerEvents = "auto";
       this.terminalLayer.style.textShadow = "0 0 5px var(--term-color)";
-      this.cursor.style.display = "inline-block";
     }
   }
 
@@ -792,7 +782,6 @@ export class TerminalUI {
         this.terminalLayer.style.background = "rgba(0, 0, 0, 0)"; // 완전 투명
         this.terminalLayer.style.pointerEvents = "auto"; // 클릭 가능 (선택지 등)
         this.terminalLayer.style.textShadow = "0 0 2px #000, 0 0 5px var(--term-color)";
-        this.cursor.style.display = "inline-block";
     } else {
         // 비활성화 시 기본 터미널 모드로 복귀
         this.setTransparentMode(false);

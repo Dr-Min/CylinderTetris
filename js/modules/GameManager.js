@@ -4,6 +4,7 @@ import { DefenseGame } from "./DefenseGame.js";
 import { PerkManager } from "./PerkManager.js";
 import { ConquestManager } from "./ConquestManager.js";
 import { EquipmentManager } from "./EquipmentManager.js";
+import { StageManager } from "./StageManager.js";
 
 export class GameManager {
   constructor() {
@@ -13,6 +14,7 @@ export class GameManager {
     this.perkManager = new PerkManager();
     this.conquestManager = new ConquestManager();
     this.equipmentManager = new EquipmentManager();
+    this.stageManager = new StageManager(); // 스테이지 관리자 추가
 
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
@@ -348,6 +350,9 @@ export class GameManager {
     this.loadReputation();
     this.tetrisGame.init(); // 3D 씬 로드 (항상 로드해둠)
 
+    // [DEV] 튜토리얼 스킵 (개발 중 비활성화)
+    localStorage.setItem("tutorial_completed", "true");
+
     const tutorialCompleted = localStorage.getItem("tutorial_completed");
     if (tutorialCompleted) {
       this.loadPermanentPerks();
@@ -407,15 +412,10 @@ export class GameManager {
       const stats = this.equipmentManager.getTotalStats();
       this.defenseGame.turret.damage = 10 + stats.damage;
 
-      // 테트리스 모드 진입 옵션 (능동적 선택)
+      // 터미널 명령어 옵션 표시
       setTimeout(async () => {
         this.terminal.printSystemMessage("System Idle. Ready for Operations.");
-        const choice = await this.terminal.showChoices([
-          { text: "/breach_defense (Enter Tetris - Get Equipment)", value: "breach" }
-        ]);
-        if (choice === "breach") {
-          this.switchMode("breach");
-        }
+        await this.showCommandMenu();
       }, 1000);
 
     } else if (mode === "breach") {
@@ -431,6 +431,237 @@ export class GameManager {
       // 3. 테트리스 시작 (장비 획득 목표)
       this.startBreachMode();
     }
+  }
+
+  /**
+   * 터미널 명령어 메뉴 표시
+   */
+  async showCommandMenu() {
+    const currentStage = this.stageManager.getCurrentStage();
+    
+    const choice = await this.terminal.showChoices([
+      { text: "/map (Open Stage Map)", value: "map" },
+      { text: "/breach_defense (Enter Tetris - Get Equipment)", value: "breach" }
+    ]);
+    
+    if (choice === "map") {
+      await this.showMap();
+    } else if (choice === "breach") {
+      this.switchMode("breach");
+    }
+  }
+
+  /**
+   * 맵 UI 표시
+   */
+  async showMap() {
+    this.defenseGame.pause(); // 디펜스 일시정지
+    
+    const mapData = this.stageManager.getMapData();
+    
+    // 맵 오버레이 생성
+    const overlay = document.createElement("div");
+    overlay.id = "map-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 3000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    `;
+
+    // 헤더
+    const header = document.createElement("div");
+    header.style.cssText = `
+      color: #00ff00;
+      font-family: var(--term-font);
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px #00ff00;
+    `;
+    header.innerText = "[ STAGE MAP ]";
+    overlay.appendChild(header);
+
+    // 맵 컨테이너
+    const mapContainer = document.createElement("div");
+    mapContainer.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(5, 80px);
+      gap: 10px;
+      justify-content: center;
+      align-content: center;
+    `;
+
+    // 스테이지 버튼 생성
+    mapData.stages.forEach(stage => {
+      const btn = document.createElement("button");
+      btn.className = "map-stage-btn";
+      
+      // 위치 계산 (row 0~4, col 0~2)
+      const gridRow = stage.position.row + 1;
+      const gridCol = stage.position.col + 1;
+      
+      // 스타일 설정
+      let bgColor, borderColor, textColor;
+      if (stage.id === mapData.currentStageId) {
+        bgColor = "rgba(0, 255, 0, 0.3)";
+        borderColor = "#00ff00";
+        textColor = "#00ff00";
+      } else if (stage.conquered) {
+        bgColor = "rgba(0, 150, 255, 0.3)";
+        borderColor = "#00aaff";
+        textColor = "#00aaff";
+      } else if (stage.type === "boss") {
+        bgColor = "rgba(255, 0, 0, 0.3)";
+        borderColor = "#ff0000";
+        textColor = "#ff0000";
+      } else if (stage.type === "farming") {
+        bgColor = "rgba(255, 200, 0, 0.3)";
+        borderColor = "#ffcc00";
+        textColor = "#ffcc00";
+      } else {
+        bgColor = "rgba(100, 100, 100, 0.3)";
+        borderColor = "#666";
+        textColor = "#999";
+      }
+
+      btn.style.cssText = `
+        grid-row: ${gridRow};
+        grid-column: ${gridCol};
+        background: ${bgColor};
+        border: 2px solid ${borderColor};
+        color: ${textColor};
+        font-family: var(--term-font);
+        font-size: 11px;
+        padding: 5px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+      `;
+      
+      // 현재 위치 표시
+      const currentMarker = stage.id === mapData.currentStageId ? ">> " : "";
+      const conqueredMarker = stage.conquered ? " ✓" : "";
+      
+      btn.innerHTML = `
+        <div style="font-weight:bold;">${currentMarker}${stage.name}${conqueredMarker}</div>
+        <div style="font-size:9px;margin-top:3px;">${stage.type.toUpperCase()}</div>
+      `;
+
+      // 클릭 이벤트
+      btn.onclick = () => this.handleMapStageClick(stage, overlay);
+
+      // 호버 효과
+      btn.onmouseenter = () => {
+        btn.style.transform = "scale(1.05)";
+        btn.style.boxShadow = `0 0 15px ${borderColor}`;
+      };
+      btn.onmouseleave = () => {
+        btn.style.transform = "scale(1)";
+        btn.style.boxShadow = "none";
+      };
+
+      mapContainer.appendChild(btn);
+    });
+
+    overlay.appendChild(mapContainer);
+
+    // 현재 스테이지 정보
+    const currentStage = this.stageManager.getCurrentStage();
+    const info = document.createElement("div");
+    info.style.cssText = `
+      color: #aaa;
+      font-family: var(--term-font);
+      font-size: 14px;
+      margin-top: 20px;
+      text-align: center;
+      max-width: 300px;
+    `;
+    info.innerHTML = `
+      <div style="color:#00ff00;margin-bottom:10px;">Current: ${currentStage.name}</div>
+      <div>${currentStage.description}</div>
+      <div style="margin-top:10px;color:#666;">Conquered: ${mapData.conqueredCount}/4</div>
+    `;
+    overlay.appendChild(info);
+
+    // 닫기 버튼
+    const closeBtn = document.createElement("button");
+    closeBtn.style.cssText = `
+      margin-top: 20px;
+      padding: 10px 30px;
+      background: transparent;
+      border: 2px solid #ff0000;
+      color: #ff0000;
+      font-family: var(--term-font);
+      font-size: 14px;
+      cursor: pointer;
+    `;
+    closeBtn.innerText = "[CLOSE MAP]";
+    closeBtn.onclick = () => {
+      overlay.remove();
+      this.defenseGame.resume();
+      this.showCommandMenu();
+    };
+    overlay.appendChild(closeBtn);
+
+    document.body.appendChild(overlay);
+  }
+
+  /**
+   * 맵에서 스테이지 클릭 시 처리
+   */
+  async handleMapStageClick(stage, overlay) {
+    const result = this.stageManager.moveToStage(stage.id);
+    
+    if (result.success) {
+      overlay.remove();
+      
+      // 스테이지 설정 적용
+      this.applyStageSettings(result.stage);
+      
+      // 디펜스 게임 재시작
+      this.defenseGame.resume();
+      
+      this.terminal.printSystemMessage(`Moved to: ${result.stage.name}`);
+      this.terminal.printSystemMessage(result.stage.description);
+      
+      await this.showCommandMenu();
+    } else {
+      this.terminal.printSystemMessage(`ACCESS DENIED: ${result.message}`);
+    }
+  }
+
+  /**
+   * 스테이지 설정을 DefenseGame에 적용
+   */
+  applyStageSettings(stage) {
+    // 안전영역 여부
+    this.defenseGame.isSafeZone = (stage.type === "safe");
+    this.defenseGame.safeZoneSpawnRate = stage.spawnRate;
+    this.defenseGame.spawnRate = stage.spawnRate;
+    
+    // 페이지 시스템
+    if (!stage.hasPages) {
+      this.defenseGame.currentPage = 0;
+    } else {
+      this.defenseGame.currentPage = 1;
+      this.defenseGame.pageTimer = 0;
+    }
+    
+    // UI 업데이트
+    this.defenseGame.updateWaveDisplay();
+    
+    // 적 초기화
+    this.defenseGame.enemies = [];
   }
 
   loadPermanentPerks() {

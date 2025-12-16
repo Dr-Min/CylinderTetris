@@ -14,6 +14,22 @@ export class DefenseGame {
     this.canvas.style.zIndex = "50"; // 터미널(100)보다 아래, game-container(0)보다 위
     document.body.appendChild(this.canvas); // [수정] body에 직접 부착
 
+    // 코어 설정 (가장 먼저 초기화)
+    this.core = {
+      x: 0,
+      y: 0,
+      radius: 15,
+      hp: 100,
+      maxHp: 100,
+      color: "#00f0ff",
+      shieldActive: true,
+      shieldState: "ACTIVE",
+      shieldHp: 100,
+      shieldMaxHp: 100,
+      shieldRadius: 70,
+      shieldTimer: 0
+    };
+
     // UI 레이어 생성 (DOM 기반, 모바일 터치 최적화)
     this.uiLayer = document.createElement("div");
     this.uiLayer.id = "defense-ui";
@@ -66,9 +82,11 @@ export class DefenseGame {
     this.shieldBtn.style.touchAction = "manipulation"; // 모바일 터치 최적화
     this.shieldBtn.style.userSelect = "none"; // 텍스트 선택 방지
     this.shieldBtn.style.webkitTapHighlightColor = "transparent"; // iOS 탭 하이라이트 제거
-    this.shieldBtn.innerHTML = "SHIELD: <span style='color:#fff'>ACTIVE</span><br><span style='font-size:12px'>(100%)</span>";
+    
+    // 초기 텍스트 설정 (UI 업데이트 함수 호출로 통일)
     this.shieldBtn.onclick = () => this.toggleShield();
     this.uiLayer.appendChild(this.shieldBtn);
+    this.updateShieldBtnUI("ACTIVE", "#00f0ff"); // 초기값 설정
 
     // 3. 점령 버튼 (12페이지 달성 시 등장)
     this.conquerBtn = document.createElement("button");
@@ -96,40 +114,26 @@ export class DefenseGame {
     this.conquerBtn.onclick = () => this.handleConquerClick();
     this.uiLayer.appendChild(this.conquerBtn);
 
-    // 웨이브 정보 표시
+    // 웨이브 정보 표시 (DATA 아래에 위치)
     this.waveInfo = document.createElement("div");
     this.waveInfo.id = "wave-info";
     this.waveInfo.style.position = "absolute";
-    this.waveInfo.style.top = "20px";
-    this.waveInfo.style.left = "20px";
+    this.waveInfo.style.top = "55px"; // DATA(top:20 + height:~30) 아래
+    this.waveInfo.style.right = "20px"; // 우측 정렬 (DATA와 같은 위치)
     this.waveInfo.style.color = "#fff";
     this.waveInfo.style.fontFamily = "var(--term-font)";
-    this.waveInfo.style.fontSize = "18px";
+    this.waveInfo.style.fontSize = "16px";
     this.waveInfo.style.textShadow = "0 0 5px rgba(255,255,255,0.5)";
-    this.waveInfo.innerText = "PAGE: 1 / 12";
+    this.waveInfo.style.background = "rgba(0,0,0,0.5)";
+    this.waveInfo.style.padding = "4px 10px";
+    this.waveInfo.innerText = "SAFE ZONE"; // 시작은 안전영역
+    this.waveInfo.style.color = "#00ff00";
     this.uiLayer.appendChild(this.waveInfo);
 
     // 게임 상태 변수
     this.isRunning = false;
     this.lastTime = 0;
     
-    // 코어 설정
-    this.core = {
-      x: 0,
-      y: 0,
-      radius: 30,
-      hp: 100,
-      maxHp: 100,
-      color: "#00f0ff",
-      // 쉴드 관련
-      shieldActive: true,      // 현재 켜져있는지
-      shieldState: "ACTIVE",   // ACTIVE, OFF, CHARGING, DISCHARGING, BROKEN
-      shieldHp: 100,           // 내구도
-      shieldMaxHp: 100,
-      shieldRadius: 100,
-      shieldTimer: 0           // 상태 전환 타이머
-    };
-
     // 포탑 설정 (강화됨)
     this.turret = {
       angle: 0,
@@ -151,13 +155,18 @@ export class DefenseGame {
     this.pageTimer = 0;
     this.pageDuration = 20; // 페이지당 20초 (테스트용, 실제론 더 길게)
     
+    // 스테이지 관리
+    this.currentStage = 0; // 0 = 안전영역, 1+ = 일반 스테이지
+    this.isSafeZone = true; // 안전영역 여부
+    this.safeZoneSpawnRate = 8; // 안전영역에서 적 생성 주기 (8초에 한 마리)
+    
     // 이벤트 콜백
     this.onResourceGained = null; 
     this.onGameOver = null;
     this.onConquer = null; // 점령 요청 콜백
 
     // 아군 정보 (ConquestManager에서 주입)
-    this.alliedInfo = { count: 0, level: 1, color: "#00ff00" };
+    this.alliedInfo = { count: 0, level: 1, color: "#00aaff" }; // 파란색으로 변경
 
     // 현재 자원 (GameManager와 동기화용)
     this.currentData = 0;
@@ -241,7 +250,24 @@ export class DefenseGame {
 
   updateShieldBtnUI(text, color) {
       const hpPct = Math.floor((this.core.shieldHp / this.core.shieldMaxHp) * 100);
-      this.shieldBtn.innerHTML = `SHIELD: <span style='color:${color}'>${text}</span><br><span style='font-size:12px'>(${hpPct}%)</span>`;
+      
+      // 버튼 내부: 상태 텍스트
+      // 버튼 위: 체력 텍스트 (position: absolute로 버튼 기준 상단 배치)
+      this.shieldBtn.innerHTML = `
+          SHIELD: ${text}
+          <div style='
+              position: absolute; 
+              top: -25px; 
+              left: 50%; 
+              transform: translateX(-50%); 
+              font-size: 14px; 
+              color: ${color}; 
+              text-shadow: 0 0 5px ${color};
+              white-space: nowrap;
+          '>
+              (${hpPct}%)
+          </div>
+      `;
       this.shieldBtn.style.borderColor = color;
       this.shieldBtn.style.color = color;
   }
@@ -268,6 +294,19 @@ export class DefenseGame {
     this.isRunning = false;
     this.canvas.style.display = "none";
     this.uiLayer.style.display = "none"; // UI 숨김
+  }
+
+  pause() {
+    this.isRunning = false;
+    // 캔버스와 UI는 보이지만 업데이트 중지
+  }
+
+  resume() {
+    if (!this.isRunning) {
+      this.isRunning = true;
+      this.lastTime = performance.now();
+      requestAnimationFrame((t) => this.animate(t));
+    }
   }
 
   update(deltaTime) {
@@ -311,8 +350,8 @@ export class DefenseGame {
         }
     }
 
-    // 0.5 웨이브(페이지) 진행
-    if (this.currentPage <= 12) {
+    // 0.5 웨이브(페이지) 진행 - 안전영역이 아닐 때만
+    if (!this.isSafeZone && this.currentPage <= 12) {
         this.pageTimer += dt;
         if (this.pageTimer >= this.pageDuration) {
             if (this.currentPage < 12) {
@@ -392,8 +431,10 @@ export class DefenseGame {
     });
 
     // 1. 적 생성
+    // 적 생성 (안전영역이면 느리게)
+    const currentSpawnRate = this.isSafeZone ? this.safeZoneSpawnRate : this.spawnRate;
     this.waveTimer += dt;
-    if (this.waveTimer > this.spawnRate) {
+    if (this.waveTimer > currentSpawnRate) {
       this.spawnEnemy();
       this.waveTimer = 0;
     }
@@ -531,7 +572,13 @@ export class DefenseGame {
   }
 
   updateWaveDisplay() {
-      this.waveInfo.innerText = `PAGE: ${this.currentPage} / 12`;
+      if (this.isSafeZone) {
+          this.waveInfo.innerText = "SAFE ZONE";
+          this.waveInfo.style.color = "#00ff00"; // 녹색
+      } else {
+          this.waveInfo.innerText = `PAGE: ${this.currentPage} / 12`;
+          this.waveInfo.style.color = "#fff"; // 흰색
+      }
   }
 
   render() {
@@ -556,19 +603,12 @@ export class DefenseGame {
         this.ctx.setLineDash([]);
     }
 
-    // 아군 바이러스 그리기 (HP 바 포함)
+    // 아군 바이러스 그리기 (HP 바 삭제, 크기 유지)
     this.alliedViruses.forEach(v => {
         this.ctx.fillStyle = v.color;
         this.ctx.beginPath();
         this.ctx.arc(v.x, v.y, v.radius, 0, Math.PI * 2);
         this.ctx.fill();
-        
-        // HP 바
-        const hpPct = v.hp / v.maxHp;
-        this.ctx.fillStyle = "#333";
-        this.ctx.fillRect(v.x - 8, v.y - v.radius - 8, 16, 3);
-        this.ctx.fillStyle = hpPct > 0.5 ? "#0f0" : "#f00";
-        this.ctx.fillRect(v.x - 8, v.y - v.radius - 8, 16 * hpPct, 3);
     });
 
     // 1. 발사체
@@ -593,12 +633,11 @@ export class DefenseGame {
       this.ctx.fillRect(e.x - 10, e.y - 20, 20 * hpPct, 4);
     });
 
-    // 3. 코어 및 포탑
+    // 3. 코어 및 포탑 (포탑 발사대 삭제)
     this.ctx.save();
     this.ctx.translate(this.core.x, this.core.y);
     this.ctx.rotate(this.turret.angle);
-    this.ctx.fillStyle = "#33ff00";
-    this.ctx.fillRect(0, -5, 40, 10);
+    // 발사대 그리기 삭제됨
     this.ctx.restore();
 
     this.ctx.beginPath();
@@ -619,21 +658,18 @@ export class DefenseGame {
         this.ctx.globalAlpha = 1.0;
     });
 
-    // 5. 코어 HP 바
-    const barWidth = 100;
-    const barHeight = 10;
-    const hpPercent = Math.max(0, this.core.hp / this.core.maxHp);
-    
-    this.ctx.fillStyle = "#333";
-    this.ctx.fillRect(this.core.x - barWidth/2, this.core.y + 40, barWidth, barHeight);
-    
-    this.ctx.fillStyle = hpPercent > 0.3 ? "#0f0" : "#f00";
-    this.ctx.fillRect(this.core.x - barWidth/2, this.core.y + 40, barWidth * hpPercent, barHeight);
-    
-    this.ctx.fillStyle = "#fff";
-    this.ctx.font = "12px monospace";
-    this.ctx.textAlign = "center";
-    this.ctx.fillText(`CORE: ${Math.floor(hpPercent * 100)}%`, this.core.x, this.core.y + 65);
+    // 5. 코어 HP 바 (삭제됨 - 코어 체력 표시 안함)
+    // const barWidth = 100;
+    // const barHeight = 10;
+    // const hpPercent = Math.max(0, this.core.hp / this.core.maxHp);
+    // this.ctx.fillStyle = "#333";
+    // this.ctx.fillRect(this.core.x - barWidth/2, this.core.y + 40, barWidth, barHeight);
+    // this.ctx.fillStyle = hpPercent > 0.3 ? "#0f0" : "#f00";
+    // this.ctx.fillRect(this.core.x - barWidth/2, this.core.y + 40, barWidth * hpPercent, barHeight);
+    // this.ctx.fillStyle = "#fff";
+    // this.ctx.font = "12px monospace";
+    // this.ctx.textAlign = "center";
+    // this.ctx.fillText(`CORE: ${Math.floor(hpPercent * 100)}%`, this.core.x, this.core.y + 65);
   }
 
   spawnEnemy() {
@@ -646,7 +682,7 @@ export class DefenseGame {
     this.enemies.push({
       x: ex,
       y: ey,
-      radius: 15,
+      radius: 10, // 적 크기 축소 (15 -> 10)
       speed: 50 + Math.random() * 30,
       hp: 30,
       maxHp: 30,

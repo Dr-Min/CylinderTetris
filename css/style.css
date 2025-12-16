@@ -274,7 +274,8 @@ body {
 .input-line {
   display: flex;
   align-items: center;
-  margin-top: 10px;
+  margin: 2px 0 0 0; /* 상단만 2px */
+  padding: 0;
   width: 100%;
 }
 
@@ -302,14 +303,15 @@ body {
 
 .terminal-line {
   margin: 0;
-  line-height: 1.3;
+  padding: 0;
+  line-height: 1.1; /* 1.2 -> 1.1 더 축소 */
   white-space: pre-wrap;
   display: block;
-  min-height: 24px;
+  min-height: auto; /* 18px -> auto 제거 */
 }
 
 .cursor {
-  display: inline-block;
+  display: none; /* 터미널 커서 숨김 */
   width: 12px;
   height: 1.1em;
   background-color: var(--term-color);
@@ -318,7 +320,7 @@ body {
 }
 
 .cursor.blinking {
-  animation: blink 1s step-end infinite;
+  animation: none; /* 깜빡임 비활성화 */
 }
 
 @keyframes blink {
@@ -331,26 +333,32 @@ body {
   }
 }
 
-#choice-area {
-  margin-top: 20px;
+#choice-area,
+.choice-container {
+  margin: 2px 0 0 0; /* 상단만 2px */
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 0;
 }
 
 .choice-btn {
   background: transparent;
   border: none;
   color: rgba(51, 255, 0, 0.7);
-  padding: 2px 0;
+  padding: 0;
+  margin: 0;
   font-family: var(--term-font);
-  font-size: inherit; /* 부모 폰트 사이즈 상속 (PC 18px, Mobile 12px) */
+  font-size: inherit;
+  line-height: 1.1;
   cursor: pointer;
   text-align: left;
   width: 100%;
   outline: none;
   text-shadow: none;
   transition: all 0.1s;
+  display: block;
+  min-height: auto;
 }
 
 .choice-btn:hover,
@@ -361,12 +369,12 @@ body {
 }
 
 .choice-btn::before {
-  content: "[ ] ";
+  content: ""; /* 중복 제거 - JS에서 이미 [1], [2] 추가함 */
   opacity: 0.5;
 }
 .choice-btn:hover::before,
 .choice-btn:focus::before {
-  content: "[*] ";
+  content: ""; /* 중복 제거 */
   opacity: 1;
 }
 
@@ -562,12 +570,26 @@ body {
 @media (max-width: 768px) {
   #terminal-layer {
     padding: 10px;
-    font-size: 10px; /* 모바일 폰트 크기 축소 (12px -> 10px) */
+    padding-top: 80px; /* 상단 UI 공간만큼 텍스트를 아래로 밀어줌 */
+    font-size: 13px;
+    top: 0; /* 터미널 박스는 화면 맨 꼭대기부터 시작 */
+    height: 100%;
+    background: transparent; /* 배경 투명 복구 (게임 화면이 보여야 함) */
+    pointer-events: none; /* 배경은 클릭 통과 */
+  }
+
+  /* 터미널 내부 상호작용 요소는 클릭 가능해야 함 */
+  #terminal-content,
+  .input-line,
+  .choice-container {
+    pointer-events: auto; 
   }
 
   .terminal-line {
-    min-height: 14px; /* 줄 높이 축소 */
-    line-height: 1.2;
+    min-height: auto;
+    line-height: 1.1;
+    margin: 0;
+    padding: 0;
   }
 
   /* 상점 UI 모바일 최적화 (강제 리스트 뷰) */
@@ -677,7 +699,13 @@ body {
   }
 
   #game-over-screen h1 {
-    font-size: 28px;
+    font-size: 24px;
+  }
+
+  #game-over-screen button {
+    font-size: 14px;
+    padding: 10px 20px;
+    min-height: 36px;
   }
 
   /* 모바일 컨트롤 버튼 위치 및 크기 조정 (확실하게 고정) */
@@ -702,67 +730,74 @@ body {
   /* 디펜스 모드 모바일 최적화 */
   #defense-ui button {
     min-height: 50px;
-    font-size: 11px; /* 버튼 폰트 축소 (14px -> 11px) */
+    font-size: 13px; /* 버튼 폰트 상향 (11px -> 13px) */
     padding: 8px 12px;
   }
 
   #defense-ui #shield-btn {
-    width: 180px;
-    height: 55px;
-    bottom: 80px;
-    font-size: 11px; /* 쉴드 버튼 폰트 축소 */
-  }
-
-  #defense-ui #shield-btn span {
-    font-size: 10px !important; /* 하위 텍스트 더 작게 */
+    width: 220px;
+    height: 50px;
+    bottom: 90px;
+    font-size: 16px; /* 폰트 조금 키움 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute; /* absolute 유지 */
+    overflow: visible; /* 체력 텍스트가 밖으로 나가도 보이게 */
   }
 
   #defense-ui #conquer-btn {
-    width: 160px;
-    padding: 8px;
-    font-size: 12px; /* 점령 버튼 폰트 축소 */
-    top: 60px;
+    width: 180px;
+    padding: 10px;
+    font-size: 14px;
+    top: 100px; /* 데이터/페이지 UI 아래로 내림 */
   }
 
+  /* 상단 UI 재배치 (우측 상단 정렬, 겹침 방지) */
   #defense-ui #resource-display {
-    font-size: 14px; /* 자원 표시 폰트 축소 (18px -> 14px) */
-    padding: 6px 12px;
+    font-size: 14px;
+    padding: 6px 10px;
     top: 10px;
     right: 10px;
+    text-align: right;
+    min-width: 120px;
+    height: 30px;
+    line-height: 18px;
+    box-sizing: border-box;
+    z-index: 200; 
   }
 
   #defense-ui #wave-info {
-    font-size: 11px; /* 웨이브 정보 폰트 축소 (14px -> 11px) */
-    top: 10px;
-    left: 10px;
+    font-size: 14px;
+    top: 50px; /* 데이터(top:10 + height:30 + gap:10) = 50px */
+    right: 10px;
+    left: auto;
+    text-align: right;
+    width: auto;
+    height: 25px;
+    line-height: 25px;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.5); /* 배경 추가로 겹침 방지 */
+    padding: 0 8px;
   }
 
   /* 터미널 선택지 모바일 최적화 */
+  #choice-area,
   .choice-container {
-    gap: 8px;
+    gap: 0;
+    margin: 2px 0 0 0;
+    padding: 0;
   }
 
   .choice-btn {
-    padding: 10px 14px;
-    font-size: 11px; /* 선택지 버튼 폰트 축소 (14px -> 11px) */
-    min-height: 40px; /* 터치 영역 유지하되 높이 약간 축소 */
+    padding: 3px 6px; /* 터치용 최소 패딩 */
+    font-size: 13px;
+    min-height: auto;
+    line-height: 1.1;
+    margin: 0;
   }
 
-  /* 게임 오버 스크린 모바일 */
-  #game-over-screen {
-    width: 90%;
-    padding: 30px 20px;
-  }
-
-  #game-over-screen h1 {
-    font-size: 24px; /* 게임오버 제목 폰트 축소 (32px -> 24px) */
-  }
-
-  #game-over-screen button {
-    font-size: 14px; /* 게임오버 버튼 폰트 축소 (18px -> 14px) */
-    padding: 10px 20px;
-    min-height: 40px;
-  }
+  /* 게임 오버 스크린 모바일 - 중복 제거됨 (위에서 정의) */
 
   /* 업데이트 알림 모바일 */
   #update-notification {
@@ -790,7 +825,7 @@ body {
   }
 
   .terminal-line {
-    min-height: 12px;
+    min-height: auto;
     line-height: 1.1;
   }
 
@@ -812,12 +847,23 @@ body {
   }
 
   #defense-ui #resource-display {
-    font-size: 12px; /* 자원 표시 더 축소 */
-    padding: 5px 10px;
+    font-size: 12px;
+    padding: 5px 8px;
+    top: 8px;
+    right: 8px;
+    height: 28px;
+    line-height: 18px;
   }
 
   #defense-ui #wave-info {
-    font-size: 10px; /* 웨이브 정보 더 축소 */
+    font-size: 12px;
+    top: 45px; /* 데이터(top:8 + height:28 + gap:9) = 45px */
+    right: 8px;
+    left: auto;
+    height: 22px;
+    line-height: 22px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0 6px;
   }
 
   .top-bar {
