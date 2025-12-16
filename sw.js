@@ -1,5 +1,5 @@
-// v4.9 - Fix canvas stretch on mobile (remove CSS size)
-const CACHE_NAME = "hacker-tetris-v4.9";
+// v5.1 - MAX PAGE button in debug panel (` key)
+const CACHE_NAME = "hacker-tetris-v5.1";
 const ASSETS = [
   "./",
   "./index.html",

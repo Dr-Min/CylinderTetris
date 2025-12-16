@@ -25,8 +25,10 @@ export class StageManager {
                 position: { row: 3, col: 0 }, // 하단 좌측
                 connections: [0, 3], // Safe Zone, Farming Zone
                 enemyTypes: ["basic", "fast"],
-                spawnRate: 1.5,
+                spawnRate: 1.2, // 더 빠른 스폰
                 hasPages: true,
+                maxPages: 5, // 초반 지역: 5페이지
+                difficultyScale: 1.5, // 페이지당 난이도 증가폭 1.5배
                 description: "Entry point - Low threat level"
             },
             {
@@ -37,8 +39,10 @@ export class StageManager {
                 position: { row: 3, col: 2 }, // 하단 우측
                 connections: [0, 3], // Safe Zone, Farming Zone
                 enemyTypes: ["basic", "tank"],
-                spawnRate: 1.5,
+                spawnRate: 1.2, // 더 빠른 스폰
                 hasPages: true,
+                maxPages: 5, // 초반 지역: 5페이지
+                difficultyScale: 1.5, // 페이지당 난이도 증가폭 1.5배
                 description: "Entry point - Low threat level"
             },
             {
@@ -63,6 +67,8 @@ export class StageManager {
                 enemyTypes: ["fast", "tank", "elite"],
                 spawnRate: 1.0,
                 hasPages: true,
+                maxPages: 12, // 상위 지역: 12페이지
+                difficultyScale: 1.0, // 기본 난이도 증가
                 description: "Advanced sector - High threat"
             },
             {
@@ -75,6 +81,8 @@ export class StageManager {
                 enemyTypes: ["fast", "tank", "elite"],
                 spawnRate: 1.0,
                 hasPages: true,
+                maxPages: 12, // 상위 지역: 12페이지
+                difficultyScale: 1.0, // 기본 난이도 증가
                 description: "Advanced sector - High threat"
             },
             {
@@ -87,6 +95,8 @@ export class StageManager {
                 enemyTypes: ["elite", "boss"],
                 spawnRate: 0.5,
                 hasPages: true,
+                maxPages: 15, // 보스: 15페이지
+                difficultyScale: 0.8, // 느린 증가 (긴 전투)
                 description: "FINAL TARGET - Boss awaits"
             }
         ];

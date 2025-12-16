@@ -223,11 +223,73 @@ export class DefenseGame {
   }
 
   handleConquerClick() {
+      // 1. 실드 파괴 연출
+      this.playShieldBreakAnimation();
+      
+      // 2. 실드 상태 변경 (점령 중에는 사용 불가)
+      this.core.shieldActive = false;
+      this.core.shieldState = "DISABLED"; // 점령 중 비활성화
+      this.core.shieldHp = 0;
+      this.updateShieldBtnUI("DISABLED", "#555");
+      this.shieldBtn.style.pointerEvents = "none"; // 클릭 불가
+      
+      // 3. 점령 콜백 호출
       if (this.onConquer) this.onConquer();
       this.conquerBtn.style.display = "none";
-      // 다음 페이지(13)로 넘기거나, 스테이지 리셋은 GameManager가 처리
+      
+      // 다음 페이지로 리셋은 GameManager가 처리
       this.currentPage = 1;
       this.updateWaveDisplay();
+  }
+  
+  // 실드 파괴 애니메이션
+  playShieldBreakAnimation() {
+      // 파괴 파티클 (원형으로 퍼짐)
+      const segments = 16;
+      for (let i = 0; i < segments; i++) {
+          const angle = (Math.PI * 2 / segments) * i;
+          const startX = this.core.x + Math.cos(angle) * this.core.shieldRadius;
+          const startY = this.core.y + Math.sin(angle) * this.core.shieldRadius;
+          
+          // 파편 파티클
+          for (let j = 0; j < 3; j++) {
+              this.particles.push({
+                  x: startX,
+                  y: startY,
+                  vx: Math.cos(angle) * (50 + Math.random() * 50),
+                  vy: Math.sin(angle) * (50 + Math.random() * 50),
+                  life: 1.0,
+                  maxLife: 1.0,
+                  alpha: 1,
+                  color: "#00f0ff",
+                  size: 3 + Math.random() * 3
+              });
+          }
+      }
+      
+      // 중앙 플래시
+      this.flashScreen("#ff0000", 0.3);
+      this.shakeScreen(20);
+      
+      // 실드 반경 축소 애니메이션
+      const originalRadius = this.core.shieldRadius;
+      const duration = 500;
+      const startTime = performance.now();
+      
+      const animateShrink = (now) => {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          this.core.shieldRadius = originalRadius * (1 - progress);
+          
+          if (progress < 1) {
+              requestAnimationFrame(animateShrink);
+          } else {
+              this.core.shieldRadius = 0;
+          }
+      };
+      
+      requestAnimationFrame(animateShrink);
   }
 
   toggleShield() {
@@ -235,7 +297,8 @@ export class DefenseGame {
       if (this.core.shieldState === "CHARGING" || 
           this.core.shieldState === "DISCHARGING" || 
           this.core.shieldState === "BROKEN" ||
-          this.core.shieldState === "RECHARGING") {
+          this.core.shieldState === "RECHARGING" ||
+          this.core.shieldState === "DISABLED") {
           return;
       }
 
@@ -389,19 +452,23 @@ export class DefenseGame {
     }
 
     // 0.5 웨이브(페이지) 진행 - 안전영역이 아닐 때만
-    if (!this.isSafeZone && this.currentPage <= 12) {
+    const maxPages = this.maxPages || 12; // 스테이지별 최대 페이지
+    const diffScale = this.difficultyScale || 1.0; // 난이도 스케일
+    
+    if (!this.isSafeZone && this.currentPage <= maxPages) {
         this.pageTimer += dt;
         if (this.pageTimer >= this.pageDuration) {
-            if (this.currentPage < 12) {
+            if (this.currentPage < maxPages) {
                 this.currentPage++;
                 this.pageTimer = 0;
-                this.spawnRate = Math.max(0.2, 1.5 - (this.currentPage * 0.1)); // 난이도 상승
+                // 난이도 스케일 적용 (diffScale이 높을수록 빠르게 어려워짐)
+                this.spawnRate = Math.max(0.2, 1.5 - (this.currentPage * 0.1 * diffScale));
                 this.updateWaveDisplay();
             } else {
-                // 12페이지 완료 -> 점령 가능 상태
+                // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘)
                 if (this.conquerBtn.style.display === "none") {
                     this.conquerBtn.style.display = "block";
-                    this.pageDisplay.innerText = "CONQUER READY";
+                    this.pageDisplay.innerText = "∞ READY";
                     this.pageDisplay.style.color = "#ffff00"; // 노란색
                     this.pageDisplay.style.borderColor = "#ffff00";
                 }
@@ -621,12 +688,19 @@ export class DefenseGame {
   }
 
   updateWaveDisplay() {
+      const maxPages = this.maxPages || 12;
+      
       if (this.isSafeZone) {
           this.pageDisplay.innerText = "SAFE ZONE";
           this.pageDisplay.style.color = "#00ff00"; // 녹색
           this.pageDisplay.style.borderColor = "#00ff00";
+      } else if (this.currentPage > maxPages) {
+          // 최대 페이지 초과 = 무한대 모드
+          this.pageDisplay.innerText = "∞ READY";
+          this.pageDisplay.style.color = "#ffff00";
+          this.pageDisplay.style.borderColor = "#ffff00";
       } else {
-          this.pageDisplay.innerText = `PAGE: ${this.currentPage} / 12`;
+          this.pageDisplay.innerText = `PAGE: ${this.currentPage} / ${maxPages}`;
           this.pageDisplay.style.color = "#00f0ff"; // 시안
           this.pageDisplay.style.borderColor = "#00f0ff";
       }
@@ -982,6 +1056,36 @@ export class DefenseGame {
     };
     
     doShake();
+  }
+  
+  // 화면 플래시 효과
+  flashScreen(color = "#ffffff", duration = 0.2) {
+    const flash = document.createElement("div");
+    flash.style.cssText = `
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: ${color};
+      opacity: 0.8;
+      z-index: 9999;
+      pointer-events: none;
+    `;
+    document.body.appendChild(flash);
+    
+    // 페이드 아웃
+    const startTime = performance.now();
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = elapsed / (duration * 1000);
+      
+      if (progress < 1) {
+        flash.style.opacity = 0.8 * (1 - progress);
+        requestAnimationFrame(animate);
+      } else {
+        flash.remove();
+      }
+    };
+    requestAnimationFrame(animate);
   }
 
   // 착지 충격 파티클

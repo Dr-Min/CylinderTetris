@@ -331,6 +331,21 @@ export class GameManager {
       miscInp.value = 0.5;
     });
 
+    createBtn("MAX PAGE", () => {
+      if (this.defenseGame && !this.defenseGame.isSafeZone) {
+        const maxPages = this.defenseGame.maxPages || 12;
+        this.defenseGame.currentPage = maxPages;
+        this.defenseGame.updateWaveDisplay();
+        this.defenseGame.conquerBtn.style.display = "block";
+        this.defenseGame.pageDisplay.innerText = "∞ READY";
+        this.defenseGame.pageDisplay.style.color = "#ffff00";
+        this.defenseGame.pageDisplay.style.borderColor = "#ffff00";
+        this.terminal.printSystemMessage("[DEBUG] Skipped to MAX PAGE - CONQUER READY!");
+      } else {
+        this.terminal.printSystemMessage("[DEBUG] Not in conquest stage!");
+      }
+    });
+
     document.body.appendChild(debugPanel);
 
     // Toggle Key (Backtick `)
@@ -800,9 +815,12 @@ export class GameManager {
     // 페이지 시스템
     if (!stage.hasPages) {
       this.defenseGame.currentPage = 0;
+      this.defenseGame.maxPages = 0;
     } else {
       this.defenseGame.currentPage = 1;
       this.defenseGame.pageTimer = 0;
+      this.defenseGame.maxPages = stage.maxPages || 12; // 기본 12페이지
+      this.defenseGame.difficultyScale = stage.difficultyScale || 1.0; // 난이도 스케일
     }
     
     // UI 업데이트

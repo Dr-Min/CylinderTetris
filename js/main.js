@@ -181,6 +181,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 게임 매니저 초기화
     const gameManager = new GameManager();
+    window.gameManager = gameManager; // 콘솔에서 접근용
+    
     gameManager.init().catch((err) => {
         console.error("Initialization failed:", err);
     });
