@@ -571,7 +571,7 @@ body {
   #terminal-layer {
     padding: 10px;
     padding-top: 80px; /* 상단 UI 공간만큼 텍스트를 아래로 밀어줌 */
-    font-size: 13px;
+    font-size: 15px; /* 13px -> 15px (2px 증가) */
     top: 0; /* 터미널 박스는 화면 맨 꼭대기부터 시작 */
     height: 100%;
     background: transparent; /* 배경 투명 복구 (게임 화면이 보여야 함) */
@@ -820,7 +820,7 @@ body {
    ============================================ */
 @media (max-width: 480px) {
   #terminal-layer {
-    font-size: 9px; /* 작은 화면 폰트 더 축소 (11px -> 9px) */
+    font-size: 11px; /* 9px -> 11px (2px 증가) */
     padding: 8px;
   }
 

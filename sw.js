@@ -1,5 +1,5 @@
-// v4.3 - Ally spawn from core with elastic pop animation
-const CACHE_NAME = "hacker-tetris-v4.3";
+// v4.5 - Mobile zoom out effect (gameScale 0.65)
+const CACHE_NAME = "hacker-tetris-v4.5";
 const ASSETS = [
   "./",
   "./index.html",

@@ -35,6 +35,9 @@ export class DefenseGame {
     this.showCoreHP = true;
     this.glitchText = false;
     this.glitchOffset = { x: 0, y: 0 };
+    
+    // 게임 스케일 (모바일 줌 아웃용)
+    this.gameScale = 1.0;
 
     // UI 레이어 생성 (DOM 기반, 모바일 터치 최적화)
     this.uiLayer = document.createElement("div");
@@ -194,6 +197,16 @@ export class DefenseGame {
   resize() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+    
+    // 모바일에서 줌 아웃 효과 (더 멀리서 보기)
+    if (window.innerWidth <= 768) {
+      this.gameScale = 0.65; // 모바일: 65% 크기 (줌 아웃)
+    } else if (window.innerWidth <= 1024) {
+      this.gameScale = 0.8; // 태블릿: 80% 크기
+    } else {
+      this.gameScale = 1.0; // PC: 100%
+    }
+    
     this.core.x = this.canvas.width / 2;
     this.core.y = this.canvas.height / 2;
   }
@@ -581,6 +594,14 @@ export class DefenseGame {
 
   render() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // 줌 아웃 효과 적용 (중심 기준 스케일링)
+    this.ctx.save();
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2;
+    this.ctx.translate(centerX, centerY);
+    this.ctx.scale(this.gameScale, this.gameScale);
+    this.ctx.translate(-centerX, -centerY);
 
     // 0. 배리어 그리기 (상태별 색상)
     if (this.core.shieldActive) {
@@ -699,6 +720,9 @@ export class DefenseGame {
     // this.ctx.font = "12px monospace";
     // this.ctx.textAlign = "center";
     // this.ctx.fillText(`CORE: ${Math.floor(hpPercent * 100)}%`, this.core.x, this.core.y + 65);
+    
+    // 줌 아웃 스케일 복원
+    this.ctx.restore();
   }
 
   spawnEnemy() {
