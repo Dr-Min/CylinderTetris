@@ -57,8 +57,15 @@ export class TerminalUI {
     // dataDisplay 바로 뒤에 추가
     this.dataDisplay.after(this.pageDisplay);
 
-    // 전역 클릭 시 입력창 포커스 (터미널 모드일 때만)
-    this.terminalLayer.addEventListener("click", () => {
+    // 입력창 직접 클릭 시에만 포커스 (화면 터치로 키보드 올라오는 문제 방지)
+    this.cmdInput.addEventListener("click", (e) => {
+      e.stopPropagation(); // 이벤트 버블링 방지
+      this.cmdInput.focus();
+    });
+    
+    // inputLine 클릭 시에도 포커스
+    this.inputLine.addEventListener("click", (e) => {
+      e.stopPropagation();
       if (!this.inputLine.classList.contains("hidden")) {
         this.cmdInput.focus();
       }

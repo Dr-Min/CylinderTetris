@@ -268,9 +268,14 @@ body {
   text-shadow: 0 0 2px rgba(51, 255, 0, 0.7), 0 0 10px rgba(51, 255, 0, 0.5);
   overflow-y: auto;
   animation: flicker 0.15s infinite;
+  pointer-events: none; /* 배경은 클릭 통과 (캔버스 터치 가능) */
 }
 
-/* 터미널 콘텐츠 영역 - 최근 3줄만 표시 */
+/* 터미널 내부 상호작용 요소만 클릭 가능 */
+#terminal-layer .input-line,
+#terminal-layer .choice-container {
+  pointer-events: auto;
+}
 #terminal-content {
   max-height: 4.5em; /* 약 3줄 높이 (line-height 1.1 기준) */
   overflow: hidden;
@@ -598,8 +603,7 @@ body {
     pointer-events: none; /* 배경은 클릭 통과 */
   }
 
-  /* 터미널 내부 상호작용 요소는 클릭 가능해야 함 */
-  #terminal-content,
+  /* 터미널 내부 상호작용 요소는 클릭 가능해야 함 (terminal-content 제외) */
   .input-line,
   .choice-container {
     pointer-events: auto; 

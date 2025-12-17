@@ -1,5 +1,5 @@
-// v7.6 - Fix debug panel pageDisplay error
-const CACHE_NAME = "hacker-tetris-v7.6";
+// v7.9 - Green projectiles + glitch-style ASCII particles
+const CACHE_NAME = "hacker-tetris-v8.2";
 const ASSETS = [
   "./",
   "./index.html",

@@ -1209,6 +1209,12 @@ export class GameManager {
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate;
     this.defenseGame.spawnRate = stage.spawnRate;
     
+    // 강화 모드 리셋 (스테이지 이동 시 항상 초기화)
+    this.defenseGame.isReinforcementMode = false;
+    this.defenseGame.reinforcementPage = 0;
+    this.defenseGame.reinforcementComplete = false;
+    this.defenseGame.conquerReady = false;
+    
     // 점령 상태 확인 및 적용
     if (stage.conquered && stage.type === "conquest") {
       // 점령된 스테이지 - 점령 시각화 적용

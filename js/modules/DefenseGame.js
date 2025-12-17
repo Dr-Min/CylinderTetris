@@ -177,6 +177,17 @@ export class DefenseGame {
         this.shieldBtn.style.height = "50px";
     }
     
+    // 포탑 자동 회전 (적 없을 때)
+    this.idleTurretAngle = 0;
+    this.idleTurretSpeed = 1.5; // 초당 1.5 라디안 (시계방향)
+    
+    // 화면 터치/클릭으로 탄환 발사
+    this.canvas.addEventListener("click", (e) => this.handleCanvasClick(e));
+    this.canvas.addEventListener("touchstart", (e) => this.handleCanvasTouch(e), { passive: false });
+    
+    // 스페이스바 발사 (PC용)
+    window.addEventListener("keydown", (e) => this.handleKeyDown(e));
+    
     this.resize();
   }
 
@@ -655,7 +666,9 @@ export class DefenseGame {
         this.turret.lastFireTime = now;
       }
     } else {
-        this.turret.angle += dt; 
+        // 적이 없을 때 포탑 자동 회전 (시계방향)
+        this.turret.angle += dt * this.idleTurretSpeed;
+        this.idleTurretAngle = this.turret.angle; // 동기화
     }
 
     // 4. 발사체 이동
@@ -667,6 +680,7 @@ export class DefenseGame {
         continue;
       }
 
+      // 유도탄 (타겟이 있는 경우)
       if (p.target && this.enemies.includes(p.target)) {
         const dx = p.target.x - p.x;
         const dy = p.target.y - p.y;
@@ -696,8 +710,35 @@ export class DefenseGame {
           }
         }
       } else {
+        // 직선탄 (타겟 없이 방향으로 발사)
         p.x += Math.cos(p.angle) * p.speed * dt;
         p.y += Math.sin(p.angle) * p.speed * dt;
+        
+        // 직선탄도 적과 충돌 검사
+        for (let j = this.enemies.length - 1; j >= 0; j--) {
+          const enemy = this.enemies[j];
+          const dx = enemy.x - p.x;
+          const dy = enemy.y - p.y;
+          const dist = Math.hypot(dx, dy);
+          
+          if (dist < p.radius + enemy.radius) {
+            enemy.hp -= p.damage;
+            this.createExplosion(p.x, p.y, "#ffff00", 5);
+            this.projectiles.splice(i, 1);
+            
+            // 적 처치
+            if (enemy.hp <= 0) {
+              this.enemies.splice(j, 1);
+              this.createExplosion(enemy.x, enemy.y, "#00ff00", 15);
+              
+              const gain = 10;
+              this.currentData += gain;
+              this.updateResourceDisplay(this.currentData);
+              if (this.onResourceGained) this.onResourceGained(gain);
+            }
+            break; // 한 적과 충돌하면 탄환 제거
+          }
+        }
       }
     }
 
@@ -949,13 +990,17 @@ export class DefenseGame {
         this.ctx.fill();
     });
 
-    // 1. 발사체
-    this.ctx.fillStyle = "#ffff00";
+    // 1. 발사체 (랜덤 아스키 문자)
+    this.ctx.font = "bold 12px monospace";
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    this.ctx.fillStyle = "#00ff00"; // 초록색으로 변경
+    this.ctx.shadowColor = "#00ff00";
+    this.ctx.shadowBlur = 5;
     this.projectiles.forEach(p => {
-      this.ctx.beginPath();
-      this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      this.ctx.fill();
+      this.ctx.fillText(p.char || "*", p.x, p.y);
     });
+    this.ctx.shadowBlur = 0;
 
     // 2. 적
     this.enemies.forEach(e => {
@@ -1017,13 +1062,48 @@ export class DefenseGame {
       this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX, this.core.y + scaledRadius + 20 + offsetY);
     }
 
-    // 4. 파티클
+    // 4. 파티클 (글리치 스타일)
+    this.ctx.font = "bold 10px monospace";
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    
     this.particles.forEach(p => {
+        // 글리치 떨림 효과
+        const glitchX = p.char ? (Math.random() - 0.5) * 3 : 0;
+        const glitchY = p.char ? (Math.random() - 0.5) * 3 : 0;
+        
+        // 깜빡임 효과 (30% 확률로 안 그림)
+        if (p.char && Math.random() < 0.3 && p.life < p.maxLife * 0.5) {
+            return; // 깜빡임
+        }
+        
         this.ctx.globalAlpha = p.alpha;
         this.ctx.fillStyle = p.color;
-        this.ctx.beginPath();
-        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        this.ctx.fill();
+        
+        if (p.char) {
+            // 글리치 문자 파티클
+            this.ctx.font = `bold ${p.size}px monospace`;
+            this.ctx.shadowColor = p.color;
+            this.ctx.shadowBlur = 3;
+            
+            // RGB 분리 효과 (수명이 적을 때)
+            if (p.life < p.maxLife * 0.4) {
+                this.ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+                this.ctx.fillText(p.char, p.x + glitchX - 1, p.y + glitchY);
+                this.ctx.fillStyle = "rgba(0, 255, 255, 0.5)";
+                this.ctx.fillText(p.char, p.x + glitchX + 1, p.y + glitchY);
+            }
+            
+            this.ctx.fillStyle = p.color;
+            this.ctx.fillText(p.char, p.x + glitchX, p.y + glitchY);
+            this.ctx.shadowBlur = 0;
+        } else {
+            // 기존 원형 파티클 (호환성)
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        
         this.ctx.globalAlpha = 1.0;
     });
 
@@ -1063,6 +1143,10 @@ export class DefenseGame {
   }
 
   fireProjectile(target) {
+    // 랜덤 아스키 문자 (33~126: 출력 가능한 ASCII)
+    const asciiChars = "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const randomChar = asciiChars[Math.floor(Math.random() * asciiChars.length)];
+    
     this.projectiles.push({
       x: this.core.x,
       y: this.core.y,
@@ -1071,10 +1155,105 @@ export class DefenseGame {
       speed: 400, // 탄속 증가
       damage: this.turret.damage,
       radius: 4,
-      life: 2.0
+      life: 2.0,
+      char: randomChar // 랜덤 아스키 문자
     });
     
     this.createExplosion(this.core.x + Math.cos(this.turret.angle)*40, this.core.y + Math.sin(this.turret.angle)*40, "#fff", 3);
+  }
+  
+  // 방향 지정 발사 (터치/클릭용)
+  fireProjectileToward(angle) {
+    const asciiChars = "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const randomChar = asciiChars[Math.floor(Math.random() * asciiChars.length)];
+    
+    this.projectiles.push({
+      x: this.core.x,
+      y: this.core.y,
+      target: null, // 타겟 없이 방향으로 발사
+      angle: angle,
+      speed: 400,
+      damage: this.turret.damage,
+      radius: 4,
+      life: 2.0,
+      char: randomChar
+    });
+    
+    this.createExplosion(this.core.x + Math.cos(angle)*40, this.core.y + Math.sin(angle)*40, "#00ff00", 3);
+  }
+  
+  // 화면 클릭 핸들러
+  handleCanvasClick(e) {
+    // 게임이 활성화되어 있지 않으면 무시하지만, 디펜스 모드면 허용
+    if (this.isPaused) return;
+    
+    // 실드 버튼 클릭은 무시
+    if (e.target === this.shieldBtn) return;
+    
+    const rect = this.canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    this.fireAtPosition(clickX, clickY);
+  }
+  
+  // 화면 터치 핸들러
+  handleCanvasTouch(e) {
+    if (this.isPaused) return;
+    
+    // 터치-클릭 중복 방지
+    e.preventDefault();
+    
+    // 터치 이벤트에서 좌표 추출 (멀티터치 지원)
+    for (let i = 0; i < e.touches.length; i++) {
+      const touch = e.touches[i];
+      const rect = this.canvas.getBoundingClientRect();
+      const touchX = touch.clientX - rect.left;
+      const touchY = touch.clientY - rect.top;
+      
+      // 터치가 캔버스 내부인지 확인
+      if (touchX >= 0 && touchX <= rect.width && touchY >= 0 && touchY <= rect.height) {
+        this.fireAtPosition(touchX, touchY);
+      }
+    }
+  }
+  
+  // 키보드 핸들러 (스페이스바 발사)
+  handleKeyDown(e) {
+    if (this.isPaused) return;
+    
+    if (e.code === "Space" || e.key === " ") {
+      e.preventDefault(); // 스크롤 방지
+      this.fireAtPosition(0, 0); // 위치는 상관없음, fireAtPosition에서 처리
+    }
+  }
+  
+  // 위치 기반 발사 로직
+  fireAtPosition(x, y) {
+    // 적이 있으면 가장 가까운 적 방향으로 발사
+    if (this.enemies.length > 0) {
+      let closestEnemy = null;
+      let closestDist = Infinity;
+      
+      for (const enemy of this.enemies) {
+        const dx = enemy.x - this.core.x;
+        const dy = enemy.y - this.core.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestEnemy = enemy;
+        }
+      }
+      
+      if (closestEnemy) {
+        const angle = Math.atan2(closestEnemy.y - this.core.y, closestEnemy.x - this.core.x);
+        this.turret.angle = angle; // 포탑 방향도 업데이트
+        this.fireProjectileToward(angle);
+      }
+    } else {
+      // 적이 없으면 현재 포탑 방향으로 발사
+      this.fireProjectileToward(this.turret.angle);
+    }
   }
 
   createExplosion(x, y, color, count = 10) {
@@ -1087,20 +1266,36 @@ export class DefenseGame {
           this.particles.splice(0, actualCount);
       }
       
+      // 글리치 스타일 아스키 문자들
+      const glitchChars = "!@#$%^&*?/<>[]{}|\\~`░▒▓█▀▄■□";
+      
       for(let i=0; i<actualCount; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 100;
-          const life = 0.3 + Math.random() * 0.3; // 수명 단축
+          const speed = Math.random() * 120; // 약간 더 빠르게
+          const life = 0.2 + Math.random() * 0.4; // 수명
+          
+          // 글리치 색상 (주 색상 + 랜덤 노이즈)
+          let particleColor = color;
+          const colorRoll = Math.random();
+          if (colorRoll < 0.15) {
+              particleColor = "#ff0000"; // 빨간 노이즈
+          } else if (colorRoll < 0.25) {
+              particleColor = "#ffffff"; // 흰색 노이즈
+          }
+          
           this.particles.push({
-              x: x,
-              y: y,
+              x: x + (Math.random() - 0.5) * 10, // 약간 흩어진 시작점
+              y: y + (Math.random() - 0.5) * 10,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed,
               life: life,
               maxLife: life,
               alpha: 1,
-              color: color,
-              size: 2 + Math.random() * 2
+              color: particleColor,
+              size: 10 + Math.random() * 4, // 폰트 크기
+              char: glitchChars[Math.floor(Math.random() * glitchChars.length)], // 랜덤 문자
+              glitchOffset: { x: 0, y: 0 }, // 글리치 떨림용
+              flickerTimer: Math.random() * 0.1 // 깜빡임 타이머
           });
       }
   }
