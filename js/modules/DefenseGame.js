@@ -889,8 +889,35 @@ export class DefenseGame {
           }
         }
       } else {
+        // 직선탄 (타겟 없이 방향으로 발사)
         p.x += Math.cos(p.angle) * p.speed * dt;
         p.y += Math.sin(p.angle) * p.speed * dt;
+        
+        // 직선탄도 적과 충돌 검사
+        for (let j = this.enemies.length - 1; j >= 0; j--) {
+          const enemy = this.enemies[j];
+          const dx = enemy.x - p.x;
+          const dy = enemy.y - p.y;
+          const dist = Math.hypot(dx, dy);
+          
+          if (dist < p.radius + enemy.radius) {
+            enemy.hp -= p.damage;
+            this.createExplosion(p.x, p.y, "#00ff00", 5);
+            this.projectiles.splice(i, 1);
+            
+            // 적 처치
+            if (enemy.hp <= 0) {
+              this.enemies.splice(j, 1);
+              this.createExplosion(enemy.x, enemy.y, "#00ff00", 15);
+              
+              const gain = 10;
+              this.currentData += gain;
+              this.updateResourceDisplay(this.currentData);
+              if (this.onResourceGained) this.onResourceGained(gain);
+            }
+            break; // 한 적과 충돌하면 탄환 제거
+          }
+        }
       }
     }
 
