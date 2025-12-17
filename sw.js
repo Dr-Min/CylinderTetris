@@ -1,5 +1,5 @@
-// v5.2 - Conquer option in terminal (red, large font)
-const CACHE_NAME = "hacker-tetris-v5.2";
+// v6.5 - Fix terminal z-index + ally respawn system
+const CACHE_NAME = "hacker-tetris-v6.5";
 const ASSETS = [
   "./",
   "./index.html",

@@ -52,7 +52,7 @@ export class DefenseGame {
     this.uiLayer.style.width = "100%";
     this.uiLayer.style.height = "100%";
     this.uiLayer.style.pointerEvents = "none"; // 게임 조작 방해 금지
-    this.uiLayer.style.zIndex = "200"; // 터미널(100)보다 높게
+    this.uiLayer.style.zIndex = "90"; // 터미널(100)보다 낮게
     this.uiLayer.style.display = "none";
     document.body.appendChild(this.uiLayer); // [수정] container가 아닌 body에 직접 부착
 
@@ -158,6 +158,16 @@ export class DefenseGame {
     this.currentStage = 0; // 0 = 안전영역, 1+ = 일반 스테이지
     this.isSafeZone = true; // 안전영역 여부
     this.safeZoneSpawnRate = 8; // 안전영역에서 적 생성 주기 (8초에 한 마리)
+    
+    // 강화 페이지 모드 (점령 시)
+    this.isReinforcementMode = false;
+    this.reinforcementPage = 0;
+    this.reinforcementMaxPages = 3;
+    this.reinforcementComplete = false;
+    this.reinforcementSpawnRate = 1.2; // 약하게 조정 (기존 0.5 → 1.2)
+    
+    // 점령 상태 (영구)
+    this.isConquered = false; // 이 스테이지가 점령되었는지
     
     // 이벤트 콜백
     this.onResourceGained = null; 
@@ -451,11 +461,30 @@ export class DefenseGame {
         }
     }
 
-    // 0.5 웨이브(페이지) 진행 - 안전영역이 아닐 때만
-    const maxPages = this.maxPages || 12; // 스테이지별 최대 페이지
-    const diffScale = this.difficultyScale || 1.0; // 난이도 스케일
+    // 0.5 웨이브(페이지) 진행
     
-    if (!this.isSafeZone && this.currentPage <= maxPages) {
+    // 강화 페이지 모드 (점령 중)
+    if (this.isReinforcementMode) {
+        this.pageTimer += dt;
+        if (this.pageTimer >= this.pageDuration) {
+            if (this.reinforcementPage < this.reinforcementMaxPages) {
+                this.reinforcementPage++;
+                this.pageTimer = 0;
+                this.spawnRate = Math.max(0.8, this.reinforcementSpawnRate - (this.reinforcementPage * 0.1)); // 약하게 조정
+                this.updateWaveDisplay();
+                console.log("[Defense] Reinforcement Page:", this.reinforcementPage);
+            } else {
+                // 강화 페이지 완료 -> 점령 완료!
+                this.reinforcementComplete = true;
+                console.log("[Defense] Reinforcement Complete!");
+            }
+        }
+    }
+    // 일반 페이지 모드
+    else if (!this.isSafeZone && this.currentPage <= (this.maxPages || 12)) {
+        const maxPages = this.maxPages || 12;
+        const diffScale = this.difficultyScale || 1.0;
+        
         this.pageTimer += dt;
         if (this.pageTimer >= this.pageDuration) {
             if (this.currentPage < maxPages) {
@@ -466,12 +495,8 @@ export class DefenseGame {
                 this.updateWaveDisplay();
             } else {
                 // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘)
-                // conquerBtn은 이제 터미널에서 표시하므로 숨김
-                // if (this.conquerBtn.style.display === "none") {
-                //     this.conquerBtn.style.display = "block";
-                // }
                 this.pageDisplay.innerText = "∞ READY";
-                this.pageDisplay.style.color = "#ff3333"; // 빨간색으로 변경
+                this.pageDisplay.style.color = "#ff3333";
                 this.pageDisplay.style.borderColor = "#ff3333";
             }
         }
@@ -485,6 +510,11 @@ export class DefenseGame {
         if (v.hp <= 0) {
             this.createExplosion(v.x, v.y, v.color, 8);
             this.alliedViruses.splice(idx, 1);
+            
+            // 점령 상태면 2초 후 리스폰
+            if (this.isConquered) {
+                setTimeout(() => this.respawnOneAlly(), 2000);
+            }
             continue;
         }
         
@@ -691,20 +721,176 @@ export class DefenseGame {
   updateWaveDisplay() {
       const maxPages = this.maxPages || 12;
       
-      if (this.isSafeZone) {
+      if (this.isConquered) {
+          // 점령 완료 상태
+          this.pageDisplay.innerText = "🚩 점령지";
+          this.pageDisplay.style.color = "#00ff00";
+          this.pageDisplay.style.borderColor = "#00ff00";
+      } else if (this.isReinforcementMode) {
+          // 강화 페이지 모드
+          this.pageDisplay.innerText = `⚔️ ${this.reinforcementPage}/${this.reinforcementMaxPages}`;
+          this.pageDisplay.style.color = "#ff3333"; // 빨간색
+          this.pageDisplay.style.borderColor = "#ff3333";
+      } else if (this.isSafeZone) {
           this.pageDisplay.innerText = "SAFE ZONE";
           this.pageDisplay.style.color = "#00ff00"; // 녹색
           this.pageDisplay.style.borderColor = "#00ff00";
       } else if (this.currentPage > maxPages) {
           // 최대 페이지 초과 = 무한대 모드
           this.pageDisplay.innerText = "∞ READY";
-          this.pageDisplay.style.color = "#ffff00";
-          this.pageDisplay.style.borderColor = "#ffff00";
+          this.pageDisplay.style.color = "#ff3333";
+          this.pageDisplay.style.borderColor = "#ff3333";
       } else {
           this.pageDisplay.innerText = `PAGE: ${this.currentPage} / ${maxPages}`;
           this.pageDisplay.style.color = "#00f0ff"; // 시안
           this.pageDisplay.style.borderColor = "#00f0ff";
       }
+  }
+  
+  // 강화 페이지 모드 시작 (점령 시)
+  startReinforcementMode(maxPages = 3) {
+      this.isReinforcementMode = true;
+      this.reinforcementPage = 1;
+      this.reinforcementMaxPages = maxPages;
+      this.reinforcementComplete = false;
+      this.pageTimer = 0;
+      this.spawnRate = this.reinforcementSpawnRate; // 더 빠른 스폰
+      this.updateWaveDisplay();
+      console.log("[Defense] Reinforcement Mode Started:", maxPages, "pages");
+  }
+  
+  // 일반 모드로 복귀
+  resetToNormalMode() {
+      this.isReinforcementMode = false;
+      this.reinforcementPage = 0;
+      this.reinforcementComplete = false;
+      this.currentPage = 1;
+      this.pageTimer = 0;
+      this.spawnRate = 1.5;
+      
+      // 실드 복구
+      this.core.shieldRadius = 70;
+      this.core.shieldState = "OFF";
+      this.core.shieldHp = this.core.shieldMaxHp;
+      this.shieldBtn.style.pointerEvents = "auto";
+      
+      this.updateWaveDisplay();
+      console.log("[Defense] Reset to Normal Mode");
+  }
+  
+  // 점령 상태로 설정
+  setConqueredState(conquered) {
+      this.isConquered = conquered;
+      if (conquered) {
+          // 점령 시 적 스폰 중지, 실드 비활성화
+          this.spawnRate = 9999; // 적 거의 안 나옴
+          this.core.shieldActive = false;
+          this.shieldBtn.style.display = "none"; // 실드 버튼 숨김
+          
+          // 아군 바이러스 10마리 소환
+          this.spawnConqueredAllies(10);
+      }
+      this.updateWaveDisplay();
+  }
+  
+  // 점령 시 아군 바이러스 소환
+  spawnConqueredAllies(count) {
+      this.alliedViruses = [];
+      for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 / count) * i;
+          const distance = 60 + Math.random() * 30;
+          this.alliedViruses.push({
+              x: this.core.x + Math.cos(angle) * distance,
+              y: this.core.y + Math.sin(angle) * distance,
+              radius: 6,
+              color: "#00aaff",
+              hp: 50,
+              maxHp: 50,
+              damage: 10,
+              angle: angle,
+              targetAngle: angle
+          });
+      }
+  }
+  
+  // 아군 바이러스 1마리 리스폰 (점령 상태에서 10마리 유지)
+  respawnOneAlly() {
+      if (!this.isConquered) return;
+      if (this.alliedViruses.length >= 10) return; // 이미 10마리면 스킵
+      
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 60 + Math.random() * 30;
+      
+      const newAlly = {
+          x: this.core.x + Math.cos(angle) * distance,
+          y: this.core.y + Math.sin(angle) * distance,
+          radius: 6,
+          color: "#00aaff",
+          hp: 50,
+          maxHp: 50,
+          damage: 10,
+          angle: angle,
+          targetAngle: angle
+      };
+      
+      this.alliedViruses.push(newAlly);
+      
+      // 팝 파티클 효과
+      this.createExplosion(newAlly.x, newAlly.y, "#00aaff", 5);
+  }
+  
+  // 점령 시각화 렌더링 (깃발 + 별 모양 방어막)
+  renderConqueredVisuals() {
+      const ctx = this.ctx;
+      const x = this.core.x;
+      const y = this.core.y;
+      const size = 80; // 방어막 크기
+      const time = Date.now() / 1000;
+      
+      // 1. 별 모양 방어막 (정사각형 + 다이아몬드)
+      ctx.save();
+      ctx.translate(x, y);
+      
+      // 정사각형 (0도)
+      ctx.strokeStyle = `rgba(0, 255, 100, ${0.4 + Math.sin(time * 2) * 0.2})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-size/2, -size/2, size, size);
+      
+      // 다이아몬드 (45도 회전)
+      ctx.rotate(Math.PI / 4);
+      ctx.strokeStyle = `rgba(0, 200, 255, ${0.4 + Math.cos(time * 2) * 0.2})`;
+      ctx.strokeRect(-size/2, -size/2, size, size);
+      
+      ctx.restore();
+      
+      // 2. 깃발 (중앙 위)
+      ctx.save();
+      ctx.translate(x, y - 25);
+      
+      // 깃대
+      ctx.strokeStyle = "#888";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -40);
+      ctx.stroke();
+      
+      // 깃발 (펄럭이는 효과)
+      ctx.fillStyle = "#00ff00";
+      ctx.beginPath();
+      ctx.moveTo(0, -40);
+      ctx.lineTo(20 + Math.sin(time * 3) * 3, -35);
+      ctx.lineTo(20 + Math.sin(time * 3 + 1) * 3, -25);
+      ctx.lineTo(0, -20);
+      ctx.closePath();
+      ctx.fill();
+      
+      // 깃발 테두리
+      ctx.strokeStyle = "#00aa00";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      ctx.restore();
   }
 
   render() {
@@ -718,8 +904,13 @@ export class DefenseGame {
     this.ctx.scale(this.gameScale, this.gameScale);
     this.ctx.translate(-centerX, -centerY);
 
-    // 0. 배리어 그리기 (상태별 색상)
-    if (this.core.shieldActive) {
+    // 점령 상태 시각화 (깃발 + 별 모양 방어막)
+    if (this.isConquered) {
+        this.renderConqueredVisuals();
+    }
+
+    // 0. 배리어 그리기 (상태별 색상) - 점령 상태가 아닐 때만
+    if (!this.isConquered && this.core.shieldActive) {
         this.ctx.beginPath();
         this.ctx.arc(this.core.x, this.core.y, this.core.shieldRadius, 0, Math.PI * 2);
         this.ctx.fillStyle = "rgba(0, 200, 255, 0.1)"; 
@@ -727,7 +918,7 @@ export class DefenseGame {
         this.ctx.lineWidth = 2;
         this.ctx.strokeStyle = `rgba(0, 200, 255, ${0.5 + Math.sin(Date.now() / 200) * 0.2})`;
         this.ctx.stroke();
-    } else if (this.core.shieldState === "BROKEN") {
+    } else if (!this.isConquered && this.core.shieldState === "BROKEN") {
         // 깨진 쉴드 파편 느낌? (일단 점선)
         this.ctx.beginPath();
         this.ctx.arc(this.core.x, this.core.y, this.core.shieldRadius, 0, Math.PI * 2);

@@ -43,6 +43,12 @@ export class GameManager {
     this.currentMoney = 0; // Data (Money)
     this.reputation = 0; // Reputation
 
+    // 점령 모드 상태
+    this.isConquestMode = false;
+    this.conquestTetrisComplete = false;
+    this.conquestSplitScreen = null;
+    this.miniDefenseLoop = null;
+
     // 영구 퍽 트리 데이터 정의
     this.permTree = [
       // Root (기본 제공)
@@ -336,11 +342,14 @@ export class GameManager {
         const maxPages = this.defenseGame.maxPages || 12;
         this.defenseGame.currentPage = maxPages;
         this.defenseGame.updateWaveDisplay();
-        this.defenseGame.conquerBtn.style.display = "block";
+        // conquerBtn은 더 이상 사용하지 않음 (터미널에서 표시)
         this.defenseGame.pageDisplay.innerText = "∞ READY";
-        this.defenseGame.pageDisplay.style.color = "#ffff00";
-        this.defenseGame.pageDisplay.style.borderColor = "#ffff00";
+        this.defenseGame.pageDisplay.style.color = "#ff3333";
+        this.defenseGame.pageDisplay.style.borderColor = "#ff3333";
         this.terminal.printSystemMessage("[DEBUG] Skipped to MAX PAGE - CONQUER READY!");
+        
+        // 선택지 다시 표시 (점령 옵션 포함)
+        setTimeout(() => this.showCommandMenu(), 500);
       } else {
         this.terminal.printSystemMessage("[DEBUG] Not in conquest stage!");
       }
@@ -412,7 +421,7 @@ export class GameManager {
       this.defenseGame.start();
       // [추가] 자원 UI 동기화
       this.defenseGame.updateResourceDisplay(this.currentMoney);
-      
+
       // 아군 바이러스 정보 업데이트
       const alliedInfo = this.conquestManager.getAlliedInfo();
       this.defenseGame.updateAlliedInfo(alliedInfo);
@@ -483,14 +492,328 @@ export class GameManager {
   
   // 터미널에서 점령 선택 시
   async handleConquerFromTerminal() {
-    // DefenseGame의 점령 처리 호출
+    // 1. DefenseGame의 실드 파괴 연출
     this.defenseGame.handleConquerClick();
     
-    // 점령 완료 메시지
+    // 2. 점령 메시지
     await this.terminal.printSystemMessage("INITIATING CONQUEST PROTOCOL...");
+    await this.terminal.printSystemMessage("FIREWALL BREACH DETECTED!");
+    await this.terminal.printSystemMessage("Objective: Clear 3 lines + Survive 3 waves.");
     
-    // TODO: 여기서 테트리스 + 미니 디펜스 동시 진행 모드로 전환
-    // 일단은 기존 점령 완료 처리
+    // 3. 강화 페이지 모드 설정
+    this.isConquestMode = true;
+    this.conquestTetrisComplete = false;
+    this.defenseGame.startReinforcementMode(3); // 강화 페이지 3개
+    
+    // 4. 바로 테트리스 시작 (딜레이 제거)
+    this.startConquestTetris();
+  }
+  
+  // 점령용 테트리스 시작 (디펜스는 미니 화면에서 계속)
+  startConquestTetris() {
+    const targetLines = 3;
+    const speed = 500;
+    
+    // 테트리스 상단 UI 숨기기 (Mining Rate, DATA MINED 등)
+    this.hideConquestTetrisUI();
+    
+    // 미니 디펜스 패널 생성 (캔버스 포함)
+    this.createMiniDefensePanel();
+    
+    // 디펜스 메인 캔버스는 숨기고, resume() 호출
+    this.defenseGame.canvas.style.display = "none";
+    this.defenseGame.uiLayer.style.display = "none";
+    this.defenseGame.resume();
+    
+    // 테트리스 시작
+    const gameContainer = document.getElementById("game-container");
+    gameContainer.style.opacity = 1;
+    document.getElementById("game-ui").style.display = "block";
+    this.terminal.setTransparentMode(true);
+    this.terminal.hide(); // 터미널 완전히 숨기기
+    this.tetrisGame.startGame(targetLines, speed);
+    
+    // 미니 디펜스 렌더링 시작
+    this.startMiniDefenseRender();
+  }
+  
+  // 테트리스 상단 UI 숨기기 (점령 모드) - NEXT 블럭은 유지
+  hideConquestTetrisUI() {
+    const gameUI = document.getElementById("game-ui");
+    if (!gameUI) return;
+    
+    // LEVEL, DATA MINED만 숨기기 (NEXT 블럭은 유지)
+    const levelBox = gameUI.querySelector(".level-box");
+    const scoreBoard = gameUI.querySelector(".score-board");
+    
+    if (levelBox) levelBox.style.display = "none";
+    if (scoreBoard) scoreBoard.style.display = "none";
+  }
+  
+  // 테트리스 상단 UI 복구
+  showConquestTetrisUI() {
+    const gameUI = document.getElementById("game-ui");
+    if (!gameUI) return;
+    
+    const levelBox = gameUI.querySelector(".level-box");
+    const scoreBoard = gameUI.querySelector(".score-board");
+    
+    if (levelBox) levelBox.style.display = "";
+    if (scoreBoard) scoreBoard.style.display = "";
+  }
+  
+  // 미니 디펜스 패널 생성 (상단 전체에 크게 배치)
+  createMiniDefensePanel() {
+    // 기존 패널 제거
+    const existing = document.getElementById("mini-defense-panel");
+    if (existing) existing.remove();
+    
+    // NEXT 블록 위치 변경 (왼쪽 하단으로)
+    const nextBox = document.querySelector(".next-box");
+    if (nextBox) {
+      nextBox.style.cssText = `
+        position: fixed !important;
+        bottom: 100px;
+        left: 10px;
+        top: auto !important;
+        right: auto !important;
+        z-index: 1001;
+      `;
+    }
+    
+    const panel = document.createElement("div");
+    panel.id = "mini-defense-panel";
+    panel.style.cssText = `
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      padding: 8px;
+      background: rgba(0, 10, 0, 0.95);
+      border: 2px solid #ff3333;
+      border-radius: 5px;
+      color: #ff3333;
+      font-family: var(--term-font);
+      font-size: 12px;
+      z-index: 1000;
+      height: 180px;
+    `;
+    
+    // 정보 영역 (상단)
+    const infoDiv = document.createElement("div");
+    infoDiv.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #ff3333;
+      font-size: 14px;
+    `;
+    infoDiv.innerHTML = `
+      <span id="conquest-core-hp">♥ 100%</span>
+      <span style="color: #00ff00;">DEFENSE MODE</span>
+      <span id="conquest-page">⚔️ WAVE 1/3</span>
+    `;
+    panel.appendChild(infoDiv);
+    
+    // 미니 캔버스 (디펜스 렌더링용) - 크게!
+    const miniCanvas = document.createElement("canvas");
+    miniCanvas.id = "mini-defense-canvas";
+    miniCanvas.width = 400;
+    miniCanvas.height = 150;
+    miniCanvas.style.cssText = `
+      width: 100%;
+      height: 140px;
+      background: #001100;
+      border-radius: 3px;
+    `;
+    panel.appendChild(miniCanvas);
+    
+    document.body.appendChild(panel);
+  }
+  
+  // NEXT 블록 위치 복구
+  restoreNextBoxPosition() {
+    const nextBox = document.querySelector(".next-box");
+    if (nextBox) {
+      nextBox.style.cssText = "";
+    }
+  }
+  
+  // 미니 디펜스 렌더링 시작
+  startMiniDefenseRender() {
+    const miniCanvas = document.getElementById("mini-defense-canvas");
+    if (!miniCanvas) return;
+    
+    const ctx = miniCanvas.getContext("2d");
+    
+    this.defenseMonitorLoop = () => {
+      if (!this.isConquestMode) return;
+      
+      // 미니 캔버스에 디펜스 렌더링 - 캔버스 전체를 채우도록 스케일 업
+      const scaleX = miniCanvas.width / this.defenseGame.canvas.width;
+      const scaleY = miniCanvas.height / this.defenseGame.canvas.height;
+      const scale = Math.max(scaleX, scaleY) * 1.2; // 더 크게!
+      
+      ctx.fillStyle = "#001100";
+      ctx.fillRect(0, 0, miniCanvas.width, miniCanvas.height);
+      
+      ctx.save();
+      ctx.translate(miniCanvas.width / 2, miniCanvas.height / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-this.defenseGame.canvas.width / 2, -this.defenseGame.canvas.height / 2);
+      
+      // 원본 디펜스 캔버스 복사
+      ctx.drawImage(this.defenseGame.canvas, 0, 0);
+      ctx.restore();
+      
+      // 정보 업데이트
+      const hpPercent = Math.ceil((this.defenseGame.core.hp / this.defenseGame.core.maxHp) * 100);
+      const page = this.defenseGame.reinforcementPage || 1;
+      const maxPage = this.defenseGame.reinforcementMaxPages || 3;
+      
+      const coreEl = document.getElementById("conquest-core-hp");
+      const pageEl = document.getElementById("conquest-page");
+      
+      if (coreEl) coreEl.textContent = `♥ ${hpPercent}%`;
+      if (pageEl) pageEl.textContent = `⚔️ ${page}/${maxPage}`;
+      
+      // HP에 따라 패널 색상 변경
+      const panel = document.getElementById("mini-defense-panel");
+      if (panel) {
+        if (hpPercent <= 30) {
+          panel.style.borderColor = "#ff0000";
+        } else if (hpPercent <= 60) {
+          panel.style.borderColor = "#ffaa00";
+        } else {
+          panel.style.borderColor = "#ff3333";
+        }
+      }
+      
+      // 강화 페이지 완료 체크
+      if (this.defenseGame.reinforcementComplete) {
+        this.handleConquestComplete();
+        return;
+      }
+      
+      // 코어 파괴 체크
+      if (this.defenseGame.core.hp <= 0) {
+        this.handleConquestFail();
+        return;
+      }
+      
+      requestAnimationFrame(this.defenseMonitorLoop);
+    };
+    
+    requestAnimationFrame(this.defenseMonitorLoop);
+  }
+  
+  // 테트리스 클리어 시 (점령 모드) - 바로 디펜스로 복귀
+  handleConquestTetrisClear() {
+    if (!this.isConquestMode) return;
+    
+    this.conquestTetrisComplete = true;
+    
+    // 테트리스 UI 정리
+    this.tetrisGame.state.isPlaying = false;
+    document.getElementById("game-container").style.opacity = 0;
+    document.getElementById("game-ui").style.display = "none";
+    this.showConquestTetrisUI();
+    this.restoreNextBoxPosition();
+    
+    // 미니 패널 제거
+    const panel = document.getElementById("mini-defense-panel");
+    if (panel) panel.remove();
+    
+    // 디펜스 화면 복구 및 재개
+    this.defenseGame.canvas.style.display = "block";
+    this.defenseGame.uiLayer.style.display = "block";
+    this.defenseGame.resume(); // 디펜스 재개! (강화 페이지 진행을 위해)
+    
+    // 터미널 복구
+    this.terminal.setTransparentMode(false);
+    this.terminal.show();
+    this.terminal.setDefenseMode(true);
+    this.terminal.printSystemMessage("FIREWALL BREACHED! Defend the core!");
+    
+    // defenseMonitorLoop가 계속 돌면서 강화 페이지 완료 체크
+  }
+  
+  // 점령 완료
+  async handleConquestComplete() {
+    this.isConquestMode = false;
+    
+    // 테트리스 정리 (혹시 아직 플레이 중이면)
+    if (this.tetrisGame.state.isPlaying) {
+      this.tetrisGame.state.isPlaying = false;
+    }
+    
+    // 미니 패널 제거
+    const panel = document.getElementById("mini-defense-panel");
+    if (panel) panel.remove();
+    
+    // 테트리스 UI 완전 정리
+    const gameContainer = document.getElementById("game-container");
+    if (gameContainer) gameContainer.style.opacity = 0;
+    document.getElementById("game-ui").style.display = "none";
+    this.showConquestTetrisUI();
+    this.restoreNextBoxPosition();
+    
+    // 디펜스 화면 복구
+    this.defenseGame.canvas.style.display = "block";
+    this.defenseGame.uiLayer.style.display = "block";
+    
+    // 점령 처리
+    this.conquestManager.conquerStage();
+    
+    // 현재 스테이지를 점령 상태로 설정
+    const currentStage = this.stageManager.getCurrentStage();
+    if (currentStage) {
+        this.stageManager.setConquered(currentStage.id, true);
+    }
+    
+    // 디펜스 게임에 점령 상태 설정 (시각화 + 아군 10마리)
+    this.defenseGame.setConqueredState(true);
+    this.defenseGame.resume(); // 디펜스 재개
+    
+    // 터미널 표시 및 메시지
+    this.terminal.setTransparentMode(false);
+    this.terminal.show();
+    this.terminal.setDefenseMode(true);
+    await this.terminal.printSystemMessage("!!! SECTOR CONQUERED !!!");
+    await this.terminal.printSystemMessage("Territory secured.");
+    
+    // 선택지 표시
+    await this.showCommandMenu();
+  }
+  
+  // 점령 실패
+  async handleConquestFail() {
+    this.isConquestMode = false;
+    
+    // 테트리스 정리
+    if (this.tetrisGame.state.isPlaying) {
+      this.tetrisGame.state.isPlaying = false;
+    }
+    document.getElementById("game-container").style.opacity = 0;
+    document.getElementById("game-ui").style.display = "none";
+    this.showConquestTetrisUI(); // 상단 UI 복구
+    this.restoreNextBoxPosition(); // NEXT 블록 위치 복구
+    
+    // 미니 패널 제거
+    const panel = document.getElementById("mini-defense-panel");
+    if (panel) panel.remove();
+    
+    // 디펜스 정리
+    this.defenseGame.canvas.style.display = "block";
+    this.defenseGame.uiLayer.style.display = "block";
+    
+    this.terminal.setTransparentMode(false);
+    this.terminal.show();
+    await this.terminal.printSystemMessage("CONQUEST FAILED - Core Destroyed");
+    
+    // 게임 오버 처리
+    this.handleDefenseGameOver();
   }
 
   /**
@@ -842,15 +1165,25 @@ export class GameManager {
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate;
     this.defenseGame.spawnRate = stage.spawnRate;
     
-    // 페이지 시스템
-    if (!stage.hasPages) {
-      this.defenseGame.currentPage = 0;
-      this.defenseGame.maxPages = 0;
+    // 점령 상태 확인 및 적용
+    if (stage.conquered && stage.type === "conquest") {
+      // 점령된 스테이지 - 점령 시각화 적용
+      this.defenseGame.setConqueredState(true);
     } else {
-      this.defenseGame.currentPage = 1;
-      this.defenseGame.pageTimer = 0;
-      this.defenseGame.maxPages = stage.maxPages || 12; // 기본 12페이지
-      this.defenseGame.difficultyScale = stage.difficultyScale || 1.0; // 난이도 스케일
+      // 점령되지 않은 스테이지
+      this.defenseGame.isConquered = false;
+      this.defenseGame.shieldBtn.style.display = "block";
+      
+      // 페이지 시스템
+      if (!stage.hasPages) {
+        this.defenseGame.currentPage = 0;
+        this.defenseGame.maxPages = 0;
+      } else {
+        this.defenseGame.currentPage = 1;
+        this.defenseGame.pageTimer = 0;
+        this.defenseGame.maxPages = stage.maxPages || 12;
+        this.defenseGame.difficultyScale = stage.difficultyScale || 1.0;
+      }
     }
     
     // UI 업데이트
@@ -1625,7 +1958,13 @@ export class GameManager {
   }
 
   async handleBreachClear(lines) {
-      // 장비 획득
+      // 점령 모드인 경우 별도 처리
+      if (this.isConquestMode) {
+          this.handleConquestTetrisClear();
+          return;
+      }
+      
+      // 일반 브리치 모드 - 장비 획득
       const item = this.equipmentManager.generateEquipment(this.defenseGame.currentPage || 1);
       this.equipmentManager.addItem(item);
       
@@ -1654,16 +1993,50 @@ export class GameManager {
   }
 
   async handleBreachFail(score) {
-      // 패배 시 빈털터리로 복귀
+      // 점령 모드인 경우 별도 처리
+      if (this.isConquestMode) {
+          // 테트리스 실패 = 페널티 (적 증가)
+          this.tetrisGame.state.isPlaying = false;
+          
+          // 테트리스 UI 정리
+          document.getElementById("game-container").style.opacity = 0;
+          document.getElementById("game-ui").style.display = "none";
+          this.showConquestTetrisUI(); // 상단 UI 복구
+          this.restoreNextBoxPosition(); // NEXT 블록 위치 복구
+          this.terminal.setTransparentMode(false);
+          this.terminal.show();
+          
+          this.terminal.printSystemMessage("BREACH DEFENSE FAILED!");
+          this.terminal.printSystemMessage("Enemy reinforcements incoming!");
+          
+          // 적 다수 스폰 (페널티)
+          for (let i = 0; i < 5; i++) {
+              this.defenseGame.spawnEnemy();
+          }
+          
+          // 디펜스 화면 복구
+          this.defenseGame.canvas.style.display = "block";
+          this.defenseGame.uiLayer.style.display = "block";
+          
+          // 미니 패널 제거
+          const panel = document.getElementById("mini-defense-panel");
+          if (panel) panel.remove();
+          
+          // 디펜스는 계속 (강화 페이지 완료까지)
+          // defenseMonitorLoop가 계속 돌아감
+          return;
+      }
+      
+      // 일반 브리치 모드 - 패배 시 복귀
       this.tetrisGame.state.isPlaying = false;
+      document.getElementById("game-container").style.opacity = 0;
       document.getElementById("game-ui").style.display = "none";
       this.terminal.setTransparentMode(false);
       this.terminal.show();
-      this.terminal.clear();
       
       await this.terminal.typeText("DEFENSE FAILED.", 50);
       await this.terminal.typeText("Systems compromised...", 30);
-      await this.terminal.typeText("Returning to core defense (Vulnerable).", 30);
+      await this.terminal.typeText("Returning to core defense.", 30);
       
       await new Promise(r => setTimeout(r, 1500));
       

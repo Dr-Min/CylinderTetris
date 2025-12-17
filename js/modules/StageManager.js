@@ -196,6 +196,18 @@ export class StageManager {
         this.saveState();
         return true;
     }
+    
+    /**
+     * 스테이지 점령 상태 설정
+     */
+    setConquered(stageId, conquered) {
+        const stage = this.getStage(stageId);
+        if (!stage) return false;
+        
+        stage.conquered = conquered;
+        this.saveState();
+        return true;
+    }
 
     /**
      * 점령한 스테이지 수
