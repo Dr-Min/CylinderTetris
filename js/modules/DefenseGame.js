@@ -172,8 +172,6 @@ export class DefenseGame {
     
     // 모바일 스타일 조정
     if (window.innerWidth <= 768) {
-        this.pageDisplay.style.fontSize = "14px";
-        this.pageDisplay.style.padding = "5px 10px";
         this.shieldBtn.style.bottom = "80px";
         this.shieldBtn.style.width = "160px";
         this.shieldBtn.style.height = "50px";

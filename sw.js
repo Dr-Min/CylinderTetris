@@ -1,5 +1,5 @@
-// v7.4 - PAGE display moved to terminal (below DATA)
-const CACHE_NAME = "hacker-tetris-v7.4";
+// v7.5 - Fix pageDisplay undefined error
+const CACHE_NAME = "hacker-tetris-v7.5";
 const ASSETS = [
   "./",
   "./index.html",
