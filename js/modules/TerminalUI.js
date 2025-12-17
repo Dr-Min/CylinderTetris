@@ -909,8 +909,9 @@ export class TerminalUI {
     console.log("[DEBUG TerminalUI] setDefenseMode(" + enabled + ") 호출됨");
     if (enabled) {
         this.terminalLayer.style.background = "rgba(0, 0, 0, 0)"; // 완전 투명
-        this.terminalLayer.style.pointerEvents = "auto"; // 클릭 가능 (선택지 등)
+        this.terminalLayer.style.pointerEvents = "none"; // 배경은 클릭 통과 (캔버스 터치 가능)
         this.terminalLayer.style.textShadow = "0 0 2px #000, 0 0 5px var(--term-color)";
+        // 선택지와 입력창은 CSS에서 pointer-events: auto로 설정됨
     } else {
         // 비활성화 시 기본 터미널 모드로 복귀
         this.setTransparentMode(false);

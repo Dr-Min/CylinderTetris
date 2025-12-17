@@ -30,6 +30,21 @@ export class DefenseGame {
       scale: 1 // 원근감 애니메이션용
     };
     
+    // 실드 시각 효과용 보간 변수 (부드러운 전환)
+    this.shieldVisual = {
+      alpha: 0.7,           // 현재 투명도
+      targetAlpha: 0.7,     // 목표 투명도
+      dashGap: 0,           // 현재 점선 간격 (0=실선)
+      targetDashGap: 0,     // 목표 점선 간격
+      lineWidth: 2,         // 현재 선 두께
+      targetLineWidth: 2,   // 목표 선 두께
+      rotation: 0,          // 현재 회전 오프셋
+      rotationSpeed: 0,     // 현재 회전 속도
+      targetRotationSpeed: 0, // 목표 회전 속도
+      fillAlpha: 0.1,       // 채우기 투명도
+      targetFillAlpha: 0.1  // 목표 채우기 투명도
+    };
+    
     // HP 표시 상태
     this.showCoreHP = true;
     this.glitchText = false;
@@ -170,6 +185,9 @@ export class DefenseGame {
 
     window.addEventListener("resize", () => this.resize());
     
+    // 🛡️ 탭 비활성화/활성화 감지 (모바일 앱 전환 대응)
+    document.addEventListener("visibilitychange", () => this.handleVisibilityChange());
+    
     // 모바일 스타일 조정
     if (window.innerWidth <= 768) {
         this.shieldBtn.style.bottom = "80px";
@@ -189,6 +207,87 @@ export class DefenseGame {
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     
     this.resize();
+  }
+  
+  // 🛡️ 탭 비활성화/활성화 처리
+  handleVisibilityChange() {
+    if (document.visibilityState === "visible") {
+      console.log("[Defense] Tab restored - validating game state");
+      // 탭 복귀 시 상태 복구
+      this.validateGameState();
+      this.resize(); // 캔버스 재확인
+      
+      // 시간 기준 리셋 (deltaTime 폭발 방지)
+      this.lastTime = performance.now();
+    } else {
+      console.log("[Defense] Tab hidden - pausing updates");
+    }
+  }
+  
+  // 🛡️ 게임 상태 유효성 검증 및 복구
+  validateGameState() {
+    // 1. 코어 위치 검증
+    if (!this.core.x || !this.core.y || 
+        isNaN(this.core.x) || isNaN(this.core.y) ||
+        this.core.x < 0 || this.core.x > this.canvas.width ||
+        this.core.y < 0 || this.core.y > this.canvas.height) {
+      console.warn("[Defense] Core position invalid, resetting to center");
+      this.core.x = this.canvas.width / 2;
+      this.core.y = this.canvas.height / 2;
+    }
+    
+    // 2. 코어 HP 검증
+    if (isNaN(this.core.hp) || this.core.hp < 0) {
+      console.warn("[Defense] Core HP invalid, resetting");
+      this.core.hp = this.core.maxHp;
+    }
+    
+    // 3. 실드 상태 검증
+    if (isNaN(this.core.shieldHp)) {
+      console.warn("[Defense] Shield HP invalid, resetting");
+      this.core.shieldHp = this.core.shieldMaxHp;
+    }
+    
+    // 4. 화면 밖 적 제거
+    this.enemies = this.enemies.filter(e => {
+      const margin = 200;
+      return e.x > -margin && e.x < this.canvas.width + margin &&
+             e.y > -margin && e.y < this.canvas.height + margin &&
+             !isNaN(e.x) && !isNaN(e.y);
+    });
+    
+    // 5. 화면 밖 아군 바이러스 재배치
+    this.alliedViruses.forEach(v => {
+      if (isNaN(v.x) || isNaN(v.y) ||
+          v.x < 0 || v.x > this.canvas.width ||
+          v.y < 0 || v.y > this.canvas.height) {
+        // 코어 주변으로 재배치
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 80 + Math.random() * 40;
+        v.x = this.core.x + Math.cos(angle) * dist;
+        v.y = this.core.y + Math.sin(angle) * dist;
+        console.warn("[Defense] Allied virus repositioned");
+      }
+    });
+    
+    // 6. 화면 밖 발사체 제거
+    this.projectiles = this.projectiles.filter(p => {
+      return p.x > -50 && p.x < this.canvas.width + 50 &&
+             p.y > -50 && p.y < this.canvas.height + 50 &&
+             !isNaN(p.x) && !isNaN(p.y);
+    });
+    
+    // 7. 실드 시각 효과 검증
+    if (!this.shieldVisual || isNaN(this.shieldVisual.alpha)) {
+      console.warn("[Defense] Shield visual state invalid, resetting");
+      this.shieldVisual = {
+        alpha: 0.7, targetAlpha: 0.7,
+        dashGap: 0, targetDashGap: 0,
+        lineWidth: 2, targetLineWidth: 2,
+        rotation: 0, rotationSpeed: 0, targetRotationSpeed: 0,
+        fillAlpha: 0.1, targetFillAlpha: 0.1
+      };
+    }
   }
 
   resize() {
@@ -321,6 +420,66 @@ export class DefenseGame {
           this.updateShieldBtnUI("CHARGING...", "#ffff00");
       }
   }
+  
+  // 실드 상태별 시각 효과 목표값 설정
+  updateShieldVisualTargets() {
+      const sv = this.shieldVisual;
+      const state = this.core.shieldState;
+      
+      if (state === "ACTIVE") {
+          // ACTIVE: 실선, 밝은 색, 채우기 있음
+          sv.targetAlpha = 0.7;
+          sv.targetDashGap = 0; // 실선
+          sv.targetLineWidth = 2;
+          sv.targetFillAlpha = 0.1;
+          sv.targetRotationSpeed = 0; // 회전 없음
+          
+      } else if (state === "OFF") {
+          // OFF: 연한 점선, 정적
+          sv.targetAlpha = 0.2;
+          sv.targetDashGap = 12; // 점선
+          sv.targetLineWidth = 1;
+          sv.targetFillAlpha = 0;
+          sv.targetRotationSpeed = 0;
+          
+      } else if (state === "DISCHARGING") {
+          // DISCHARGING: 점선으로 전환 중, 약간 회전
+          sv.targetAlpha = 0.4;
+          sv.targetDashGap = 10;
+          sv.targetLineWidth = 1.5;
+          sv.targetFillAlpha = 0.05;
+          sv.targetRotationSpeed = 30; // 느린 회전
+          
+      } else if (state === "CHARGING") {
+          // CHARGING: 점선 → 실선, 가속 회전
+          const elapsed = 2.0 - this.core.shieldTimer;
+          const progress = Math.min(1, elapsed / 2.0);
+          
+          // 진행률에 따라 점점 실선으로, 밝아지고, 빨라짐
+          sv.targetAlpha = 0.3 + progress * 0.4;
+          sv.targetDashGap = 15 * (1 - progress); // 점선 → 실선
+          sv.targetLineWidth = 1 + progress * 1;
+          sv.targetFillAlpha = progress * 0.1;
+          sv.targetRotationSpeed = 50 + progress * 500; // 가속 회전
+          
+      } else if (state === "BROKEN" || state === "RECHARGING") {
+          // BROKEN/RECHARGING: 철컥철컥 (stepwise rotation은 render에서 처리)
+          sv.targetAlpha = 0.3;
+          sv.targetDashGap = 15;
+          sv.targetLineWidth = 1;
+          sv.targetFillAlpha = 0;
+          // 철컥철컥은 별도 처리 (rotationSpeed 사용 안함)
+          sv.targetRotationSpeed = 0;
+          
+      } else if (state === "DISABLED") {
+          // DISABLED: 거의 안 보임
+          sv.targetAlpha = 0.1;
+          sv.targetDashGap = 20;
+          sv.targetLineWidth = 0.5;
+          sv.targetFillAlpha = 0;
+          sv.targetRotationSpeed = 0;
+      }
+  }
 
   updateShieldBtnUI(text, color, loadingProgress = null) {
       const hpPct = Math.floor((this.core.shieldHp / this.core.shieldMaxHp) * 100);
@@ -403,7 +562,13 @@ export class DefenseGame {
 
   update(deltaTime) {
     const now = performance.now() / 1000;
-    const dt = deltaTime / 1000;
+    
+    // 🛡️ deltaTime 제한 (최대 100ms) - 탭 비활성화 후 복귀 시 폭발 방지
+    const clampedDeltaTime = Math.min(deltaTime, 100);
+    const dt = clampedDeltaTime / 1000;
+    
+    // 🛡️ 상태 유효성 검증 (모바일 메모리 이슈 방어)
+    this.validateGameState();
 
     // 0. 쉴드 상태 업데이트
     if (this.core.shieldState === "CHARGING") {
@@ -458,6 +623,21 @@ export class DefenseGame {
             this.updateShieldBtnUI("OFFLINE", "#f00");
         }
     }
+    
+    // 실드 시각 효과 목표값 설정 (상태별)
+    this.updateShieldVisualTargets();
+    
+    // 실드 시각 효과 보간 (부드러운 전환)
+    const lerpSpeed = 3.0; // 보간 속도 (높을수록 빠름)
+    const sv = this.shieldVisual;
+    sv.alpha += (sv.targetAlpha - sv.alpha) * lerpSpeed * dt;
+    sv.dashGap += (sv.targetDashGap - sv.dashGap) * lerpSpeed * dt;
+    sv.lineWidth += (sv.targetLineWidth - sv.lineWidth) * lerpSpeed * dt;
+    sv.fillAlpha += (sv.targetFillAlpha - sv.fillAlpha) * lerpSpeed * dt;
+    sv.rotationSpeed += (sv.targetRotationSpeed - sv.rotationSpeed) * lerpSpeed * dt;
+    
+    // 회전 오프셋 업데이트
+    sv.rotation += sv.rotationSpeed * dt;
 
     // 0.5 웨이브(페이지) 진행
     
@@ -680,7 +860,6 @@ export class DefenseGame {
         continue;
       }
 
-      // 유도탄 (타겟이 있는 경우)
       if (p.target && this.enemies.includes(p.target)) {
         const dx = p.target.x - p.x;
         const dy = p.target.y - p.y;
@@ -710,35 +889,8 @@ export class DefenseGame {
           }
         }
       } else {
-        // 직선탄 (타겟 없이 방향으로 발사)
         p.x += Math.cos(p.angle) * p.speed * dt;
         p.y += Math.sin(p.angle) * p.speed * dt;
-        
-        // 직선탄도 적과 충돌 검사
-        for (let j = this.enemies.length - 1; j >= 0; j--) {
-          const enemy = this.enemies[j];
-          const dx = enemy.x - p.x;
-          const dy = enemy.y - p.y;
-          const dist = Math.hypot(dx, dy);
-          
-          if (dist < p.radius + enemy.radius) {
-            enemy.hp -= p.damage;
-            this.createExplosion(p.x, p.y, "#ffff00", 5);
-            this.projectiles.splice(i, 1);
-            
-            // 적 처치
-            if (enemy.hp <= 0) {
-              this.enemies.splice(j, 1);
-              this.createExplosion(enemy.x, enemy.y, "#00ff00", 15);
-              
-              const gain = 10;
-              this.currentData += gain;
-              this.updateResourceDisplay(this.currentData);
-              if (this.onResourceGained) this.onResourceGained(gain);
-            }
-            break; // 한 적과 충돌하면 탄환 제거
-          }
-        }
       }
     }
 
@@ -963,21 +1115,67 @@ export class DefenseGame {
         this.renderConqueredVisuals();
     }
 
-    // 0. 배리어 그리기 (상태별 색상) - 점령 상태가 아닐 때만
-    if (!this.isConquered && this.core.shieldActive) {
+    // 0. 배리어 그리기 (부드러운 전환 효과) - 점령 상태가 아닐 때만
+    if (!this.isConquered) {
+        const shieldRadius = this.core.shieldRadius;
+        const cx = this.core.x;
+        const cy = this.core.y;
+        const sv = this.shieldVisual;
+        const state = this.core.shieldState;
+        
+        // 실드 HP 비율에 따른 색상 계산 (100%=파란색, 0%=빨간색)
+        const hpRatio = this.core.shieldHp / this.core.shieldMaxHp;
+        // 파란색 (0, 200, 255) → 빨간색 (255, 50, 50)
+        const r = Math.floor(255 * (1 - hpRatio));
+        const g = Math.floor(200 * hpRatio + 50 * (1 - hpRatio));
+        const b = Math.floor(255 * hpRatio + 50 * (1 - hpRatio));
+        
+        // BROKEN/RECHARGING: 철컥철컥 회전 (별도 처리)
+        let dashOffset = sv.rotation;
+        if (state === "BROKEN" || state === "RECHARGING") {
+            const stepDuration = 500; // 0.5초마다 한 스텝
+            const stepSize = 20;
+            const currentStep = Math.floor(Date.now() / stepDuration);
+            dashOffset = currentStep * stepSize;
+        }
+        
+        // 채우기 (ACTIVE일 때만 보임)
+        if (sv.fillAlpha > 0.01) {
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
+            this.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${sv.fillAlpha})`;
+            this.ctx.fill();
+        }
+        
+        // 테두리 (점선/실선 보간)
         this.ctx.beginPath();
-        this.ctx.arc(this.core.x, this.core.y, this.core.shieldRadius, 0, Math.PI * 2);
-        this.ctx.fillStyle = "rgba(0, 200, 255, 0.1)"; 
-        this.ctx.fill();
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeStyle = `rgba(0, 200, 255, ${0.5 + Math.sin(Date.now() / 200) * 0.2})`;
-        this.ctx.stroke();
-    } else if (!this.isConquered && this.core.shieldState === "BROKEN") {
-        // 깨진 쉴드 파편 느낌? (일단 점선)
-        this.ctx.beginPath();
-        this.ctx.arc(this.core.x, this.core.y, this.core.shieldRadius, 0, Math.PI * 2);
-        this.ctx.setLineDash([5, 15]);
-        this.ctx.strokeStyle = "rgba(100, 100, 100, 0.5)";
+        this.ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
+        
+        if (sv.dashGap > 0.5) {
+            // 점선 모드
+            const dashLength = Math.max(3, 10 - sv.dashGap * 0.3);
+            this.ctx.setLineDash([dashLength, sv.dashGap]);
+            this.ctx.lineDashOffset = -dashOffset;
+        } else {
+            // 실선 모드
+            this.ctx.setLineDash([]);
+        }
+        
+        this.ctx.lineWidth = sv.lineWidth;
+        
+        // ACTIVE일 때 펄스 효과
+        let alpha = sv.alpha;
+        if (state === "ACTIVE") {
+            alpha = sv.alpha + Math.sin(Date.now() / 200) * 0.15;
+        }
+        
+        // BROKEN일 때 회색, 그 외에는 HP 기반 색상
+        if (state === "BROKEN" || state === "RECHARGING") {
+            this.ctx.strokeStyle = `rgba(100, 100, 100, ${alpha})`;
+        } else {
+            this.ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        
         this.ctx.stroke();
         this.ctx.setLineDash([]);
     }

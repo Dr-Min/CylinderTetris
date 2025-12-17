@@ -603,7 +603,7 @@ body {
     pointer-events: none; /* 배경은 클릭 통과 */
   }
 
-  /* 터미널 내부 상호작용 요소는 클릭 가능해야 함 (terminal-content 제외) */
+  /* 터미널 내부 상호작용 요소는 클릭 가능해야 함 */
   .input-line,
   .choice-container {
     pointer-events: auto; 
