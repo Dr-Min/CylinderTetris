@@ -270,10 +270,11 @@ export class DefenseGame {
       }
     });
     
-    // 6. 화면 밖 발사체 제거
+    // 6. 화면 밖 발사체 제거 (gameScale 고려)
+    const scaledMargin = 100 / this.gameScale; // 스케일링 고려한 마진
     this.projectiles = this.projectiles.filter(p => {
-      return p.x > -50 && p.x < this.canvas.width + 50 &&
-             p.y > -50 && p.y < this.canvas.height + 50 &&
+      return p.x > -scaledMargin && p.x < this.canvas.width + scaledMargin &&
+             p.y > -scaledMargin && p.y < this.canvas.height + scaledMargin &&
              !isNaN(p.x) && !isNaN(p.y);
     });
     
