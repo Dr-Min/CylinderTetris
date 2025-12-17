@@ -1,5 +1,5 @@
 // v7.9 - Green projectiles + glitch-style ASCII particles
-const CACHE_NAME = "hacker-tetris-v8.9";
+const CACHE_NAME = "hacker-tetris-v9.3";
 const ASSETS = [
   "./",
   "./index.html",

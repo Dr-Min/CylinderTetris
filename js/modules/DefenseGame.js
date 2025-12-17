@@ -148,22 +148,22 @@ export class DefenseGame {
     
     // 웨이브 관리
     this.waveTimer = 0;
-    this.spawnRate = 1.5;
+    this.spawnRate = 1.2; // 1.5 → 1.2 (더 빠른 적 생성)
     this.currentPage = 1; // 1 ~ 12
     this.pageTimer = 0;
-    this.pageDuration = 20; // 페이지당 20초 (테스트용, 실제론 더 길게)
+    this.pageDuration = 25; // 페이지당 25초 (20 → 25, 더 오래 생존해야 함)
     
     // 스테이지 관리
     this.currentStage = 0; // 0 = 안전영역, 1+ = 일반 스테이지
     this.isSafeZone = true; // 안전영역 여부
-    this.safeZoneSpawnRate = 8; // 안전영역에서 적 생성 주기 (8초에 한 마리)
+    this.safeZoneSpawnRate = 6; // 안전영역 적 생성 (8 → 6초)
     
     // 강화 페이지 모드 (점령 시)
     this.isReinforcementMode = false;
     this.reinforcementPage = 0;
     this.reinforcementMaxPages = 3;
     this.reinforcementComplete = false;
-    this.reinforcementSpawnRate = 1.2; // 약하게 조정 (기존 0.5 → 1.2)
+    this.reinforcementSpawnRate = 0.8; // 1.2 → 0.8 (더 어렵게)
     
     // 점령 상태 (영구)
     this.isConquered = false; // 이 스테이지가 점령되었는지
@@ -429,23 +429,23 @@ export class DefenseGame {
       
       if (state === "ACTIVE") {
           // ACTIVE: 실선, 밝은 색, 채우기 있음
-          sv.targetAlpha = 0.7;
+          sv.targetAlpha = 0.8;
           sv.targetDashGap = 0; // 실선
-          sv.targetLineWidth = 2;
-          sv.targetFillAlpha = 0.1;
+          sv.targetLineWidth = 2.5;
+          sv.targetFillAlpha = 0.15;
           sv.targetRotationSpeed = 0; // 회전 없음
           
       } else if (state === "OFF") {
-          // OFF: 연한 점선, 정적
-          sv.targetAlpha = 0.2;
-          sv.targetDashGap = 12; // 점선
-          sv.targetLineWidth = 1;
+          // OFF: 점선, 잘 보이게
+          sv.targetAlpha = 0.5;
+          sv.targetDashGap = 10; // 점선
+          sv.targetLineWidth = 1.5;
           sv.targetFillAlpha = 0;
           sv.targetRotationSpeed = 0;
           
       } else if (state === "DISCHARGING") {
           // DISCHARGING: 점선으로 전환 중, 약간 회전
-          sv.targetAlpha = 0.4;
+          sv.targetAlpha = 0.6;
           sv.targetDashGap = 10;
           sv.targetLineWidth = 1.5;
           sv.targetFillAlpha = 0.05;
@@ -457,26 +457,26 @@ export class DefenseGame {
           const progress = Math.min(1, elapsed / 2.0);
           
           // 진행률에 따라 점점 실선으로, 밝아지고, 빨라짐
-          sv.targetAlpha = 0.3 + progress * 0.4;
-          sv.targetDashGap = 15 * (1 - progress); // 점선 → 실선
-          sv.targetLineWidth = 1 + progress * 1;
-          sv.targetFillAlpha = progress * 0.1;
+          sv.targetAlpha = 0.5 + progress * 0.3;
+          sv.targetDashGap = 12 * (1 - progress); // 점선 → 실선
+          sv.targetLineWidth = 1.5 + progress * 1;
+          sv.targetFillAlpha = progress * 0.15;
           sv.targetRotationSpeed = 50 + progress * 500; // 가속 회전
           
       } else if (state === "BROKEN" || state === "RECHARGING") {
-          // BROKEN/RECHARGING: 철컥철컥 (stepwise rotation은 render에서 처리)
-          sv.targetAlpha = 0.3;
-          sv.targetDashGap = 15;
-          sv.targetLineWidth = 1;
+          // BROKEN/RECHARGING: 철컥철컥, 잘 보이게
+          sv.targetAlpha = 0.5;
+          sv.targetDashGap = 12;
+          sv.targetLineWidth = 1.5;
           sv.targetFillAlpha = 0;
           // 철컥철컥은 별도 처리 (rotationSpeed 사용 안함)
           sv.targetRotationSpeed = 0;
           
       } else if (state === "DISABLED") {
-          // DISABLED: 거의 안 보임
-          sv.targetAlpha = 0.1;
-          sv.targetDashGap = 20;
-          sv.targetLineWidth = 0.5;
+          // DISABLED: 약하게 보임
+          sv.targetAlpha = 0.3;
+          sv.targetDashGap = 15;
+          sv.targetLineWidth = 1;
           sv.targetFillAlpha = 0;
           sv.targetRotationSpeed = 0;
       }
@@ -649,9 +649,14 @@ export class DefenseGame {
             if (this.reinforcementPage < this.reinforcementMaxPages) {
                 this.reinforcementPage++;
                 this.pageTimer = 0;
-                this.spawnRate = Math.max(0.8, this.reinforcementSpawnRate - (this.reinforcementPage * 0.1)); // 약하게 조정
+                
+                // 강화 페이지별 스폰 레이트 (12페이지=0.4초 기준)
+                // 1페이지: 0.5초 (살짝 쉬움), 2페이지: 0.35초, 3페이지: 0.25초
+                const reinforcementSpawnRates = [0.5, 0.35, 0.25];
+                this.spawnRate = reinforcementSpawnRates[Math.min(this.reinforcementPage - 1, 2)];
+                
                 this.updateWaveDisplay();
-                console.log("[Defense] Reinforcement Page:", this.reinforcementPage);
+                console.log("[Defense] Reinforcement Page:", this.reinforcementPage, "SpawnRate:", this.spawnRate);
             } else {
                 // 강화 페이지 완료 -> 점령 완료!
                 this.reinforcementComplete = true;
@@ -669,8 +674,8 @@ export class DefenseGame {
             if (this.currentPage < maxPages) {
                 this.currentPage++;
                 this.pageTimer = 0;
-                // 난이도 스케일 적용 (diffScale이 높을수록 빠르게 어려워짐)
-                this.spawnRate = Math.max(0.2, 1.5 - (this.currentPage * 0.1 * diffScale));
+                // 난이도 스케일 적용 (더 빠르게 어려워짐)
+                this.spawnRate = Math.max(0.4, 1.2 - (this.currentPage * 0.12 * diffScale));
                 this.updateWaveDisplay();
             } else if (!this.conquerReady) {
                 // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘)
@@ -972,9 +977,9 @@ export class DefenseGame {
       this.reinforcementMaxPages = maxPages;
       this.reinforcementComplete = false;
       this.pageTimer = 0;
-      this.spawnRate = this.reinforcementSpawnRate; // 더 빠른 스폰
+      this.spawnRate = 0.5; // 강화 1페이지: 12페이지(0.4초)보다 살짝 느림
       this.updateWaveDisplay();
-      console.log("[Defense] Reinforcement Mode Started:", maxPages, "pages");
+      console.log("[Defense] Reinforcement Mode Started:", maxPages, "pages, SpawnRate:", this.spawnRate);
   }
   
   // 일반 모드로 복귀
@@ -984,7 +989,7 @@ export class DefenseGame {
       this.reinforcementComplete = false;
       this.currentPage = 1;
       this.pageTimer = 0;
-      this.spawnRate = 1.5;
+      this.spawnRate = 1.2; // 리셋 시 초기값
       
       // 실드 복구
       this.core.shieldRadius = 70;
@@ -1081,19 +1086,41 @@ export class DefenseGame {
       const size = 80; // 방어막 크기
       const time = Date.now() / 1000;
       
-      // 1. 별 모양 방어막 (정사각형 + 다이아몬드)
+      // 철컥철컥 회전 패턴: 90° → 90° → 180° (더 긴 시간) → 루프
+      // 시간 배분: 0.5초, 0.5초, 1.0초 = 총 2초 주기
+      const cycleTime = time % 2.0;
+      let rotationAngle;
+      
+      if (cycleTime < 0.5) {
+          // 0~0.5초: 0° → 90°
+          rotationAngle = 0;
+      } else if (cycleTime < 1.0) {
+          // 0.5~1.0초: 90°
+          rotationAngle = Math.PI / 2;
+      } else {
+          // 1.0~2.0초: 180° (여기서 1초 머무름)
+          rotationAngle = Math.PI;
+      }
+      
+      // 1. 별 모양 방어막 (두 사각형이 반대 방향으로 회전)
       ctx.save();
       ctx.translate(x, y);
       
-      // 정사각형 (0도)
-      ctx.strokeStyle = `rgba(0, 255, 100, ${0.4 + Math.sin(time * 2) * 0.2})`;
+      // 사각형 1: 시계방향 회전
+      ctx.save();
+      ctx.rotate(rotationAngle);
+      ctx.strokeStyle = `rgba(0, 255, 100, ${0.5 + Math.sin(time * 2) * 0.2})`;
       ctx.lineWidth = 2;
       ctx.strokeRect(-size/2, -size/2, size, size);
+      ctx.restore();
       
-      // 다이아몬드 (45도 회전)
-      ctx.rotate(Math.PI / 4);
-      ctx.strokeStyle = `rgba(0, 200, 255, ${0.4 + Math.cos(time * 2) * 0.2})`;
+      // 사각형 2: 반시계방향 회전 + 45도 기본 오프셋
+      ctx.save();
+      ctx.rotate(Math.PI / 4 - rotationAngle); // 역방향
+      ctx.strokeStyle = `rgba(0, 200, 255, ${0.5 + Math.cos(time * 2) * 0.2})`;
+      ctx.lineWidth = 2;
       ctx.strokeRect(-size/2, -size/2, size, size);
+      ctx.restore();
       
       ctx.restore();
       
@@ -1356,14 +1383,31 @@ export class DefenseGame {
     
     const ex = this.core.x + Math.cos(angle) * distance;
     const ey = this.core.y + Math.sin(angle) * distance;
+    
+    // 난이도 스케일 계산
+    let difficultyScale;
+    const baseSpeed = 60 + Math.random() * 40; // 60~100
+    const baseHp = 35;
+    
+    if (this.isReinforcementMode) {
+        // 강화 페이지: 12페이지 기준으로 스케일링
+        // 1페이지: 2.0 (12페이지=2.1보다 살짝 낮음)
+        // 2페이지: 2.3 (12페이지보다 높음)
+        // 3페이지: 2.6 (더 높음)
+        const reinforcementScales = [2.0, 2.3, 2.6];
+        difficultyScale = reinforcementScales[Math.min(this.reinforcementPage, 2)];
+    } else {
+        // 일반 페이지: 페이지당 10% 증가 (page 12 = 2.1)
+        difficultyScale = 1 + (this.currentPage - 1) * 0.1;
+    }
 
     this.enemies.push({
       x: ex,
       y: ey,
-      radius: 10, // 적 크기 축소 (15 -> 10)
-      speed: 50 + Math.random() * 30,
-      hp: 30,
-      maxHp: 30,
+      radius: 10,
+      speed: baseSpeed * difficultyScale,
+      hp: Math.floor(baseHp * difficultyScale),
+      maxHp: Math.floor(baseHp * difficultyScale),
       damage: 10
     });
   }
