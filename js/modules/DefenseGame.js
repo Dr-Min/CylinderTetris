@@ -1086,21 +1086,26 @@ export class DefenseGame {
       const size = 80; // 방어막 크기
       const time = Date.now() / 1000;
       
-      // 철컥철컥 회전 패턴: 90° → 90° → 180° (더 긴 시간) → 루프
-      // 시간 배분: 0.5초, 0.5초, 1.0초 = 총 2초 주기
+      // 철컥철컥 회전 패턴: 90° → 90° → 180° → 루프
+      // 시간 배분: 0.5초, 0.5초, 1.0초 = 총 2초에 360° 회전
       const cycleTime = time % 2.0;
-      let rotationAngle;
+      const fullCycles = Math.floor(time / 2.0); // 완료된 사이클 수
       
+      let stepAngle;
       if (cycleTime < 0.5) {
-          // 0~0.5초: 0° → 90°
-          rotationAngle = 0;
+          // 0~0.5초: 0° (첫 번째 위치)
+          stepAngle = 0;
       } else if (cycleTime < 1.0) {
-          // 0.5~1.0초: 90°
-          rotationAngle = Math.PI / 2;
+          // 0.5~1.0초: 90° (철컥)
+          stepAngle = Math.PI / 2;
       } else {
-          // 1.0~2.0초: 180° (여기서 1초 머무름)
-          rotationAngle = Math.PI;
+          // 1.0~2.0초: 270° (180° 점프, 철컥~)
+          stepAngle = Math.PI * 1.5;
       }
+      
+      // 누적 각도 (계속 돌아감)
+      const baseAngle = fullCycles * Math.PI * 2;
+      const rotationAngle = baseAngle + stepAngle;
       
       // 1. 별 모양 방어막 (두 사각형이 반대 방향으로 회전)
       ctx.save();
@@ -1109,15 +1114,15 @@ export class DefenseGame {
       // 사각형 1: 시계방향 회전
       ctx.save();
       ctx.rotate(rotationAngle);
-      ctx.strokeStyle = `rgba(0, 255, 100, ${0.5 + Math.sin(time * 2) * 0.2})`;
+      ctx.strokeStyle = `rgba(0, 255, 100, 0.6)`;
       ctx.lineWidth = 2;
       ctx.strokeRect(-size/2, -size/2, size, size);
       ctx.restore();
       
-      // 사각형 2: 반시계방향 회전 + 45도 기본 오프셋
+      // 사각형 2: 반시계방향 회전 + 45도 기본 오프셋 (별 모양)
       ctx.save();
       ctx.rotate(Math.PI / 4 - rotationAngle); // 역방향
-      ctx.strokeStyle = `rgba(0, 200, 255, ${0.5 + Math.cos(time * 2) * 0.2})`;
+      ctx.strokeStyle = `rgba(0, 200, 255, 0.6)`;
       ctx.lineWidth = 2;
       ctx.strokeRect(-size/2, -size/2, size, size);
       ctx.restore();
