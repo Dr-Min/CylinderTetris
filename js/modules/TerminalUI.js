@@ -42,6 +42,20 @@ export class TerminalUI {
     this.dataDisplay.innerText = "DATA: 0 MB";
     // inputLine 바로 뒤에 추가
     this.inputLine.after(this.dataDisplay);
+    
+    // PAGE 표시 (DATA 밑에)
+    this.pageDisplay = document.createElement("div");
+    this.pageDisplay.id = "terminal-page-display";
+    this.pageDisplay.style.cssText = `
+      color: #00ff00;
+      font-family: var(--term-font);
+      font-size: inherit;
+      margin-top: 2px;
+      text-shadow: 0 0 5px #00ff00;
+    `;
+    this.pageDisplay.innerText = "SAFE ZONE";
+    // dataDisplay 바로 뒤에 추가
+    this.dataDisplay.after(this.pageDisplay);
 
     // 전역 클릭 시 입력창 포커스 (터미널 모드일 때만)
     this.terminalLayer.addEventListener("click", () => {
@@ -597,7 +611,7 @@ export class TerminalUI {
     const line = document.createElement("div");
     line.className = "terminal-line";
     this.contentDiv.appendChild(line);
-    this.limitLines(3); // 최대 3줄로 제한
+    // limitLines 제거 - 메시지 축적 유지
     this.scrollToBottom();
 
     return new Promise((resolve) => {
@@ -729,7 +743,7 @@ export class TerminalUI {
     line.className = "terminal-line";
     line.innerHTML = `<span style="color:var(--term-color)">[USER]> ${choice.text}</span>`;
     this.contentDiv.appendChild(line);
-    this.limitLines(3); // 최대 3줄로 제한
+    // limitLines 제거 - 메시지 축적 유지
 
     resolve(choice.value);
   }
@@ -747,7 +761,7 @@ export class TerminalUI {
       line.className = "terminal-line system-msg";
       line.textContent = "[SYSTEM] ";
       this.contentDiv.appendChild(line);
-      this.limitLines(3);
+      // limitLines 제거 - 메시지 축적 유지
       this.scrollToBottom();
 
       let i = 0;
@@ -837,20 +851,34 @@ export class TerminalUI {
       this.dataDisplay.innerText = `DATA: ${amount} MB`;
     }
   }
+  
+  // PAGE 표시 업데이트
+  updatePage(text, color = "#00ff00") {
+    if (this.pageDisplay) {
+      this.pageDisplay.innerText = text;
+      this.pageDisplay.style.color = color;
+      this.pageDisplay.style.textShadow = `0 0 5px ${color}`;
+    }
+  }
 
   clear() {
     this.contentDiv.innerHTML = "";
   }
 
   hide() {
+    console.log("[DEBUG TerminalUI] hide() 호출됨");
     this.terminalLayer.style.display = "none";
   }
 
   show() {
+    console.log("[DEBUG TerminalUI] show() 호출됨");
+    console.log("[DEBUG TerminalUI] terminalLayer before:", this.terminalLayer?.style?.display);
     this.terminalLayer.style.display = "block";
+    console.log("[DEBUG TerminalUI] terminalLayer after:", this.terminalLayer?.style?.display);
   }
 
   setTransparentMode(enabled) {
+    console.log("[DEBUG TerminalUI] setTransparentMode(" + enabled + ") 호출됨");
     if (enabled) {
       this.terminalLayer.style.background = "rgba(0,0,0,0)";
       this.terminalLayer.style.pointerEvents = "none";
@@ -866,10 +894,12 @@ export class TerminalUI {
       this.terminalLayer.style.pointerEvents = "auto";
       this.terminalLayer.style.textShadow = "0 0 5px var(--term-color)";
     }
+    console.log("[DEBUG TerminalUI] background after:", this.terminalLayer?.style?.background);
   }
 
   // 디펜스 모드용 (배경은 투명하게, 하지만 UI 클릭은 가능하게)
   setDefenseMode(enabled) {
+    console.log("[DEBUG TerminalUI] setDefenseMode(" + enabled + ") 호출됨");
     if (enabled) {
         this.terminalLayer.style.background = "rgba(0, 0, 0, 0)"; // 완전 투명
         this.terminalLayer.style.pointerEvents = "auto"; // 클릭 가능 (선택지 등)
@@ -878,5 +908,7 @@ export class TerminalUI {
         // 비활성화 시 기본 터미널 모드로 복귀
         this.setTransparentMode(false);
     }
+    console.log("[DEBUG TerminalUI] after setDefenseMode - background:", this.terminalLayer?.style?.background);
+    console.log("[DEBUG TerminalUI] after setDefenseMode - pointerEvents:", this.terminalLayer?.style?.pointerEvents);
   }
 }

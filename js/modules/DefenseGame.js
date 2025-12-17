@@ -56,24 +56,8 @@ export class DefenseGame {
     this.uiLayer.style.display = "none";
     document.body.appendChild(this.uiLayer); // [수정] container가 아닌 body에 직접 부착
 
-    // 1. 우측 상단 PAGE 표시기 (기존 resourceDisplay -> pageDisplay로 용도 변경)
-    this.pageDisplay = document.createElement("div");
-    this.pageDisplay.id = "page-display";
-    this.pageDisplay.style.position = "absolute";
-    this.pageDisplay.style.top = "20px";
-    this.pageDisplay.style.right = "20px";
-    this.pageDisplay.style.color = "#00ff00";
-    this.pageDisplay.style.fontFamily = "var(--term-font)";
-    this.pageDisplay.style.fontSize = "20px";
-    this.pageDisplay.style.fontWeight = "bold";
-    this.pageDisplay.style.textShadow = "0 0 10px #00ff00";
-    this.pageDisplay.style.backgroundColor = "rgba(0, 20, 0, 0.7)";
-    this.pageDisplay.style.padding = "8px 15px";
-    this.pageDisplay.style.border = "1px solid #00ff00";
-    this.pageDisplay.style.pointerEvents = "auto";
-    this.pageDisplay.style.userSelect = "none";
-    this.pageDisplay.innerText = "SAFE ZONE";
-    this.uiLayer.appendChild(this.pageDisplay);
+    // PAGE 표시는 TerminalUI에서 관리 (onPageUpdate 콜백으로 업데이트)
+    this.onPageUpdate = null; // 페이지 업데이트 콜백
 
     // 2. 배리어 토글 버튼 (모바일 친화적 위치: 하단 중앙)
     this.shieldBtn = document.createElement("button");
@@ -173,6 +157,10 @@ export class DefenseGame {
     this.onResourceGained = null; 
     this.onGameOver = null;
     this.onConquer = null; // 점령 요청 콜백
+    this.onConquerReady = null; // 점령 가능 상태 콜백 (선택지 갱신용)
+    
+    // 점령 가능 상태
+    this.conquerReady = false;
 
     // 아군 정보 (ConquestManager에서 주입)
     this.alliedInfo = { count: 0, level: 1, color: "#00aaff" }; // 파란색으로 변경
@@ -375,6 +363,7 @@ export class DefenseGame {
     // 웨이브 초기화
     this.currentPage = 1;
     this.pageTimer = 0;
+    this.conquerReady = false; // 점령 가능 상태 초기화
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
     this.updateShieldBtnUI("ACTIVE", "#fff");
@@ -463,8 +452,8 @@ export class DefenseGame {
 
     // 0.5 웨이브(페이지) 진행
     
-    // 강화 페이지 모드 (점령 중)
-    if (this.isReinforcementMode) {
+    // 강화 페이지 모드 (점령 중) - 이미 완료된 경우 스킵
+    if (this.isReinforcementMode && !this.reinforcementComplete) {
         this.pageTimer += dt;
         if (this.pageTimer >= this.pageDuration) {
             if (this.reinforcementPage < this.reinforcementMaxPages) {
@@ -493,11 +482,19 @@ export class DefenseGame {
                 // 난이도 스케일 적용 (diffScale이 높을수록 빠르게 어려워짐)
                 this.spawnRate = Math.max(0.2, 1.5 - (this.currentPage * 0.1 * diffScale));
                 this.updateWaveDisplay();
-            } else {
+            } else if (!this.conquerReady) {
                 // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘)
-                this.pageDisplay.innerText = "∞ READY";
-                this.pageDisplay.style.color = "#ff3333";
-                this.pageDisplay.style.borderColor = "#ff3333";
+                this.conquerReady = true;
+                
+                // 콜백으로 터미널에 업데이트
+                if (this.onPageUpdate) {
+                    this.onPageUpdate("∞ READY", "#ff3333");
+                }
+                
+                // 점령 가능 콜백 호출 (선택지 갱신용)
+                if (this.onConquerReady) {
+                    this.onConquerReady();
+                }
             }
         }
     }
@@ -508,13 +505,13 @@ export class DefenseGame {
         
         // HP가 없으면 제거 (사망)
         if (v.hp <= 0) {
+            console.log("[DEBUG DefenseGame] 아군 바이러스 사망, isConquered:", this.isConquered, "alliedInfo.count:", this.alliedInfo.count);
             this.createExplosion(v.x, v.y, v.color, 8);
             this.alliedViruses.splice(idx, 1);
             
-            // 점령 상태면 2초 후 리스폰
-            if (this.isConquered) {
-                setTimeout(() => this.respawnOneAlly(), 2000);
-            }
+            // 2초 후 리스폰 (점령 상태면 10마리, 아니면 alliedInfo.count만큼)
+            console.log("[DEBUG DefenseGame] 2초 후 리스폰 예약");
+            setTimeout(() => this.respawnOneAlly(), 2000);
             continue;
         }
         
@@ -720,30 +717,32 @@ export class DefenseGame {
 
   updateWaveDisplay() {
       const maxPages = this.maxPages || 12;
+      let text = "";
+      let color = "#00ff00";
       
       if (this.isConquered) {
           // 점령 완료 상태
-          this.pageDisplay.innerText = "🚩 점령지";
-          this.pageDisplay.style.color = "#00ff00";
-          this.pageDisplay.style.borderColor = "#00ff00";
+          text = "🚩 점령지";
+          color = "#00ff00";
       } else if (this.isReinforcementMode) {
           // 강화 페이지 모드
-          this.pageDisplay.innerText = `⚔️ ${this.reinforcementPage}/${this.reinforcementMaxPages}`;
-          this.pageDisplay.style.color = "#ff3333"; // 빨간색
-          this.pageDisplay.style.borderColor = "#ff3333";
+          text = `⚔️ ${this.reinforcementPage}/${this.reinforcementMaxPages}`;
+          color = "#ff3333";
       } else if (this.isSafeZone) {
-          this.pageDisplay.innerText = "SAFE ZONE";
-          this.pageDisplay.style.color = "#00ff00"; // 녹색
-          this.pageDisplay.style.borderColor = "#00ff00";
+          text = "SAFE ZONE";
+          color = "#00ff00";
       } else if (this.currentPage > maxPages) {
           // 최대 페이지 초과 = 무한대 모드
-          this.pageDisplay.innerText = "∞ READY";
-          this.pageDisplay.style.color = "#ff3333";
-          this.pageDisplay.style.borderColor = "#ff3333";
+          text = "∞ READY";
+          color = "#ff3333";
       } else {
-          this.pageDisplay.innerText = `PAGE: ${this.currentPage} / ${maxPages}`;
-          this.pageDisplay.style.color = "#00f0ff"; // 시안
-          this.pageDisplay.style.borderColor = "#00f0ff";
+          text = `PAGE: ${this.currentPage} / ${maxPages}`;
+          color = "#00f0ff";
+      }
+      
+      // 콜백으로 터미널에 업데이트
+      if (this.onPageUpdate) {
+          this.onPageUpdate(text, color);
       }
   }
   
@@ -813,27 +812,43 @@ export class DefenseGame {
       }
   }
   
-  // 아군 바이러스 1마리 리스폰 (점령 상태에서 10마리 유지)
+  // 아군 바이러스 1마리 리스폰 (점령: 10마리, 일반: alliedInfo.count 유지)
   respawnOneAlly() {
-      if (!this.isConquered) return;
-      if (this.alliedViruses.length >= 10) return; // 이미 10마리면 스킵
+      // 목표 아군 수 결정
+      const targetCount = this.isConquered ? 10 : (this.alliedInfo.count || 0);
+      
+      console.log("[DEBUG DefenseGame] respawnOneAlly 호출됨, isConquered:", this.isConquered, "targetCount:", targetCount, "현재 아군 수:", this.alliedViruses.length);
+      
+      if (targetCount <= 0) {
+          console.log("[DEBUG DefenseGame] targetCount가 0이라서 리스폰 취소");
+          return;
+      }
+      
+      if (this.alliedViruses.length >= targetCount) {
+          console.log("[DEBUG DefenseGame] 이미 목표 수 달성, 리스폰 취소");
+          return;
+      }
       
       const angle = Math.random() * Math.PI * 2;
       const distance = 60 + Math.random() * 30;
+      
+      // 점령 상태면 고정 스탯, 아니면 alliedInfo 기반
+      const hp = this.isConquered ? 50 : (10 + (this.alliedInfo.level - 1) * 5);
       
       const newAlly = {
           x: this.core.x + Math.cos(angle) * distance,
           y: this.core.y + Math.sin(angle) * distance,
           radius: 6,
-          color: "#00aaff",
-          hp: 50,
-          maxHp: 50,
+          color: this.alliedInfo.color || "#00aaff",
+          hp: hp,
+          maxHp: hp,
           damage: 10,
           angle: angle,
           targetAngle: angle
       };
       
       this.alliedViruses.push(newAlly);
+      console.log("[DEBUG DefenseGame] 아군 바이러스 리스폰 완료, 현재 아군 수:", this.alliedViruses.length);
       
       // 팝 파티클 효과
       this.createExplosion(newAlly.x, newAlly.y, "#00aaff", 5);
@@ -977,7 +992,7 @@ export class DefenseGame {
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.stroke();
     
-    // 코어 체력 퍼센트 표시 (글리치 효과 적용)
+    // 코어 체력 퍼센트 표시 (코어 아래에 표시)
     if (this.showCoreHP !== false) {
       const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
       
@@ -993,15 +1008,15 @@ export class DefenseGame {
       if (this.glitchText) {
         // 빨간색 오프셋
         this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-        this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX - 2, this.core.y - scaledRadius - 15 + offsetY);
+        this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX - 2, this.core.y + scaledRadius + 20 + offsetY);
         // 파란색 오프셋
         this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
-        this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX + 2, this.core.y - scaledRadius - 15 + offsetY);
+        this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX + 2, this.core.y + scaledRadius + 20 + offsetY);
       }
       
       // 메인 텍스트
       this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
-      this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX, this.core.y - scaledRadius - 15 + offsetY);
+      this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX, this.core.y + scaledRadius + 20 + offsetY);
     }
 
     // 4. 파티클

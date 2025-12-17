@@ -1,5 +1,5 @@
-// v6.5 - Fix terminal z-index + ally respawn system
-const CACHE_NAME = "hacker-tetris-v6.5";
+// v7.4 - PAGE display moved to terminal (below DATA)
+const CACHE_NAME = "hacker-tetris-v7.4";
 const ASSETS = [
   "./",
   "./index.html",

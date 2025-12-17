@@ -270,6 +270,15 @@ body {
   animation: flicker 0.15s infinite;
 }
 
+/* 터미널 콘텐츠 영역 - 최근 3줄만 표시 */
+#terminal-content {
+  max-height: 4.5em; /* 약 3줄 높이 (line-height 1.1 기준) */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* 최신 메시지가 아래에 표시 */
+}
+
 /* 터미널 입력 라인 스타일 */
 .input-line {
   display: flex;

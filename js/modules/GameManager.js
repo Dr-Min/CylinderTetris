@@ -32,6 +32,12 @@ export class GameManager {
     
     // 점령 이벤트 연결
     this.defenseGame.onConquer = () => this.handleConquest();
+    
+    // 점령 가능 상태 시 선택지 갱신
+    this.defenseGame.onConquerReady = () => this.refreshCommandMenu();
+    
+    // PAGE 업데이트 연결 (터미널에 표시)
+    this.defenseGame.onPageUpdate = (text, color) => this.terminal.updatePage(text, color);
 
     // 테트리스 게임 이벤트 연결
     this.tetrisGame.onStageClear = (lines) => this.handleBreachClear(lines);
@@ -414,7 +420,6 @@ export class GameManager {
       // 2. 터미널 UI 조정 (디펜스 모드용)
       this.terminal.setDefenseMode(true); // 배경 투명 + 클릭 가능
       this.terminal.show(); // 터미널 메시지창 활성화 (로그용)
-      this.terminal.clear();
       await this.terminal.printSystemMessage("DEFENSE_PROTOCOL_INITIATED");
 
       // 3. 디펜스 게임 시작
@@ -442,7 +447,6 @@ export class GameManager {
 
       // 2. 터미널 및 UI 조정
       this.terminal.setTransparentMode(true);
-      this.terminal.clear();
       await this.terminal.printSystemMessage("BREACH_PROTOCOL_INITIATED");
       await this.terminal.printSystemMessage("Objective: Clear lines to acquire Equipment.");
 
@@ -488,6 +492,19 @@ export class GameManager {
     } else if (choice === "upgrade") {
       await this.showUpgrades();
     }
+  }
+  
+  // 선택지 강제 갱신 (점령 가능 상태 변경 시)
+  async refreshCommandMenu() {
+    // 현재 선택지 영역 숨기기
+    this.terminal.choiceArea.classList.add("hidden");
+    this.terminal.inputLine.classList.add("hidden");
+    
+    // 알림 메시지
+    await this.terminal.printSystemMessage("!!! CONQUER READY !!!");
+    
+    // 새 선택지 표시
+    await this.showCommandMenu();
   }
   
   // 터미널에서 점령 선택 시
@@ -710,9 +727,16 @@ export class GameManager {
   
   // 테트리스 클리어 시 (점령 모드) - 바로 디펜스로 복귀
   handleConquestTetrisClear() {
-    if (!this.isConquestMode) return;
+    console.log("[DEBUG] handleConquestTetrisClear 호출됨");
+    console.log("[DEBUG] isConquestMode:", this.isConquestMode);
+    
+    if (!this.isConquestMode) {
+      console.log("[DEBUG] isConquestMode가 false라서 리턴");
+      return;
+    }
     
     this.conquestTetrisComplete = true;
+    console.log("[DEBUG] conquestTetrisComplete = true");
     
     // 테트리스 UI 정리
     this.tetrisGame.state.isPlaying = false;
@@ -720,23 +744,44 @@ export class GameManager {
     document.getElementById("game-ui").style.display = "none";
     this.showConquestTetrisUI();
     this.restoreNextBoxPosition();
+    console.log("[DEBUG] 테트리스 UI 정리 완료");
     
     // 미니 패널 제거
     const panel = document.getElementById("mini-defense-panel");
     if (panel) panel.remove();
+    console.log("[DEBUG] 미니 패널 제거됨");
     
     // 디펜스 화면 복구 및 재개
     this.defenseGame.canvas.style.display = "block";
     this.defenseGame.uiLayer.style.display = "block";
     this.defenseGame.resume(); // 디펜스 재개! (강화 페이지 진행을 위해)
+    console.log("[DEBUG] 디펜스 재개됨");
     
     // 터미널 복구
+    console.log("[DEBUG] 터미널 복구 시작");
+    console.log("[DEBUG] terminal 객체:", this.terminal);
+    console.log("[DEBUG] terminalLayer:", this.terminal.terminalLayer);
+    console.log("[DEBUG] terminalLayer display (before):", this.terminal.terminalLayer?.style?.display);
+    
     this.terminal.setTransparentMode(false);
+    console.log("[DEBUG] setTransparentMode(false) 완료");
+    
     this.terminal.show();
+    console.log("[DEBUG] terminal.show() 완료");
+    console.log("[DEBUG] terminalLayer display (after show):", this.terminal.terminalLayer?.style?.display);
+    
     this.terminal.setDefenseMode(true);
+    console.log("[DEBUG] setDefenseMode(true) 완료");
+    console.log("[DEBUG] terminalLayer display (after setDefenseMode):", this.terminal.terminalLayer?.style?.display);
+    console.log("[DEBUG] terminalLayer pointerEvents:", this.terminal.terminalLayer?.style?.pointerEvents);
+    console.log("[DEBUG] terminalLayer background:", this.terminal.terminalLayer?.style?.background);
+    console.log("[DEBUG] terminalLayer zIndex:", this.terminal.terminalLayer?.style?.zIndex);
+    
     this.terminal.printSystemMessage("FIREWALL BREACHED! Defend the core!");
+    console.log("[DEBUG] printSystemMessage 완료");
     
     // defenseMonitorLoop가 계속 돌면서 강화 페이지 완료 체크
+    console.log("[DEBUG] handleConquestTetrisClear 종료");
   }
   
   // 점령 완료
@@ -1727,7 +1772,6 @@ export class GameManager {
       }
     }
 
-    this.terminal.clear();
     await this.terminal.typeText("반갑다. 신입.", 50);
     await new Promise((r) => setTimeout(r, 800));
     await this.terminal.typeText("실전에 투입되기 전에 테스트를 거치겠다.", 40);
@@ -1810,7 +1854,6 @@ export class GameManager {
     document.getElementById("game-ui").style.display = "none";
     this.terminal.setTransparentMode(false);
     this.terminal.show();
-    this.terminal.clear();
 
     if (this.currentStage === 0) {
       // 튜토리얼 클리어
@@ -1884,14 +1927,12 @@ export class GameManager {
       document.getElementById("game-container").style.opacity = 1;
       document.getElementById("game-ui").style.display = "block";
       this.terminal.setTransparentMode(true);
-      this.terminal.clear();
 
       this.tetrisGame.startGame(targetLines, speed);
     }, 500);
   }
 
   startMiningStage() {
-    this.terminal.clear();
     this.terminal.printSystemMessage(
       `Injecting Payload... Batch ${this.currentStage}`
     );
@@ -1914,7 +1955,6 @@ export class GameManager {
       document.getElementById("game-container").style.opacity = 1;
       document.getElementById("game-ui").style.display = "block";
       this.terminal.setTransparentMode(true);
-      this.terminal.clear();
 
       this.tetrisGame.startGame(targetLines, speed);
     }, 1000);
@@ -1924,7 +1964,6 @@ export class GameManager {
     document.getElementById("game-ui").style.display = "none";
     this.terminal.setTransparentMode(false);
     this.terminal.show();
-    this.terminal.clear();
 
     const effects = this.perkManager.getEffects();
     const finalScore = Math.floor(score * effects.scoreMultiplier);
@@ -1958,8 +1997,12 @@ export class GameManager {
   }
 
   async handleBreachClear(lines) {
+      console.log("[DEBUG] handleBreachClear 호출됨, lines:", lines);
+      console.log("[DEBUG] isConquestMode:", this.isConquestMode);
+      
       // 점령 모드인 경우 별도 처리
       if (this.isConquestMode) {
+          console.log("[DEBUG] 점령 모드이므로 handleConquestTetrisClear 호출");
           this.handleConquestTetrisClear();
           return;
       }
@@ -1973,7 +2016,6 @@ export class GameManager {
       document.getElementById("game-ui").style.display = "none";
       this.terminal.setTransparentMode(false);
       this.terminal.show();
-      this.terminal.clear();
       
       await this.terminal.typeText("THREAT ELIMINATED.", 30);
       await this.terminal.typeText("Security Systems Restored.", 20);
@@ -2049,7 +2091,6 @@ export class GameManager {
       
       // 2. 터미널 연출
       this.terminal.setDefenseMode(false); 
-      this.terminal.clear();
       
       await this.terminal.typeText("!!! SYSTEM CONQUERED !!!", 30);
       await this.terminal.typeText(`Total Conquered: ${result.total}`, 20);
@@ -2068,7 +2109,6 @@ export class GameManager {
       
       // 4. 다시 디펜스 모드로 복귀 (다음 스테이지 느낌으로)
       this.terminal.setDefenseMode(true);
-      this.terminal.clear();
       this.terminal.printSystemMessage("ADVANCING TO NEXT SECTOR...");
       
       // 난이도 상승 등 추가 처리가 필요하다면 여기서
@@ -2077,7 +2117,6 @@ export class GameManager {
   async handleDefenseGameOver() {
     // 1. UI 연출 (붉은색 경고)
     this.terminal.setDefenseMode(false); // 다시 배경 어둡게
-    this.terminal.clear();
     
     // 붉은색 텍스트 스타일
     const errorStyle = "color: #ff3333; font-weight: bold; text-shadow: 0 0 10px #f00;";
