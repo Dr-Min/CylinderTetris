@@ -1,5 +1,5 @@
-// v7.5 - Fix pageDisplay undefined error
-const CACHE_NAME = "hacker-tetris-v7.5";
+// v7.6 - Fix debug panel pageDisplay error
+const CACHE_NAME = "hacker-tetris-v7.6";
 const ASSETS = [
   "./",
   "./index.html",

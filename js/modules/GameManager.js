@@ -347,11 +347,10 @@ export class GameManager {
       if (this.defenseGame && !this.defenseGame.isSafeZone) {
         const maxPages = this.defenseGame.maxPages || 12;
         this.defenseGame.currentPage = maxPages;
+        this.defenseGame.conquerReady = true;
         this.defenseGame.updateWaveDisplay();
-        // conquerBtn은 더 이상 사용하지 않음 (터미널에서 표시)
-        this.defenseGame.pageDisplay.innerText = "∞ READY";
-        this.defenseGame.pageDisplay.style.color = "#ff3333";
-        this.defenseGame.pageDisplay.style.borderColor = "#ff3333";
+        // 터미널에 PAGE 업데이트
+        this.terminal.updatePage("∞ READY", "#ff3333");
         this.terminal.printSystemMessage("[DEBUG] Skipped to MAX PAGE - CONQUER READY!");
         
         // 선택지 다시 표시 (점령 옵션 포함)
