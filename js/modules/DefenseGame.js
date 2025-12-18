@@ -148,22 +148,25 @@ export class DefenseGame {
     
     // 웨이브 관리
     this.waveTimer = 0;
-    this.spawnRate = 1.2; // 1.5 → 1.2 (더 빠른 적 생성)
+    this.spawnRate = 0.4; // 1.2 → 0.4 (스폰 수 3배 증가: 1.2 / 3)
     this.currentPage = 1; // 1 ~ 12
     this.pageTimer = 0;
     this.pageDuration = 25; // 페이지당 25초 (20 → 25, 더 오래 생존해야 함)
     
     // 스테이지 관리
     this.currentStage = 0; // 0 = 안전영역, 1+ = 일반 스테이지
+    this.currentStageId = 0; // 스테이지 ID (난이도 계산용)
+    this.stageDifficultyScale = 1.0; // 스테이지별 난이도 스케일
+    this.stageMaxPages = 12; // 스테이지 최대 페이지 수
     this.isSafeZone = true; // 안전영역 여부
-    this.safeZoneSpawnRate = 6; // 안전영역 적 생성 (8 → 6초)
+    this.safeZoneSpawnRate = 2; // 안전영역 적 생성 (6 → 2초, 스폰 수 3배)
     
     // 강화 페이지 모드 (점령 시)
     this.isReinforcementMode = false;
     this.reinforcementPage = 0;
     this.reinforcementMaxPages = 3;
     this.reinforcementComplete = false;
-    this.reinforcementSpawnRate = 0.8; // 1.2 → 0.8 (더 어렵게)
+    this.reinforcementSpawnRate = 0.27; // 0.8 → 0.27 (스폰 수 3배: 0.8 / 3)
     
     // 점령 상태 (영구)
     this.isConquered = false; // 이 스테이지가 점령되었는지
@@ -650,9 +653,9 @@ export class DefenseGame {
                 this.reinforcementPage++;
                 this.pageTimer = 0;
                 
-                // 강화 페이지별 스폰 레이트 (12페이지=0.4초 기준)
-                // 1페이지: 0.5초 (살짝 쉬움), 2페이지: 0.35초, 3페이지: 0.25초
-                const reinforcementSpawnRates = [0.5, 0.35, 0.25];
+                // 강화 페이지별 스폰 레이트 (스폰 수 3배: 1/3로 감소)
+                // 1페이지: 0.17초, 2페이지: 0.12초, 3페이지: 0.08초
+                const reinforcementSpawnRates = [0.17, 0.12, 0.08];
                 this.spawnRate = reinforcementSpawnRates[Math.min(this.reinforcementPage - 1, 2)];
                 
                 this.updateWaveDisplay();
@@ -674,8 +677,9 @@ export class DefenseGame {
             if (this.currentPage < maxPages) {
                 this.currentPage++;
                 this.pageTimer = 0;
-                // 난이도 스케일 적용 (더 빠르게 어려워짐)
-                this.spawnRate = Math.max(0.4, 1.2 - (this.currentPage * 0.12 * diffScale));
+                // 난이도 스케일 적용 (스폰 수 3배: 1/3로 감소)
+                // 최소값도 1/3로 조정: 0.4 → 0.13, 기본값도 1/3: 1.2 → 0.4
+                this.spawnRate = Math.max(0.13, 0.4 - (this.currentPage * 0.04 * diffScale));
                 this.updateWaveDisplay();
             } else if (!this.conquerReady) {
                 // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘)
@@ -977,7 +981,7 @@ export class DefenseGame {
       this.reinforcementMaxPages = maxPages;
       this.reinforcementComplete = false;
       this.pageTimer = 0;
-      this.spawnRate = 0.5; // 강화 1페이지: 12페이지(0.4초)보다 살짝 느림
+      this.spawnRate = 0.17; // 강화 1페이지: 스폰 수 3배 (0.5 / 3)
       this.updateWaveDisplay();
       debugLog("Defense", "Reinforcement Mode Started:", maxPages, "pages, SpawnRate:", this.spawnRate);
   }
@@ -989,7 +993,7 @@ export class DefenseGame {
       this.reinforcementComplete = false;
       this.currentPage = 1;
       this.pageTimer = 0;
-      this.spawnRate = 1.2; // 리셋 시 초기값
+      this.spawnRate = 0.4; // 리셋 시 초기값 (스폰 수 3배)
       
       // 실드 복구
       this.core.shieldRadius = 70;
@@ -1003,10 +1007,12 @@ export class DefenseGame {
   
   // 점령 상태로 설정
   setConqueredState(conquered) {
+      debugLog("DefenseGame", "setConqueredState 호출됨, conquered:", conquered, "현재 isConquered:", this.isConquered);
       this.isConquered = conquered;
       if (conquered) {
           // 점령 시작 시간 기록 (회전 애니메이션용)
           this.conqueredStartTime = Date.now() / 1000;
+          debugLog("DefenseGame", "점령 상태 활성화! conqueredStartTime:", this.conqueredStartTime);
           
           // 점령 시 적 스폰 중지, 실드 비활성화
           this.spawnRate = 9999; // 적 거의 안 나옴
@@ -1015,6 +1021,10 @@ export class DefenseGame {
           
           // 아군 바이러스 10마리 소환
           this.spawnConqueredAllies(10);
+      } else {
+          debugLog("DefenseGame", "점령 상태 비활성화");
+          this.conqueredStartTime = null; // 리셋
+          this.conqueredDebugFrame = 0; // 디버그 프레임 카운터 리셋
       }
       this.updateWaveDisplay();
   }
@@ -1091,29 +1101,67 @@ export class DefenseGame {
       // 점령 시작 시간 기준 상대적 시간 (없으면 현재 시간 사용)
       if (!this.conqueredStartTime) {
           this.conqueredStartTime = Date.now() / 1000;
+          debugLog("ConqueredVisuals", "conqueredStartTime 초기화:", this.conqueredStartTime);
       }
       const elapsed = (Date.now() / 1000) - this.conqueredStartTime;
       
-      // 철컥철컥 회전 패턴: 90° → 90° → 180° → 루프
-      // 시간 배분: 0.5초, 0.5초, 1.0초 = 총 2초에 360° 회전
-      const cycleTime = elapsed % 2.0;
-      const fullCycles = Math.floor(elapsed / 2.0); // 완료된 사이클 수
+      // 철컥철컥 회전 패턴: 90° 이동 → 0.5초 쉼 → 90° 이동 → 0.5초 쉼 → 180° 이동 → 0.5초 쉼
+      // 회전은 부드럽게, 그 후 정지
+      const ROTATION_TIME = 0.8; // 회전 시간 (느리게)
+      const PAUSE_TIME = 0.5; // 쉼 시간
+      const CYCLE_DURATION = ROTATION_TIME * 3 + PAUSE_TIME * 3; // 총 사이클 시간
       
-      let stepAngle;
-      if (cycleTime < 0.5) {
-          // 0~0.5초: 0° (첫 번째 위치)
-          stepAngle = 0;
-      } else if (cycleTime < 1.0) {
-          // 0.5~1.0초: 90° (철컥)
-          stepAngle = Math.PI / 2;
+      const cycleTime = elapsed % CYCLE_DURATION;
+      const fullCycles = Math.floor(elapsed / CYCLE_DURATION); // 완료된 사이클 수
+      
+      // 각 단계별 목표 각도
+      // Easing 함수: 부드러운 가속/감속
+      const easeInOut = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      
+      let targetAngle;
+      
+      if (cycleTime < ROTATION_TIME) {
+          // 첫 번째 회전: 0° → 90° (부드럽게 회전)
+          const progress = easeInOut(cycleTime / ROTATION_TIME);
+          targetAngle = progress * (Math.PI / 2);
+      } else if (cycleTime < ROTATION_TIME + PAUSE_TIME) {
+          // 첫 번째 쉼: 90° (정지)
+          targetAngle = Math.PI / 2;
+      } else if (cycleTime < ROTATION_TIME * 2 + PAUSE_TIME) {
+          // 두 번째 회전: 90° → 180° (부드럽게 회전)
+          const localTime = cycleTime - (ROTATION_TIME + PAUSE_TIME);
+          const progress = easeInOut(localTime / ROTATION_TIME);
+          targetAngle = Math.PI / 2 + progress * (Math.PI / 2);
+      } else if (cycleTime < ROTATION_TIME * 2 + PAUSE_TIME * 2) {
+          // 두 번째 쉼: 180° (정지)
+          targetAngle = Math.PI;
+      } else if (cycleTime < ROTATION_TIME * 3 + PAUSE_TIME * 2) {
+          // 세 번째 회전: 180° → 360° (부드럽게 회전)
+          const localTime = cycleTime - (ROTATION_TIME * 2 + PAUSE_TIME * 2);
+          const progress = easeInOut(localTime / ROTATION_TIME);
+          targetAngle = Math.PI + progress * Math.PI;
       } else {
-          // 1.0~2.0초: 270° (180° 점프, 철컥~)
-          stepAngle = Math.PI * 1.5;
+          // 세 번째 쉼: 360° (정지, 다음 사이클 시작)
+          targetAngle = Math.PI * 2;
       }
       
       // 누적 각도 (계속 돌아감)
       const baseAngle = fullCycles * Math.PI * 2;
-      const rotationAngle = baseAngle + stepAngle;
+      const rotationAngle = baseAngle + targetAngle;
+      
+      // 디버그 로그 (매 60프레임마다, 약 1초마다)
+      if (!this.conqueredDebugFrame) this.conqueredDebugFrame = 0;
+      this.conqueredDebugFrame++;
+      if (this.conqueredDebugFrame % 60 === 0) {
+          debugLog("ConqueredVisuals", 
+              `elapsed: ${elapsed.toFixed(2)}s, ` +
+              `cycleTime: ${cycleTime.toFixed(2)}s, ` +
+              `fullCycles: ${fullCycles}, ` +
+              `targetAngle: ${(targetAngle * 180 / Math.PI).toFixed(1)}°, ` +
+              `baseAngle: ${(baseAngle * 180 / Math.PI).toFixed(1)}°, ` +
+              `rotationAngle: ${(rotationAngle * 180 / Math.PI).toFixed(1)}°`
+          );
+      }
       
       // 1. 별 모양 방어막 (두 사각형이 반대 방향으로 회전)
       ctx.save();
@@ -1129,11 +1177,20 @@ export class DefenseGame {
       
       // 사각형 2: 반시계방향 회전 + 45도 기본 오프셋 (별 모양)
       ctx.save();
-      ctx.rotate(Math.PI / 4 - rotationAngle); // 역방향
+      const reverseAngle = Math.PI / 4 - rotationAngle; // 역방향
+      ctx.rotate(reverseAngle);
       ctx.strokeStyle = `rgba(0, 200, 255, 0.6)`;
       ctx.lineWidth = 2;
       ctx.strokeRect(-size/2, -size/2, size, size);
       ctx.restore();
+      
+      // 디버그: 회전 각도 확인 (매 프레임마다, 하지만 로그는 60프레임마다)
+      if (this.conqueredDebugFrame % 60 === 0) {
+          debugLog("ConqueredVisuals", 
+              `사각형1 회전: ${(rotationAngle * 180 / Math.PI).toFixed(1)}°, ` +
+              `사각형2 회전: ${(reverseAngle * 180 / Math.PI).toFixed(1)}°`
+          );
+      }
       
       ctx.restore();
       
@@ -1153,8 +1210,8 @@ export class DefenseGame {
       ctx.fillStyle = "#00ff00";
       ctx.beginPath();
       ctx.moveTo(0, -40);
-      ctx.lineTo(20 + Math.sin(time * 3) * 3, -35);
-      ctx.lineTo(20 + Math.sin(time * 3 + 1) * 3, -25);
+      ctx.lineTo(20 + Math.sin(elapsed * 3) * 3, -35);
+      ctx.lineTo(20 + Math.sin(elapsed * 3 + 1) * 3, -25);
       ctx.lineTo(0, -20);
       ctx.closePath();
       ctx.fill();
@@ -1180,7 +1237,15 @@ export class DefenseGame {
 
     // 점령 상태 시각화 (깃발 + 별 모양 방어막)
     if (this.isConquered) {
+        // 디버그: 점령 상태 확인 (처음 한 번만)
+        if (!this.conqueredRenderLogged) {
+            debugLog("DefenseGame", "점령 상태 렌더링 시작, isConquered:", this.isConquered, "conqueredStartTime:", this.conqueredStartTime);
+            this.conqueredRenderLogged = true;
+        }
         this.renderConqueredVisuals();
+    } else {
+        // 점령 상태가 아니면 로그 플래그 리셋
+        this.conqueredRenderLogged = false;
     }
 
     // 0. 배리어 그리기 (부드러운 전환 효과) - 점령 상태가 아닐 때만
@@ -1397,21 +1462,26 @@ export class DefenseGame {
     const ex = this.core.x + Math.cos(angle) * distance;
     const ey = this.core.y + Math.sin(angle) * distance;
     
-    // 난이도 스케일 계산
+    // 난이도 스케일 계산 (스테이지 기반 동적 계산)
     let difficultyScale;
+    
+    // 기본 스탯
     const baseSpeed = 60 + Math.random() * 40; // 60~100
-    const baseHp = 35;
+    const baseHp = 10; // 35 → 10 (스폰 수 3배 증가에 맞춰 체력 감소)
     
     if (this.isReinforcementMode) {
-        // 강화 페이지: 12페이지 기준으로 스케일링
-        // 1페이지: 2.0 (12페이지=2.1보다 살짝 낮음)
-        // 2페이지: 2.3 (12페이지보다 높음)
-        // 3페이지: 2.6 (더 높음)
-        const reinforcementScales = [2.0, 2.3, 2.6];
-        difficultyScale = reinforcementScales[Math.min(this.reinforcementPage, 2)];
+        // 강화 페이지: 스테이지 기반 + 페이지별 증가
+        // 스테이지 기본 난이도 + 강화 페이지 보너스
+        const stageBase = this.calculateStageBaseDifficulty();
+        const reinforcementBonus = 0.5 + (this.reinforcementPage - 1) * 0.3; // 0.5, 0.8, 1.1
+        difficultyScale = stageBase + reinforcementBonus;
     } else {
-        // 일반 페이지: 페이지당 10% 증가 (page 12 = 2.1)
-        difficultyScale = 1 + (this.currentPage - 1) * 0.1;
+        // 일반 페이지: 스테이지 기본 난이도 + 페이지별 증가
+        const stageBase = this.calculateStageBaseDifficulty();
+        const pageProgress = (this.currentPage - 1) / (this.stageMaxPages - 1); // 0~1 (첫 페이지부터 마지막 페이지까지)
+        // stageDifficultyScale: 페이지당 난이도 증가폭 (예: 1.5 = 페이지가 진행될수록 1.5배씩 증가)
+        const pageMultiplier = pageProgress * (this.stageDifficultyScale * stageBase * 0.5); // 스테이지별 증가폭 적용
+        difficultyScale = stageBase + pageMultiplier;
     }
 
     this.enemies.push({
@@ -1423,6 +1493,31 @@ export class DefenseGame {
       maxHp: Math.floor(baseHp * difficultyScale),
       damage: 10
     });
+  }
+  
+  // 스테이지 기본 난이도 계산 (스테이지 ID + difficultyScale 기반)
+  calculateStageBaseDifficulty() {
+    // 스테이지 ID가 높을수록 기본 난이도 증가
+    // Safe Zone (0): 0.5
+    // 초반 스테이지 (1-2): 1.0
+    // 중반 스테이지 (3-4): 1.5
+    // 후반 스테이지 (5-6): 2.0
+    
+    let baseDifficulty;
+    if (this.currentStageId === 0) {
+        baseDifficulty = 0.5; // Safe Zone
+    } else if (this.currentStageId <= 2) {
+        baseDifficulty = 1.0; // 초반
+    } else if (this.currentStageId <= 4) {
+        baseDifficulty = 1.5; // 중반
+    } else {
+        baseDifficulty = 2.0; // 후반 (Boss 포함)
+    }
+    
+    // StageManager의 difficultyScale 적용 (페이지당 증가폭 조정)
+    // difficultyScale이 높을수록 페이지 진행에 따른 난이도 증가가 빠름
+    // 하지만 기본 난이도는 스테이지 ID 기반으로 유지
+    return baseDifficulty;
   }
 
   fireProjectile(target) {

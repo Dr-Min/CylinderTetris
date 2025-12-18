@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>아이콘 생성기</title>
+</head>
+<body>
+    <h1>PWA 아이콘 생성기</h1>
+    <button onclick="generateIcons()">아이콘 생성</button>
+    <div id="result"></div>
+
+    <script>
+        function generateIcons() {
+            const sizes = [192, 512];
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '';
+
+            sizes.forEach(size => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+
+                // 배경 (검은색)
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, size, size);
+
+                // 네온 그린 테두리
+                ctx.strokeStyle = '#33ff00';
+                ctx.lineWidth = size * 0.05;
+                ctx.strokeRect(size * 0.1, size * 0.1, size * 0.8, size * 0.8);
+
+                // 중앙에 "H" 문자 (해커 테마)
+                ctx.fillStyle = '#33ff00';
+                ctx.font = `bold ${size * 0.4}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = '#33ff00';
+                ctx.shadowBlur = size * 0.1;
+                ctx.fillText('H', size / 2, size / 2);
+
+                // 다운로드
+                canvas.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `icon-${size}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    resultDiv.innerHTML += `<p>✅ icon-${size}.png 생성 완료!</p>`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>
+

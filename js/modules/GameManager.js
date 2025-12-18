@@ -1266,6 +1266,11 @@ export class GameManager {
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate;
     this.defenseGame.spawnRate = stage.spawnRate;
     
+    // 스테이지 정보 저장 (난이도 계산용)
+    this.defenseGame.currentStageId = stage.id;
+    this.defenseGame.stageDifficultyScale = stage.difficultyScale || 1.0;
+    this.defenseGame.stageMaxPages = stage.maxPages || 12;
+    
     // 강화 모드 리셋 (스테이지 이동 시 항상 초기화)
     this.defenseGame.isReinforcementMode = false;
     this.defenseGame.reinforcementPage = 0;
@@ -1289,7 +1294,6 @@ export class GameManager {
         this.defenseGame.currentPage = 1;
         this.defenseGame.pageTimer = 0;
         this.defenseGame.maxPages = stage.maxPages || 12;
-        this.defenseGame.difficultyScale = stage.difficultyScale || 1.0;
       }
     }
     

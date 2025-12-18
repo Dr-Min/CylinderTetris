@@ -13,7 +13,7 @@ export class StageManager {
                 position: { row: 4, col: 1 }, // 맨 아래 중앙
                 connections: [1, 2], // 연결된 스테이지
                 enemyTypes: ["basic"],
-                spawnRate: 8,
+                spawnRate: 2.67, // 스폰 수 3배 증가 (8 / 3)
                 hasPages: false,
                 description: "Home Base - Your starting point"
             },
@@ -25,7 +25,7 @@ export class StageManager {
                 position: { row: 3, col: 0 }, // 하단 좌측
                 connections: [0, 3], // Safe Zone, Farming Zone
                 enemyTypes: ["basic", "fast"],
-                spawnRate: 1.2, // 더 빠른 스폰
+                spawnRate: 0.4, // 스폰 수 3배 증가 (1.2 / 3)
                 hasPages: true,
                 maxPages: 5, // 초반 지역: 5페이지
                 difficultyScale: 1.5, // 페이지당 난이도 증가폭 1.5배
@@ -39,7 +39,7 @@ export class StageManager {
                 position: { row: 3, col: 2 }, // 하단 우측
                 connections: [0, 3], // Safe Zone, Farming Zone
                 enemyTypes: ["basic", "tank"],
-                spawnRate: 1.2, // 더 빠른 스폰
+                spawnRate: 0.4, // 스폰 수 3배 증가 (1.2 / 3)
                 hasPages: true,
                 maxPages: 5, // 초반 지역: 5페이지
                 difficultyScale: 1.5, // 페이지당 난이도 증가폭 1.5배
@@ -53,7 +53,7 @@ export class StageManager {
                 position: { row: 2, col: 1 }, // 중앙
                 connections: [1, 2, 4, 5],
                 enemyTypes: ["basic", "fast", "tank"],
-                spawnRate: 1.0,
+                spawnRate: 0.33, // 스폰 수 3배 증가 (1.0 / 3)
                 hasPages: false, // 페이지 없이 무한 파밍
                 description: "Neutral Zone - High resource yield"
             },
@@ -65,7 +65,7 @@ export class StageManager {
                 position: { row: 1, col: 0 }, // 상단 좌측
                 connections: [3, 6], // Farming Zone, Boss
                 enemyTypes: ["fast", "tank", "elite"],
-                spawnRate: 1.0,
+                spawnRate: 0.33, // 스폰 수 3배 증가 (1.0 / 3)
                 hasPages: true,
                 maxPages: 12, // 상위 지역: 12페이지
                 difficultyScale: 1.0, // 기본 난이도 증가
@@ -79,7 +79,7 @@ export class StageManager {
                 position: { row: 1, col: 2 }, // 상단 우측
                 connections: [3, 6], // Farming Zone, Boss
                 enemyTypes: ["fast", "tank", "elite"],
-                spawnRate: 1.0,
+                spawnRate: 0.33, // 스폰 수 3배 증가 (1.0 / 3)
                 hasPages: true,
                 maxPages: 12, // 상위 지역: 12페이지
                 difficultyScale: 1.0, // 기본 난이도 증가
@@ -93,7 +93,7 @@ export class StageManager {
                 position: { row: 0, col: 1 }, // 맨 위 중앙
                 connections: [4, 5],
                 enemyTypes: ["elite", "boss"],
-                spawnRate: 0.5,
+                spawnRate: 0.17, // 스폰 수 3배 증가 (0.5 / 3)
                 hasPages: true,
                 maxPages: 15, // 보스: 15페이지
                 difficultyScale: 0.8, // 느린 증가 (긴 전투)
