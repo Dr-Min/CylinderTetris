@@ -1005,6 +1005,9 @@ export class DefenseGame {
   setConqueredState(conquered) {
       this.isConquered = conquered;
       if (conquered) {
+          // 점령 시작 시간 기록 (회전 애니메이션용)
+          this.conqueredStartTime = Date.now() / 1000;
+          
           // 점령 시 적 스폰 중지, 실드 비활성화
           this.spawnRate = 9999; // 적 거의 안 나옴
           this.core.shieldActive = false;
@@ -1084,12 +1087,17 @@ export class DefenseGame {
       const x = this.core.x;
       const y = this.core.y;
       const size = 80; // 방어막 크기
-      const time = Date.now() / 1000;
+      
+      // 점령 시작 시간 기준 상대적 시간 (없으면 현재 시간 사용)
+      if (!this.conqueredStartTime) {
+          this.conqueredStartTime = Date.now() / 1000;
+      }
+      const elapsed = (Date.now() / 1000) - this.conqueredStartTime;
       
       // 철컥철컥 회전 패턴: 90° → 90° → 180° → 루프
       // 시간 배분: 0.5초, 0.5초, 1.0초 = 총 2초에 360° 회전
-      const cycleTime = time % 2.0;
-      const fullCycles = Math.floor(time / 2.0); // 완료된 사이클 수
+      const cycleTime = elapsed % 2.0;
+      const fullCycles = Math.floor(elapsed / 2.0); // 완료된 사이클 수
       
       let stepAngle;
       if (cycleTime < 0.5) {
