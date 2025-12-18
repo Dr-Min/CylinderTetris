@@ -13,6 +13,9 @@ export class DefenseGame {
     this.canvas.style.zIndex = "50"; // 터미널(100)보다 아래, game-container(0)보다 위
     document.body.appendChild(this.canvas); // [수정] body에 직접 부착
 
+    // 갓모드 (디버그용 무적)
+    this.isGodMode = false;
+    
     // 코어 설정 (가장 먼저 초기화)
     this.core = {
       x: 0,
@@ -27,7 +30,12 @@ export class DefenseGame {
       shieldMaxHp: 100,
       shieldRadius: 70,
       shieldTimer: 0,
-      scale: 1 // 원근감 애니메이션용
+      scale: 1, // 원근감 애니메이션용
+      // 발사 시 시각적 움직임용
+      visualOffsetX: 0,
+      visualOffsetY: 0,
+      targetOffsetX: 0,
+      targetOffsetY: 0
     };
     
     // 실드 시각 효과용 보간 변수 (부드러운 전환)
@@ -132,7 +140,7 @@ export class DefenseGame {
     this.isRunning = false;
     this.lastTime = 0;
     
-    // 포탑 설정 (강화됨)
+    // 포탑 설정 (수동 발사용 - 자동 발사는 조력자가 담당)
     this.turret = {
       angle: 0,
       range: 300,      // 사거리 증가 (200 -> 300)
@@ -141,10 +149,28 @@ export class DefenseGame {
       damage: 10
     };
     
+    // 조력자 (Helper) - 배리어 내부에서 자동 공격
+    this.helper = {
+      x: 0,
+      y: 0,
+      radius: 8,
+      color: "#ffff00", // 노란색으로 구별
+      speed: 40, // 이동 속도 (80 → 40, 천천히)
+      fireRate: 4.0, // 초당 4발 (기존 터렛과 동일)
+      lastFireTime: 0,
+      range: 300, // 사거리
+      damage: 10,
+      angle: 0, // 현재 바라보는 방향
+      evadeDistance: 50, // 적과 이 거리 이내면 회피 (40 → 50)
+      targetX: 0, // 목표 위치
+      targetY: 0
+    };
+    
     this.enemies = [];
     this.projectiles = [];
     this.particles = [];
-    this.alliedViruses = []; // 아군 바이러스 (시각적 요소)
+    this.alliedViruses = []; // 아군 바이러스 (배리어 밖)
+    this.shockwaves = []; // 파동 효과
     
     // 웨이브 관리
     this.waveTimer = 0;
@@ -333,73 +359,203 @@ export class DefenseGame {
   }
 
   handleConquerClick() {
-      // 1. 실드 파괴 연출
-      this.playShieldBreakAnimation();
-      
-      // 2. 실드 상태 변경 (점령 중에는 사용 불가)
-      this.core.shieldActive = false;
-      this.core.shieldState = "DISABLED"; // 점령 중 비활성화
-      this.core.shieldHp = 0;
-      this.updateShieldBtnUI("DISABLED", "#555");
-      this.shieldBtn.style.pointerEvents = "none"; // 클릭 불가
-      
-      // 3. 점령 콜백 호출
-      if (this.onConquer) this.onConquer();
+      // 점령 버튼 숨기기
       this.conquerBtn.style.display = "none";
       
-      // 다음 페이지로 리셋은 GameManager가 처리
-      this.currentPage = 1;
-      this.updateWaveDisplay();
+      // 실드 파괴 연출 시작 (2초 후 콜백)
+      this.playConquestShieldBreak(() => {
+          // 연출 완료 후 실드 상태 변경
+          this.core.shieldActive = false;
+          this.core.shieldState = "DISABLED";
+          this.core.shieldHp = 0;
+          this.updateShieldBtnUI("DISABLED", "#555");
+          this.shieldBtn.style.pointerEvents = "none";
+          
+          // 점령 콜백 호출 (GameManager가 테트리스 시작)
+          if (this.onConquer) this.onConquer();
+          
+          // 페이지 리셋
+          this.currentPage = 1;
+          this.updateWaveDisplay();
+      });
   }
   
-  // 실드 파괴 애니메이션
-  playShieldBreakAnimation() {
-      // 파괴 파티클 (원형으로 퍼짐)
-      const segments = 16;
-      for (let i = 0; i < segments; i++) {
-          const angle = (Math.PI * 2 / segments) * i;
-          const startX = this.core.x + Math.cos(angle) * this.core.shieldRadius;
-          const startY = this.core.y + Math.sin(angle) * this.core.shieldRadius;
-          
-          // 파편 파티클
-          for (let j = 0; j < 3; j++) {
-              this.particles.push({
-                  x: startX,
-                  y: startY,
-                  vx: Math.cos(angle) * (50 + Math.random() * 50),
-                  vy: Math.sin(angle) * (50 + Math.random() * 50),
-                  life: 1.0,
-                  maxLife: 1.0,
-                  alpha: 1,
-                  color: "#00f0ff",
-                  size: 3 + Math.random() * 3
-              });
-          }
-      }
-      
-      // 중앙 플래시
-      this.flashScreen("#ff0000", 0.3);
-      this.shakeScreen(20);
-      
-      // 실드 반경 축소 애니메이션
+  // 점령용 실드 파괴 연출 (2단계, 총 2초)
+  playConquestShieldBreak(onComplete) {
       const originalRadius = this.core.shieldRadius;
-      const duration = 500;
       const startTime = performance.now();
+      const totalDuration = 2000; // 2초
+      const phase1Duration = 800; // 1단계: 0.8초
       
-      const animateShrink = (now) => {
+      // 점령 연출 중 플래그
+      this.isConquestBreaking = true;
+      
+      const animate = (now) => {
           const elapsed = now - startTime;
-          const progress = Math.min(elapsed / duration, 1);
           
-          this.core.shieldRadius = originalRadius * (1 - progress);
+          // === 1단계: 금이 가며 살짝 부서짐 (0 ~ 0.8초) ===
+          if (elapsed < phase1Duration) {
+              const progress = elapsed / phase1Duration;
+              
+              // 실드 떨림 효과
+              if (Math.random() < 0.3) {
+                  this.shakeScreen(5 + progress * 10);
+              }
+              
+              // 금이 가는 파티클 (조금씩)
+              if (Math.random() < 0.15) {
+                  const angle = Math.random() * Math.PI * 2;
+                  const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
+                  const y = this.core.y + Math.sin(angle) * this.core.shieldRadius;
+                  
+                  this.particles.push({
+                      x, y,
+                      vx: Math.cos(angle) * (20 + Math.random() * 30),
+                      vy: Math.sin(angle) * (20 + Math.random() * 30),
+                      life: 0.8,
+                      maxLife: 0.8,
+                      alpha: 1,
+                      color: "#00f0ff",
+                      size: 2 + Math.random() * 2,
+                      char: "░▒▓"[Math.floor(Math.random() * 3)]
+                  });
+              }
+              
+              // 1단계 끝에서 첫 번째 충격
+              if (elapsed > phase1Duration - 100 && !this._phase1Flash) {
+                  this._phase1Flash = true;
+                  this.flashScreen("#00ffff", 0.4);
+                  this.shakeScreen(15);
+                  
+                  // 실드 금 파티클 대량 생성
+                  for (let i = 0; i < 20; i++) {
+                      const angle = Math.random() * Math.PI * 2;
+                      const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
+                      const y = this.core.y + Math.sin(angle) * this.core.shieldRadius;
+                      
+                      this.particles.push({
+                          x, y,
+                          vx: Math.cos(angle) * (30 + Math.random() * 40),
+                          vy: Math.sin(angle) * (30 + Math.random() * 40),
+                          life: 1.0,
+                          maxLife: 1.0,
+                          alpha: 1,
+                          color: "#00f0ff",
+                          size: 3 + Math.random() * 3,
+                          char: "▓█▄▀"[Math.floor(Math.random() * 4)]
+                      });
+                  }
+              }
+              
+              requestAnimationFrame(animate);
+              return;
+          }
           
-          if (progress < 1) {
-              requestAnimationFrame(animateShrink);
+          // === 2단계: 완전 박살 + 파동 발사 (0.8초 ~ 2초) ===
+          if (!this._phase2Started) {
+              this._phase2Started = true;
+              
+              // 강력한 플래시 + 흔들림
+              this.flashScreen("#ffffff", 0.6);
+              this.shakeScreen(30);
+              
+              // 실드 조각 대량 생성 (바깥으로 날아감)
+              const segments = 24;
+              for (let i = 0; i < segments; i++) {
+                  const angle = (Math.PI * 2 / segments) * i;
+                  const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
+                  const y = this.core.y + Math.sin(angle) * this.core.shieldRadius;
+                  
+                  // 큰 조각들
+                  for (let j = 0; j < 4; j++) {
+                      const spreadAngle = angle + (Math.random() - 0.5) * 0.5;
+                      this.particles.push({
+                          x, y,
+                          vx: Math.cos(spreadAngle) * (80 + Math.random() * 120),
+                          vy: Math.sin(spreadAngle) * (80 + Math.random() * 120),
+                          life: 1.5,
+                          maxLife: 1.5,
+                          alpha: 1,
+                          color: Math.random() > 0.5 ? "#00f0ff" : "#ffffff",
+                          size: 4 + Math.random() * 6,
+                          char: "█▓▒░■□▪▫"[Math.floor(Math.random() * 8)]
+                      });
+                  }
+              }
+              
+              // 파동 생성 (캔버스 전체로 퍼짐)
+              this.shockwaves.push({
+                  x: this.core.x,
+                  y: this.core.y,
+                  radius: this.core.shieldRadius,
+                  maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.5,
+                  speed: 400, // 픽셀/초
+                  alpha: 0.8,
+                  color: "#00f0ff",
+                  lineWidth: 6,
+                  damageDealt: false // 데미지는 한번만
+              });
+              
+              // 적에게 넉백 + 슬로우 + 데미지 적용
+              this.applyShockwaveEffects();
+          }
+          
+          // 실드 반경 축소
+          const phase2Progress = (elapsed - phase1Duration) / (totalDuration - phase1Duration);
+          this.core.shieldRadius = originalRadius * (1 - phase2Progress);
+          
+          if (elapsed < totalDuration) {
+              requestAnimationFrame(animate);
           } else {
+              // 연출 완료
               this.core.shieldRadius = 0;
+              this.isConquestBreaking = false;
+              this._phase1Flash = false;
+              this._phase2Started = false;
+              
+              if (onComplete) onComplete();
           }
       };
       
-      requestAnimationFrame(animateShrink);
+      requestAnimationFrame(animate);
+  }
+  
+  // 파동 효과: 넉백 + 슬로우 + 데미지
+  applyShockwaveEffects() {
+      const knockbackDist = 30;
+      const slowDuration = 2000; // 2초
+      const damage = 25; // 고정 데미지
+      
+      this.enemies.forEach(enemy => {
+          // 넉백 (코어 반대 방향으로)
+          const dx = enemy.x - this.core.x;
+          const dy = enemy.y - this.core.y;
+          const dist = Math.hypot(dx, dy);
+          
+          if (dist > 0) {
+              enemy.x += (dx / dist) * knockbackDist;
+              enemy.y += (dy / dist) * knockbackDist;
+          }
+          
+          // 슬로우 효과
+          enemy.slowMultiplier = 0.3; // 70% 감속
+          enemy.slowEndTime = performance.now() + slowDuration;
+          
+          // 데미지
+          enemy.hp -= damage;
+          this.createExplosion(enemy.x, enemy.y, "#00f0ff", 5);
+          
+          // 적 처치 확인
+          if (enemy.hp <= 0) {
+              this.createExplosion(enemy.x, enemy.y, "#00ff00", 10);
+              const gain = 10;
+              this.currentData += gain;
+              this.updateResourceDisplay(this.currentData);
+          }
+      });
+      
+      // 죽은 적 제거
+      this.enemies = this.enemies.filter(e => e.hp > 0);
   }
 
   toggleShield() {
@@ -573,6 +729,18 @@ export class DefenseGame {
     
     // 🛡️ 상태 유효성 검증 (모바일 메모리 이슈 방어)
     this.validateGameState();
+    
+    // 코어 시각적 오프셋 업데이트 (발사 후 부드럽게 원위치로)
+    const core = this.core;
+    // 목표 오프셋으로 부드럽게 이동
+    core.visualOffsetX += (core.targetOffsetX - core.visualOffsetX) * dt * 15;
+    core.visualOffsetY += (core.targetOffsetY - core.visualOffsetY) * dt * 15;
+    // 목표 오프셋은 천천히 0으로 (발사 후 원위치로 돌아옴)
+    core.targetOffsetX *= Math.pow(0.05, dt);
+    core.targetOffsetY *= Math.pow(0.05, dt);
+    // 작은 값은 0으로 클램프
+    if (Math.abs(core.targetOffsetX) < 0.1) core.targetOffsetX = 0;
+    if (Math.abs(core.targetOffsetY) < 0.1) core.targetOffsetY = 0;
 
     // 0. 쉴드 상태 업데이트
     if (this.core.shieldState === "CHARGING") {
@@ -670,7 +838,7 @@ export class DefenseGame {
     // 일반 페이지 모드
     else if (!this.isSafeZone && this.currentPage <= (this.maxPages || 12)) {
         const maxPages = this.maxPages || 12;
-        const diffScale = this.difficultyScale || 1.0;
+        const diffScale = this.stageDifficultyScale || 1.0;
         
         this.pageTimer += dt;
         if (this.pageTimer >= this.pageDuration) {
@@ -761,15 +929,15 @@ export class DefenseGame {
                 v.y += (dy / dist) * moveSpeed;
             }
         } else {
-            // 적이 없으면 코어 주변 순찰 (회전)
-            v.angle += dt * 0.8;
-            const patrolRadius = 50;
+            // 적이 없으면 배리어 밖에서 순찰 (회전)
+            v.angle += dt * 0.5; // 느리게 회전
+            const patrolRadius = 95; // 배리어(70) 밖에서 순찰
             const targetX = this.core.x + Math.cos(v.angle) * patrolRadius;
             const targetY = this.core.y + Math.sin(v.angle) * patrolRadius;
             
             // 부드럽게 이동
-            v.x += (targetX - v.x) * dt * 3;
-            v.y += (targetY - v.y) * dt * 3;
+            v.x += (targetX - v.x) * dt * 2;
+            v.y += (targetY - v.y) * dt * 2;
         }
     }
 
@@ -814,11 +982,14 @@ export class DefenseGame {
 
         // 코어 충돌 체크 (쉴드 없거나 뚫림)
         if (dist < this.core.radius + enemy.radius) {
-            this.core.hp -= enemy.damage;
+            // 갓모드가 아닐 때만 데미지
+            if (!this.isGodMode) {
+              this.core.hp -= enemy.damage;
+            }
             this.createExplosion(enemy.x, enemy.y, "#ff0000", 20);
             this.enemies.splice(i, 1);
             
-            if (this.core.hp <= 0) {
+            if (this.core.hp <= 0 && !this.isGodMode) {
               this.core.hp = 0;
               this.createExplosion(this.core.x, this.core.y, "#ff0000", 50);
               this.stop();
@@ -827,14 +998,15 @@ export class DefenseGame {
             continue;
         }
 
-        // 이동 적용
+        // 이동 적용 (슬로우 효과 반영)
         if (dist > 0) {
-            enemy.x += (dx / dist) * enemy.speed * dt;
-            enemy.y += (dy / dist) * enemy.speed * dt;
+            const slowMult = enemy.slowMultiplier || 1;
+            enemy.x += (dx / dist) * enemy.speed * slowMult * dt;
+            enemy.y += (dy / dist) * enemy.speed * slowMult * dt;
         }
     }
 
-    // 3. 포탑 로직
+    // 3. 포탑 로직 (수동 발사만 - 자동 발사는 조력자가 담당)
     let nearestEnemy = null;
     let minDist = Infinity;
 
@@ -847,19 +1019,19 @@ export class DefenseGame {
     });
 
     if (nearestEnemy) {
+      // 포탑이 적을 향하도록 회전 (발사는 수동으로만)
       const dx = nearestEnemy.x - this.core.x;
       const dy = nearestEnemy.y - this.core.y;
       this.turret.angle = Math.atan2(dy, dx);
-
-      if (now - this.turret.lastFireTime > (1 / this.turret.fireRate)) {
-        this.fireProjectile(nearestEnemy);
-        this.turret.lastFireTime = now;
-      }
+      // 자동 발사 제거 - 수동 발사만 (fireAtPosition에서 처리)
     } else {
         // 적이 없을 때 포탑 자동 회전 (시계방향)
         this.turret.angle += dt * this.idleTurretSpeed;
         this.idleTurretAngle = this.turret.angle; // 동기화
     }
+    
+    // 3.5 조력자(Helper) 로직 - 자동 공격 + 회피
+    this.updateHelper(dt, now);
 
     // 4. 발사체 이동
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -900,8 +1072,14 @@ export class DefenseGame {
         }
       } else {
         // 직선탄 (타겟 없이 방향으로 발사)
-        p.x += Math.cos(p.angle) * p.speed * dt;
-        p.y += Math.sin(p.angle) * p.speed * dt;
+        // vx, vy가 있으면 사용 (조력자 발사체), 없으면 angle, speed 사용 (코어 발사체)
+        if (p.vx !== undefined && p.vy !== undefined) {
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+        } else {
+          p.x += Math.cos(p.angle) * p.speed * dt;
+          p.y += Math.sin(p.angle) * p.speed * dt;
+        }
         
         // 직선탄도 적과 충돌 검사
         for (let j = this.enemies.length - 1; j >= 0; j--) {
@@ -941,6 +1119,27 @@ export class DefenseGame {
         
         if (p.life <= 0) this.particles.splice(i, 1);
     }
+    
+    // 6. 파동 효과 업데이트
+    for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+        const wave = this.shockwaves[i];
+        wave.radius += wave.speed * dt;
+        wave.alpha = Math.max(0, 0.8 * (1 - wave.radius / wave.maxRadius));
+        wave.lineWidth = Math.max(1, 6 * (1 - wave.radius / wave.maxRadius));
+        
+        if (wave.radius >= wave.maxRadius) {
+            this.shockwaves.splice(i, 1);
+        }
+    }
+    
+    // 7. 적 슬로우 효과 해제 체크
+    const nowMs = performance.now();
+    this.enemies.forEach(enemy => {
+        if (enemy.slowEndTime && nowMs >= enemy.slowEndTime) {
+            enemy.slowMultiplier = 1;
+            enemy.slowEndTime = null;
+        }
+    });
   }
 
   updateWaveDisplay() {
@@ -1029,12 +1228,12 @@ export class DefenseGame {
       this.updateWaveDisplay();
   }
   
-  // 점령 시 아군 바이러스 소환
+  // 점령 시 아군 바이러스 소환 (배리어 밖에 위치)
   spawnConqueredAllies(count) {
       this.alliedViruses = [];
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 / count) * i;
-          const distance = 60 + Math.random() * 30;
+          const distance = 90 + Math.random() * 30; // 배리어(70) 밖: 90~120
           this.alliedViruses.push({
               x: this.core.x + Math.cos(angle) * distance,
               y: this.core.y + Math.sin(angle) * distance,
@@ -1067,7 +1266,7 @@ export class DefenseGame {
       }
       
       const angle = Math.random() * Math.PI * 2;
-      const distance = 60 + Math.random() * 30;
+      const distance = 90 + Math.random() * 30; // 배리어(70) 밖: 90~120
       
       // 점령 상태면 고정 스탯, 아니면 alliedInfo 기반
       const hp = this.isConquered ? 50 : (10 + (this.alliedInfo.level - 1) * 5);
@@ -1250,7 +1449,7 @@ export class DefenseGame {
 
     // 0. 배리어 그리기 (부드러운 전환 효과) - 점령 상태가 아닐 때만
     if (!this.isConquered) {
-        const shieldRadius = this.core.shieldRadius;
+        const shieldRadius = Math.max(0, this.core.shieldRadius);
         const cx = this.core.x;
         const cy = this.core.y;
         const sv = this.shieldVisual;
@@ -1272,15 +1471,19 @@ export class DefenseGame {
             dashOffset = currentStep * stepSize;
         }
         
-        // 채우기 (ACTIVE일 때만 보임)
-        if (sv.fillAlpha > 0.01) {
+        // 채우기 (ACTIVE일 때만 보임) - shieldRadius가 0보다 클 때만
+        if (sv.fillAlpha > 0.01 && shieldRadius > 0) {
             this.ctx.beginPath();
             this.ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
             this.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${sv.fillAlpha})`;
             this.ctx.fill();
         }
         
-        // 테두리 (점선/실선 보간)
+        // 테두리 (점선/실선 보간) - shieldRadius가 0보다 클 때만
+        if (shieldRadius <= 0) {
+            // shieldRadius가 0 이하면 테두리 그리기 스킵
+            this.ctx.setLineDash([]);
+        } else {
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
         
@@ -1311,24 +1514,56 @@ export class DefenseGame {
         
         this.ctx.stroke();
         this.ctx.setLineDash([]);
+        } // else (shieldRadius > 0) 닫기
     }
 
-    // 아군 바이러스 그리기 (HP 바 삭제, 크기 유지)
+    // 아군 바이러스 그리기 (HP 바 삭제, 크기 유지) - 배리어 밖
     this.alliedViruses.forEach(v => {
         this.ctx.fillStyle = v.color;
         this.ctx.beginPath();
         this.ctx.arc(v.x, v.y, v.radius, 0, Math.PI * 2);
         this.ctx.fill();
     });
+    
+    // 조력자(Helper) 그리기 - 배리어 내부
+    if (this.helper && this.helper.x !== 0) {
+        const h = this.helper;
+        
+        // 조력자 몸체 (노란색)
+        this.ctx.fillStyle = h.color;
+        this.ctx.beginPath();
+        this.ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // 조력자 테두리
+        this.ctx.strokeStyle = "#ffffff";
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // 조력자 발사 방향 표시 (작은 삼각형)
+        this.ctx.save();
+        this.ctx.translate(h.x, h.y);
+        this.ctx.rotate(h.angle);
+        this.ctx.fillStyle = "#ffffff";
+        this.ctx.beginPath();
+        this.ctx.moveTo(h.radius + 3, 0);
+        this.ctx.lineTo(h.radius - 2, -4);
+        this.ctx.lineTo(h.radius - 2, 4);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.restore();
+    }
 
     // 1. 발사체 (랜덤 아스키 문자)
     this.ctx.font = "bold 12px monospace";
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
-    this.ctx.fillStyle = "#00ff00"; // 초록색으로 변경
-    this.ctx.shadowColor = "#00ff00";
-    this.ctx.shadowBlur = 5;
     this.projectiles.forEach(p => {
+      // 조력자 발사체는 노란색, 코어 발사체는 초록색
+      const color = p.fromHelper ? "#ffff00" : "#00ff00";
+      this.ctx.fillStyle = color;
+      this.ctx.shadowColor = color;
+      this.ctx.shadowBlur = 5;
       this.ctx.fillText(p.char || "*", p.x, p.y);
     });
     this.ctx.shadowBlur = 0;
@@ -1347,19 +1582,23 @@ export class DefenseGame {
       this.ctx.fillRect(e.x - 10, e.y - 20, 20 * hpPct, 4);
     });
 
-    // 3. 코어 및 포탑 (포탑 발사대 삭제)
-    this.ctx.save();
-    this.ctx.translate(this.core.x, this.core.y);
-    this.ctx.rotate(this.turret.angle);
-    // 발사대 그리기 삭제됨
-    this.ctx.restore();
-
     // 코어 스케일 적용 (원근감 효과)
     const coreScale = this.core.scale || 1;
     const scaledRadius = this.core.radius * coreScale;
     
+    // 코어 시각적 위치 (발사 시 움직임 효과 포함)
+    const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
+    const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
+
+    // 3. 코어 및 포탑 (포탑 발사대 삭제) - 시각적 오프셋 적용
+    this.ctx.save();
+    this.ctx.translate(coreVisualX, coreVisualY);
+    this.ctx.rotate(this.turret.angle);
+    // 발사대 그리기 삭제됨
+    this.ctx.restore();
+    
     this.ctx.beginPath();
-    this.ctx.arc(this.core.x, this.core.y, scaledRadius, 0, Math.PI * 2);
+    this.ctx.arc(coreVisualX, coreVisualY, scaledRadius, 0, Math.PI * 2);
     this.ctx.fillStyle = this.core.color;
     this.ctx.fill();
     this.ctx.lineWidth = 3 * coreScale;
@@ -1382,15 +1621,15 @@ export class DefenseGame {
       if (this.glitchText) {
         // 빨간색 오프셋
         this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-        this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX - 2, this.core.y + scaledRadius + 20 + offsetY);
+        this.ctx.fillText(`${hpPercent}%`, coreVisualX + offsetX - 2, coreVisualY + scaledRadius + 20 + offsetY);
         // 파란색 오프셋
         this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
-        this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX + 2, this.core.y + scaledRadius + 20 + offsetY);
+        this.ctx.fillText(`${hpPercent}%`, coreVisualX + offsetX + 2, coreVisualY + scaledRadius + 20 + offsetY);
       }
       
       // 메인 텍스트
       this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
-      this.ctx.fillText(`${hpPercent}%`, this.core.x + offsetX, this.core.y + scaledRadius + 20 + offsetY);
+      this.ctx.fillText(`${hpPercent}%`, coreVisualX + offsetX, coreVisualY + scaledRadius + 20 + offsetY);
     }
 
     // 4. 파티클 (글리치 스타일)
@@ -1437,8 +1676,29 @@ export class DefenseGame {
         
         this.ctx.globalAlpha = 1.0;
     });
+    
+    // 5. 파동 효과 렌더링
+    this.shockwaves.forEach(wave => {
+        this.ctx.beginPath();
+        this.ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+        this.ctx.strokeStyle = wave.color;
+        this.ctx.lineWidth = wave.lineWidth;
+        this.ctx.globalAlpha = wave.alpha;
+        this.ctx.stroke();
+        
+        // 내부 잔상 링
+        if (wave.radius > 50) {
+            this.ctx.beginPath();
+            this.ctx.arc(wave.x, wave.y, wave.radius * 0.7, 0, Math.PI * 2);
+            this.ctx.lineWidth = wave.lineWidth * 0.5;
+            this.ctx.globalAlpha = wave.alpha * 0.5;
+            this.ctx.stroke();
+        }
+        
+        this.ctx.globalAlpha = 1.0;
+    });
 
-    // 5. 코어 HP 바 (삭제됨 - 코어 체력 표시 안함)
+    // 6. 코어 HP 바 (삭제됨 - 코어 체력 표시 안함)
     // const barWidth = 100;
     // const barHeight = 10;
     // const hpPercent = Math.max(0, this.core.hp / this.core.maxHp);
@@ -1519,11 +1779,170 @@ export class DefenseGame {
     // 하지만 기본 난이도는 스테이지 ID 기반으로 유지
     return baseDifficulty;
   }
+  
+  // 조력자(Helper) 업데이트 로직 - 자동 공격 + 회피
+  updateHelper(dt, now) {
+    const helper = this.helper;
+    const shieldRadius = this.core.shieldRadius - 15; // 배리어 내부 여유
+    const minDistFromCore = 45; // 코어와 최소 거리 (25 → 45로 증가)
+    
+    // 조력자 초기 위치 설정 (첫 프레임)
+    if (helper.x === 0 && helper.y === 0) {
+      helper.x = this.core.x + 50; // 코어 오른쪽에서 시작 (35 → 50)
+      helper.y = this.core.y;
+      helper.targetX = helper.x;
+      helper.targetY = helper.y;
+    }
+    
+    // 1. 가장 가까운 적 찾기
+    let nearestEnemy = null;
+    let minDist = Infinity;
+    let enemyInsideShield = null; // 배리어 내부에 들어온 적
+    
+    this.enemies.forEach(enemy => {
+      const distToCore = Math.hypot(enemy.x - this.core.x, enemy.y - this.core.y);
+      const distToHelper = Math.hypot(enemy.x - helper.x, enemy.y - helper.y);
+      
+      // 배리어 내부에 들어온 적 확인
+      if (distToCore < this.core.shieldRadius) {
+        if (!enemyInsideShield || distToHelper < Math.hypot(enemyInsideShield.x - helper.x, enemyInsideShield.y - helper.y)) {
+          enemyInsideShield = enemy;
+        }
+      }
+      
+      // 사거리 내 가장 가까운 적
+      if (distToHelper < helper.range && distToHelper < minDist) {
+        minDist = distToHelper;
+        nearestEnemy = enemy;
+      }
+    });
+    
+    // 2. 회피 로직 - 적이 배리어 내부에 있으면 회피
+    if (enemyInsideShield) {
+      const dx = helper.x - enemyInsideShield.x;
+      const dy = helper.y - enemyInsideShield.y;
+      const dist = Math.hypot(dx, dy);
+      
+      if (dist < helper.evadeDistance && dist > 0) {
+        // 적 반대 방향으로 회피
+        const evadeX = helper.x + (dx / dist) * 40;
+        const evadeY = helper.y + (dy / dist) * 40;
+        
+        // 배리어 내부 범위 제한 (코어와 거리 유지)
+        const evadeDistToCore = Math.hypot(evadeX - this.core.x, evadeY - this.core.y);
+        if (evadeDistToCore < shieldRadius && evadeDistToCore > minDistFromCore) {
+          helper.targetX = evadeX;
+          helper.targetY = evadeY;
+        } else if (evadeDistToCore <= minDistFromCore) {
+          // 코어와 너무 가까우면 바깥쪽으로
+          const angle = Math.atan2(evadeY - this.core.y, evadeX - this.core.x);
+          helper.targetX = this.core.x + Math.cos(angle) * (minDistFromCore + 10);
+          helper.targetY = this.core.y + Math.sin(angle) * (minDistFromCore + 10);
+        } else {
+          // 배리어 밖이면 안쪽으로
+          const angle = Math.atan2(helper.y - this.core.y, helper.x - this.core.x);
+          helper.targetX = this.core.x + Math.cos(angle) * (shieldRadius - 10);
+          helper.targetY = this.core.y + Math.sin(angle) * (shieldRadius - 10);
+        }
+      }
+    } else if (nearestEnemy) {
+      // 적이 있으면 적 방향으로 살짝 이동 (하지만 배리어 내부에 머무름)
+      const angleToEnemy = Math.atan2(nearestEnemy.y - this.core.y, nearestEnemy.x - this.core.x);
+      const targetDist = Math.min(shieldRadius - 5, minDistFromCore + 15);
+      helper.targetX = this.core.x + Math.cos(angleToEnemy) * targetDist;
+      helper.targetY = this.core.y + Math.sin(angleToEnemy) * targetDist;
+    } else {
+      // 적이 없으면 코어 주변에서 부드럽게 순찰 (회전)
+      if (!helper.patrolAngle) helper.patrolAngle = 0;
+      helper.patrolAngle += dt * 0.3; // 느리게 회전
+      const patrolDist = minDistFromCore + 10;
+      helper.targetX = this.core.x + Math.cos(helper.patrolAngle) * patrolDist;
+      helper.targetY = this.core.y + Math.sin(helper.patrolAngle) * patrolDist;
+    }
+    
+    // 3. 목표 위치로 부드럽게 이동 (lerp 방식 - 아군 바이러스와 동일)
+    const lerpSpeed = enemyInsideShield ? 3.5 : 1.5; // 회피 시 더 빠르게
+    helper.x += (helper.targetX - helper.x) * dt * lerpSpeed;
+    helper.y += (helper.targetY - helper.y) * dt * lerpSpeed;
+    
+    // 배리어 내부 범위 제한 + 코어와 최소 거리 유지 (부드럽게)
+    const distToCore = Math.hypot(helper.x - this.core.x, helper.y - this.core.y);
+    const angle = Math.atan2(helper.y - this.core.y, helper.x - this.core.x);
+    
+    // 배리어 밖으로 나가면 안쪽으로 (부드럽게)
+    if (distToCore > shieldRadius) {
+      const clampedX = this.core.x + Math.cos(angle) * shieldRadius;
+      const clampedY = this.core.y + Math.sin(angle) * shieldRadius;
+      helper.x += (clampedX - helper.x) * dt * 5;
+      helper.y += (clampedY - helper.y) * dt * 5;
+    }
+    
+    // 코어와 너무 가까우면 바깥쪽으로 (부드럽게)
+    if (distToCore < minDistFromCore) {
+      const pushX = this.core.x + Math.cos(angle) * minDistFromCore;
+      const pushY = this.core.y + Math.sin(angle) * minDistFromCore;
+      helper.x += (pushX - helper.x) * dt * 5;
+      helper.y += (pushY - helper.y) * dt * 5;
+    }
+    
+    // 4. 자동 발사 (적이 있으면 항상 발사)
+    if (nearestEnemy) {
+      // 적을 향해 바라보기
+      helper.angle = Math.atan2(nearestEnemy.y - helper.y, nearestEnemy.x - helper.x);
+      
+      // 발사 간격 체크
+      const fireInterval = 1 / helper.fireRate;
+      const timeSinceLastFire = now - helper.lastFireTime;
+      
+      if (timeSinceLastFire >= fireInterval) {
+        debugLog("Helper", "발사!", "타겟:", nearestEnemy.x.toFixed(0), nearestEnemy.y.toFixed(0));
+        this.fireHelperProjectile(nearestEnemy);
+        helper.lastFireTime = now;
+      }
+    } else if (this.enemies.length > 0) {
+      // 적이 있는데 타겟이 없음 - 사거리 밖 (디버그용)
+      if (!this._helperNoTargetLogged) {
+        const firstEnemy = this.enemies[0];
+        const dist = Math.hypot(firstEnemy.x - helper.x, firstEnemy.y - helper.y);
+        debugLog("Helper", "사거리 밖!", "거리:", dist.toFixed(0), "사거리:", helper.range);
+        this._helperNoTargetLogged = true;
+        setTimeout(() => { this._helperNoTargetLogged = false; }, 3000);
+      }
+    }
+  }
+  
+  // 조력자 발사체 생성
+  fireHelperProjectile(target) {
+    const asciiChars = "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const randomChar = asciiChars[Math.floor(Math.random() * asciiChars.length)];
+    
+    const dx = target.x - this.helper.x;
+    const dy = target.y - this.helper.y;
+    const dist = Math.hypot(dx, dy);
+    
+    this.projectiles.push({
+      x: this.helper.x,
+      y: this.helper.y,
+      vx: (dx / dist) * 400, // 발사체 속도
+      vy: (dy / dist) * 400,
+      damage: this.helper.damage,
+      life: 2,
+      radius: 8, // 충돌 검사용 반경
+      char: randomChar,
+      color: "#ffff00", // 조력자 발사체는 노란색
+      fromHelper: true // 조력자 발사체 표시
+    });
+  }
 
   fireProjectile(target) {
     // 랜덤 아스키 문자 (33~126: 출력 가능한 ASCII)
     const asciiChars = "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     const randomChar = asciiChars[Math.floor(Math.random() * asciiChars.length)];
+    
+    // 코어가 발사 방향으로 움찔하는 효과
+    const recoilDist = 8; // 반동 거리
+    this.core.targetOffsetX = Math.cos(this.turret.angle) * recoilDist;
+    this.core.targetOffsetY = Math.sin(this.turret.angle) * recoilDist;
     
     this.projectiles.push({
       x: this.core.x,
@@ -1544,6 +1963,11 @@ export class DefenseGame {
   fireProjectileToward(angle) {
     const asciiChars = "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     const randomChar = asciiChars[Math.floor(Math.random() * asciiChars.length)];
+    
+    // 코어가 발사 방향으로 움찔하는 효과
+    const recoilDist = 8;
+    this.core.targetOffsetX = Math.cos(angle) * recoilDist;
+    this.core.targetOffsetY = Math.sin(angle) * recoilDist;
     
     this.projectiles.push({
       x: this.core.x,
@@ -1914,7 +2338,7 @@ export class DefenseGame {
     this.alliedViruses = [];
     
     const delay = 250; // 0.25초 간격
-    const targetRadius = 55; // 최종 위치 (코어에서 거리)
+    const targetRadius = 95; // 최종 위치 (배리어 70 밖: 95)
 
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i; // 시계 방향

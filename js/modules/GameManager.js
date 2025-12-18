@@ -62,6 +62,7 @@ export class GameManager {
     // 테트리스 게임 이벤트 연결
     this.tetrisGame.onStageClear = (lines) => this.handleBreachClear(lines);
     this.tetrisGame.onGameOver = (score) => this.handleBreachFail(score);
+    this.tetrisGame.onPuzzleFail = () => this.handleBreachFail(0); // 퍼즐 실패도 동일 처리
     this.tetrisGame.getPerkEffects = () => this.perkManager.getEffects();
 
     // 게임 상태
@@ -228,46 +229,7 @@ export class GameManager {
     };
 
     // --- Inputs ---
-    // 1. Bomb Chance
-    const bombInp = createInput(
-      "Bomb Chance (0-1)",
-      "dbg-bomb",
-      this.perkManager.activeEffects.bombChance
-    );
-    bombInp.onchange = (e) => {
-      this.perkManager.activeEffects.bombChance = parseFloat(e.target.value);
-      this.terminal.printSystemMessage(
-        `[DEBUG] Bomb Chance set to ${e.target.value}`
-      );
-    };
-
-    // 2. Gold Chance
-    const goldInp = createInput(
-      "Gold Chance (0-1)",
-      "dbg-gold",
-      this.perkManager.activeEffects.goldChance
-    );
-    goldInp.onchange = (e) => {
-      this.perkManager.activeEffects.goldChance = parseFloat(e.target.value);
-      this.terminal.printSystemMessage(
-        `[DEBUG] Gold Chance set to ${e.target.value}`
-      );
-    };
-
-    // 2.5 Misc Chance (Freeze, Laser)
-    const miscInp = createInput(
-      "Misc Chance (0-1)",
-      "dbg-misc",
-      this.perkManager.activeEffects.miscChance
-    );
-    miscInp.onchange = (e) => {
-      this.perkManager.activeEffects.miscChance = parseFloat(e.target.value);
-      this.terminal.printSystemMessage(
-        `[DEBUG] Misc Chance set to ${e.target.value}`
-      );
-    };
-
-    // 3. Current Money
+    // 1. Current Money (Data)
     const moneyInp = createInput(
       "Data (Money)",
       "dbg-money",
@@ -282,23 +244,7 @@ export class GameManager {
       );
     };
 
-    // 4. Reputation
-    const repInp = createInput(
-      "Reputation",
-      "dbg-rep",
-      this.reputation,
-      "number",
-      10
-    );
-    repInp.onchange = (e) => {
-      this.reputation = parseInt(e.target.value);
-      this.saveReputation();
-      this.terminal.printSystemMessage(
-        `[DEBUG] Reputation set to ${e.target.value}`
-      );
-    };
-
-    // 5. Score Multiplier
+    // 2. Score Multiplier
     const scoreInp = createInput(
       "Score Mult",
       "dbg-score",
@@ -387,17 +333,19 @@ export class GameManager {
       this.terminal.printSystemMessage(`[DEBUG] Switched to ${this.activeMode}`);
     });
 
-    createBtn("Unlock All Perks", () => {
-      this.perkManager.activeEffects.bombChance = 0.5;
-      this.perkManager.activeEffects.goldChance = 0.5;
-      this.perkManager.activeEffects.miscChance = 0.5;
+    createBtn("GOD MODE", () => {
       this.perkManager.activeEffects.speedModifier = 0.5;
+      this.perkManager.activeEffects.scoreMultiplier = 5.0;
+      this.currentMoney = 99999;
+      moneyInp.value = 99999;
+      scoreInp.value = 5.0;
+      this.isGodMode = true;
+      if (this.defenseGame) {
+        this.defenseGame.isGodMode = true;
+      }
       this.terminal.printSystemMessage(
-        "[DEBUG] GOD MODE ACTIVATED (High Stats)"
+        "[DEBUG] GOD MODE ACTIVATED - 무적 모드!"
       );
-      bombInp.value = 0.5;
-      goldInp.value = 0.5;
-      miscInp.value = 0.5;
     });
 
     createBtn("MAX PAGE", () => {
@@ -417,6 +365,69 @@ export class GameManager {
       }
     });
 
+    // 진행상황 초기화 버튼 (위험!)
+    const resetContainer = document.createElement("div");
+    resetContainer.style.cssText = `
+      margin-top: 15px;
+      padding: 10px;
+      border: 2px solid #ff3333;
+      background: rgba(50, 0, 0, 0.5);
+    `;
+    
+    const resetLabel = document.createElement("div");
+    resetLabel.innerText = "⚠️ DANGER ZONE";
+    resetLabel.style.cssText = `
+      color: #ff3333;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+    `;
+    resetContainer.appendChild(resetLabel);
+
+    const resetBtn = document.createElement("button");
+    resetBtn.innerText = "🗑️ RESET ALL PROGRESS";
+    resetBtn.style.cssText = `
+      width: 100%;
+      padding: 10px;
+      background: #330000;
+      color: #ff3333;
+      border: 1px solid #ff3333;
+      cursor: pointer;
+      font-weight: bold;
+    `;
+    resetBtn.onclick = () => {
+      if (confirm("⚠️ 정말로 모든 진행상황을 초기화하시겠습니까?\n\n- 점령한 스테이지\n- 저장된 데이터(돈)\n- 튜토리얼 완료 상태\n\n이 작업은 되돌릴 수 없습니다!")) {
+        // 모든 localStorage 초기화
+        localStorage.clear();
+        
+        // StageManager 점령 상태 초기화
+        if (this.stageManager) {
+          this.stageManager.stages.forEach(stage => {
+            stage.conquered = false;
+          });
+        }
+        
+        // ConquestManager 초기화
+        if (this.conquestManager) {
+          this.conquestManager.conqueredStages = [];
+        }
+        
+        // 현재 상태 초기화
+        this.currentMoney = 0;
+        this.reputation = 0;
+        
+        this.terminal.printSystemMessage("[DEBUG] ALL PROGRESS RESET!");
+        this.terminal.printSystemMessage("Reloading page in 2 seconds...");
+        
+        // 2초 후 새로고침
+        setTimeout(() => {
+          location.reload();
+        }, 2000);
+      }
+    };
+    resetContainer.appendChild(resetBtn);
+    debugPanel.appendChild(resetContainer);
+
     document.body.appendChild(debugPanel);
 
     // Toggle Key (Backtick `)
@@ -427,11 +438,7 @@ export class GameManager {
 
         // Refresh inputs values when opening
         if (isHidden) {
-          bombInp.value = this.perkManager.activeEffects.bombChance;
-          goldInp.value = this.perkManager.activeEffects.goldChance;
-          miscInp.value = this.perkManager.activeEffects.miscChance;
           moneyInp.value = this.currentMoney;
-          repInp.value = this.reputation;
           scoreInp.value = this.perkManager.activeEffects.scoreMultiplier;
         }
       }
@@ -565,21 +572,26 @@ export class GameManager {
   
   // 터미널에서 점령 선택 시
   async handleConquerFromTerminal() {
-    // 1. DefenseGame의 실드 파괴 연출
-    this.defenseGame.handleConquerClick();
-    
-    // 2. 점령 메시지
+    // 1. 점령 시작 메시지
     await this.terminal.printSystemMessage("INITIATING CONQUEST PROTOCOL...");
-    await this.terminal.printSystemMessage("FIREWALL BREACH DETECTED!");
-    await this.terminal.printSystemMessage("Objective: Clear 3 lines + Survive 3 waves.");
     
-    // 3. 강화 페이지 모드 설정
-    this.isConquestMode = true;
-    this.conquestTetrisComplete = false;
-    this.defenseGame.startReinforcementMode(3); // 강화 페이지 3개
+    // 2. 실드 파괴 연출 완료 후 테트리스 시작 (콜백 설정)
+    this.defenseGame.onConquer = () => {
+      // 연출 완료 후 실행
+      this.terminal.printSystemMessage("FIREWALL BREACH DETECTED!");
+      this.terminal.printSystemMessage("Objective: Clear 3 lines + Survive 3 waves.");
+      
+      // 강화 페이지 모드 설정
+      this.isConquestMode = true;
+      this.conquestTetrisComplete = false;
+      this.defenseGame.startReinforcementMode(3); // 강화 페이지 3개
+      
+      // 테트리스 시작
+      this.startConquestTetris();
+    };
     
-    // 4. 바로 테트리스 시작 (딜레이 제거)
-    this.startConquestTetris();
+    // 3. 실드 파괴 연출 시작 (2초 후 onConquer 콜백 호출)
+    this.defenseGame.handleConquerClick();
   }
   
   // 점령용 테트리스 시작 (디펜스는 미니 화면에서 계속)
@@ -598,13 +610,18 @@ export class GameManager {
     this.defenseGame.uiLayer.style.display = "none";
     this.defenseGame.resume();
     
-    // 테트리스 시작
+    // 퍼즐 모드로 테트리스 시작
     const gameContainer = document.getElementById("game-container");
+    gameContainer.style.display = "block"; // 먼저 보이게
     gameContainer.style.opacity = 1;
     document.getElementById("game-ui").style.display = "block";
     this.terminal.setTransparentMode(true);
     this.terminal.hide(); // 터미널 완전히 숨기기
-    this.tetrisGame.startGame(targetLines, speed);
+    
+    // 현재 스테이지 난이도 기반으로 퍼즐 모드 시작
+    const currentStage = this.stageManager.getCurrentStage();
+    const difficulty = parseInt(currentStage.id) || 1;
+    this.tetrisGame.startPuzzleMode(difficulty);
     
     // 미니 디펜스 렌더링 시작
     this.startMiniDefenseRender();
@@ -765,7 +782,13 @@ export class GameManager {
       
       // 강화 페이지 완료 체크
       if (this.defenseGame.reinforcementComplete) {
-        this.handleConquestComplete();
+        // 테트리스 성공 시에만 점령 완료
+        if (this.conquestTetrisComplete) {
+          this.handleConquestComplete();
+        } else {
+          // 테트리스 실패했으면 점령 없이 종료
+          this.handleConquestFailNoConquer();
+        }
         return;
       }
       
@@ -888,7 +911,7 @@ export class GameManager {
     await this.showCommandMenu();
   }
   
-  // 점령 실패
+  // 점령 실패 (코어 파괴)
   async handleConquestFail() {
     this.isConquestMode = false;
     
@@ -915,6 +938,38 @@ export class GameManager {
     
     // 게임 오버 처리
     this.handleDefenseGameOver();
+  }
+  
+  // 점령 실패 (테트리스 실패, 점령 없이 종료)
+  async handleConquestFailNoConquer() {
+    this.isConquestMode = false;
+    
+    // 테트리스 정리
+    if (this.tetrisGame.state.isPlaying) {
+      this.tetrisGame.state.isPlaying = false;
+    }
+    document.getElementById("game-container").style.display = "none";
+    document.getElementById("game-ui").style.display = "none";
+    this.showConquestTetrisUI();
+    this.restoreNextBoxPosition();
+    
+    // 미니 패널 제거
+    const panel = document.getElementById("mini-defense-panel");
+    if (panel) panel.remove();
+    
+    // 디펜스 정리 및 복구
+    this.defenseGame.canvas.style.display = "block";
+    this.defenseGame.uiLayer.style.display = "block";
+    this.defenseGame.resume();
+    
+    // 터미널 표시
+    this.terminal.setDefenseMode(true);
+    this.terminal.show();
+    await this.terminal.printSystemMessage("BREACH FAILED - Conquest Aborted");
+    await this.terminal.printSystemMessage("Territory NOT secured.");
+    
+    // 명령 메뉴 표시 (점령 안 됨)
+    await this.showCommandMenu();
   }
 
   /**
@@ -1276,6 +1331,15 @@ export class GameManager {
     this.defenseGame.reinforcementPage = 0;
     this.defenseGame.reinforcementComplete = false;
     this.defenseGame.conquerReady = false;
+    
+    // 실드 상태 복구 (스테이지 이동 시 항상 리셋)
+    this.defenseGame.core.shieldActive = true;
+    this.defenseGame.core.shieldState = "ACTIVE";
+    this.defenseGame.core.shieldHp = this.defenseGame.core.shieldMaxHp;
+    this.defenseGame.core.shieldRadius = 70; // 기본 반경
+    this.defenseGame.core.shieldTimer = 0;
+    this.defenseGame.updateShieldBtnUI("ACTIVE", "#fff");
+    this.defenseGame.shieldBtn.style.pointerEvents = "auto";
     
     // 점령 상태 확인 및 적용
     if (stage.conquered && stage.type === "conquest") {
@@ -1990,6 +2054,7 @@ export class GameManager {
     const speed = 600; // 적당한 속도
     
     setTimeout(() => {
+      document.getElementById("game-container").style.display = "block"; // 먼저 보이게
       document.getElementById("game-container").style.opacity = 1;
       document.getElementById("game-ui").style.display = "block";
       this.terminal.setTransparentMode(true);
@@ -2018,6 +2083,7 @@ export class GameManager {
 
   transitionToGame(targetLines, speed) {
     setTimeout(() => {
+      document.getElementById("game-container").style.display = "block"; // 먼저 보이게
       document.getElementById("game-container").style.opacity = 1;
       document.getElementById("game-ui").style.display = "block";
       this.terminal.setTransparentMode(true);
@@ -2106,12 +2172,14 @@ export class GameManager {
           // 테트리스 실패 = 페널티 (적 증가)
           this.tetrisGame.state.isPlaying = false;
           
-          // 테트리스 UI 정리
-          document.getElementById("game-container").style.opacity = 0;
+          // 테트리스 완전히 숨기기 (중요!)
+          document.getElementById("game-container").style.display = "none";
           document.getElementById("game-ui").style.display = "none";
           this.showConquestTetrisUI(); // 상단 UI 복구
           this.restoreNextBoxPosition(); // NEXT 블록 위치 복구
-          this.terminal.setTransparentMode(false);
+          
+          // 터미널을 디펜스 모드로 설정 (투명 배경 + 캔버스 클릭 가능)
+          this.terminal.setDefenseMode(true);
           this.terminal.show();
           
           this.terminal.printSystemMessage("BREACH DEFENSE FAILED!");

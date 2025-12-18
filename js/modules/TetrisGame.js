@@ -97,10 +97,16 @@ export class TetrisGame {
       slowModeTimer: 0,
       originalSpeed: 0,
       targetLines: Infinity, // 목표 라인 수 (기본값 무한)
+      // 퍼즐 모드 상태
+      isPuzzleMode: false,
+      puzzleBlocks: [], // 플레이어에게 주어진 블록들
+      currentPuzzleBlockIndex: 0, // 현재 선택된 블록 인덱스
+      puzzleLinesTarget: 3, // 목표 라인 수
     };
 
     this.onStageClear = null; // 콜백 함수
     this.onGameOver = null; // 콜백 함수
+    this.onPuzzleFail = null; // 퍼즐 실패 콜백
     this.getPerkEffects = () => ({}); // 기본값 (GameManager에서 덮어씀)
 
     // Three.js objects
@@ -1057,6 +1063,612 @@ export class TetrisGame {
     if (this.onStageClear) this.onStageClear(this.state.linesClearedStage);
   }
 
+  // ===== 퍼즐 모드 =====
+  
+  /**
+   * 퍼즐 모드 시작
+   * @param {number} difficulty - 난이도 (스테이지 ID 기반)
+   */
+  startPuzzleMode(difficulty = 1) {
+    this.resetScene();
+    
+    // 퍼즐 모드 상태 설정
+    this.state.isPuzzleMode = true;
+    this.state.isPlaying = true;
+    this.state.isLogicActive = true;
+    this.state.score = 0;
+    this.state.linesClearedStage = 0;
+    
+    // 난이도 기반 설정
+    const settings = this.getPuzzleSettings(difficulty);
+    this.state.puzzleLinesTarget = settings.linesTarget;
+    
+    // 그리드 초기화
+    this.state.grid = Array(this.CONFIG.GRID_HEIGHT)
+      .fill()
+      .map(() => Array(this.CONFIG.GRID_WIDTH).fill(null));
+    
+    // 역방향 생성: 완성된 보드에서 블록 제거
+    const puzzle = this.generatePuzzle(settings);
+    this.state.grid = puzzle.grid;
+    this.state.puzzleBlocks = puzzle.blocks;
+    this.state.currentPuzzleBlockIndex = 0;
+    
+    // 그리드 시각화
+    this.refreshGridVisuals();
+    
+    // 첫 블록 선택
+    if (this.state.puzzleBlocks.length > 0) {
+      this.selectPuzzleBlock(0);
+    }
+    
+    // UI 업데이트
+    this.updatePuzzleUI();
+    
+    this.SoundManager.init();
+    this.SoundManager.startBGM();
+    
+    this.animate();
+  }
+  
+  /**
+   * 난이도별 퍼즐 설정
+   */
+  getPuzzleSettings(difficulty) {
+    // 난이도별 설정 (목표 라인은 항상 3줄 고정)
+    // 스테이지 1-2: 블록 3개, 회전 0개
+    // 스테이지 3-4: 블록 4개, 회전 0개
+    // 스테이지 5-6: 블록 4개, 회전 1개
+    // 스테이지 7-8: 블록 5개, 회전 1개
+    // 스테이지 9+: 블록 5개, 회전 2개
+    
+    let blockCount, rotationRequired;
+    const linesTarget = 3; // 항상 3줄 클리어 목표
+    
+    if (difficulty <= 2) {
+      blockCount = 3;
+      rotationRequired = 0;
+    } else if (difficulty <= 4) {
+      blockCount = 4;
+      rotationRequired = 0;
+    } else if (difficulty <= 6) {
+      blockCount = 4;
+      rotationRequired = 1;
+    } else if (difficulty <= 8) {
+      blockCount = 5;
+      rotationRequired = 1;
+    } else {
+      blockCount = 5;
+      rotationRequired = 2;
+    }
+    
+    console.log(`[Puzzle] 난이도 ${difficulty}: 블록 ${blockCount}개, 회전 ${rotationRequired}개, 목표 ${linesTarget}줄`);
+    
+    return {
+      blockCount,
+      rotationRequired,
+      linesTarget,
+    };
+  }
+  
+  /**
+   * 역방향 생성으로 퍼즐 생성 (올바른 버전)
+   * 핵심: 3줄을 꽉 채운 후, 블록 모양으로만 구멍 뚫기
+   * 이렇게 하면 플레이어가 블록을 배치하면 정확히 3줄이 완성됨
+   */
+  generatePuzzle(settings) {
+    const { blockCount, rotationRequired } = settings;
+    const TARGET_LINES = this.state.puzzleLinesTarget; // 3줄
+    
+    // 1. 바닥 TARGET_LINES 줄을 꽉 채우기 (구멍 없이!)
+    const grid = Array(this.CONFIG.GRID_HEIGHT)
+      .fill()
+      .map(() => Array(this.CONFIG.GRID_WIDTH).fill(null));
+    
+    const colors = Object.values(this.CONFIG.COLORS).filter(
+      c => c !== this.CONFIG.COLORS.GHOST && c !== this.CONFIG.COLORS.GRID
+    );
+    
+    // 바닥 3줄 꽉 채우기
+    for (let y = 0; y < TARGET_LINES; y++) {
+      for (let x = 0; x < this.CONFIG.GRID_WIDTH; x++) {
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        grid[y][x] = { color: randomColor, type: this.SPECIAL_TYPES.NONE };
+      }
+    }
+    
+    console.log("[Puzzle] 바닥", TARGET_LINES, "줄 꽉 채움");
+    
+    // 2. 블록 모양으로 구멍 뚫기 (각 줄에 최소 1개씩 분산)
+    const blocks = [];
+    const tetrominoTypes = Object.keys(this.TETROMINOS);
+    
+    // 각 줄에 최소 1개 구멍 보장하기 위해 줄별로 블록 배치
+    const rowsNeedingHoles = new Set();
+    for (let y = 0; y < TARGET_LINES; y++) {
+      rowsNeedingHoles.add(y);
+    }
+    
+    for (let i = 0; i < blockCount; i++) {
+      const type = tetrominoTypes[Math.floor(Math.random() * tetrominoTypes.length)];
+      let shape = JSON.parse(JSON.stringify(this.TETROMINOS[type].shape));
+      const color = this.TETROMINOS[type].color;
+      
+      // 회전 적용 (난이도에 따라)
+      let rotations = 0;
+      if (i < rotationRequired) {
+        rotations = 1 + Math.floor(Math.random() * 3);
+        for (let r = 0; r < rotations; r++) {
+          shape = this.rotateShape(shape);
+        }
+      }
+      
+      // 배치 위치 찾기 (TARGET_LINES 내에서, 꽉 찬 셀에만)
+      const position = this.findCarvePositionStrict(grid, shape, TARGET_LINES, rowsNeedingHoles);
+      
+      if (position) {
+        // 구멍 뚫기
+        this.carveShape(grid, shape, position.x, position.y);
+        
+        // 뚫은 줄 기록
+        for (let sy = 0; sy < shape.length; sy++) {
+          for (let sx = 0; sx < shape[sy].length; sx++) {
+            if (shape[sy][sx]) {
+              rowsNeedingHoles.delete(position.y + sy);
+            }
+          }
+        }
+        
+        // 원래 모양으로 블록 저장
+        const originalShape = JSON.parse(JSON.stringify(this.TETROMINOS[type].shape));
+        blocks.push({
+          type,
+          shape: originalShape,
+          color,
+          rotationsToSolve: rotations,
+          used: false,
+        });
+        
+        console.log("[Puzzle] 블록 추가:", type, "위치:", position, "회전:", rotations);
+      } else {
+        console.log("[Puzzle] 블록 배치 불가:", type);
+      }
+    }
+    
+    // 3. 아직 구멍 없는 줄이 있으면 추가 처리
+    if (rowsNeedingHoles.size > 0) {
+      console.log("[Puzzle] 구멍 없는 줄 있음:", [...rowsNeedingHoles]);
+      
+      // 각 줄에 강제로 구멍 뚫기
+      for (const y of rowsNeedingHoles) {
+        // 랜덤 위치에 구멍 하나 뚫기
+        const x = Math.floor(Math.random() * this.CONFIG.GRID_WIDTH);
+        if (grid[y][x] !== null) {
+          grid[y][x] = null;
+          console.log("[Puzzle] 줄", y, "에 강제 구멍 추가 at x:", x);
+        }
+      }
+    }
+    
+    // 블록 순서 섞기
+    this.shuffleArray(blocks);
+    
+    // 디버그: 각 줄 상태 출력
+    let totalHoles = 0;
+    for (let y = 0; y < TARGET_LINES; y++) {
+      const filledCount = grid[y].filter(cell => cell !== null).length;
+      const holesCount = this.CONFIG.GRID_WIDTH - filledCount;
+      totalHoles += holesCount;
+      console.log(`[Puzzle] 줄 ${y}: ${filledCount}/${this.CONFIG.GRID_WIDTH} 채움, 구멍 ${holesCount}개`);
+    }
+    
+    const totalBlockCells = blocks.length * 4; // 테트로미노는 각 4칸
+    console.log(`[Puzzle] 총 구멍: ${totalHoles}개, 블록 칸: ${totalBlockCells}칸`);
+    console.log("[Puzzle] 생성 완료, 블록 수:", blocks.length);
+    
+    return { grid, blocks };
+  }
+  
+  /**
+   * 블록을 조각할 수 있는 위치 찾기 (꽉 찬 셀에만, 우선순위 줄 고려)
+   */
+  findCarvePositionStrict(grid, shape, maxY, priorityRows) {
+    const positions = [];
+    const priorityPositions = [];
+    
+    for (let y = 0; y <= maxY - shape.length; y++) {
+      for (let x = 0; x < this.CONFIG.GRID_WIDTH; x++) {
+        if (this.canCarveAtStrict(grid, shape, x, y, maxY)) {
+          const pos = { x, y };
+          positions.push(pos);
+          
+          // 우선순위 줄에 포함되는지 확인
+          for (let sy = 0; sy < shape.length; sy++) {
+            if (priorityRows.has(y + sy)) {
+              priorityPositions.push(pos);
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    // 우선순위 위치가 있으면 그쪽에서 선택
+    if (priorityPositions.length > 0) {
+      return priorityPositions[Math.floor(Math.random() * priorityPositions.length)];
+    }
+    
+    if (positions.length === 0) return null;
+    return positions[Math.floor(Math.random() * positions.length)];
+  }
+  
+  /**
+   * 해당 위치에 구멍을 뚫을 수 있는지 확인 (모든 셀이 채워져 있어야 함)
+   */
+  canCarveAtStrict(grid, shape, startX, startY, maxY) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          const gridX = (startX + x) % this.CONFIG.GRID_WIDTH;
+          const gridY = startY + y;
+          
+          if (gridY >= maxY) return false;
+          if (gridY >= this.CONFIG.GRID_HEIGHT) return false;
+          if (grid[gridY][gridX] === null) return false; // 이미 구멍이면 안됨
+        }
+      }
+    }
+    return true;
+  }
+  
+  
+  /**
+   * 해당 위치에 구멍을 뚫을 수 있는지 확인
+   */
+  canCarveAt(grid, shape, startX, startY, maxY) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          const gridX = (startX + x) % this.CONFIG.GRID_WIDTH;
+          const gridY = startY + y;
+          
+          if (gridY >= maxY) return false; // 바닥 영역을 벗어남
+          if (gridY >= this.CONFIG.GRID_HEIGHT) return false;
+          if (grid[gridY][gridX] === null) return false; // 이미 구멍
+        }
+      }
+    }
+    return true;
+  }
+  
+  /**
+   * 그리드에 구멍 뚫기
+   */
+  carveShape(grid, shape, startX, startY) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          const gridX = (startX + x) % this.CONFIG.GRID_WIDTH;
+          const gridY = startY + y;
+          grid[gridY][gridX] = null;
+        }
+      }
+    }
+  }
+  
+  /**
+   * 모양 회전
+   */
+  rotateShape(shape) {
+    const rows = shape.length;
+    const cols = shape[0].length;
+    const rotated = [];
+    
+    for (let x = 0; x < cols; x++) {
+      rotated.push([]);
+      for (let y = rows - 1; y >= 0; y--) {
+        rotated[x].push(shape[y][x]);
+      }
+    }
+    return rotated;
+  }
+  
+  /**
+   * 배열 섞기
+   */
+  shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+  
+  /**
+   * 퍼즐 블록 선택
+   */
+  selectPuzzleBlock(index) {
+    console.log("[Puzzle] selectPuzzleBlock 호출, index:", index, "총 블록수:", this.state.puzzleBlocks.length);
+    
+    if (index < 0 || index >= this.state.puzzleBlocks.length) {
+      console.log("[Puzzle] 인덱스 범위 초과");
+      return;
+    }
+    if (this.state.puzzleBlocks[index].used) {
+      console.log("[Puzzle] 이미 사용된 블록");
+      return;
+    }
+    
+    this.state.currentPuzzleBlockIndex = index;
+    const block = this.state.puzzleBlocks[index];
+    
+    // 현재 조각 설정
+    this.state.currentPiece = {
+      type: block.type,
+      shape: JSON.parse(JSON.stringify(block.shape)),
+      color: block.color,
+      x: Math.floor(this.CONFIG.GRID_WIDTH / 2) - Math.floor(block.shape[0].length / 2),
+      y: this.CONFIG.GRID_HEIGHT - 1, // 퍼즐 모드: 상단에서 시작
+      specialType: this.SPECIAL_TYPES.NONE,
+    };
+    
+    console.log("[Puzzle] 블록 선택됨:", block.type, "currentPiece:", this.state.currentPiece);
+    
+    // render()에서 자동으로 시각화됨
+    this.updatePuzzleUI();
+  }
+  
+  /**
+   * 퍼즐 모드용 고스트 Y 위치 계산
+   */
+  getGhostY() {
+    if (!this.state.currentPiece) return 0;
+    
+    let ghostY = this.state.currentPiece.y;
+    while (
+      !this.checkCollision(
+        this.state.currentPiece.x,
+        ghostY - 1,
+        this.state.currentPiece.shape
+      )
+    ) {
+      ghostY--;
+    }
+    return ghostY;
+  }
+  
+  /**
+   * 퍼즐 모드에서 블록 배치
+   */
+  placePuzzlePiece() {
+    if (!this.state.isPuzzleMode) return;
+    if (!this.state.currentPiece) return;
+    
+    const piece = this.state.currentPiece;
+    const ghostY = this.getGhostY();
+    
+    // 데드라인 체크 (상단 3줄 이상이면 실패)
+    const DEADLINE_Y = this.CONFIG.GRID_HEIGHT - 3; // y=17 이상이면 데드라인
+    if (ghostY >= DEADLINE_Y) {
+      console.log("[Puzzle] 데드라인 초과! ghostY:", ghostY, "DEADLINE:", DEADLINE_Y);
+      this.puzzleFail();
+      return;
+    }
+    
+    // 배치 (y축은 아래로 감소)
+    for (let y = 0; y < piece.shape.length; y++) {
+      for (let x = 0; x < piece.shape[y].length; x++) {
+        if (piece.shape[y][x]) {
+          const gridX = (piece.x + x) % this.CONFIG.GRID_WIDTH;
+          const gridY = ghostY - y;
+          
+          if (gridY >= 0 && gridY < this.CONFIG.GRID_HEIGHT) {
+            this.state.grid[gridY][gridX] = {
+              color: piece.color,
+              type: piece.specialType || this.SPECIAL_TYPES.NONE,
+            };
+          }
+        }
+      }
+    }
+    
+    // 블록 사용 처리
+    this.state.puzzleBlocks[this.state.currentPuzzleBlockIndex].used = true;
+    
+    this.SoundManager.drop();
+    this.refreshGridVisuals();
+    
+    // 라인 체크
+    this.checkPuzzleLines();
+    
+    // 다음 블록 선택
+    this.selectNextAvailablePuzzleBlock();
+  }
+  
+  /**
+   * 다음 사용 가능한 블록 선택
+   */
+  selectNextAvailablePuzzleBlock() {
+    // 이미 목표 달성했으면 스킵
+    if (this.state.linesClearedStage >= this.state.puzzleLinesTarget) {
+      console.log("[Puzzle] 이미 목표 달성됨, 다음 블록 선택 스킵");
+      return;
+    }
+    
+    const nextIndex = this.state.puzzleBlocks.findIndex((b, i) => 
+      i > this.state.currentPuzzleBlockIndex && !b.used
+    );
+    
+    console.log("[Puzzle] 다음 블록 검색, nextIndex:", nextIndex, "currentIndex:", this.state.currentPuzzleBlockIndex);
+    
+    if (nextIndex !== -1) {
+      this.selectPuzzleBlock(nextIndex);
+    } else {
+      // 앞에서부터 다시 검색
+      const firstAvailable = this.state.puzzleBlocks.findIndex(b => !b.used);
+      console.log("[Puzzle] 앞에서 검색, firstAvailable:", firstAvailable);
+      
+      if (firstAvailable !== -1) {
+        this.selectPuzzleBlock(firstAvailable);
+      } else {
+        // 모든 블록 사용됨 - 블록 리셋하고 계속!
+        console.log("[Puzzle] 모든 블록 사용됨, 블록 리셋하고 계속 진행");
+        this.resetPuzzleBlocks();
+        this.selectPuzzleBlock(0);
+      }
+    }
+  }
+  
+  /**
+   * 퍼즐 블록 리셋 (다시 사용 가능하게)
+   */
+  resetPuzzleBlocks() {
+    this.state.puzzleBlocks.forEach(block => {
+      block.used = false;
+    });
+    this.state.currentPuzzleBlockIndex = 0;
+    console.log("[Puzzle] 블록 리셋 완료, 총:", this.state.puzzleBlocks.length, "개");
+  }
+  
+  /**
+   * 퍼즐 라인 체크
+   */
+  checkPuzzleLines() {
+    let linesCleared = [];
+    
+    for (let y = 0; y < this.CONFIG.GRID_HEIGHT; y++) {
+      if (this.state.grid[y].every(cell => cell !== null)) {
+        linesCleared.push(y);
+      }
+    }
+    
+    console.log("[Puzzle] 라인 체크 - 클리어된 줄:", linesCleared.length, "현재 총:", this.state.linesClearedStage, "목표:", this.state.puzzleLinesTarget);
+    
+    if (linesCleared.length > 0) {
+      // 라인 제거 연출
+      linesCleared.forEach(y => this.createExplosion(y));
+      
+      // 라인 제거 (위에서 아래로 정렬 후 삭제 + 맨 위에 빈 줄 추가)
+      linesCleared.sort((a, b) => b - a);
+      
+      linesCleared.forEach(y => {
+        // 해당 줄 제거
+        this.state.grid.splice(y, 1);
+        // 맨 위에 빈 줄 추가 (일반 테트리스 방식)
+        this.state.grid.push(Array(this.CONFIG.GRID_WIDTH).fill(null));
+      });
+      
+      this.state.linesClearedStage += linesCleared.length;
+      
+      // 점수
+      const baseScore = linesCleared.length * 100 * linesCleared.length;
+      this.updateScore(this.state.score + baseScore);
+      
+      this.refreshGridVisuals();
+      
+      console.log("[Puzzle] 클리어 후 총 라인:", this.state.linesClearedStage);
+      
+      // 목표 달성 체크
+      if (this.state.linesClearedStage >= this.state.puzzleLinesTarget) {
+        console.log("[Puzzle] 목표 달성! 퍼즐 클리어");
+        this.puzzleClear();
+      }
+    }
+  }
+  
+  /**
+   * 퍼즐 완료 체크 (모든 블록 사용 후)
+   */
+  checkPuzzleComplete() {
+    console.log("[Puzzle] checkPuzzleComplete - 현재:", this.state.linesClearedStage, "목표:", this.state.puzzleLinesTarget);
+    
+    if (this.state.linesClearedStage >= this.state.puzzleLinesTarget) {
+      console.log("[Puzzle] 성공! 퍼즐 클리어");
+      this.puzzleClear();
+    } else {
+      console.log("[Puzzle] 실패! 목표 미달성");
+      this.puzzleFail();
+    }
+  }
+  
+  /**
+   * 퍼즐 클리어
+   */
+  puzzleClear() {
+    this.state.isLogicActive = false;
+    this.SoundManager.stopBGM();
+    this.SoundManager.playTone({ start: 400, end: 800 }, "sine", 0.5, 0.3);
+    
+    this.playClearEffect();
+    
+    if (this.onStageClear) this.onStageClear(this.state.linesClearedStage);
+  }
+  
+  /**
+   * 퍼즐 실패
+   */
+  puzzleFail() {
+    this.state.isLogicActive = false;
+    this.SoundManager.stopBGM();
+    this.SoundManager.playTone({ start: 400, end: 200 }, "sawtooth", 0.5, 0.5);
+    
+    if (this.onPuzzleFail) {
+      this.onPuzzleFail();
+    } else if (this.onGameOver) {
+      this.onGameOver(this.state.score);
+    }
+  }
+  
+  /**
+   * 퍼즐 UI 업데이트 (블록 목록 표시)
+   */
+  updatePuzzleUI() {
+    // 기존 next-box를 퍼즐 블록 목록으로 활용
+    const nextBox = document.getElementById("next-box");
+    if (!nextBox) return;
+    
+    const canvas = nextBox.querySelector("canvas");
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const blockSize = 12;
+    const padding = 5;
+    let offsetY = 10;
+    
+    this.state.puzzleBlocks.forEach((block, index) => {
+      const isSelected = index === this.state.currentPuzzleBlockIndex;
+      const isUsed = block.used;
+      
+      // 배경
+      if (isSelected) {
+        ctx.fillStyle = "rgba(0, 255, 0, 0.3)";
+        ctx.fillRect(0, offsetY - 2, canvas.width, block.shape.length * blockSize + 8);
+      }
+      
+      // 블록 그리기
+      block.shape.forEach((row, y) => {
+        row.forEach((cell, x) => {
+          if (cell) {
+            if (isUsed) {
+              ctx.fillStyle = "#333";
+            } else {
+              ctx.fillStyle = `#${block.color.toString(16).padStart(6, '0')}`;
+            }
+            ctx.fillRect(
+              padding + x * blockSize,
+              offsetY + y * blockSize,
+              blockSize - 1,
+              blockSize - 1
+            );
+          }
+        });
+      });
+      
+      offsetY += block.shape.length * blockSize + padding + 5;
+    });
+  }
+
   createExplosion(gridY) {
     const CELL_HEIGHT =
       (2 * Math.PI * this.CONFIG.RADIUS) / this.CONFIG.GRID_WIDTH;
@@ -1117,6 +1729,16 @@ export class TetrisGame {
 
   handleInput(e) {
     if (!this.state.isPlaying || !this.state.isLogicActive) return;
+    
+    // 퍼즐 모드: 숫자키로 블록 선택
+    if (this.state.isPuzzleMode) {
+      const numKey = parseInt(e.key);
+      if (numKey >= 1 && numKey <= this.state.puzzleBlocks.length) {
+        this.selectPuzzleBlock(numKey - 1);
+        return;
+      }
+    }
+    
     if (e.key === "ArrowLeft") this.moveHorizontal(-1);
     if (e.key === "ArrowRight") this.moveHorizontal(1);
     if (e.key === "ArrowUp") this.rotatePiece();
@@ -1175,6 +1797,12 @@ export class TetrisGame {
   }
 
   hardDrop() {
+    // 퍼즐 모드에서는 바로 배치
+    if (this.state.isPuzzleMode) {
+      this.placePuzzlePiece();
+      return;
+    }
+    
     while (
       !this.checkCollision(
         this.state.currentPiece.x,
@@ -1293,19 +1921,22 @@ export class TetrisGame {
       if (this.cameraShake < 0.05) this.cameraShake = 0;
     }
 
-    this.state.dropTimer += deltaTime;
-    if (this.state.dropTimer > this.CONFIG.DROP_SPEED) {
-      this.state.dropTimer = 0;
-      if (
-        !this.checkCollision(
-          this.state.currentPiece.x,
-          this.state.currentPiece.y - 1,
-          this.state.currentPiece.shape
-        )
-      ) {
-        this.state.currentPiece.y--;
-      } else {
-        this.lockPiece();
+    // 퍼즐 모드에서는 자동 드롭 없음
+    if (!this.state.isPuzzleMode) {
+      this.state.dropTimer += deltaTime;
+      if (this.state.dropTimer > this.CONFIG.DROP_SPEED) {
+        this.state.dropTimer = 0;
+        if (
+          !this.checkCollision(
+            this.state.currentPiece.x,
+            this.state.currentPiece.y - 1,
+            this.state.currentPiece.shape
+          )
+        ) {
+          this.state.currentPiece.y--;
+        } else {
+          this.lockPiece();
+        }
       }
     }
 
