@@ -63,6 +63,7 @@ export class GameManager {
     this.tetrisGame.onStageClear = (lines) => this.handleBreachClear(lines);
     this.tetrisGame.onGameOver = (score) => this.handleBreachFail(score);
     this.tetrisGame.onPuzzleFail = () => this.handleBreachFail(0); // 퍼즐 실패도 동일 처리
+    this.tetrisGame.onLineCleared = (lineNum) => this.handlePuzzleLineCleared(lineNum);
     this.tetrisGame.getPerkEffects = () => this.perkManager.getEffects();
 
     // 게임 상태
@@ -861,6 +862,90 @@ export class GameManager {
     
     // defenseMonitorLoop가 계속 돌면서 강화 페이지 완료 체크
     debugLog("GameManager", "handleConquestTetrisClear 종료");
+  }
+  
+  // 퍼즐 줄 클리어 시 디펜스에 파동 효과
+  handlePuzzleLineCleared(lineNum) {
+    if (!this.isConquestMode || !this.defenseGame) return;
+    
+    debugLog("GameManager", `퍼즐 라인 클리어: ${lineNum}줄`);
+    
+    // 효과 적용 (1,2,3줄에 따라 다른 효과)
+    switch (lineNum) {
+      case 1:
+        // 1줄: 넉백 + 슬로우
+        this.defenseGame.applyWaveEffect("knockback_slow");
+        this.showPuzzleSuccessMessage("LINE CLEAR!", "WAVE SENT - SLOWDOWN");
+        break;
+      case 2:
+        // 2줄: 넉백 + 데미지
+        this.defenseGame.applyWaveEffect("knockback_damage");
+        this.showPuzzleSuccessMessage("DOUBLE LINE!", "WAVE SENT - DAMAGE");
+        break;
+      case 3:
+        // 3줄: 넉백 + 데미지 3회
+        this.defenseGame.applyWaveEffect("knockback_damage_x3");
+        this.showPuzzleSuccessMessage("TRIPLE LINE!", "WAVE SENT - CRITICAL");
+        break;
+      default:
+        // 4줄 이상
+        this.defenseGame.applyWaveEffect("knockback_damage_x3");
+        this.showPuzzleSuccessMessage("MEGA CLEAR!", "WAVE SENT - DEVASTATION");
+        break;
+    }
+  }
+  
+  // 퍼즐 성공 메시지 표시 (터미널 스타일)
+  showPuzzleSuccessMessage(title, subtitle) {
+    // 기존 메시지 제거
+    const existing = document.getElementById("puzzle-success-msg");
+    if (existing) existing.remove();
+    
+    // 메시지 요소 생성
+    const msg = document.createElement("div");
+    msg.id = "puzzle-success-msg";
+    msg.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 9999;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      pointer-events: none;
+      animation: puzzleSuccessFade 1.5s ease-out forwards;
+    `;
+    
+    msg.innerHTML = `
+      <div style="color: #0f0; font-size: 32px; text-shadow: 0 0 10px #0f0, 0 0 20px #0f0; font-weight: bold;">
+        ${title}
+      </div>
+      <div style="color: #0ff; font-size: 18px; text-shadow: 0 0 5px #0ff; margin-top: 10px;">
+        ${subtitle}
+      </div>
+    `;
+    
+    // 애니메이션 스타일 추가 (없으면)
+    if (!document.getElementById("puzzle-success-style")) {
+      const style = document.createElement("style");
+      style.id = "puzzle-success-style";
+      style.textContent = `
+        @keyframes puzzleSuccessFade {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+          20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+          40% { transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(msg);
+    
+    // 1.5초 후 제거
+    setTimeout(() => {
+      if (msg.parentNode) msg.remove();
+    }, 1500);
   }
   
   // 점령 완료

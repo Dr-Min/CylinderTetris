@@ -1714,6 +1714,73 @@ export class DefenseGame {
     // 줌 아웃 스케일 복원
     this.ctx.restore();
   }
+  
+  /**
+   * 테트리스 줄 클리어 시 파동 효과 적용
+   * @param {string} effectType - "knockback_slow", "knockback_damage", "knockback_damage_x3"
+   */
+  applyWaveEffect(effectType) {
+    console.log("[Defense] 파동 효과:", effectType);
+    
+    const knockbackDist = 50; // 넉백 거리
+    const slowDuration = 2000; // 슬로우 2초
+    const damage = 10; // 기본 데미지
+    
+    // 파동 시각 효과 추가
+    let waveColor = "#0f0";
+    if (effectType === "knockback_damage") waveColor = "#ff0";
+    if (effectType === "knockback_damage_x3") waveColor = "#f00";
+    
+    this.shockwaves.push({
+      x: this.core.x,
+      y: this.core.y,
+      radius: 30,
+      maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.5,
+      speed: 500,
+      alpha: 0.9,
+      color: waveColor,
+      lineWidth: 8,
+      damageDealt: false
+    });
+    
+    // 모든 적에게 효과 적용
+    this.enemies.forEach(enemy => {
+      // 넉백 계산
+      const dx = enemy.x - this.core.x;
+      const dy = enemy.y - this.core.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist > 0) {
+        // 넉백 적용
+        enemy.x += (dx / dist) * knockbackDist;
+        enemy.y += (dy / dist) * knockbackDist;
+      }
+      
+      // 효과 타입별 추가 효과
+      if (effectType === "knockback_slow") {
+        // 슬로우 적용
+        enemy.slowMultiplier = 0.3;
+        enemy.slowEndTime = performance.now() + slowDuration;
+      } else if (effectType === "knockback_damage") {
+        // 데미지 적용
+        enemy.hp -= damage;
+      } else if (effectType === "knockback_damage_x3") {
+        // 데미지 3회 적용 (연속 타격)
+        enemy.hp -= damage * 3;
+        
+        // 추가 시각 효과: 적 위치에 폭발
+        this.createExplosion(enemy.x, enemy.y, "#ff4400", 10);
+      }
+    });
+    
+    // 죽은 적 제거
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      if (this.enemies[i].hp <= 0) {
+        this.createExplosion(this.enemies[i].x, this.enemies[i].y, "#ff0000", 15);
+        this.enemies.splice(i, 1);
+      }
+    }
+  }
 
   spawnEnemy() {
     const angle = Math.random() * Math.PI * 2;

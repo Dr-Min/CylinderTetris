@@ -107,6 +107,7 @@ export class TetrisGame {
     this.onStageClear = null; // 콜백 함수
     this.onGameOver = null; // 콜백 함수
     this.onPuzzleFail = null; // 퍼즐 실패 콜백
+    this.onLineCleared = null; // 줄 클리어 시 콜백 (lineNumber: 1,2,3)
     this.getPerkEffects = () => ({}); // 기본값 (GameManager에서 덮어씀)
 
     // Three.js objects
@@ -1566,6 +1567,11 @@ export class TetrisGame {
       this.refreshGridVisuals();
       
       console.log("[Puzzle] 클리어 후 총 라인:", this.state.linesClearedStage);
+      
+      // 줄 클리어 콜백 호출 (디펜스에 파동 효과)
+      if (this.onLineCleared) {
+        this.onLineCleared(this.state.linesClearedStage);
+      }
       
       // 목표 달성 체크
       if (this.state.linesClearedStage >= this.state.puzzleLinesTarget) {
