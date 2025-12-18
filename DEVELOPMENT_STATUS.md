@@ -1,10 +1,26 @@
 # 🎮 HACKER'S BASE - Development Status
 
-> 마지막 업데이트: 2024-12-17 (v8.8)
+> 마지막 업데이트: 2024-12-19 (v8.9)
 
 ---
 
-## 🆕 최신 업데이트 (v8.8)
+## 🆕 최신 업데이트 (v8.9)
+
+### 🔧 디버그 로그 토글 시스템
+- **전역 디버그 유틸리티**: `window.debugLog()`, `window.debugWarn()`, `window.debugError()` 추가
+- **디버그 패널 토글**: 백틱(`) 키로 열리는 디버그 패널에 "Console Logs ON/OFF" 체크박스 추가
+- **콘솔 로그 제어**: 체크박스로 DEBUG 로그 출력 여부 실시간 토글 가능
+- **기본값 OFF**: 일반 플레이 시 콘솔 깔끔하게 유지
+- **태그 기반 로그**: `[GameManager]`, `[Defense]`, `[TerminalUI]` 등 모듈별 태그로 구분
+
+### 적용 파일
+- `GameManager.js`: 점령 모드 관련 디버그 로그
+- `DefenseGame.js`: 아군 바이러스, 강화 페이지, 인트로 애니메이션 등
+- `TerminalUI.js`: hide/show, setDefenseMode 등 UI 상태 로그
+
+---
+
+## 🔄 이전 업데이트 (v8.8)
 
 ### 🔫 수동 발사 시스템
 - **터치/클릭 발사**: 화면 터치/클릭 시 탄환 수동 발사
@@ -164,6 +180,12 @@
 - [x] visibilitychange 이벤트 처리
 - [x] 상태 유효성 검증 (validateGameState)
 - [x] 코어/아군/적/실드 자동 복구
+
+### 개발자 도구
+- [x] 디버그 패널 (백틱 키 토글)
+- [x] 콘솔 로그 ON/OFF 토글
+- [x] 전역 debugLog/debugWarn/debugError 함수
+- [x] 모듈별 태그 기반 로그 시스템
 
 ### 안전영역
 - [x] 시작 시 안전영역으로 시작

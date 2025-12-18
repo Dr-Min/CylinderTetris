@@ -7,6 +7,26 @@ import { EquipmentManager } from "./EquipmentManager.js";
 import { StageManager } from "./StageManager.js";
 import { InventoryManager } from "./InventoryManager.js";
 
+// ===== 전역 디버그 로깅 시스템 =====
+window.DEBUG_LOG_ENABLED = false; // 기본값 OFF
+
+window.debugLog = function(tag, ...args) {
+  if (window.DEBUG_LOG_ENABLED) {
+    console.log(`[${tag}]`, ...args);
+  }
+};
+
+window.debugWarn = function(tag, ...args) {
+  if (window.DEBUG_LOG_ENABLED) {
+    console.warn(`[${tag}]`, ...args);
+  }
+};
+
+// 에러는 항상 출력 (디버그 모드 상관없이)
+window.debugError = function(tag, ...args) {
+  console.error(`[${tag}]`, ...args);
+};
+
 export class GameManager {
   constructor() {
     this.terminal = new TerminalUI();
@@ -292,6 +312,43 @@ export class GameManager {
         `[DEBUG] Score Mult set to ${e.target.value}`
       );
     };
+
+    // ===== 콘솔 로그 토글 체크박스 =====
+    const logToggleContainer = document.createElement("div");
+    logToggleContainer.style.cssText = `
+      margin: 15px 0;
+      padding: 10px;
+      border: 1px dashed #0f0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    `;
+
+    const logToggleCheckbox = document.createElement("input");
+    logToggleCheckbox.type = "checkbox";
+    logToggleCheckbox.id = "dbg-console-log";
+    logToggleCheckbox.checked = window.DEBUG_LOG_ENABLED;
+    logToggleCheckbox.style.cssText = `
+      width: 18px;
+      height: 18px;
+      accent-color: #0f0;
+      cursor: pointer;
+    `;
+    logToggleCheckbox.onchange = (e) => {
+      window.DEBUG_LOG_ENABLED = e.target.checked;
+      const status = e.target.checked ? "ON" : "OFF";
+      this.terminal.printSystemMessage(`[DEBUG] Console Logs: ${status}`);
+      console.log(`[DEBUG] Console logging ${status}`);
+    };
+
+    const logToggleLabel = document.createElement("label");
+    logToggleLabel.htmlFor = "dbg-console-log";
+    logToggleLabel.innerText = "Console Logs (ON/OFF)";
+    logToggleLabel.style.cursor = "pointer";
+
+    logToggleContainer.appendChild(logToggleCheckbox);
+    logToggleContainer.appendChild(logToggleLabel);
+    debugPanel.appendChild(logToggleContainer);
 
     // Buttons Container
     const btnContainer = document.createElement("div");
@@ -726,16 +783,16 @@ export class GameManager {
   
   // 테트리스 클리어 시 (점령 모드) - 바로 디펜스로 복귀
   handleConquestTetrisClear() {
-    console.log("[DEBUG] handleConquestTetrisClear 호출됨");
-    console.log("[DEBUG] isConquestMode:", this.isConquestMode);
+    debugLog("GameManager", "handleConquestTetrisClear 호출됨");
+    debugLog("GameManager", "isConquestMode:", this.isConquestMode);
     
     if (!this.isConquestMode) {
-      console.log("[DEBUG] isConquestMode가 false라서 리턴");
+      debugLog("GameManager", "isConquestMode가 false라서 리턴");
       return;
     }
     
     this.conquestTetrisComplete = true;
-    console.log("[DEBUG] conquestTetrisComplete = true");
+    debugLog("GameManager", "conquestTetrisComplete = true");
     
     // 테트리스 UI 정리
     this.tetrisGame.state.isPlaying = false;
@@ -743,44 +800,44 @@ export class GameManager {
     document.getElementById("game-ui").style.display = "none";
     this.showConquestTetrisUI();
     this.restoreNextBoxPosition();
-    console.log("[DEBUG] 테트리스 UI 정리 완료");
+    debugLog("GameManager", "테트리스 UI 정리 완료");
     
     // 미니 패널 제거
     const panel = document.getElementById("mini-defense-panel");
     if (panel) panel.remove();
-    console.log("[DEBUG] 미니 패널 제거됨");
+    debugLog("GameManager", "미니 패널 제거됨");
     
     // 디펜스 화면 복구 및 재개
     this.defenseGame.canvas.style.display = "block";
     this.defenseGame.uiLayer.style.display = "block";
     this.defenseGame.resume(); // 디펜스 재개! (강화 페이지 진행을 위해)
-    console.log("[DEBUG] 디펜스 재개됨");
+    debugLog("GameManager", "디펜스 재개됨");
     
     // 터미널 복구
-    console.log("[DEBUG] 터미널 복구 시작");
-    console.log("[DEBUG] terminal 객체:", this.terminal);
-    console.log("[DEBUG] terminalLayer:", this.terminal.terminalLayer);
-    console.log("[DEBUG] terminalLayer display (before):", this.terminal.terminalLayer?.style?.display);
+    debugLog("GameManager", "터미널 복구 시작");
+    debugLog("GameManager", "terminal 객체:", this.terminal);
+    debugLog("GameManager", "terminalLayer:", this.terminal.terminalLayer);
+    debugLog("GameManager", "terminalLayer display (before):", this.terminal.terminalLayer?.style?.display);
     
     this.terminal.setTransparentMode(false);
-    console.log("[DEBUG] setTransparentMode(false) 완료");
+    debugLog("GameManager", "setTransparentMode(false) 완료");
     
     this.terminal.show();
-    console.log("[DEBUG] terminal.show() 완료");
-    console.log("[DEBUG] terminalLayer display (after show):", this.terminal.terminalLayer?.style?.display);
+    debugLog("GameManager", "terminal.show() 완료");
+    debugLog("GameManager", "terminalLayer display (after show):", this.terminal.terminalLayer?.style?.display);
     
     this.terminal.setDefenseMode(true);
-    console.log("[DEBUG] setDefenseMode(true) 완료");
-    console.log("[DEBUG] terminalLayer display (after setDefenseMode):", this.terminal.terminalLayer?.style?.display);
-    console.log("[DEBUG] terminalLayer pointerEvents:", this.terminal.terminalLayer?.style?.pointerEvents);
-    console.log("[DEBUG] terminalLayer background:", this.terminal.terminalLayer?.style?.background);
-    console.log("[DEBUG] terminalLayer zIndex:", this.terminal.terminalLayer?.style?.zIndex);
+    debugLog("GameManager", "setDefenseMode(true) 완료");
+    debugLog("GameManager", "terminalLayer display (after setDefenseMode):", this.terminal.terminalLayer?.style?.display);
+    debugLog("GameManager", "terminalLayer pointerEvents:", this.terminal.terminalLayer?.style?.pointerEvents);
+    debugLog("GameManager", "terminalLayer background:", this.terminal.terminalLayer?.style?.background);
+    debugLog("GameManager", "terminalLayer zIndex:", this.terminal.terminalLayer?.style?.zIndex);
     
     this.terminal.printSystemMessage("FIREWALL BREACHED! Defend the core!");
-    console.log("[DEBUG] printSystemMessage 완료");
+    debugLog("GameManager", "printSystemMessage 완료");
     
     // defenseMonitorLoop가 계속 돌면서 강화 페이지 완료 체크
-    console.log("[DEBUG] handleConquestTetrisClear 종료");
+    debugLog("GameManager", "handleConquestTetrisClear 종료");
   }
   
   // 점령 완료
@@ -2002,12 +2059,12 @@ export class GameManager {
   }
 
   async handleBreachClear(lines) {
-      console.log("[DEBUG] handleBreachClear 호출됨, lines:", lines);
-      console.log("[DEBUG] isConquestMode:", this.isConquestMode);
+      debugLog("GameManager", "handleBreachClear 호출됨, lines:", lines);
+      debugLog("GameManager", "isConquestMode:", this.isConquestMode);
       
       // 점령 모드인 경우 별도 처리
       if (this.isConquestMode) {
-          console.log("[DEBUG] 점령 모드이므로 handleConquestTetrisClear 호출");
+          debugLog("GameManager", "점령 모드이므로 handleConquestTetrisClear 호출");
           this.handleConquestTetrisClear();
           return;
       }

@@ -873,19 +873,19 @@ export class TerminalUI {
   }
 
   hide() {
-    console.log("[DEBUG TerminalUI] hide() 호출됨");
+    debugLog("TerminalUI", "hide() 호출됨");
     this.terminalLayer.style.display = "none";
   }
 
   show() {
-    console.log("[DEBUG TerminalUI] show() 호출됨");
-    console.log("[DEBUG TerminalUI] terminalLayer before:", this.terminalLayer?.style?.display);
+    debugLog("TerminalUI", "show() 호출됨");
+    debugLog("TerminalUI", "terminalLayer before:", this.terminalLayer?.style?.display);
     this.terminalLayer.style.display = "block";
-    console.log("[DEBUG TerminalUI] terminalLayer after:", this.terminalLayer?.style?.display);
+    debugLog("TerminalUI", "terminalLayer after:", this.terminalLayer?.style?.display);
   }
 
   setTransparentMode(enabled) {
-    console.log("[DEBUG TerminalUI] setTransparentMode(" + enabled + ") 호출됨");
+    debugLog("TerminalUI", "setTransparentMode(" + enabled + ") 호출됨");
     if (enabled) {
       this.terminalLayer.style.background = "rgba(0,0,0,0)";
       this.terminalLayer.style.pointerEvents = "none";
@@ -901,12 +901,12 @@ export class TerminalUI {
       this.terminalLayer.style.pointerEvents = "auto";
       this.terminalLayer.style.textShadow = "0 0 5px var(--term-color)";
     }
-    console.log("[DEBUG TerminalUI] background after:", this.terminalLayer?.style?.background);
+    debugLog("TerminalUI", "background after:", this.terminalLayer?.style?.background);
   }
 
   // 디펜스 모드용 (배경은 투명하게, 하지만 UI 클릭은 가능하게)
   setDefenseMode(enabled) {
-    console.log("[DEBUG TerminalUI] setDefenseMode(" + enabled + ") 호출됨");
+    debugLog("TerminalUI", "setDefenseMode(" + enabled + ") 호출됨");
     if (enabled) {
         this.terminalLayer.style.background = "rgba(0, 0, 0, 0)"; // 완전 투명
         this.terminalLayer.style.pointerEvents = "none"; // 배경은 클릭 통과 (캔버스 터치 가능)
@@ -916,7 +916,7 @@ export class TerminalUI {
         // 비활성화 시 기본 터미널 모드로 복귀
         this.setTransparentMode(false);
     }
-    console.log("[DEBUG TerminalUI] after setDefenseMode - background:", this.terminalLayer?.style?.background);
-    console.log("[DEBUG TerminalUI] after setDefenseMode - pointerEvents:", this.terminalLayer?.style?.pointerEvents);
+    debugLog("TerminalUI", "after setDefenseMode - background:", this.terminalLayer?.style?.background);
+    debugLog("TerminalUI", "after setDefenseMode - pointerEvents:", this.terminalLayer?.style?.pointerEvents);
   }
 }

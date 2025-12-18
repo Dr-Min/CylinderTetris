@@ -212,7 +212,7 @@ export class DefenseGame {
   // 🛡️ 탭 비활성화/활성화 처리
   handleVisibilityChange() {
     if (document.visibilityState === "visible") {
-      console.log("[Defense] Tab restored - validating game state");
+      debugLog("Defense", "Tab restored - validating game state");
       // 탭 복귀 시 상태 복구
       this.validateGameState();
       this.resize(); // 캔버스 재확인
@@ -220,7 +220,7 @@ export class DefenseGame {
       // 시간 기준 리셋 (deltaTime 폭발 방지)
       this.lastTime = performance.now();
     } else {
-      console.log("[Defense] Tab hidden - pausing updates");
+      debugLog("Defense", "Tab hidden - pausing updates");
     }
   }
   
@@ -231,20 +231,20 @@ export class DefenseGame {
         isNaN(this.core.x) || isNaN(this.core.y) ||
         this.core.x < 0 || this.core.x > this.canvas.width ||
         this.core.y < 0 || this.core.y > this.canvas.height) {
-      console.warn("[Defense] Core position invalid, resetting to center");
+      debugWarn("Defense", "Core position invalid, resetting to center");
       this.core.x = this.canvas.width / 2;
       this.core.y = this.canvas.height / 2;
     }
     
     // 2. 코어 HP 검증
     if (isNaN(this.core.hp) || this.core.hp < 0) {
-      console.warn("[Defense] Core HP invalid, resetting");
+      debugWarn("Defense", "Core HP invalid, resetting");
       this.core.hp = this.core.maxHp;
     }
     
     // 3. 실드 상태 검증
     if (isNaN(this.core.shieldHp)) {
-      console.warn("[Defense] Shield HP invalid, resetting");
+      debugWarn("Defense", "Shield HP invalid, resetting");
       this.core.shieldHp = this.core.shieldMaxHp;
     }
     
@@ -266,7 +266,7 @@ export class DefenseGame {
         const dist = 80 + Math.random() * 40;
         v.x = this.core.x + Math.cos(angle) * dist;
         v.y = this.core.y + Math.sin(angle) * dist;
-        console.warn("[Defense] Allied virus repositioned");
+        debugWarn("Defense", "Allied virus repositioned");
       }
     });
     
@@ -280,7 +280,7 @@ export class DefenseGame {
     
     // 7. 실드 시각 효과 검증
     if (!this.shieldVisual || isNaN(this.shieldVisual.alpha)) {
-      console.warn("[Defense] Shield visual state invalid, resetting");
+      debugWarn("Defense", "Shield visual state invalid, resetting");
       this.shieldVisual = {
         alpha: 0.7, targetAlpha: 0.7,
         dashGap: 0, targetDashGap: 0,
@@ -325,7 +325,7 @@ export class DefenseGame {
   // 외부에서 아군 정보 업데이트 (정보만 저장, 생성은 playIntroAnimation에서)
   updateAlliedInfo(info) {
       this.alliedInfo = info;
-      console.log("[updateAlliedInfo] Info saved:", info);
+      debugLog("Defense", "updateAlliedInfo - Info saved:", info);
       // 아군 바이러스 생성은 playIntroAnimation에서 처리
   }
 
@@ -539,7 +539,7 @@ export class DefenseGame {
 
     this.lastTime = performance.now();
     this.animate(this.lastTime);
-    console.log("Defense Mode Started");
+    debugLog("Defense", "Mode Started");
   }
 
   stop() {
@@ -656,11 +656,11 @@ export class DefenseGame {
                 this.spawnRate = reinforcementSpawnRates[Math.min(this.reinforcementPage - 1, 2)];
                 
                 this.updateWaveDisplay();
-                console.log("[Defense] Reinforcement Page:", this.reinforcementPage, "SpawnRate:", this.spawnRate);
+                debugLog("Defense", "Reinforcement Page:", this.reinforcementPage, "SpawnRate:", this.spawnRate);
             } else {
                 // 강화 페이지 완료 -> 점령 완료!
                 this.reinforcementComplete = true;
-                console.log("[Defense] Reinforcement Complete!");
+                debugLog("Defense", "Reinforcement Complete!");
             }
         }
     }
@@ -700,12 +700,12 @@ export class DefenseGame {
         
         // HP가 없으면 제거 (사망)
         if (v.hp <= 0) {
-            console.log("[DEBUG DefenseGame] 아군 바이러스 사망, isConquered:", this.isConquered, "alliedInfo.count:", this.alliedInfo.count);
+            debugLog("DefenseGame", "아군 바이러스 사망, isConquered:", this.isConquered, "alliedInfo.count:", this.alliedInfo.count);
             this.createExplosion(v.x, v.y, v.color, 8);
             this.alliedViruses.splice(idx, 1);
             
             // 2초 후 리스폰 (점령 상태면 10마리, 아니면 alliedInfo.count만큼)
-            console.log("[DEBUG DefenseGame] 2초 후 리스폰 예약");
+            debugLog("DefenseGame", "2초 후 리스폰 예약");
             setTimeout(() => this.respawnOneAlly(), 2000);
             continue;
         }
@@ -979,7 +979,7 @@ export class DefenseGame {
       this.pageTimer = 0;
       this.spawnRate = 0.5; // 강화 1페이지: 12페이지(0.4초)보다 살짝 느림
       this.updateWaveDisplay();
-      console.log("[Defense] Reinforcement Mode Started:", maxPages, "pages, SpawnRate:", this.spawnRate);
+      debugLog("Defense", "Reinforcement Mode Started:", maxPages, "pages, SpawnRate:", this.spawnRate);
   }
   
   // 일반 모드로 복귀
@@ -998,7 +998,7 @@ export class DefenseGame {
       this.shieldBtn.style.pointerEvents = "auto";
       
       this.updateWaveDisplay();
-      console.log("[Defense] Reset to Normal Mode");
+      debugLog("Defense", "Reset to Normal Mode");
   }
   
   // 점령 상태로 설정
@@ -1041,15 +1041,15 @@ export class DefenseGame {
       // 목표 아군 수 결정
       const targetCount = this.isConquered ? 10 : (this.alliedInfo.count || 0);
       
-      console.log("[DEBUG DefenseGame] respawnOneAlly 호출됨, isConquered:", this.isConquered, "targetCount:", targetCount, "현재 아군 수:", this.alliedViruses.length);
+      debugLog("DefenseGame", "respawnOneAlly 호출됨, isConquered:", this.isConquered, "targetCount:", targetCount, "현재 아군 수:", this.alliedViruses.length);
       
       if (targetCount <= 0) {
-          console.log("[DEBUG DefenseGame] targetCount가 0이라서 리스폰 취소");
+          debugLog("DefenseGame", "targetCount가 0이라서 리스폰 취소");
           return;
       }
       
       if (this.alliedViruses.length >= targetCount) {
-          console.log("[DEBUG DefenseGame] 이미 목표 수 달성, 리스폰 취소");
+          debugLog("DefenseGame", "이미 목표 수 달성, 리스폰 취소");
           return;
       }
       
@@ -1072,7 +1072,7 @@ export class DefenseGame {
       };
       
       this.alliedViruses.push(newAlly);
-      console.log("[DEBUG DefenseGame] 아군 바이러스 리스폰 완료, 현재 아군 수:", this.alliedViruses.length);
+      debugLog("DefenseGame", "아군 바이러스 리스폰 완료, 현재 아군 수:", this.alliedViruses.length);
       
       // 팝 파티클 효과
       this.createExplosion(newAlly.x, newAlly.y, "#00aaff", 5);
@@ -1612,7 +1612,7 @@ export class DefenseGame {
       
       this.core.scale = startScale;
       
-      console.log("[IntroAnimation] Starting with scale:", startScale);
+      debugLog("Defense", "IntroAnimation Starting with scale:", startScale);
       
       const animateDrop = (now) => {
         const elapsed = now - startTime;
@@ -1800,10 +1800,10 @@ export class DefenseGame {
 
   async spawnAlliesSequentially() {
     const count = this.alliedInfo.count;
-    console.log("[spawnAllies] Starting, count:", count);
+    debugLog("Defense", "spawnAllies Starting, count:", count);
     
     if (!count || count === 0) {
-      console.log("[spawnAllies] No allies to spawn");
+      debugLog("Defense", "spawnAllies - No allies to spawn");
       return;
     }
 
@@ -1836,7 +1836,7 @@ export class DefenseGame {
       };
       
       this.alliedViruses.push(ally);
-      console.log("[spawnAllies] 푝! Ally", i + 1, "of", count);
+      debugLog("Defense", "spawnAllies 푝! Ally", i + 1, "of", count);
       
       // 튀어나오기 애니메이션 (비동기로 실행)
       this.animateAllySpawn(ally, targetRadius, angle);
@@ -1845,7 +1845,7 @@ export class DefenseGame {
       await new Promise(r => setTimeout(r, delay));
     }
     
-    console.log("[spawnAllies] Complete! Total:", this.alliedViruses.length);
+    debugLog("Defense", "spawnAllies Complete! Total:", this.alliedViruses.length);
   }
 
   // 아군 튀어나오기 애니메이션
