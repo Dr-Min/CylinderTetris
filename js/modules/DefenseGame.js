@@ -1855,29 +1855,19 @@ export class DefenseGame {
       damageDealt: false
     });
     
-    // 모든 적에게 효과 적용
+    // 모든 적에게 효과 적용 (부드러운 넉백)
     this.enemies.forEach(enemy => {
-      // 넉백 계산
-      const dx = enemy.x - this.core.x;
-      const dy = enemy.y - this.core.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      
-      if (dist > 0) {
-        // 넉백 적용
-        enemy.x += (dx / dist) * knockbackDist;
-        enemy.y += (dy / dist) * knockbackDist;
-      }
-      
-      // 효과 타입별 추가 효과
+      // 효과 타입별 넉백 및 추가 효과
       if (effectType === "knockback_slow") {
-        // 슬로우 적용
-        enemy.slowMultiplier = 0.3;
-        enemy.slowEndTime = performance.now() + slowDuration;
+        // 넉백 + 슬로우
+        this.applyKnockback(enemy, 300, 0.3, 2);
       } else if (effectType === "knockback_damage") {
-        // 데미지 적용
+        // 넉백 + 데미지
+        this.applyKnockback(enemy, 300);
         enemy.hp -= damage;
       } else if (effectType === "knockback_damage_x3") {
-        // 데미지 3회 적용 (연속 타격)
+        // 넉백 + 데미지 3회
+        this.applyKnockback(enemy, 350);
         enemy.hp -= damage * 3;
         
         // 추가 시각 효과: 적 위치에 폭발

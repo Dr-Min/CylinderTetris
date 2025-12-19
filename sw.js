@@ -1,5 +1,5 @@
-// v8.6 - Conquest wave effects + rotation wave effects
-const CACHE_NAME = "hacker-tetris-v14.4";
+// v8.7 - Smooth knockback with velocity-based movement
+const CACHE_NAME = "hacker-tetris-v14.5";
 const ASSETS = [
   "./",
   "./index.html",
