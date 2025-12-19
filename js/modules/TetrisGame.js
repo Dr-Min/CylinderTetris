@@ -1106,10 +1106,64 @@ export class TetrisGame {
     // UI 업데이트
     this.updatePuzzleUI();
     
+    // 모바일 블록 변경 버튼 설정
+    this.setupSwitchBlockButton();
+    
     this.SoundManager.init();
     this.SoundManager.startBGM();
     
     this.animate();
+  }
+  
+  /**
+   * 모바일 블록 변경 버튼 설정
+   */
+  setupSwitchBlockButton() {
+    const switchBtn = document.getElementById("switch-block-btn");
+    if (!switchBtn) return;
+    
+    // 퍼즐 모드에서만 표시
+    switchBtn.style.display = "block";
+    
+    // 기존 이벤트 제거 후 새로 등록
+    const newBtn = switchBtn.cloneNode(true);
+    switchBtn.parentNode.replaceChild(newBtn, switchBtn);
+    
+    newBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.switchToNextBlock();
+    });
+    
+    newBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.switchToNextBlock();
+    }, { passive: false });
+  }
+  
+  /**
+   * 다음 사용 가능한 블록으로 변경
+   */
+  switchToNextBlock() {
+    if (!this.state.isPuzzleMode || !this.state.puzzleBlocks) return;
+    
+    // 현재 인덱스에서 다음 사용 가능한 블록 찾기
+    let nextIndex = -1;
+    const totalBlocks = this.state.puzzleBlocks.length;
+    
+    for (let i = 1; i <= totalBlocks; i++) {
+      const checkIndex = (this.state.currentPuzzleBlockIndex + i) % totalBlocks;
+      if (!this.state.puzzleBlocks[checkIndex].used) {
+        nextIndex = checkIndex;
+        break;
+      }
+    }
+    
+    if (nextIndex !== -1 && nextIndex !== this.state.currentPuzzleBlockIndex) {
+      this.selectPuzzleBlock(nextIndex);
+      console.log("[Puzzle] 블록 변경:", this.state.puzzleBlocks[nextIndex].type);
+    }
   }
   
   /**
@@ -1520,14 +1574,32 @@ export class TetrisGame {
   }
   
   /**
-   * 퍼즐 블록 리셋 (다시 사용 가능하게)
+   * 퍼즐 블록 리셋 (새로운 랜덤 블록 생성)
    */
   resetPuzzleBlocks() {
-    this.state.puzzleBlocks.forEach(block => {
-      block.used = false;
-    });
+    const tetrominoTypes = Object.keys(this.TETROMINOS);
+    const blockCount = this.state.puzzleBlocks.length || 3;
+    
+    // 새로운 랜덤 블록 생성
+    this.state.puzzleBlocks = [];
+    for (let i = 0; i < blockCount; i++) {
+      const type = tetrominoTypes[Math.floor(Math.random() * tetrominoTypes.length)];
+      const template = this.TETROMINOS[type];
+      
+      this.state.puzzleBlocks.push({
+        type,
+        shape: JSON.parse(JSON.stringify(template.shape)),
+        color: template.color,
+        rotationsToSolve: 0,
+        used: false,
+      });
+    }
+    
+    // 섞기
+    this.shuffleArray(this.state.puzzleBlocks);
+    
     this.state.currentPuzzleBlockIndex = 0;
-    console.log("[Puzzle] 블록 리셋 완료, 총:", this.state.puzzleBlocks.length, "개");
+    console.log("[Puzzle] 새 블록 생성:", this.state.puzzleBlocks.map(b => b.type).join(", "));
   }
   
   /**
@@ -1568,15 +1640,16 @@ export class TetrisGame {
       
       console.log("[Puzzle] 클리어 후 총 라인:", this.state.linesClearedStage);
       
-      // 줄 클리어 콜백 호출 (디펜스에 파동 효과)
-      if (this.onLineCleared) {
-        this.onLineCleared(this.state.linesClearedStage);
-      }
-      
-      // 목표 달성 체크
+      // 목표 달성 체크 - 달성 시 클리어 메시지만, 미달성 시 라인 클리어 메시지
       if (this.state.linesClearedStage >= this.state.puzzleLinesTarget) {
         console.log("[Puzzle] 목표 달성! 퍼즐 클리어");
+        // 마지막 클리어 시 라인 메시지 생략 (FIREWALL BREACHED만 표시)
         this.puzzleClear();
+      } else {
+        // 목표 미달성 시에만 라인 클리어 콜백 호출 (디펜스에 파동 효과)
+        if (this.onLineCleared) {
+          this.onLineCleared(this.state.linesClearedStage);
+        }
       }
     }
   }
@@ -1604,6 +1677,12 @@ export class TetrisGame {
     this.SoundManager.stopBGM();
     this.SoundManager.playTone({ start: 400, end: 800 }, "sine", 0.5, 0.3);
     
+    // 블록 변경 버튼 숨기기
+    this.hideSwitchBlockButton();
+    
+    // 성공 메시지 표시
+    this.showPuzzleResultMessage(true);
+    
     this.playClearEffect();
     
     if (this.onStageClear) this.onStageClear(this.state.linesClearedStage);
@@ -1617,6 +1696,12 @@ export class TetrisGame {
     this.SoundManager.stopBGM();
     this.SoundManager.playTone({ start: 400, end: 200 }, "sawtooth", 0.5, 0.5);
     
+    // 블록 변경 버튼 숨기기
+    this.hideSwitchBlockButton();
+    
+    // 실패 메시지 표시
+    this.showPuzzleResultMessage(false);
+    
     if (this.onPuzzleFail) {
       this.onPuzzleFail();
     } else if (this.onGameOver) {
@@ -1625,54 +1710,173 @@ export class TetrisGame {
   }
   
   /**
-   * 퍼즐 UI 업데이트 (블록 목록 표시)
+   * 블록 변경 버튼 숨기기
+   */
+  hideSwitchBlockButton() {
+    const switchBtn = document.getElementById("switch-block-btn");
+    if (switchBtn) {
+      switchBtn.style.display = "none";
+    }
+  }
+  
+  /**
+   * 퍼즐 결과 메시지 표시 (중앙, 터미널 스타일)
+   */
+  showPuzzleResultMessage(isSuccess) {
+    // 기존 메시지 제거
+    const existing = document.getElementById("puzzle-result-msg");
+    if (existing) existing.remove();
+    
+    const msg = document.createElement("div");
+    msg.id = "puzzle-result-msg";
+    
+    const title = isSuccess ? "FIREWALL BREACHED!!" : "BREACH FAILED";
+    const subtitle = isSuccess ? "System Access Granted" : "Connection Terminated";
+    const color = isSuccess ? "#0f0" : "#f00";
+    const glowColor = isSuccess ? "0, 255, 0" : "255, 0, 0";
+    
+    msg.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 99999;
+      text-align: center;
+      font-family: "Galmuri11", "VT323", monospace;
+      pointer-events: none;
+      animation: puzzleResultAnim 2.5s ease-out forwards;
+    `;
+    
+    msg.innerHTML = `
+      <div style="
+        color: ${color}; 
+        font-size: 36px; 
+        font-weight: bold;
+        text-shadow: 0 0 10px rgba(${glowColor}, 0.8), 
+                     0 0 20px rgba(${glowColor}, 0.6), 
+                     0 0 40px rgba(${glowColor}, 0.4);
+        letter-spacing: 3px;
+        animation: puzzleResultGlitch 0.1s infinite;
+      ">
+        ${title}
+      </div>
+      <div style="
+        color: ${color}; 
+        font-size: 16px; 
+        margin-top: 15px;
+        opacity: 0.8;
+        letter-spacing: 2px;
+      ">
+        ${subtitle}
+      </div>
+      <div style="
+        color: ${color}; 
+        font-size: 12px; 
+        margin-top: 20px;
+        opacity: 0.6;
+      ">
+        [${this.state.linesClearedStage}/${this.state.puzzleLinesTarget} LINES]
+      </div>
+    `;
+    
+    // 애니메이션 스타일 추가
+    if (!document.getElementById("puzzle-result-style")) {
+      const style = document.createElement("style");
+      style.id = "puzzle-result-style";
+      style.textContent = `
+        @keyframes puzzleResultAnim {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+          10% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+          20% { transform: translate(-50%, -50%) scale(1); }
+          80% { opacity: 1; }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes puzzleResultGlitch {
+          0% { text-shadow: 2px 0 #f00, -2px 0 #0ff; }
+          25% { text-shadow: -2px 0 #f00, 2px 0 #0ff; }
+          50% { text-shadow: 2px 2px #f00, -2px -2px #0ff; }
+          75% { text-shadow: -2px 2px #f00, 2px -2px #0ff; }
+          100% { text-shadow: 0 0 #f00, 0 0 #0ff; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(msg);
+    
+    // 2.5초 후 제거
+    setTimeout(() => {
+      if (msg.parentNode) msg.remove();
+    }, 2500);
+  }
+  
+  /**
+   * 퍼즐 UI 업데이트 (현재 블록만 표시)
    */
   updatePuzzleUI() {
-    // 기존 next-box를 퍼즐 블록 목록으로 활용
-    const nextBox = document.getElementById("next-box");
-    if (!nextBox) return;
+    // 기존 next-box의 캔버스 사용 (drawNextPiece와 동일한 방식)
+    if (!this.nextCtx) {
+      console.log("[Puzzle] nextCtx 없음");
+      return;
+    }
     
-    const canvas = nextBox.querySelector("canvas");
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext("2d");
+    const ctx = this.nextCtx;
+    const canvas = ctx.canvas;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    const blockSize = 12;
-    const padding = 5;
-    let offsetY = 10;
+    // 현재 선택된 블록 가져오기
+    if (!this.state.puzzleBlocks || this.state.puzzleBlocks.length === 0) {
+      return;
+    }
     
-    this.state.puzzleBlocks.forEach((block, index) => {
-      const isSelected = index === this.state.currentPuzzleBlockIndex;
-      const isUsed = block.used;
-      
-      // 배경
-      if (isSelected) {
-        ctx.fillStyle = "rgba(0, 255, 0, 0.3)";
-        ctx.fillRect(0, offsetY - 2, canvas.width, block.shape.length * blockSize + 8);
-      }
-      
-      // 블록 그리기
-      block.shape.forEach((row, y) => {
-        row.forEach((cell, x) => {
-          if (cell) {
-            if (isUsed) {
-              ctx.fillStyle = "#333";
-            } else {
-              ctx.fillStyle = `#${block.color.toString(16).padStart(6, '0')}`;
-            }
-            ctx.fillRect(
-              padding + x * blockSize,
-              offsetY + y * blockSize,
-              blockSize - 1,
-              blockSize - 1
-            );
-          }
-        });
+    const currentBlock = this.state.puzzleBlocks[this.state.currentPuzzleBlockIndex];
+    if (!currentBlock || currentBlock.used) {
+      // 사용 안 한 다음 블록 찾기
+      const nextAvailable = this.state.puzzleBlocks.find(b => !b.used);
+      if (!nextAvailable) return;
+    }
+    
+    const block = currentBlock;
+    const blockSize = 14;
+    
+    // 블록 중앙에 그리기
+    const shapeWidth = block.shape[0].length * blockSize;
+    const shapeHeight = block.shape.length * blockSize;
+    const startX = (canvas.width - shapeWidth) / 2;
+    const startY = (canvas.height - shapeHeight) / 2;
+    
+    // 블록 그리기
+    block.shape.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell) {
+          // 메인 색상
+          ctx.fillStyle = `#${block.color.toString(16).padStart(6, '0')}`;
+          ctx.fillRect(
+            startX + x * blockSize,
+            startY + y * blockSize,
+            blockSize - 2,
+            blockSize - 2
+          );
+          
+          // 하이라이트 (위, 왼쪽)
+          ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+          ctx.fillRect(startX + x * blockSize, startY + y * blockSize, blockSize - 2, 2);
+          ctx.fillRect(startX + x * blockSize, startY + y * blockSize, 2, blockSize - 2);
+          
+          // 그림자 (아래, 오른쪽)
+          ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+          ctx.fillRect(startX + x * blockSize, startY + y * blockSize + blockSize - 4, blockSize - 2, 2);
+          ctx.fillRect(startX + x * blockSize + blockSize - 4, startY + y * blockSize, 2, blockSize - 2);
+        }
       });
-      
-      offsetY += block.shape.length * blockSize + padding + 5;
     });
+    
+    // 블록 남은 개수 표시
+    const remaining = this.state.puzzleBlocks.filter(b => !b.used).length;
+    ctx.fillStyle = "#0f0";
+    ctx.font = "bold 10px 'Galmuri11', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`${remaining}/${this.state.puzzleBlocks.length}`, canvas.width / 2, canvas.height - 5);
   }
 
   createExplosion(gridY) {
@@ -1927,19 +2131,23 @@ export class TetrisGame {
       if (this.cameraShake < 0.05) this.cameraShake = 0;
     }
 
-    // 퍼즐 모드에서는 자동 드롭 없음
-    if (!this.state.isPuzzleMode) {
-      this.state.dropTimer += deltaTime;
-      if (this.state.dropTimer > this.CONFIG.DROP_SPEED) {
-        this.state.dropTimer = 0;
-        if (
-          !this.checkCollision(
-            this.state.currentPiece.x,
-            this.state.currentPiece.y - 1,
-            this.state.currentPiece.shape
-          )
-        ) {
-          this.state.currentPiece.y--;
+    // 자동 드롭 (퍼즐 모드에서도 활성화)
+    this.state.dropTimer += deltaTime;
+    const dropSpeed = this.state.isPuzzleMode ? 1500 : this.CONFIG.DROP_SPEED; // 퍼즐 모드는 느리게
+    if (this.state.dropTimer > dropSpeed) {
+      this.state.dropTimer = 0;
+      if (
+        !this.checkCollision(
+          this.state.currentPiece.x,
+          this.state.currentPiece.y - 1,
+          this.state.currentPiece.shape
+        )
+      ) {
+        this.state.currentPiece.y--;
+      } else {
+        // 퍼즐 모드에서 바닥에 닿으면 배치
+        if (this.state.isPuzzleMode) {
+          this.placePuzzlePiece();
         } else {
           this.lockPiece();
         }

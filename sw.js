@@ -1,5 +1,5 @@
-// v7.9 - Green projectiles + glitch-style ASCII particles
-const CACHE_NAME = "hacker-tetris-v13.3";
+// v8.6 - Conquest wave effects + rotation wave effects
+const CACHE_NAME = "hacker-tetris-v14.4";
 const ASSETS = [
   "./",
   "./index.html",

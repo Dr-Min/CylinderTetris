@@ -522,24 +522,11 @@ export class DefenseGame {
   
   // 파동 효과: 넉백 + 슬로우 + 데미지
   applyShockwaveEffects() {
-      const knockbackDist = 30;
-      const slowDuration = 2000; // 2초
       const damage = 25; // 고정 데미지
       
       this.enemies.forEach(enemy => {
-          // 넉백 (코어 반대 방향으로)
-          const dx = enemy.x - this.core.x;
-          const dy = enemy.y - this.core.y;
-          const dist = Math.hypot(dx, dy);
-          
-          if (dist > 0) {
-              enemy.x += (dx / dist) * knockbackDist;
-              enemy.y += (dy / dist) * knockbackDist;
-          }
-          
-          // 슬로우 효과
-          enemy.slowMultiplier = 0.3; // 70% 감속
-          enemy.slowEndTime = performance.now() + slowDuration;
+          // 부드러운 넉백 + 슬로우
+          this.applyKnockback(enemy, 200, 0.3, 2);
           
           // 데미지
           enemy.hp -= damage;
@@ -998,6 +985,23 @@ export class DefenseGame {
             continue;
         }
 
+        // 넉백 속도 적용 (부드러운 넉백)
+        if (enemy.knockbackVx || enemy.knockbackVy) {
+            enemy.x += (enemy.knockbackVx || 0) * dt;
+            enemy.y += (enemy.knockbackVy || 0) * dt;
+            
+            // 마찰로 속도 감소 (0.9^60 ≈ 0.002, 약 1초 후 거의 0)
+            const friction = Math.pow(0.05, dt); // dt 기반 마찰
+            enemy.knockbackVx = (enemy.knockbackVx || 0) * friction;
+            enemy.knockbackVy = (enemy.knockbackVy || 0) * friction;
+            
+            // 속도가 거의 0이면 제거
+            if (Math.abs(enemy.knockbackVx) < 1 && Math.abs(enemy.knockbackVy) < 1) {
+                enemy.knockbackVx = 0;
+                enemy.knockbackVy = 0;
+            }
+        }
+        
         // 이동 적용 (슬로우 효과 반영)
         if (dist > 0) {
             const slowMult = enemy.slowMultiplier || 1;
@@ -1211,7 +1215,11 @@ export class DefenseGame {
       if (conquered) {
           // 점령 시작 시간 기록 (회전 애니메이션용)
           this.conqueredStartTime = Date.now() / 1000;
+          this.lastRotationStep = -1; // 회전 단계 추적 (파동 발생용)
           debugLog("DefenseGame", "점령 상태 활성화! conqueredStartTime:", this.conqueredStartTime);
+          
+          // 점령 시 강한 파동 발사!
+          this.emitConquestWave();
           
           // 점령 시 적 스폰 중지, 실드 비활성화
           this.spawnRate = 9999; // 적 거의 안 나옴
@@ -1224,8 +1232,88 @@ export class DefenseGame {
           debugLog("DefenseGame", "점령 상태 비활성화");
           this.conqueredStartTime = null; // 리셋
           this.conqueredDebugFrame = 0; // 디버그 프레임 카운터 리셋
+          this.lastRotationStep = -1;
       }
       this.updateWaveDisplay();
+  }
+  
+  // 점령 완료 시 강한 파동
+  emitConquestWave() {
+      this.shockwaves.push({
+          x: this.core.x,
+          y: this.core.y,
+          radius: 0,
+          maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.5,
+          speed: 600, // 빠른 속도
+          alpha: 1.0,
+          color: "#00ff00", // 녹색
+          lineWidth: 10,
+          damageDealt: false
+      });
+      
+      // 강한 넉백 적용 (부드럽게)
+      this.enemies.forEach(enemy => {
+          this.applyKnockback(enemy, 400, 0.3, 3); // 속도 400, 슬로우 0.3, 3초
+      });
+  }
+  
+  // 부드러운 넉백 적용 헬퍼
+  applyKnockback(enemy, speed, slowMult = 1, slowDuration = 0) {
+      const dx = enemy.x - this.core.x;
+      const dy = enemy.y - this.core.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      
+      // 넉백 속도 설정 (기존 속도에 추가)
+      enemy.knockbackVx = (enemy.knockbackVx || 0) + (dx / dist) * speed;
+      enemy.knockbackVy = (enemy.knockbackVy || 0) + (dy / dist) * speed;
+      
+      // 슬로우 적용
+      if (slowMult < 1 && slowDuration > 0) {
+          enemy.slowMultiplier = slowMult;
+          enemy.slowTimer = slowDuration;
+      }
+  }
+  
+  // 회전 단계 완료 시 파동 발사
+  emitRotationWave(type) {
+      let color, lineWidth;
+      
+      if (type === "green") {
+          color = "rgba(0, 255, 100, 0.8)"; // 초록색 (사각형1 색상)
+          lineWidth = 4;
+      } else if (type === "blue") {
+          color = "rgba(0, 200, 255, 0.8)"; // 파란색 (사각형2 색상)
+          lineWidth = 4;
+      } else {
+          // 혼합색 (청록색)
+          color = "rgba(0, 255, 200, 0.9)";
+          lineWidth = 6;
+      }
+      
+      // 파동 추가
+      this.shockwaves.push({
+          x: this.core.x,
+          y: this.core.y,
+          radius: 0,
+          maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.2,
+          speed: 400,
+          alpha: 0.7,
+          color: color,
+          lineWidth: lineWidth,
+          damageDealt: false
+      });
+      
+      // 적에게 효과 적용 (부드러운 넉백)
+      this.enemies.forEach(enemy => {
+          if (type === "mixed") {
+              // 혼합색: 넉백 + 데미지
+              this.applyKnockback(enemy, 200);
+              enemy.hp -= 15; // 데미지
+          } else {
+              // 초록/파랑: 넉백 + 슬로우
+              this.applyKnockback(enemy, 250, 0.5, 2);
+          }
+      });
   }
   
   // 점령 시 아군 바이러스 소환 (배리어 밖에 위치)
@@ -1318,31 +1406,55 @@ export class DefenseGame {
       const easeInOut = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
       
       let targetAngle;
+      let currentStep = 0; // 현재 단계 (0=1단계 회전 중, 1=1단계 쉼, 2=2단계 회전 중, ...)
       
       if (cycleTime < ROTATION_TIME) {
           // 첫 번째 회전: 0° → 90° (부드럽게 회전)
           const progress = easeInOut(cycleTime / ROTATION_TIME);
           targetAngle = progress * (Math.PI / 2);
+          currentStep = 0;
       } else if (cycleTime < ROTATION_TIME + PAUSE_TIME) {
-          // 첫 번째 쉼: 90° (정지)
+          // 첫 번째 쉼: 90° (정지) - 1단계 완료
           targetAngle = Math.PI / 2;
+          currentStep = 1;
       } else if (cycleTime < ROTATION_TIME * 2 + PAUSE_TIME) {
           // 두 번째 회전: 90° → 180° (부드럽게 회전)
           const localTime = cycleTime - (ROTATION_TIME + PAUSE_TIME);
           const progress = easeInOut(localTime / ROTATION_TIME);
           targetAngle = Math.PI / 2 + progress * (Math.PI / 2);
+          currentStep = 2;
       } else if (cycleTime < ROTATION_TIME * 2 + PAUSE_TIME * 2) {
-          // 두 번째 쉼: 180° (정지)
+          // 두 번째 쉼: 180° (정지) - 2단계 완료
           targetAngle = Math.PI;
+          currentStep = 3;
       } else if (cycleTime < ROTATION_TIME * 3 + PAUSE_TIME * 2) {
           // 세 번째 회전: 180° → 360° (부드럽게 회전)
           const localTime = cycleTime - (ROTATION_TIME * 2 + PAUSE_TIME * 2);
           const progress = easeInOut(localTime / ROTATION_TIME);
           targetAngle = Math.PI + progress * Math.PI;
+          currentStep = 4;
       } else {
-          // 세 번째 쉼: 360° (정지, 다음 사이클 시작)
+          // 세 번째 쉼: 360° (정지, 다음 사이클 시작) - 3단계 완료
           targetAngle = Math.PI * 2;
+          currentStep = 5;
       }
+      
+      // 회전 단계 변경 시 파동 발사
+      const globalStep = fullCycles * 6 + currentStep;
+      if (this.lastRotationStep !== undefined && this.lastRotationStep !== globalStep) {
+          // 쉼 단계 진입 시 (1, 3, 5) 파동 발사
+          if (currentStep === 1) {
+              // 1단계 완료: 초록색 파동 (넉백 + 슬로우)
+              this.emitRotationWave("green");
+          } else if (currentStep === 3) {
+              // 2단계 완료: 파란색 파동 (넉백 + 슬로우)
+              this.emitRotationWave("blue");
+          } else if (currentStep === 5) {
+              // 3단계 완료: 혼합색 파동 (데미지)
+              this.emitRotationWave("mixed");
+          }
+      }
+      this.lastRotationStep = globalStep;
       
       // 누적 각도 (계속 돌아감)
       const baseAngle = fullCycles * Math.PI * 2;

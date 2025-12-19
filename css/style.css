@@ -591,6 +591,36 @@ body {
   color: #000 !important;
 }
 
+/* 블록 변경 버튼 (퍼즐 모드용) */
+#switch-block-btn {
+  position: fixed;
+  bottom: 110px;
+  right: 20px;
+  width: 70px;
+  height: 50px;
+  z-index: 9999;
+  pointer-events: auto;
+  
+  background: rgba(0, 20, 0, 0.8);
+  border: 2px solid var(--term-color);
+  border-radius: 5px;
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(51, 255, 0, 0.5);
+}
+
+#switch-block-btn:active {
+  background: var(--term-color);
+  color: #000;
+  box-shadow: 0 0 25px var(--term-color);
+  transform: scale(0.95);
+}
+
 /* === Mobile Optimization (미디어 쿼리) === */
 @media (max-width: 768px) {
   #terminal-layer {

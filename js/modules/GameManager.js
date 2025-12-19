@@ -695,6 +695,7 @@ export class GameManager {
     infoDiv.style.cssText = `
       display: flex;
       justify-content: space-between;
+      align-items: center;
       margin-bottom: 5px;
       padding-bottom: 5px;
       border-bottom: 1px solid #ff3333;
@@ -703,7 +704,7 @@ export class GameManager {
     infoDiv.innerHTML = `
       <span id="conquest-core-hp">♥ 100%</span>
       <span style="color: #00ff00;">DEFENSE MODE</span>
-      <span id="conquest-page">⚔️ WAVE 1/3</span>
+      <span id="conquest-page">⚔️ 2/3</span>
     `;
     panel.appendChild(infoDiv);
     
@@ -721,13 +722,103 @@ export class GameManager {
     panel.appendChild(miniCanvas);
     
     document.body.appendChild(panel);
+    
+    // BGM/VIEW 버튼을 패널 외부 오른쪽에 배치 (패널 아래)
+    const settingsBtnContainer = document.createElement("div");
+    settingsBtnContainer.id = "conquest-settings-btns";
+    settingsBtnContainer.style.cssText = `
+      position: fixed;
+      top: 215px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      pointer-events: auto;
+      z-index: 1001;
+    `;
+    
+    const btnStyle = `
+      padding: 8px 10px;
+      font-size: 12px;
+      background: rgba(0, 20, 0, 0.8);
+      border: 1px solid var(--term-color);
+      color: var(--term-color);
+      font-family: var(--term-font);
+      cursor: pointer;
+      line-height: 1.2;
+      text-align: center;
+    `;
+    
+    // 원본 버튼 참조
+    const origBgmBtn = document.getElementById("bgm-btn");
+    const origViewBtn = document.getElementById("toggle-btn");
+    
+    // BGM 버튼 생성
+    const bgmClone = document.createElement("button");
+    bgmClone.id = "conquest-bgm-btn";
+    bgmClone.innerHTML = origBgmBtn ? origBgmBtn.innerHTML : "BGM<br>ON";
+    bgmClone.style.cssText = btnStyle;
+    bgmClone.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // 원본 버튼의 pointerdown 이벤트 트리거
+      if (origBgmBtn) {
+        const event = new PointerEvent("pointerdown", { bubbles: true });
+        origBgmBtn.dispatchEvent(event);
+        // 복제 버튼 텍스트 동기화
+        setTimeout(() => {
+          bgmClone.innerHTML = origBgmBtn.innerHTML;
+        }, 10);
+      }
+    });
+    
+    // VIEW 버튼 생성
+    const viewClone = document.createElement("button");
+    viewClone.id = "conquest-view-btn";
+    viewClone.innerHTML = origViewBtn ? origViewBtn.innerHTML : "VIEW<br>OFF";
+    viewClone.style.cssText = btnStyle;
+    viewClone.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // 원본 버튼의 pointerdown 이벤트 트리거
+      if (origViewBtn) {
+        const event = new PointerEvent("pointerdown", { bubbles: true });
+        origViewBtn.dispatchEvent(event);
+        // 복제 버튼 텍스트 동기화
+        setTimeout(() => {
+          viewClone.innerHTML = origViewBtn.innerHTML;
+        }, 10);
+      }
+    });
+    
+    settingsBtnContainer.appendChild(bgmClone);
+    settingsBtnContainer.appendChild(viewClone);
+    document.body.appendChild(settingsBtnContainer);
+    
+    // 원래 settings-area 숨기기
+    const settingsArea = document.querySelector(".settings-area");
+    if (settingsArea) {
+      settingsArea.style.display = "none";
+    }
   }
   
-  // NEXT 블록 위치 복구
+  // NEXT 블록 위치 복구 및 설정 버튼 복구
   restoreNextBoxPosition() {
     const nextBox = document.querySelector(".next-box");
     if (nextBox) {
       nextBox.style.cssText = "";
+    }
+    
+    // 정복 모드 설정 버튼 제거
+    const conquestSettingsBtns = document.getElementById("conquest-settings-btns");
+    if (conquestSettingsBtns) {
+      conquestSettingsBtns.remove();
+    }
+    
+    // settings-area 다시 표시
+    const settingsArea = document.querySelector(".settings-area");
+    if (settingsArea) {
+      settingsArea.style.display = "flex";
     }
   }
   
@@ -895,7 +986,7 @@ export class GameManager {
     }
   }
   
-  // 퍼즐 성공 메시지 표시 (터미널 스타일)
+  // 퍼즐 성공 메시지 표시 (터미널 스타일 - 클리어 메시지와 동일)
   showPuzzleSuccessMessage(title, subtitle) {
     // 기존 메시지 제거
     const existing = document.getElementById("puzzle-success-msg");
@@ -909,18 +1000,35 @@ export class GameManager {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 9999;
+      z-index: 99999;
       text-align: center;
-      font-family: 'Courier New', monospace;
+      font-family: "Galmuri11", "VT323", monospace;
       pointer-events: none;
-      animation: puzzleSuccessFade 1.5s ease-out forwards;
+      animation: puzzleSuccessAnim 1.5s ease-out forwards;
     `;
     
     msg.innerHTML = `
-      <div style="color: #0f0; font-size: 32px; text-shadow: 0 0 10px #0f0, 0 0 20px #0f0; font-weight: bold;">
+      <div style="
+        color: #0f0; 
+        font-size: 32px; 
+        font-weight: bold;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 
+                     0 0 20px rgba(0, 255, 0, 0.6), 
+                     0 0 40px rgba(0, 255, 0, 0.4);
+        letter-spacing: 3px;
+        animation: puzzleSuccessGlitch 0.1s infinite;
+      ">
         ${title}
       </div>
-      <div style="color: #0ff; font-size: 18px; text-shadow: 0 0 5px #0ff; margin-top: 10px;">
+      <div style="
+        color: #0ff; 
+        font-size: 16px; 
+        margin-top: 15px;
+        text-shadow: 0 0 8px rgba(0, 255, 255, 0.8), 
+                     0 0 15px rgba(0, 255, 255, 0.5);
+        letter-spacing: 2px;
+        opacity: 0.9;
+      ">
         ${subtitle}
       </div>
     `;
@@ -930,11 +1038,19 @@ export class GameManager {
       const style = document.createElement("style");
       style.id = "puzzle-success-style";
       style.textContent = `
-        @keyframes puzzleSuccessFade {
+        @keyframes puzzleSuccessAnim {
           0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-          20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-          40% { transform: translate(-50%, -50%) scale(1); }
+          10% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+          20% { transform: translate(-50%, -50%) scale(1); }
+          80% { opacity: 1; }
           100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes puzzleSuccessGlitch {
+          0% { text-shadow: 2px 0 #f00, -2px 0 #0ff, 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.6); }
+          25% { text-shadow: -2px 0 #f00, 2px 0 #0ff, 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.6); }
+          50% { text-shadow: 2px 2px #f00, -2px -2px #0ff, 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.6); }
+          75% { text-shadow: -2px 2px #f00, 2px -2px #0ff, 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.6); }
+          100% { text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.6), 0 0 40px rgba(0, 255, 0, 0.4); }
         }
       `;
       document.head.appendChild(style);
