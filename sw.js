@@ -1,5 +1,5 @@
-// v8.8 - Fix enemy HP bar clamping
-const CACHE_NAME = "hacker-tetris-v14.6";
+// v9.0 - Mobile optimization: scale limit, error handling
+const CACHE_NAME = "hacker-tetris-v15.0";
 const ASSETS = [
   "./",
   "./index.html",

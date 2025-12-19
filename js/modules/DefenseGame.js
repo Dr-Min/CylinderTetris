@@ -2301,41 +2301,50 @@ export class DefenseGame {
       // 체력 표시 숨김 (착지 후 글리치로 나타남)
       this.showCoreHP = false;
       
-      // 원근법: 화면 전체를 덮을 정도로 크게 (50x)
-      const startScale = 50.0;
-      const duration = 300; // 0.3초 (더 빠르게!)
+      // 원근법: 모바일에서는 스케일 제한 (성능 최적화)
+      const isMobile = window.innerWidth <= 768;
+      const startScale = isMobile ? 20.0 : 50.0; // 모바일: 20x, PC: 50x
+      const duration = isMobile ? 250 : 300; // 모바일: 더 빠르게
       const startTime = performance.now();
       
       this.core.scale = startScale;
       
-      debugLog("Defense", "IntroAnimation Starting with scale:", startScale);
+      debugLog("Defense", `IntroAnimation Starting with scale: ${startScale} (mobile: ${isMobile})`);
       
       const animateDrop = (now) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        // ease-in quint (더 급격하게)
-        const easeInQuint = t => t * t * t * t * t;
-        
-        // 스케일: 50x → 1x (급격히)
-        this.core.scale = startScale - (startScale - 1) * easeInQuint(progress);
-        
-        if (progress < 1) {
-          requestAnimationFrame(animateDrop);
-        } else {
-          // 착지!
+        try {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // ease-in quint (더 급격하게)
+          const easeInQuint = t => t * t * t * t * t;
+          
+          // 스케일: Nx → 1x (급격히)
+          this.core.scale = startScale - (startScale - 1) * easeInQuint(progress);
+          
+          if (progress < 1) {
+            requestAnimationFrame(animateDrop);
+          } else {
+            // 착지!
+            this.core.scale = 1;
+            
+            // 착지 효과
+            this.impactEffect();
+            
+            // 글리치 효과로 체력 표시 (예외 처리 추가)
+            this.glitchShowHP()
+              .then(() => this.spawnAlliesSequentially())
+              .then(() => this.expandShield())
+              .then(resolve)
+              .catch(err => {
+                console.error("IntroAnimation error:", err);
+                resolve(); // 에러 발생해도 진행
+              });
+          }
+        } catch (err) {
+          console.error("animateDrop error:", err);
           this.core.scale = 1;
-          
-          // 착지 효과
-          this.impactEffect();
-          
-          // 글리치 효과로 체력 표시
-          this.glitchShowHP().then(() => {
-            // 아군 순차 생성
-            this.spawnAlliesSequentially().then(() => {
-              this.expandShield().then(resolve);
-            });
-          });
+          resolve();
         }
       };
       

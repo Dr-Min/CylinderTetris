@@ -476,10 +476,10 @@ export class GameManager {
     this.activeMode = mode;
 
     if (mode === "defense") {
-      // 1. 테트리스 정지 및 숨김 (UI만 숨기고 컨테이너는 보이게)
+      // 1. 테트리스 정지 및 Three.js 캔버스 완전 숨김
       this.tetrisGame.state.isPlaying = false;
       document.getElementById("game-ui").style.display = "none";
-      document.getElementById("game-container").style.opacity = "1"; // [수정] 화면 다시 켜기
+      document.getElementById("game-container").style.display = "none"; // Three.js 캔버스 숨김
       
       // 2. 터미널 UI 조정 (디펜스 모드용)
       this.terminal.setDefenseMode(true); // 배경 투명 + 클릭 가능
