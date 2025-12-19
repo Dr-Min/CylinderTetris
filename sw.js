@@ -1,5 +1,5 @@
-// v8.7 - Smooth knockback with velocity-based movement
-const CACHE_NAME = "hacker-tetris-v14.5";
+// v8.8 - Fix enemy HP bar clamping
+const CACHE_NAME = "hacker-tetris-v14.6";
 const ASSETS = [
   "./",
   "./index.html",

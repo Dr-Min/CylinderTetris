@@ -1687,7 +1687,7 @@ export class DefenseGame {
       this.ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
       this.ctx.fill();
       
-      const hpPct = e.hp / e.maxHp;
+      const hpPct = Math.max(0, Math.min(1, e.hp / e.maxHp)); // 0~1 클램핑
       this.ctx.fillStyle = "#550000";
       this.ctx.fillRect(e.x - 10, e.y - 20, 20, 4);
       this.ctx.fillStyle = "#ff0000";
