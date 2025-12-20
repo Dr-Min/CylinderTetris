@@ -686,6 +686,16 @@ export class TerminalUI {
           `;
         }
         
+        // 위험 스타일 (어두운 빨간색, 작은 폰트)
+        if (choice.style === "danger") {
+          btn.style.cssText = `
+            color: #aa3333 !important;
+            border-color: #663333 !important;
+            font-size: 0.9em !important;
+            opacity: 0.7 !important;
+          `;
+        }
+        
         const displayIndex = index + 1;
         const fullText = `[${displayIndex}] ${choice.text}`;
         btn.textContent = ""; // 빈 상태로 시작

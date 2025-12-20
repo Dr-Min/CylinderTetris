@@ -1,5 +1,5 @@
-// v9.0 - Mobile optimization: scale limit, error handling
-const CACHE_NAME = "hacker-tetris-v15.0";
+// v9.1 - Upgrade UI refactoring, helper projectile speed, upgrade click animation
+const CACHE_NAME = "hacker-tetris-v16.1";
 const ASSETS = [
   "./",
   "./index.html",

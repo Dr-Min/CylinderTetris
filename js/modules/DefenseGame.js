@@ -160,6 +160,7 @@ export class DefenseGame {
       lastFireTime: 0,
       range: 300, // 사거리
       damage: 10,
+      projectileSpeed: 400, // 탄환 속도
       angle: 0, // 현재 바라보는 방향
       evadeDistance: 50, // 적과 이 거리 이내면 회피 (40 → 50)
       targetX: 0, // 목표 위치
@@ -2089,11 +2090,12 @@ export class DefenseGame {
     const dy = target.y - this.helper.y;
     const dist = Math.hypot(dx, dy);
     
+    const speed = this.helper.projectileSpeed || 400;
     this.projectiles.push({
       x: this.helper.x,
       y: this.helper.y,
-      vx: (dx / dist) * 400, // 발사체 속도
-      vy: (dy / dist) * 400,
+      vx: (dx / dist) * speed, // 발사체 속도
+      vy: (dy / dist) * speed,
       damage: this.helper.damage,
       life: 2,
       radius: 8, // 충돌 검사용 반경

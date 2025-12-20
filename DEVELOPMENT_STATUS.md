@@ -1,10 +1,52 @@
 # 🎮 HACKER'S BASE - Development Status
 
-> 마지막 업데이트: 2024-12-19 (v8.9)
+> 마지막 업데이트: 2024-12-21 (v9.1)
 
 ---
 
-## 🆕 최신 업데이트 (v8.9)
+## 🆕 최신 업데이트 (v9.1)
+
+### 🔧 업그레이드 UI 리팩토링 (Depth 2 구조)
+- **카테고리 선택 화면 (Depth 1)**: 코어, 조력자, 아군 바이러스, 실드 4개 카테고리
+- **카테고리별 업그레이드 화면 (Depth 2)**: 해당 카테고리의 업그레이드 목록
+- **조력자 업그레이드 구현**:
+  - Damage +5 (150 MB) - Lv.N 표시
+  - Fire Rate +1/s (200 MB) - Lv.N 표시
+  - Range +50 (100 MB) - Lv.N 표시
+  - Move Speed +20 (120 MB) - Lv.N 표시
+  - **Bullet Speed +100 (180 MB)** - 탄환 속도 업그레이드 추가!
+- **현재 스탯 박스**: DMG, RATE, RNG, MOVE, BULLET 한눈에 확인
+- **업그레이드 레벨 추적**: `upgradeLevels` 객체로 각 스탯별 업그레이드 횟수 추적
+- **코어/실드 업그레이드**: 기존 기능 유지
+- **아군 바이러스**: COMING SOON 표시
+
+### 적용 파일
+- `GameManager.js`: `showUpgrades()` 리팩토링, 카테고리별 메서드 추가, `upgradeLevels` 추적 시스템
+- `DefenseGame.js`: `helper.projectileSpeed` 속성 추가, 탄환 발사 시 속도 적용
+
+---
+
+## 🔄 이전 업데이트 (v9.0)
+
+### 🗑️ 터미널 진행상황 초기화 명령어
+- **`/reset` 명령어 추가**: 터미널 메뉴에서 모든 진행상황 초기화 가능
+- **확인 절차**: "YES - Delete everything" / "NO - Cancel" 선택지로 실수 방지
+- **초기화 대상**:
+  - localStorage 전체 삭제
+  - 점령한 스테이지 초기화
+  - 저장된 DATA(돈) 초기화
+  - 튜토리얼 완료 상태 초기화
+  - 명성(Reputation) 초기화
+- **UI 스타일**: 위험 스타일(`danger`) 적용 - 어두운 빨간색으로 구분
+- **자동 새로고침**: 초기화 완료 2초 후 페이지 새로고침
+
+### 적용 파일
+- `GameManager.js`: `handleResetProgress()` 메서드 추가, `showCommandMenu()`에 reset 옵션 추가
+- `TerminalUI.js`: `danger` 스타일 지원 추가
+
+---
+
+## 🔄 이전 업데이트 (v8.9)
 
 ### 🔧 디버그 로그 토글 시스템
 - **전역 디버그 유틸리티**: `window.debugLog()`, `window.debugWarn()`, `window.debugError()` 추가
