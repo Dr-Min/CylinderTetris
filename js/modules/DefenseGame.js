@@ -149,6 +149,96 @@ export class DefenseGame {
       damage: 10
     };
     
+    // 무기 모드 정의 (모든 무기가 풀업 시 동일한 스탯 도달)
+    // 최종 목표: DMG 50, RATE 10/s, RNG 500, BULLET 900
+    this.weaponModes = {
+      NORMAL: {
+        name: "NORMAL",
+        icon: "●",
+        color: "#ffff00",
+        desc: "기본 무기",
+        // 기본 스탯
+        baseDamage: 10,
+        baseFireRate: 4.0,
+        baseRange: 300,
+        baseProjectileSpeed: 400,
+        // 발사 패턴
+        projectileCount: 1,
+        spreadAngle: 0,
+        piercing: false,
+        // 재장전
+        hasReload: false,
+        magazineSize: 0,
+        reloadTime: 0
+      },
+      SHOTGUN: {
+        name: "SHOTGUN",
+        icon: "◎",
+        color: "#ff8800",
+        desc: "5발 산탄 | 재장전 필요",
+        baseDamage: 5,
+        baseFireRate: 2.0,
+        baseRange: 150,
+        baseProjectileSpeed: 300,
+        projectileCount: 5,
+        spreadAngle: 0.4, // 라디안
+        piercing: false,
+        hasReload: true,
+        magazineSize: 6,
+        reloadTime: 2.0
+      },
+      SNIPER: {
+        name: "SNIPER",
+        icon: "◈",
+        color: "#00ffff",
+        desc: "고데미지 | 재장전 필요",
+        baseDamage: 30,
+        baseFireRate: 1.0,
+        baseRange: 500,
+        baseProjectileSpeed: 600,
+        projectileCount: 1,
+        spreadAngle: 0,
+        piercing: false,
+        hasReload: true,
+        magazineSize: 3,
+        reloadTime: 2.5
+      },
+      RAPID: {
+        name: "RAPID",
+        icon: "◆",
+        color: "#00ff00",
+        desc: "빠른 연사",
+        baseDamage: 5,
+        baseFireRate: 10.0,
+        baseRange: 250,
+        baseProjectileSpeed: 350,
+        projectileCount: 1,
+        spreadAngle: 0.1, // 약간의 탄퍼짐
+        piercing: false,
+        hasReload: false,
+        magazineSize: 0,
+        reloadTime: 0
+      },
+      LAUNCHER: {
+        name: "LAUNCHER",
+        icon: "◉",
+        color: "#ff0000",
+        desc: "폭발 데미지 | 재장전 필요",
+        baseDamage: 40,
+        baseFireRate: 0.5,
+        baseRange: 400,
+        baseProjectileSpeed: 250,
+        projectileCount: 1,
+        spreadAngle: 0,
+        piercing: false,
+        explosive: true, // 폭발
+        explosionRadius: 50,
+        hasReload: true,
+        magazineSize: 2,
+        reloadTime: 3.0
+      }
+    };
+    
     // 조력자 (Helper) - 배리어 내부에서 자동 공격
     this.helper = {
       x: 0,
@@ -164,7 +254,14 @@ export class DefenseGame {
       angle: 0, // 현재 바라보는 방향
       evadeDistance: 50, // 적과 이 거리 이내면 회피 (40 → 50)
       targetX: 0, // 목표 위치
-      targetY: 0
+      targetY: 0,
+      // 무기 모드
+      weaponMode: "NORMAL",
+      // 재장전 시스템
+      currentAmmo: 0, // 현재 탄약 (0 = 무제한 또는 미사용)
+      isReloading: false,
+      reloadProgress: 0, // 0 ~ 1
+      reloadStartTime: 0
     };
     
     this.enemies = [];
@@ -1037,6 +1134,9 @@ export class DefenseGame {
     
     // 3.5 조력자(Helper) 로직 - 자동 공격 + 회피
     this.updateHelper(dt, now);
+    
+    // 3.6 재장전 업데이트
+    this.updateReload(dt);
 
     // 4. 발사체 이동
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -1641,8 +1741,9 @@ export class DefenseGame {
     // 조력자(Helper) 그리기 - 배리어 내부
     if (this.helper && this.helper.x !== 0) {
         const h = this.helper;
+        const mode = this.getCurrentWeaponMode();
         
-        // 조력자 몸체 (노란색)
+        // 조력자 몸체 (무기 모드 색상)
         this.ctx.fillStyle = h.color;
         this.ctx.beginPath();
         this.ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
@@ -1665,6 +1766,73 @@ export class DefenseGame {
         this.ctx.closePath();
         this.ctx.fill();
         this.ctx.restore();
+        
+        // ===== 재장전 시각 효과 =====
+        if (h.isReloading && mode.hasReload) {
+            const reloadRadius = h.radius + 8;
+            const progress = h.reloadProgress;
+            
+            // 1. 원형 프로그레스 바 (arc)
+            this.ctx.beginPath();
+            this.ctx.arc(h.x, h.y, reloadRadius, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress));
+            this.ctx.strokeStyle = h.color;
+            this.ctx.lineWidth = 3;
+            this.ctx.lineCap = "round";
+            this.ctx.stroke();
+            this.ctx.lineCap = "butt";
+            
+            // 배경 원 (진행률 표시용)
+            this.ctx.beginPath();
+            this.ctx.arc(h.x, h.y, reloadRadius, 0, Math.PI * 2);
+            this.ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            
+            // 2. 글리치 "RELOAD!" 텍스트
+            const glitchTime = Date.now();
+            const glitchX = (Math.random() - 0.5) * 4;
+            const glitchY = (Math.random() - 0.5) * 2;
+            
+            this.ctx.save();
+            this.ctx.font = "bold 10px monospace";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            
+            // RGB 분리 효과
+            if (glitchTime % 100 < 50) {
+                this.ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
+                this.ctx.fillText("RELOAD!", h.x + glitchX - 1, h.y - h.radius - 15 + glitchY);
+                this.ctx.fillStyle = "rgba(0, 255, 255, 0.6)";
+                this.ctx.fillText("RELOAD!", h.x + glitchX + 1, h.y - h.radius - 15 + glitchY);
+            }
+            
+            // 메인 텍스트 (깜빡임 효과)
+            if (glitchTime % 200 < 150) {
+                this.ctx.fillStyle = h.color;
+                this.ctx.shadowColor = h.color;
+                this.ctx.shadowBlur = 5;
+                this.ctx.fillText("RELOAD!", h.x + glitchX, h.y - h.radius - 15 + glitchY);
+                this.ctx.shadowBlur = 0;
+            }
+            
+            // 퍼센트 표시
+            this.ctx.fillStyle = "#ffffff";
+            this.ctx.font = "bold 8px monospace";
+            this.ctx.fillText(`${Math.floor(progress * 100)}%`, h.x, h.y + h.radius + 12);
+            
+            this.ctx.restore();
+        }
+        
+        // 탄약 표시 (재장전 무기만)
+        if (mode.hasReload && !h.isReloading) {
+            this.ctx.save();
+            this.ctx.font = "bold 8px monospace";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillStyle = "#ffffff";
+            this.ctx.fillText(`${h.currentAmmo}/${mode.magazineSize}`, h.x, h.y + h.radius + 12);
+            this.ctx.restore();
+        }
     }
 
     // 1. 발사체 (랜덤 아스키 문자)
@@ -2081,28 +2249,160 @@ export class DefenseGame {
     }
   }
   
-  // 조력자 발사체 생성
+  // 무기 모드 변경
+  setWeaponMode(modeName) {
+    const mode = this.weaponModes[modeName];
+    if (!mode) {
+      debugLog("Defense", "Unknown weapon mode:", modeName);
+      return;
+    }
+    
+    this.helper.weaponMode = modeName;
+    this.helper.color = mode.color;
+    
+    // 기본 스탯 적용 (업그레이드 보너스는 별도 적용)
+    this.helper.damage = mode.baseDamage;
+    this.helper.fireRate = mode.baseFireRate;
+    this.helper.range = mode.baseRange;
+    this.helper.projectileSpeed = mode.baseProjectileSpeed;
+    
+    // 재장전 시스템 초기화
+    if (mode.hasReload) {
+      this.helper.currentAmmo = mode.magazineSize;
+      this.helper.isReloading = false;
+      this.helper.reloadProgress = 0;
+    } else {
+      this.helper.currentAmmo = 0;
+    }
+    
+    debugLog("Defense", "Weapon mode changed to:", modeName);
+  }
+  
+  // 현재 무기 모드 정보 반환
+  getCurrentWeaponMode() {
+    return this.weaponModes[this.helper.weaponMode] || this.weaponModes.NORMAL;
+  }
+  
+  // 업그레이드 보너스 적용 (무기 모드 기본값 + 보너스)
+  applyUpgradeBonus(bonusDamage, bonusFireRate, bonusRange, bonusBulletSpeed) {
+    const mode = this.getCurrentWeaponMode();
+    
+    this.helper.damage = mode.baseDamage + bonusDamage;
+    this.helper.fireRate = mode.baseFireRate + bonusFireRate;
+    this.helper.range = mode.baseRange + bonusRange;
+    this.helper.projectileSpeed = mode.baseProjectileSpeed + bonusBulletSpeed;
+    
+    debugLog("Defense", "Upgrade bonus applied:", {
+      damage: this.helper.damage,
+      fireRate: this.helper.fireRate,
+      range: this.helper.range,
+      projectileSpeed: this.helper.projectileSpeed
+    });
+  }
+
+  // 조력자 발사체 생성 (무기 모드별 발사 패턴)
   fireHelperProjectile(target) {
+    const mode = this.getCurrentWeaponMode();
     const asciiChars = "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    const randomChar = asciiChars[Math.floor(Math.random() * asciiChars.length)];
+    
+    // 재장전 시스템 체크
+    if (mode.hasReload) {
+      if (this.helper.isReloading) {
+        return; // 재장전 중이면 발사 안 함
+      }
+      if (this.helper.currentAmmo <= 0) {
+        this.startReload();
+        return;
+      }
+      this.helper.currentAmmo--;
+    }
     
     const dx = target.x - this.helper.x;
     const dy = target.y - this.helper.y;
     const dist = Math.hypot(dx, dy);
+    const baseAngle = Math.atan2(dy, dx);
     
     const speed = this.helper.projectileSpeed || 400;
-    this.projectiles.push({
-      x: this.helper.x,
-      y: this.helper.y,
-      vx: (dx / dist) * speed, // 발사체 속도
-      vy: (dy / dist) * speed,
-      damage: this.helper.damage,
-      life: 2,
-      radius: 8, // 충돌 검사용 반경
-      char: randomChar,
-      color: "#ffff00", // 조력자 발사체는 노란색
-      fromHelper: true // 조력자 발사체 표시
-    });
+    const projectileCount = mode.projectileCount || 1;
+    const spreadAngle = mode.spreadAngle || 0;
+    
+    // 발사체 생성 (발사 패턴별)
+    for (let i = 0; i < projectileCount; i++) {
+      let angle = baseAngle;
+      
+      // 산탄 패턴 (여러 발)
+      if (projectileCount > 1) {
+        const spreadOffset = (i - (projectileCount - 1) / 2) * (spreadAngle / (projectileCount - 1));
+        angle = baseAngle + spreadOffset;
+      }
+      // 탄퍼짐 (단발에도 적용 가능)
+      else if (spreadAngle > 0) {
+        angle += (Math.random() - 0.5) * spreadAngle;
+      }
+      
+      const randomChar = asciiChars[Math.floor(Math.random() * asciiChars.length)];
+      
+      this.projectiles.push({
+        x: this.helper.x,
+        y: this.helper.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        damage: this.helper.damage,
+        life: 2,
+        radius: 8,
+        char: randomChar,
+        color: mode.color,
+        fromHelper: true,
+        // 폭발 속성
+        explosive: mode.explosive || false,
+        explosionRadius: mode.explosionRadius || 0,
+        // 관통 속성
+        piercing: mode.piercing || false
+      });
+    }
+    
+    // 탄약 부족 시 자동 재장전
+    if (mode.hasReload && this.helper.currentAmmo <= 0) {
+      this.startReload();
+    }
+  }
+  
+  // 재장전 시작
+  startReload() {
+    const mode = this.getCurrentWeaponMode();
+    if (!mode.hasReload || this.helper.isReloading) return;
+    
+    this.helper.isReloading = true;
+    this.helper.reloadProgress = 0;
+    this.helper.reloadStartTime = performance.now();
+    
+    debugLog("Defense", "Reload started:", mode.name);
+  }
+  
+  // 재장전 업데이트 (update 루프에서 호출)
+  updateReload(dt) {
+    if (!this.helper.isReloading) return;
+    
+    const mode = this.getCurrentWeaponMode();
+    if (!mode.hasReload) {
+      this.helper.isReloading = false;
+      return;
+    }
+    
+    // Fire Rate가 재장전 속도에 영향 (공식: 실제 시간 = 기본 시간 / (1 + RATE * 0.1))
+    const reloadSpeedMultiplier = 1 + this.helper.fireRate * 0.1;
+    const actualReloadTime = mode.reloadTime / reloadSpeedMultiplier;
+    
+    const elapsed = (performance.now() - this.helper.reloadStartTime) / 1000;
+    this.helper.reloadProgress = Math.min(elapsed / actualReloadTime, 1);
+    
+    if (this.helper.reloadProgress >= 1) {
+      // 재장전 완료
+      this.helper.currentAmmo = mode.magazineSize;
+      this.helper.isReloading = false;
+      this.helper.reloadProgress = 0;
+      debugLog("Defense", "Reload complete:", mode.name);
+    }
   }
 
   fireProjectile(target) {

@@ -1,28 +1,59 @@
 # 🎮 HACKER'S BASE - Development Status
 
-> 마지막 업데이트: 2024-12-21 (v9.1)
+> 마지막 업데이트: 2024-12-21 (v9.2)
 
 ---
 
-## 🆕 최신 업데이트 (v9.1)
+## 🆕 최신 업데이트 (v9.2)
+
+### 🔫 무기 모드 시스템 (Helper Weapon Modes)
+- **5가지 무기 모드 추가**:
+  - **NORMAL**: 기본 무기 (1발, 재장전 없음)
+  - **SHOTGUN**: 5발 산탄, 탄창 6발, 재장전 2.0초
+  - **SNIPER**: 고데미지, 탄창 3발, 재장전 2.5초
+  - **RAPID**: 빠른 연사 (10/s), 약간의 탄퍼짐
+  - **LAUNCHER**: 폭발 데미지, 탄창 2발, 재장전 3.0초
+
+### 📊 업그레이드 시스템 개선
+- **MAX Level 10**: 모든 업그레이드 상한선 Lv.10
+- **레벨당 증가량 조정**: 풀업 시 모든 무기가 동일 스탯 도달
+  - Damage: +2.5/Lv → 최종 +25
+  - Fire Rate: +0.6/Lv → 최종 +6/s
+  - Range: +20/Lv → 최종 +200
+  - Bullet Speed: +50/Lv → 최종 +500
+- **Move Speed 업그레이드 제거**: 불필요하여 삭제
+- **MAX Level UI**: 최대 레벨 도달 시 "MAX" 표시 + 시안색 하이라이트
+
+### 🔄 재장전 시스템
+- **탄창 시스템**: 무기별 탄창 크기 설정
+- **자동 재장전**: 탄창 소진 시 자동 재장전 시작
+- **Fire Rate 영향**: 공격 속도가 재장전 속도에도 영향 (공식: 실제 시간 = 기본 시간 / (1 + RATE * 0.1))
+
+### 🎨 재장전 시각 효과
+- **원형 프로그레스 바**: Helper 주변에 원형 리로드 표시 (arc)
+- **글리치 "RELOAD!" 텍스트**: RGB 분리 효과 + 깜빡임
+- **퍼센트 표시**: 재장전 진행률 % 표시
+- **탄약 표시**: 현재 탄약 / 최대 탄약 표시
+
+### 📱 무기 선택 UI (상단 탭)
+- **탭 형태 선택**: 조력자 업그레이드 화면 상단에 무기 모드 탭
+- **즉시 전환**: 탭 클릭 시 즉시 무기 모드 변경
+- **무기별 색상**: NORMAL(노란), SHOTGUN(주황), SNIPER(시안), RAPID(녹색), LAUNCHER(빨강)
+
+### 적용 파일
+- `GameManager.js`: 무기 탭 UI, 업그레이드 상한선 시스템, Move Speed 제거, `applyHelperUpgradeBonuses()`
+- `DefenseGame.js`: `weaponModes` 정의, 재장전 시스템, 무기별 발사 패턴, 리로드 시각 효과
+
+---
+
+## 🔄 이전 업데이트 (v9.1)
 
 ### 🔧 업그레이드 UI 리팩토링 (Depth 2 구조)
 - **카테고리 선택 화면 (Depth 1)**: 코어, 조력자, 아군 바이러스, 실드 4개 카테고리
 - **카테고리별 업그레이드 화면 (Depth 2)**: 해당 카테고리의 업그레이드 목록
-- **조력자 업그레이드 구현**:
-  - Damage +5 (150 MB) - Lv.N 표시
-  - Fire Rate +1/s (200 MB) - Lv.N 표시
-  - Range +50 (100 MB) - Lv.N 표시
-  - Move Speed +20 (120 MB) - Lv.N 표시
-  - **Bullet Speed +100 (180 MB)** - 탄환 속도 업그레이드 추가!
-- **현재 스탯 박스**: DMG, RATE, RNG, MOVE, BULLET 한눈에 확인
+- **조력자 업그레이드 구현**: Damage, Fire Rate, Range, Bullet Speed
+- **현재 스탯 박스**: DMG, RATE, RNG, BULLET 한눈에 확인
 - **업그레이드 레벨 추적**: `upgradeLevels` 객체로 각 스탯별 업그레이드 횟수 추적
-- **코어/실드 업그레이드**: 기존 기능 유지
-- **아군 바이러스**: COMING SOON 표시
-
-### 적용 파일
-- `GameManager.js`: `showUpgrades()` 리팩토링, 카테고리별 메서드 추가, `upgradeLevels` 추적 시스템
-- `DefenseGame.js`: `helper.projectileSpeed` 속성 추가, 탄환 발사 시 속도 적용
 
 ---
 

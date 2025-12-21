@@ -1,5 +1,5 @@
-// v9.1 - Upgrade UI refactoring, helper projectile speed, upgrade click animation
-const CACHE_NAME = "hacker-tetris-v16.1";
+// v9.2 - Weapon mode system, reload mechanics, upgrade MAX Lv.10
+const CACHE_NAME = "hacker-tetris-v17.0";
 const ASSETS = [
   "./",
   "./index.html",

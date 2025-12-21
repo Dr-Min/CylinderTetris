@@ -71,14 +71,14 @@ export class GameManager {
     this.currentMoney = 0; // Data (Money)
     this.reputation = 0; // Reputation
 
-    // 업그레이드 레벨 추적
+    // 업그레이드 레벨 추적 (MAX Lv.10)
     this.upgradeLevels = {
       helper: {
-        damage: 0,
-        fireRate: 0,
-        range: 0,
-        speed: 0,
-        projectileSpeed: 0
+        damage: 0,       // MAX Lv.10, +2.5/Lv = 최종 +25
+        fireRate: 0,     // MAX Lv.10, +0.6/Lv = 최종 +6/s
+        range: 0,        // MAX Lv.10, +20/Lv = 최종 +200
+        projectileSpeed: 0 // MAX Lv.10, +50/Lv = 최종 +500
+        // speed 제거됨
       },
       core: {
         hp: 0,
@@ -89,6 +89,23 @@ export class GameManager {
       },
       ally: {
         // 추후 추가
+      }
+    };
+    
+    // 업그레이드 상한선 정의 (MAX Level)
+    this.upgradeMaxLevels = {
+      helper: {
+        damage: 10,
+        fireRate: 10,
+        range: 10,
+        projectileSpeed: 10
+      },
+      core: {
+        hp: 10,
+        turretDamage: 10
+      },
+      shield: {
+        hp: 10
       }
     };
 
@@ -1916,6 +1933,87 @@ export class GameManager {
     header.innerText = "[ HELPER UPGRADES ]";
     overlay.appendChild(header);
     
+    // ===== 무기 모드 탭 (상단) =====
+    const weaponTabContainer = document.createElement("div");
+    weaponTabContainer.style.cssText = `
+      display: flex;
+      gap: 5px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      max-width: 350px;
+    `;
+    
+    const weaponModes = this.defenseGame.weaponModes;
+    const currentMode = this.defenseGame.helper.weaponMode;
+    
+    Object.keys(weaponModes).forEach(modeName => {
+      const mode = weaponModes[modeName];
+      const isActive = modeName === currentMode;
+      
+      const tab = document.createElement("button");
+      tab.style.cssText = `
+        padding: 8px 12px;
+        font-family: var(--term-font);
+        font-size: 12px;
+        cursor: pointer;
+        border: 2px solid ${isActive ? mode.color : '#555'};
+        background: ${isActive ? `rgba(${this.hexToRgb(mode.color)}, 0.3)` : 'rgba(0, 0, 0, 0.5)'};
+        color: ${isActive ? mode.color : '#888'};
+        transition: all 0.2s;
+        min-width: 60px;
+      `;
+      
+      tab.innerHTML = `
+        <div style="font-size: 16px;">${mode.icon}</div>
+        <div style="font-size: 10px;">${mode.name}</div>
+      `;
+      
+      tab.onmouseenter = () => {
+        if (!isActive) {
+          tab.style.borderColor = mode.color;
+          tab.style.color = mode.color;
+        }
+      };
+      tab.onmouseleave = () => {
+        if (!isActive) {
+          tab.style.borderColor = '#555';
+          tab.style.color = '#888';
+        }
+      };
+      
+      tab.onclick = () => {
+        // 무기 모드 변경
+        this.defenseGame.setWeaponMode(modeName);
+        // 업그레이드 보너스 재적용
+        this.applyHelperUpgradeBonuses();
+        // 화면 새로고침
+        this.showHelperUpgrades(overlay);
+        this.terminal.printSystemMessage(`WEAPON MODE: ${modeName}`);
+      };
+      
+      weaponTabContainer.appendChild(tab);
+    });
+    
+    overlay.appendChild(weaponTabContainer);
+    
+    // 현재 무기 설명
+    const currentModeInfo = weaponModes[currentMode];
+    const modeDesc = document.createElement("div");
+    modeDesc.style.cssText = `
+      color: ${currentModeInfo.color};
+      font-family: var(--term-font);
+      font-size: 11px;
+      margin-bottom: 10px;
+      text-align: center;
+    `;
+    modeDesc.innerHTML = `<span style="font-size: 14px;">${currentModeInfo.icon}</span> ${currentModeInfo.desc}`;
+    if (currentModeInfo.hasReload) {
+      modeDesc.innerHTML += ` <span style="color: #888;">(탄창: ${currentModeInfo.magazineSize})</span>`;
+    }
+    overlay.appendChild(modeDesc);
+    
     // 현재 스탯 박스 (방법 B 스타일)
     const helper = this.defenseGame.helper;
     const statsBox = document.createElement("div");
@@ -1924,7 +2022,7 @@ export class GameManager {
       font-size: 11px;
       margin-bottom: 15px;
       padding: 12px;
-      border: 2px solid #ffff00;
+      border: 2px solid ${currentModeInfo.color};
       background: rgba(50, 50, 0, 0.3);
       width: 100%;
       max-width: 350px;
@@ -1957,62 +2055,56 @@ export class GameManager {
       max-width: 350px;
     `;
 
-    // 조력자 업그레이드 옵션들 (레벨 추적 포함)
+    // 조력자 업그레이드 옵션들 (MAX Lv.10, Move Speed 제거됨)
     const levels = this.upgradeLevels.helper;
+    const maxLevels = this.upgradeMaxLevels.helper;
     const upgrades = [
       { 
         id: "damage", 
         name: "Damage", 
-        increment: "+5",
+        increment: "+2.5",
         cost: 150, 
         level: levels.damage,
+        maxLevel: maxLevels.damage,
         effect: () => { 
-          this.defenseGame.helper.damage += 5; 
           this.upgradeLevels.helper.damage++;
+          this.applyHelperUpgradeBonuses();
         } 
       },
       { 
         id: "fireRate", 
         name: "Fire Rate", 
-        increment: "+1/s",
+        increment: "+0.6/s",
         cost: 200, 
         level: levels.fireRate,
+        maxLevel: maxLevels.fireRate,
         effect: () => { 
-          this.defenseGame.helper.fireRate += 1; 
           this.upgradeLevels.helper.fireRate++;
+          this.applyHelperUpgradeBonuses();
         } 
       },
       { 
         id: "range", 
         name: "Range", 
-        increment: "+50",
+        increment: "+20",
         cost: 100, 
         level: levels.range,
+        maxLevel: maxLevels.range,
         effect: () => { 
-          this.defenseGame.helper.range += 50; 
           this.upgradeLevels.helper.range++;
-        } 
-      },
-      { 
-        id: "speed", 
-        name: "Move Speed", 
-        increment: "+20",
-        cost: 120, 
-        level: levels.speed,
-        effect: () => { 
-          this.defenseGame.helper.speed += 20; 
-          this.upgradeLevels.helper.speed++;
+          this.applyHelperUpgradeBonuses();
         } 
       },
       { 
         id: "projectileSpeed", 
         name: "Bullet Speed", 
-        increment: "+100",
+        increment: "+50",
         cost: 180, 
         level: levels.projectileSpeed,
+        maxLevel: maxLevels.projectileSpeed,
         effect: () => { 
-          this.defenseGame.helper.projectileSpeed += 100; 
           this.upgradeLevels.helper.projectileSpeed++;
+          this.applyHelperUpgradeBonuses();
         } 
       }
     ];
@@ -2038,19 +2130,21 @@ export class GameManager {
   }
   
   /**
-   * 조력자 업그레이드 버튼 렌더링 (레벨 표시 포함)
+   * 조력자 업그레이드 버튼 렌더링 (MAX Level 체크 포함)
    */
   renderHelperUpgradeButtons(container, upgrades, dataInfo, statsBox) {
     container.innerHTML = "";
+    const modeColor = this.defenseGame.getCurrentWeaponMode().color || '#ffff00';
     
     upgrades.forEach(upgrade => {
       const btn = document.createElement("button");
-      const canAfford = this.currentMoney >= upgrade.cost;
+      const isMaxLevel = upgrade.level >= upgrade.maxLevel;
+      const canAfford = this.currentMoney >= upgrade.cost && !isMaxLevel;
       
       btn.style.cssText = `
-        background: ${canAfford ? 'rgba(50, 80, 0, 0.6)' : 'rgba(50, 50, 50, 0.5)'};
-        border: 1px solid ${canAfford ? '#ffff00' : '#555'};
-        color: ${canAfford ? '#ffff00' : '#666'};
+        background: ${isMaxLevel ? 'rgba(0, 100, 100, 0.4)' : (canAfford ? 'rgba(50, 80, 0, 0.6)' : 'rgba(50, 50, 50, 0.5)')};
+        border: 1px solid ${isMaxLevel ? '#00ffff' : (canAfford ? modeColor : '#555')};
+        color: ${isMaxLevel ? '#00ffff' : (canAfford ? modeColor : '#666')};
         padding: 10px 12px;
         font-family: var(--term-font);
         font-size: 13px;
@@ -2061,18 +2155,27 @@ export class GameManager {
         align-items: center;
       `;
       
+      const levelDisplay = isMaxLevel ? 
+        `<span style="color: #00ffff; font-size: 11px;">MAX</span>` :
+        `<span style="color: #888; font-size: 11px;">Lv.${upgrade.level}/${upgrade.maxLevel}</span>`;
+      
+      const costDisplay = isMaxLevel ?
+        `<span style="color: #00ffff; font-size: 12px;">-</span>` :
+        `<span style="color: #ffcc00; font-size: 12px;">${upgrade.cost} MB</span>`;
+      
       btn.innerHTML = `
         <div>
           <span style="font-weight: bold;">${upgrade.name}</span>
           <span style="color: #aaa; margin-left: 8px;">${upgrade.increment}</span>
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="color: #888; font-size: 11px;">Lv.${upgrade.level}</span>
-          <span style="color: #ffcc00; font-size: 12px;">${upgrade.cost} MB</span>
+          ${levelDisplay}
+          ${costDisplay}
         </div>
       `;
       
       btn.onclick = () => {
+        if (isMaxLevel) return;
         if (this.currentMoney >= upgrade.cost) {
           this.currentMoney -= upgrade.cost;
           upgrade.effect();
@@ -2082,10 +2185,6 @@ export class GameManager {
           dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
           
           // ===== 클릭 애니메이션 =====
-          // 1. 버튼 상태 저장
-          const originalHTML = btn.innerHTML;
-          
-          // 2. 성공 애니메이션 적용
           btn.style.transition = "all 0.15s ease-out";
           btn.style.background = "rgba(0, 200, 100, 0.8)";
           btn.style.borderColor = "#00ff88";
@@ -2098,7 +2197,7 @@ export class GameManager {
             </div>
           `;
           
-          // 3. 0.4초 후 원래대로 복구 + 레벨 업데이트
+          // 0.4초 후 원래대로 복구 + 레벨 업데이트
           setTimeout(() => {
             btn.style.transition = "all 0.2s ease-in";
             btn.style.transform = "scale(1)";
@@ -2109,24 +2208,27 @@ export class GameManager {
             
             // 버튼 리렌더링 (레벨 업데이트)
             const levels = this.upgradeLevels.helper;
+            const maxLevels = this.upgradeMaxLevels.helper;
             const newUpgrades = [
-              { id: "damage", name: "Damage", increment: "+5", cost: 150, level: levels.damage,
-                effect: () => { this.defenseGame.helper.damage += 5; this.upgradeLevels.helper.damage++; } },
-              { id: "fireRate", name: "Fire Rate", increment: "+1/s", cost: 200, level: levels.fireRate,
-                effect: () => { this.defenseGame.helper.fireRate += 1; this.upgradeLevels.helper.fireRate++; } },
-              { id: "range", name: "Range", increment: "+50", cost: 100, level: levels.range,
-                effect: () => { this.defenseGame.helper.range += 50; this.upgradeLevels.helper.range++; } },
-              { id: "speed", name: "Move Speed", increment: "+20", cost: 120, level: levels.speed,
-                effect: () => { this.defenseGame.helper.speed += 20; this.upgradeLevels.helper.speed++; } },
-              { id: "projectileSpeed", name: "Bullet Speed", increment: "+100", cost: 180, level: levels.projectileSpeed,
-                effect: () => { this.defenseGame.helper.projectileSpeed += 100; this.upgradeLevels.helper.projectileSpeed++; } }
+              { id: "damage", name: "Damage", increment: "+2.5", cost: 150, 
+                level: levels.damage, maxLevel: maxLevels.damage,
+                effect: () => { this.upgradeLevels.helper.damage++; this.applyHelperUpgradeBonuses(); } },
+              { id: "fireRate", name: "Fire Rate", increment: "+0.6/s", cost: 200, 
+                level: levels.fireRate, maxLevel: maxLevels.fireRate,
+                effect: () => { this.upgradeLevels.helper.fireRate++; this.applyHelperUpgradeBonuses(); } },
+              { id: "range", name: "Range", increment: "+20", cost: 100, 
+                level: levels.range, maxLevel: maxLevels.range,
+                effect: () => { this.upgradeLevels.helper.range++; this.applyHelperUpgradeBonuses(); } },
+              { id: "projectileSpeed", name: "Bullet Speed", increment: "+50", cost: 180, 
+                level: levels.projectileSpeed, maxLevel: maxLevels.projectileSpeed,
+                effect: () => { this.upgradeLevels.helper.projectileSpeed++; this.applyHelperUpgradeBonuses(); } }
             ];
             this.renderHelperUpgradeButtons(container, newUpgrades, dataInfo, statsBox);
             
             this.terminal.printSystemMessage(`UPGRADED: ${upgrade.name}`);
           }, 400);
           
-          return; // 바로 리턴 (아래 코드 실행 안함)
+          return;
         }
       };
       
@@ -2139,18 +2241,52 @@ export class GameManager {
    */
   updateHelperStatsBox(element) {
     const helper = this.defenseGame.helper;
+    const mode = this.defenseGame.getCurrentWeaponMode();
+    const modeColor = mode.color || '#ffff00';
+    
+    let ammoDisplay = '';
+    if (mode.hasReload) {
+      ammoDisplay = `<div>AMMO: <span style="color: #fff;">${helper.currentAmmo}/${mode.magazineSize}</span></div>`;
+    }
+    
     element.innerHTML = `
-      <div style="color: #ffff00; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 5px;">
+      <div style="color: ${modeColor}; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 5px;">
         ─── Current Stats ───
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #ccc;">
         <div>DMG: <span style="color: #fff;">${helper.damage}</span></div>
         <div>RATE: <span style="color: #fff;">${helper.fireRate.toFixed(1)}/s</span></div>
         <div>RNG: <span style="color: #fff;">${helper.range}</span></div>
-        <div>MOVE: <span style="color: #fff;">${helper.speed}</span></div>
         <div>BULLET: <span style="color: #fff;">${helper.projectileSpeed}</span></div>
+        ${ammoDisplay}
       </div>
     `;
+  }
+  
+  /**
+   * Hex 색상을 RGB 문자열로 변환
+   */
+  hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (result) {
+      return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`;
+    }
+    return '255, 255, 0'; // 기본값
+  }
+  
+  /**
+   * 조력자 업그레이드 보너스 적용
+   */
+  applyHelperUpgradeBonuses() {
+    const levels = this.upgradeLevels.helper;
+    
+    // 레벨당 증가량 (MAX Lv.10, 최종 보너스 동일)
+    const bonusDamage = levels.damage * 2.5; // Lv.10 = +25
+    const bonusFireRate = levels.fireRate * 0.6; // Lv.10 = +6/s
+    const bonusRange = levels.range * 20; // Lv.10 = +200
+    const bonusBulletSpeed = levels.projectileSpeed * 50; // Lv.10 = +500
+    
+    this.defenseGame.applyUpgradeBonus(bonusDamage, bonusFireRate, bonusRange, bonusBulletSpeed);
   }
   
   /**
