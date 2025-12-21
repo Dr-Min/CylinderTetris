@@ -151,12 +151,13 @@ export class DefenseGame {
     
     // 무기 모드 정의 (모든 무기가 풀업 시 동일한 스탯 도달)
     // 최종 목표: DMG 50, RATE 10/s, RNG 500, BULLET 900
+    // 모든 무기 탄창 있음! 컨셉별 탄창 크기 다름
     this.weaponModes = {
       NORMAL: {
         name: "NORMAL",
         icon: "●",
         color: "#ffff00",
-        desc: "기본 무기",
+        desc: "밸런스형 | 탄창 12발",
         // 기본 스탯
         baseDamage: 10,
         baseFireRate: 4.0,
@@ -166,76 +167,86 @@ export class DefenseGame {
         projectileCount: 1,
         spreadAngle: 0,
         piercing: false,
-        // 재장전
-        hasReload: false,
-        magazineSize: 0,
-        reloadTime: 0
+        // 재장전 (모든 무기 탄창 있음)
+        hasReload: true,
+        magazineSize: 12,
+        reloadTime: 1.5,
+        // 폭발 없음
+        explosive: false,
+        explosionRadius: 0
       },
       SHOTGUN: {
         name: "SHOTGUN",
         icon: "◎",
         color: "#ff8800",
-        desc: "5발 산탄 | 재장전 필요",
+        desc: "5발 산탄 | 탄창 6발",
         baseDamage: 5,
         baseFireRate: 2.0,
         baseRange: 150,
         baseProjectileSpeed: 300,
         projectileCount: 5,
-        spreadAngle: 0.4, // 라디안
+        spreadAngle: 0.5, // 넓은 산탄
         piercing: false,
         hasReload: true,
         magazineSize: 6,
-        reloadTime: 2.0
+        reloadTime: 2.0,
+        explosive: false,
+        explosionRadius: 0
       },
       SNIPER: {
         name: "SNIPER",
         icon: "◈",
         color: "#00ffff",
-        desc: "고데미지 | 재장전 필요",
+        desc: "고데미지 | 탄창 3발",
         baseDamage: 30,
         baseFireRate: 1.0,
         baseRange: 500,
-        baseProjectileSpeed: 600,
+        baseProjectileSpeed: 700,
         projectileCount: 1,
         spreadAngle: 0,
-        piercing: false,
+        piercing: true, // 관통!
         hasReload: true,
         magazineSize: 3,
-        reloadTime: 2.5
+        reloadTime: 2.5,
+        explosive: false,
+        explosionRadius: 0
       },
       RAPID: {
         name: "RAPID",
         icon: "◆",
         color: "#00ff00",
-        desc: "빠른 연사",
-        baseDamage: 5,
-        baseFireRate: 10.0,
-        baseRange: 250,
-        baseProjectileSpeed: 350,
+        desc: "고속 연사 | 탄창 30발",
+        baseDamage: 3, // 낮은 데미지
+        baseFireRate: 12.0, // 매우 빠른 연사
+        baseRange: 200, // 짧은 사거리
+        baseProjectileSpeed: 500, // 빠른 탄속
         projectileCount: 1,
-        spreadAngle: 0.1, // 약간의 탄퍼짐
+        spreadAngle: 0.15, // 탄퍼짐
         piercing: false,
-        hasReload: false,
-        magazineSize: 0,
-        reloadTime: 0
+        hasReload: true,
+        magazineSize: 30, // 큰 탄창
+        reloadTime: 2.0,
+        explosive: false,
+        explosionRadius: 0
       },
       LAUNCHER: {
         name: "LAUNCHER",
         icon: "◉",
         color: "#ff0000",
-        desc: "폭발 데미지 | 재장전 필요",
-        baseDamage: 40,
-        baseFireRate: 0.5,
-        baseRange: 400,
-        baseProjectileSpeed: 250,
+        desc: "범위 폭발 | 탄창 2발",
+        baseDamage: 25, // 직격 데미지
+        baseFireRate: 0.8,
+        baseRange: 350,
+        baseProjectileSpeed: 200, // 느린 탄속
         projectileCount: 1,
         spreadAngle: 0,
         piercing: false,
-        explosive: true, // 폭발
-        explosionRadius: 50,
         hasReload: true,
-        magazineSize: 2,
-        reloadTime: 3.0
+        magazineSize: 2, // 작은 탄창
+        reloadTime: 3.0,
+        explosive: true, // 폭발!
+        explosionRadius: 100, // 큰 폭발 범위
+        explosionDamage: 15 // 폭발 추가 데미지
       }
     };
     
@@ -1187,6 +1198,7 @@ export class DefenseGame {
         }
         
         // 직선탄도 적과 충돌 검사
+        let hitEnemy = false;
         for (let j = this.enemies.length - 1; j >= 0; j--) {
           const enemy = this.enemies[j];
           const dx = enemy.x - p.x;
@@ -1194,21 +1206,38 @@ export class DefenseGame {
           const dist = Math.hypot(dx, dy);
           
           if (dist < p.radius + enemy.radius) {
+            // 직격 데미지
             enemy.hp -= p.damage;
-            this.createExplosion(p.x, p.y, "#00ff00", 5);
-            this.projectiles.splice(i, 1);
+            this.createExplosion(p.x, p.y, p.color || "#00ff00", 5);
+            
+            // 폭발 처리 (LAUNCHER)
+            if (p.explosive && p.explosionRadius > 0) {
+              this.handleExplosion(p.x, p.y, p.explosionRadius, p.damage * 0.5, p.color);
+            }
             
             // 적 처치
             if (enemy.hp <= 0) {
               this.enemies.splice(j, 1);
-              this.createExplosion(enemy.x, enemy.y, "#00ff00", 15);
+              this.createExplosion(enemy.x, enemy.y, p.color || "#00ff00", 15);
               
               const gain = 10;
               this.currentData += gain;
               this.updateResourceDisplay(this.currentData);
               if (this.onResourceGained) this.onResourceGained(gain);
             }
-            break; // 한 적과 충돌하면 탄환 제거
+            
+            hitEnemy = true;
+            
+            // 관통 탄환은 계속 진행, 아니면 제거
+            if (!p.piercing) {
+              this.projectiles.splice(i, 1);
+              break;
+            }
+            // 관통 시: 한 적당 한 번만 피해 (pierced 목록 사용)
+            if (!p.piercedEnemies) p.piercedEnemies = [];
+            if (!p.piercedEnemies.includes(enemy)) {
+              p.piercedEnemies.push(enemy);
+            }
           }
         }
       }
@@ -2266,16 +2295,13 @@ export class DefenseGame {
     this.helper.range = mode.baseRange;
     this.helper.projectileSpeed = mode.baseProjectileSpeed;
     
-    // 재장전 시스템 초기화
-    if (mode.hasReload) {
-      this.helper.currentAmmo = mode.magazineSize;
-      this.helper.isReloading = false;
-      this.helper.reloadProgress = 0;
-    } else {
-      this.helper.currentAmmo = 0;
-    }
+    // 재장전 시스템 초기화 (모든 무기 탄창 있음)
+    const magazineBonus = this.helper.magazineBonus || 0;
+    this.helper.currentAmmo = mode.magazineSize + magazineBonus;
+    this.helper.isReloading = false;
+    this.helper.reloadProgress = 0;
     
-    debugLog("Defense", "Weapon mode changed to:", modeName);
+    debugLog("Defense", "Weapon mode changed to:", modeName, "Ammo:", this.helper.currentAmmo);
   }
   
   // 현재 무기 모드 정보 반환
@@ -2284,19 +2310,21 @@ export class DefenseGame {
   }
   
   // 업그레이드 보너스 적용 (무기 모드 기본값 + 보너스)
-  applyUpgradeBonus(bonusDamage, bonusFireRate, bonusRange, bonusBulletSpeed) {
+  applyUpgradeBonus(bonusDamage, bonusFireRate, bonusRange, bonusBulletSpeed, bonusMagazine = 0) {
     const mode = this.getCurrentWeaponMode();
     
     this.helper.damage = mode.baseDamage + bonusDamage;
     this.helper.fireRate = mode.baseFireRate + bonusFireRate;
     this.helper.range = mode.baseRange + bonusRange;
     this.helper.projectileSpeed = mode.baseProjectileSpeed + bonusBulletSpeed;
+    this.helper.magazineBonus = bonusMagazine; // 탄창 보너스 저장
     
     debugLog("Defense", "Upgrade bonus applied:", {
       damage: this.helper.damage,
       fireRate: this.helper.fireRate,
       range: this.helper.range,
-      projectileSpeed: this.helper.projectileSpeed
+      projectileSpeed: this.helper.projectileSpeed,
+      magazineBonus: bonusMagazine
     });
   }
 
@@ -2397,12 +2425,65 @@ export class DefenseGame {
     this.helper.reloadProgress = Math.min(elapsed / actualReloadTime, 1);
     
     if (this.helper.reloadProgress >= 1) {
-      // 재장전 완료
-      this.helper.currentAmmo = mode.magazineSize;
+      // 재장전 완료 - 탄창 크기 보너스 적용
+      const magazineBonus = this.helper.magazineBonus || 0;
+      this.helper.currentAmmo = mode.magazineSize + magazineBonus;
       this.helper.isReloading = false;
       this.helper.reloadProgress = 0;
-      debugLog("Defense", "Reload complete:", mode.name);
+      debugLog("Defense", "Reload complete:", mode.name, "Ammo:", this.helper.currentAmmo);
     }
+  }
+  
+  // 폭발 처리 (LAUNCHER용) - 범위 내 모든 적에게 데미지
+  handleExplosion(x, y, radius, damage, color) {
+    // 시각 효과: 큰 폭발 파티클
+    this.createExplosion(x, y, color || "#ff4400", 25);
+    
+    // 파동 효과
+    this.shockwaves.push({
+      x: x,
+      y: y,
+      radius: 10,
+      maxRadius: radius * 1.5,
+      speed: 400,
+      alpha: 0.9,
+      color: color || "#ff4400",
+      lineWidth: 5,
+      damageDealt: false
+    });
+    
+    // 범위 내 모든 적에게 데미지 + 넉백
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const enemy = this.enemies[i];
+      const dist = Math.hypot(enemy.x - x, enemy.y - y);
+      
+      if (dist <= radius) {
+        // 거리에 따른 데미지 감소 (중심: 100%, 가장자리: 50%)
+        const damageMultiplier = 1 - (dist / radius) * 0.5;
+        const actualDamage = Math.floor(damage * damageMultiplier);
+        
+        enemy.hp -= actualDamage;
+        
+        // 넉백 적용
+        this.applyKnockback(enemy, 150, 0.5, 1);
+        
+        // 피격 이펙트
+        this.createExplosion(enemy.x, enemy.y, "#ff8800", 3);
+        
+        // 적 처치
+        if (enemy.hp <= 0) {
+          this.enemies.splice(i, 1);
+          this.createExplosion(enemy.x, enemy.y, "#ff0000", 15);
+          
+          const gain = 10;
+          this.currentData += gain;
+          this.updateResourceDisplay(this.currentData);
+          if (this.onResourceGained) this.onResourceGained(gain);
+        }
+      }
+    }
+    
+    debugLog("Defense", "Explosion at", x.toFixed(0), y.toFixed(0), "radius:", radius, "damage:", damage);
   }
 
   fireProjectile(target) {

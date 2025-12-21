@@ -77,8 +77,8 @@ export class GameManager {
         damage: 0,       // MAX Lv.10, +2.5/Lv = 최종 +25
         fireRate: 0,     // MAX Lv.10, +0.6/Lv = 최종 +6/s
         range: 0,        // MAX Lv.10, +20/Lv = 최종 +200
-        projectileSpeed: 0 // MAX Lv.10, +50/Lv = 최종 +500
-        // speed 제거됨
+        projectileSpeed: 0, // MAX Lv.10, +50/Lv = 최종 +500
+        magazineSize: 0  // MAX Lv.10, 무기별 다름
       },
       core: {
         hp: 0,
@@ -98,7 +98,8 @@ export class GameManager {
         damage: 10,
         fireRate: 10,
         range: 10,
-        projectileSpeed: 10
+        projectileSpeed: 10,
+        magazineSize: 10
       },
       core: {
         hp: 10,
@@ -2058,6 +2059,11 @@ export class GameManager {
     // 조력자 업그레이드 옵션들 (MAX Lv.10, Move Speed 제거됨)
     const levels = this.upgradeLevels.helper;
     const maxLevels = this.upgradeMaxLevels.helper;
+    const weaponMode = this.defenseGame.getCurrentWeaponMode();
+    
+    // 탄창 증가량 계산 (무기별 다름)
+    const magIncrement = this.getMagazineIncrement(weaponMode.name);
+    
     const upgrades = [
       { 
         id: "damage", 
@@ -2104,6 +2110,18 @@ export class GameManager {
         maxLevel: maxLevels.projectileSpeed,
         effect: () => { 
           this.upgradeLevels.helper.projectileSpeed++;
+          this.applyHelperUpgradeBonuses();
+        } 
+      },
+      { 
+        id: "magazineSize", 
+        name: "Magazine", 
+        increment: `+${magIncrement}`,
+        cost: 120, 
+        level: levels.magazineSize,
+        maxLevel: maxLevels.magazineSize,
+        effect: () => { 
+          this.upgradeLevels.helper.magazineSize++;
           this.applyHelperUpgradeBonuses();
         } 
       }
@@ -2209,6 +2227,8 @@ export class GameManager {
             // 버튼 리렌더링 (레벨 업데이트)
             const levels = this.upgradeLevels.helper;
             const maxLevels = this.upgradeMaxLevels.helper;
+            const currentMode = this.defenseGame.getCurrentWeaponMode();
+            const magIncrement = this.getMagazineIncrement(currentMode.name);
             const newUpgrades = [
               { id: "damage", name: "Damage", increment: "+2.5", cost: 150, 
                 level: levels.damage, maxLevel: maxLevels.damage,
@@ -2221,7 +2241,10 @@ export class GameManager {
                 effect: () => { this.upgradeLevels.helper.range++; this.applyHelperUpgradeBonuses(); } },
               { id: "projectileSpeed", name: "Bullet Speed", increment: "+50", cost: 180, 
                 level: levels.projectileSpeed, maxLevel: maxLevels.projectileSpeed,
-                effect: () => { this.upgradeLevels.helper.projectileSpeed++; this.applyHelperUpgradeBonuses(); } }
+                effect: () => { this.upgradeLevels.helper.projectileSpeed++; this.applyHelperUpgradeBonuses(); } },
+              { id: "magazineSize", name: "Magazine", increment: `+${magIncrement}`, cost: 120, 
+                level: levels.magazineSize, maxLevel: maxLevels.magazineSize,
+                effect: () => { this.upgradeLevels.helper.magazineSize++; this.applyHelperUpgradeBonuses(); } }
             ];
             this.renderHelperUpgradeButtons(container, newUpgrades, dataInfo, statsBox);
             
@@ -2244,9 +2267,19 @@ export class GameManager {
     const mode = this.defenseGame.getCurrentWeaponMode();
     const modeColor = mode.color || '#ffff00';
     
-    let ammoDisplay = '';
-    if (mode.hasReload) {
-      ammoDisplay = `<div>AMMO: <span style="color: #fff;">${helper.currentAmmo}/${mode.magazineSize}</span></div>`;
+    // 탄창 크기 (기본 + 보너스)
+    const totalMagazine = mode.magazineSize + (helper.magazineBonus || 0);
+    
+    // 특수 효과 표시
+    let specialDisplay = '';
+    if (mode.explosive) {
+      specialDisplay = `<div style="color: #ff4400;">💥 폭발 반경: ${mode.explosionRadius}</div>`;
+    }
+    if (mode.piercing) {
+      specialDisplay = `<div style="color: #00ffff;">⚡ 관통</div>`;
+    }
+    if (mode.projectileCount > 1) {
+      specialDisplay += `<div style="color: #ff8800;">🔥 ${mode.projectileCount}발 산탄</div>`;
     }
     
     element.innerHTML = `
@@ -2254,12 +2287,14 @@ export class GameManager {
         ─── Current Stats ───
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #ccc;">
-        <div>DMG: <span style="color: #fff;">${helper.damage}</span></div>
+        <div>DMG: <span style="color: #fff;">${helper.damage.toFixed(1)}</span></div>
         <div>RATE: <span style="color: #fff;">${helper.fireRate.toFixed(1)}/s</span></div>
         <div>RNG: <span style="color: #fff;">${helper.range}</span></div>
         <div>BULLET: <span style="color: #fff;">${helper.projectileSpeed}</span></div>
-        ${ammoDisplay}
+        <div>MAG: <span style="color: #fff;">${totalMagazine}</span></div>
+        <div>RELOAD: <span style="color: #fff;">${mode.reloadTime.toFixed(1)}s</span></div>
       </div>
+      ${specialDisplay ? `<div style="margin-top: 8px; border-top: 1px solid #555; padding-top: 5px;">${specialDisplay}</div>` : ''}
     `;
   }
   
@@ -2279,6 +2314,7 @@ export class GameManager {
    */
   applyHelperUpgradeBonuses() {
     const levels = this.upgradeLevels.helper;
+    const currentMode = this.defenseGame.getCurrentWeaponMode();
     
     // 레벨당 증가량 (MAX Lv.10, 최종 보너스 동일)
     const bonusDamage = levels.damage * 2.5; // Lv.10 = +25
@@ -2286,7 +2322,26 @@ export class GameManager {
     const bonusRange = levels.range * 20; // Lv.10 = +200
     const bonusBulletSpeed = levels.projectileSpeed * 50; // Lv.10 = +500
     
-    this.defenseGame.applyUpgradeBonus(bonusDamage, bonusFireRate, bonusRange, bonusBulletSpeed);
+    // 탄창 보너스 (무기별 다름)
+    const magIncrement = this.getMagazineIncrement(currentMode.name);
+    const bonusMagazine = levels.magazineSize * magIncrement;
+    
+    this.defenseGame.applyUpgradeBonus(bonusDamage, bonusFireRate, bonusRange, bonusBulletSpeed, bonusMagazine);
+  }
+  
+  /**
+   * 무기별 탄창 증가량 반환
+   */
+  getMagazineIncrement(weaponName) {
+    // 무기별 탄창 증가량 (컨셉에 맞게)
+    const increments = {
+      NORMAL: 2,    // 12 → 32 (+20)
+      SHOTGUN: 1,   // 6 → 16 (+10)
+      SNIPER: 1,    // 3 → 13 (+10)
+      RAPID: 5,     // 30 → 80 (+50)
+      LAUNCHER: 1   // 2 → 12 (+10)
+    };
+    return increments[weaponName] || 1;
   }
   
   /**

@@ -1,5 +1,5 @@
-// v9.2 - Weapon mode system, reload mechanics, upgrade MAX Lv.10
-const CACHE_NAME = "hacker-tetris-v17.0";
+// v9.3 - All weapons have magazine, explosion/pierce logic, magazine upgrade
+const CACHE_NAME = "hacker-tetris-v17.1";
 const ASSETS = [
   "./",
   "./index.html",
