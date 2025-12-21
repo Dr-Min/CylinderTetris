@@ -81,8 +81,12 @@ export class GameManager {
         magazineSize: 0  // MAX Lv.10, 무기별 다름
       },
       core: {
-        hp: 0,
-        turretDamage: 0
+        hp: 0,           // MAX Lv.10, +10/Lv = 최종 +100
+        turretDamage: 0, // MAX Lv.10, +3/Lv = 최종 +30
+        turretRange: 0,  // MAX Lv.10, +15/Lv = 최종 +150
+        turretSpeed: 0,  // MAX Lv.10, +30/Lv = 최종 +300
+        staticDamage: 0, // MAX Lv.10, +5/Lv = 최종 +50
+        staticChain: 0   // MAX Lv.10, +1/Lv = 최종 +10 (3→13)
       },
       shield: {
         hp: 0
@@ -103,7 +107,11 @@ export class GameManager {
       },
       core: {
         hp: 10,
-        turretDamage: 10
+        turretDamage: 10,
+        turretRange: 10,
+        turretSpeed: 10,
+        staticDamage: 10,
+        staticChain: 10
       },
       shield: {
         hp: 10
@@ -2345,7 +2353,7 @@ export class GameManager {
   }
   
   /**
-   * 코어 업그레이드 화면 (Depth 2) - 기본 구현
+   * 코어 업그레이드 화면 (Depth 2) - 조력자 스타일로 리팩토링
    */
   showCoreUpgrades(overlay) {
     overlay.innerHTML = "";
@@ -2361,26 +2369,25 @@ export class GameManager {
     header.innerText = "[ CORE UPGRADES ]";
     overlay.appendChild(header);
     
-    // 현재 스탯 표시
-    const core = this.defenseGame.core;
-    const turret = this.defenseGame.turret;
-    const statsInfo = document.createElement("div");
-    statsInfo.style.cssText = `
+    // 현재 스탯 박스
+    const statsBox = document.createElement("div");
+    statsBox.id = "core-stats-box";
+    statsBox.style.cssText = `
       color: #aaa;
       font-family: var(--term-font);
-      font-size: 12px;
+      font-size: 11px;
       margin-bottom: 15px;
       padding: 10px;
-      border: 1px solid #444;
-      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid #00ffff;
+      background: rgba(0, 255, 255, 0.1);
+      width: 100%;
+      max-width: 350px;
+      box-sizing: border-box;
     `;
-    statsInfo.id = "core-stats-info";
-    statsInfo.innerHTML = `
-      <div>HP: ${core.hp}/${core.maxHp}</div>
-      <div>Turret Damage: ${turret.damage}</div>
-    `;
-    overlay.appendChild(statsInfo);
+    this.updateCoreStatsBox(statsBox);
+    overlay.appendChild(statsBox);
 
+    // DATA 표시
     const dataInfo = document.createElement("div");
     dataInfo.id = "upgrade-data-display";
     dataInfo.style.cssText = `
@@ -2392,38 +2399,101 @@ export class GameManager {
     dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
     overlay.appendChild(dataInfo);
 
-    const upgradeList = document.createElement("div");
-    upgradeList.style.cssText = `
+    // 업그레이드 버튼 컨테이너
+    const container = document.createElement("div");
+    container.id = "core-upgrade-container";
+    container.style.cssText = `
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       width: 100%;
       max-width: 350px;
     `;
 
+    // 업그레이드 목록 (MAX Lv.10)
+    const levels = this.upgradeLevels.core;
+    const maxLevels = this.upgradeMaxLevels.core;
+    const staticSystem = this.defenseGame.staticSystem;
+    
     const upgrades = [
       { 
-        id: "core_hp", 
-        name: "Core HP +20", 
-        cost: 200, 
-        desc: `현재: ${core.maxHp}`,
+        id: "hp", 
+        name: "Core HP", 
+        increment: "+10",
+        cost: 100, 
+        level: levels.hp,
+        maxLevel: maxLevels.hp,
         effect: () => { 
-          this.defenseGame.core.maxHp += 20; 
-          this.defenseGame.core.hp += 20; 
+          this.upgradeLevels.core.hp++;
+          this.applyCoreUpgradeBonuses();
         } 
       },
       { 
-        id: "turret_damage", 
-        name: "Turret Damage +5", 
+        id: "turretDamage", 
+        name: "Turret Damage", 
+        increment: "+3",
+        cost: 120, 
+        level: levels.turretDamage,
+        maxLevel: maxLevels.turretDamage,
+        effect: () => { 
+          this.upgradeLevels.core.turretDamage++;
+          this.applyCoreUpgradeBonuses();
+        } 
+      },
+      { 
+        id: "turretRange", 
+        name: "Turret Range", 
+        increment: "+15",
+        cost: 80, 
+        level: levels.turretRange,
+        maxLevel: maxLevels.turretRange,
+        effect: () => { 
+          this.upgradeLevels.core.turretRange++;
+          this.applyCoreUpgradeBonuses();
+        } 
+      },
+      { 
+        id: "turretSpeed", 
+        name: "Bullet Speed", 
+        increment: "+30",
+        cost: 100, 
+        level: levels.turretSpeed,
+        maxLevel: maxLevels.turretSpeed,
+        effect: () => { 
+          this.upgradeLevels.core.turretSpeed++;
+          this.applyCoreUpgradeBonuses();
+        } 
+      },
+      { 
+        id: "staticDamage", 
+        name: "⚡ Static Damage", 
+        increment: "+5",
         cost: 150, 
-        desc: `현재: ${turret.damage}`,
-        effect: () => { this.defenseGame.turret.damage += 5; } 
+        level: levels.staticDamage,
+        maxLevel: maxLevels.staticDamage,
+        effect: () => { 
+          this.upgradeLevels.core.staticDamage++;
+          this.applyCoreUpgradeBonuses();
+        } 
+      },
+      { 
+        id: "staticChain", 
+        name: "⚡ Chain Count", 
+        increment: "+1",
+        cost: 200, 
+        level: levels.staticChain,
+        maxLevel: maxLevels.staticChain,
+        effect: () => { 
+          this.upgradeLevels.core.staticChain++;
+          this.applyCoreUpgradeBonuses();
+        } 
       }
     ];
 
-    this.renderUpgradeButtons(upgradeList, upgrades, dataInfo, statsInfo, "core");
-    overlay.appendChild(upgradeList);
+    this.renderCoreUpgradeButtons(container, upgrades, dataInfo, statsBox);
+    overlay.appendChild(container);
 
+    // 뒤로가기 버튼
     const backBtn = document.createElement("button");
     backBtn.style.cssText = `
       margin-top: 20px;
@@ -2438,6 +2508,176 @@ export class GameManager {
     backBtn.innerText = "← BACK";
     backBtn.onclick = () => this.showUpgradeCategories(overlay);
     overlay.appendChild(backBtn);
+  }
+  
+  /**
+   * 코어 스탯 박스 업데이트
+   */
+  updateCoreStatsBox(element) {
+    const core = this.defenseGame.core;
+    const turret = this.defenseGame.turret;
+    const staticSystem = this.defenseGame.staticSystem;
+    
+    element.innerHTML = `
+      <div style="color: #00ffff; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 5px;">
+        ─── Current Stats ───
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #ccc;">
+        <div>HP: <span style="color: #fff;">${core.hp}/${core.maxHp}</span></div>
+        <div>T.DMG: <span style="color: #fff;">${turret.damage}</span></div>
+        <div>T.RNG: <span style="color: #fff;">${turret.range}</span></div>
+        <div>T.SPD: <span style="color: #fff;">${turret.projectileSpeed}</span></div>
+      </div>
+      <div style="margin-top: 8px; border-top: 1px solid #555; padding-top: 5px; color: #ffff00;">
+        <div>⚡ Static: <span style="color: #fff;">${staticSystem.damage} DMG</span> | <span style="color: #fff;">${staticSystem.chainCount} chains</span></div>
+        <div>⚡ Charge: <span style="color: #fff;">${Math.floor(staticSystem.currentCharge)}/${staticSystem.maxCharge}</span></div>
+      </div>
+    `;
+  }
+  
+  /**
+   * 코어 업그레이드 버튼 렌더링
+   */
+  renderCoreUpgradeButtons(container, upgrades, dataInfo, statsBox) {
+    container.innerHTML = "";
+    
+    upgrades.forEach(upgrade => {
+      const isMaxLevel = upgrade.level >= upgrade.maxLevel;
+      
+      const btn = document.createElement("button");
+      btn.style.cssText = `
+        background: ${isMaxLevel ? 'rgba(0, 255, 255, 0.2)' : 'rgba(0, 50, 50, 0.8)'};
+        border: 2px solid ${isMaxLevel ? '#00ffff' : '#00aaaa'};
+        color: ${isMaxLevel ? '#00ffff' : '#00ffff'};
+        padding: 12px 15px;
+        font-family: var(--term-font);
+        font-size: 12px;
+        cursor: ${isMaxLevel ? 'default' : 'pointer'};
+        text-align: left;
+        transition: all 0.2s;
+        opacity: ${isMaxLevel ? '0.7' : '1'};
+      `;
+      
+      const levelDisplay = isMaxLevel ? 
+        `<span style="color: #00ffff; font-weight: bold;">MAX</span>` : 
+        `Lv.${upgrade.level}/${upgrade.maxLevel}`;
+      
+      btn.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>${upgrade.name} <span style="color: #88ff88;">${upgrade.increment}</span></span>
+          <span style="font-size: 11px;">${levelDisplay}</span>
+        </div>
+        <div style="font-size: 10px; color: #888; margin-top: 3px;">
+          ${isMaxLevel ? '최대 레벨 도달' : `Cost: ${upgrade.cost} DATA`}
+        </div>
+      `;
+      
+      if (!isMaxLevel) {
+        btn.onmouseenter = () => {
+          btn.style.background = 'rgba(0, 100, 100, 0.8)';
+          btn.style.borderColor = '#00ffff';
+        };
+        btn.onmouseleave = () => {
+          btn.style.background = 'rgba(0, 50, 50, 0.8)';
+          btn.style.borderColor = '#00aaaa';
+        };
+        
+        btn.onclick = () => {
+          if (this.currentMoney >= upgrade.cost) {
+            this.currentMoney -= upgrade.cost;
+            upgrade.effect();
+            
+            // 클릭 애니메이션
+            btn.style.transform = 'scale(0.95)';
+            btn.style.boxShadow = '0 0 20px #00ffff';
+            
+            // UI 업데이트 (즉시)
+            dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
+            this.updateCoreStatsBox(statsBox);
+            
+            // 애니메이션 후 버튼 리렌더링 (200ms 지연)
+            setTimeout(() => {
+              btn.style.transform = 'scale(1)';
+              btn.style.boxShadow = 'none';
+              
+              // 버튼 리렌더링
+              const levels = this.upgradeLevels.core;
+              const maxLevels = this.upgradeMaxLevels.core;
+              const newUpgrades = [
+                { id: "hp", name: "Core HP", increment: "+10", cost: 100, 
+                  level: levels.hp, maxLevel: maxLevels.hp,
+                  effect: () => { this.upgradeLevels.core.hp++; this.applyCoreUpgradeBonuses(); } },
+                { id: "turretDamage", name: "Turret Damage", increment: "+3", cost: 120, 
+                  level: levels.turretDamage, maxLevel: maxLevels.turretDamage,
+                  effect: () => { this.upgradeLevels.core.turretDamage++; this.applyCoreUpgradeBonuses(); } },
+                { id: "turretRange", name: "Turret Range", increment: "+15", cost: 80, 
+                  level: levels.turretRange, maxLevel: maxLevels.turretRange,
+                  effect: () => { this.upgradeLevels.core.turretRange++; this.applyCoreUpgradeBonuses(); } },
+                { id: "turretSpeed", name: "Bullet Speed", increment: "+30", cost: 100, 
+                  level: levels.turretSpeed, maxLevel: maxLevels.turretSpeed,
+                  effect: () => { this.upgradeLevels.core.turretSpeed++; this.applyCoreUpgradeBonuses(); } },
+                { id: "staticDamage", name: "⚡ Static Damage", increment: "+5", cost: 150, 
+                  level: levels.staticDamage, maxLevel: maxLevels.staticDamage,
+                  effect: () => { this.upgradeLevels.core.staticDamage++; this.applyCoreUpgradeBonuses(); } },
+                { id: "staticChain", name: "⚡ Chain Count", increment: "+1", cost: 200, 
+                  level: levels.staticChain, maxLevel: maxLevels.staticChain,
+                  effect: () => { this.upgradeLevels.core.staticChain++; this.applyCoreUpgradeBonuses(); } }
+              ];
+              this.renderCoreUpgradeButtons(container, newUpgrades, dataInfo, statsBox);
+            }, 200); // 애니메이션 후 리렌더링
+            
+            this.terminal.printSystemMessage(`UPGRADED: ${upgrade.name}`);
+          } else {
+            this.terminal.printSystemMessage("NOT ENOUGH DATA!", "error");
+          }
+        };
+      }
+      
+      container.appendChild(btn);
+    });
+  }
+  
+  /**
+   * 코어 업그레이드 보너스 적용
+   */
+  applyCoreUpgradeBonuses() {
+    const levels = this.upgradeLevels.core;
+    
+    // 기본값
+    const baseMaxHp = 100;
+    const baseTurretDamage = 10;
+    const baseTurretRange = 200;
+    const baseTurretSpeed = 300;
+    const baseStaticDamage = 10;
+    const baseStaticChain = 3;
+    
+    // 보너스 계산
+    const bonusHp = levels.hp * 10;
+    const bonusTurretDamage = levels.turretDamage * 3;
+    const bonusTurretRange = levels.turretRange * 15;
+    const bonusTurretSpeed = levels.turretSpeed * 30;
+    const bonusStaticDamage = levels.staticDamage * 5;
+    const bonusStaticChain = levels.staticChain * 1;
+    
+    // 적용
+    const hpDiff = (baseMaxHp + bonusHp) - this.defenseGame.core.maxHp;
+    this.defenseGame.core.maxHp = baseMaxHp + bonusHp;
+    if (hpDiff > 0) this.defenseGame.core.hp += hpDiff; // 최대 HP 증가분만큼 현재 HP도 증가
+    
+    this.defenseGame.turret.damage = baseTurretDamage + bonusTurretDamage;
+    this.defenseGame.turret.range = baseTurretRange + bonusTurretRange;
+    this.defenseGame.turret.projectileSpeed = baseTurretSpeed + bonusTurretSpeed;
+    
+    this.defenseGame.staticSystem.damage = baseStaticDamage + bonusStaticDamage;
+    this.defenseGame.staticSystem.chainCount = baseStaticChain + bonusStaticChain;
+    
+    debugLog("GameManager", "Core upgrade bonus applied:", {
+      maxHp: this.defenseGame.core.maxHp,
+      turretDamage: this.defenseGame.turret.damage,
+      turretRange: this.defenseGame.turret.range,
+      staticDamage: this.defenseGame.staticSystem.damage,
+      staticChain: this.defenseGame.staticSystem.chainCount
+    });
   }
   
   /**

@@ -143,10 +143,30 @@ export class DefenseGame {
     // 포탑 설정 (수동 발사용 - 자동 발사는 조력자가 담당)
     this.turret = {
       angle: 0,
-      range: 300,      // 사거리 증가 (200 -> 300)
+      range: 200,      // 기본 사거리
       fireRate: 4.0,   // 공속 증가 (0.5 -> 4.0, 초당 4발)
       lastFireTime: 0,
-      damage: 10
+      damage: 10,
+      projectileSpeed: 300 // 탄환 속도
+    };
+    
+    // 스태틱 시스템 (체인 라이트닝)
+    this.staticSystem = {
+      currentCharge: 0,    // 현재 충전량
+      maxCharge: 100,      // 최대 충전량
+      chargeRate: 8,       // 초당 충전량 (시간 기반)
+      hitChargeAmount: 15, // 피격 시 충전량
+      killChargeAmount: 25,// 처치 시 충전량
+      damage: 10,          // 기본 데미지
+      chainCount: 3,       // 튕기는 횟수
+      chainRange: 250,     // 튕기는 거리 (150 → 250)
+      lastDischargeTime: 0 // 마지막 발동 시간
+    };
+    
+    // 스태틱 시각 효과
+    this.staticEffects = {
+      sparks: [],          // 전기 스파크 파티클
+      chains: []           // 체인 라이트닝 라인
     };
     
     // 무기 모드 정의 (모든 무기가 풀업 시 동일한 스탯 도달)
@@ -167,10 +187,10 @@ export class DefenseGame {
         projectileCount: 1,
         spreadAngle: 0,
         piercing: false,
-        // 재장전 (모든 무기 탄창 있음)
+        // 재장전 (MAX Lv.10에서 1.0초 도달)
         hasReload: true,
         magazineSize: 12,
-        reloadTime: 1.5,
+        reloadTime: 2.0,
         // 폭발 없음
         explosive: false,
         explosionRadius: 0
@@ -187,9 +207,10 @@ export class DefenseGame {
         projectileCount: 5,
         spreadAngle: 0.5, // 넓은 산탄
         piercing: false,
+        // 재장전 (MAX Lv.10에서 1.0초 도달)
         hasReload: true,
         magazineSize: 6,
-        reloadTime: 2.0,
+        reloadTime: 1.8,
         explosive: false,
         explosionRadius: 0
       },
@@ -197,7 +218,7 @@ export class DefenseGame {
         name: "SNIPER",
         icon: "◈",
         color: "#00ffff",
-        desc: "고데미지 | 탄창 3발",
+        desc: "고데미지 관통 | 탄창 3발",
         baseDamage: 30,
         baseFireRate: 1.0,
         baseRange: 500,
@@ -205,9 +226,10 @@ export class DefenseGame {
         projectileCount: 1,
         spreadAngle: 0,
         piercing: true, // 관통!
+        // 재장전 (MAX Lv.10에서 1.2초 도달)
         hasReload: true,
         magazineSize: 3,
-        reloadTime: 2.5,
+        reloadTime: 2.04,
         explosive: false,
         explosionRadius: 0
       },
@@ -223,9 +245,10 @@ export class DefenseGame {
         projectileCount: 1,
         spreadAngle: 0.15, // 탄퍼짐
         piercing: false,
+        // 재장전 (MAX Lv.10에서 1.0초 도달)
         hasReload: true,
         magazineSize: 30, // 큰 탄창
-        reloadTime: 2.0,
+        reloadTime: 2.8,
         explosive: false,
         explosionRadius: 0
       },
@@ -241,9 +264,10 @@ export class DefenseGame {
         projectileCount: 1,
         spreadAngle: 0,
         piercing: false,
+        // 재장전 (MAX Lv.10에서 1.2초 도달)
         hasReload: true,
         magazineSize: 2, // 작은 탄창
-        reloadTime: 3.0,
+        reloadTime: 2.02,
         explosive: true, // 폭발!
         explosionRadius: 100, // 큰 폭발 범위
         explosionDamage: 15 // 폭발 추가 데미지
@@ -1059,6 +1083,7 @@ export class DefenseGame {
         if (this.core.shieldActive && dist < this.core.shieldRadius + enemy.radius) {
             // 쉴드 피격
             this.core.shieldHp -= 10; // 적 하나당 내구도 10 감소
+            this.chargeStaticOnHit(); // 피격 시 스태틱 충전
             this.createExplosion(enemy.x, enemy.y, "#00f0ff", 5);
             this.enemies.splice(i, 1);
             
@@ -1081,6 +1106,7 @@ export class DefenseGame {
             // 갓모드가 아닐 때만 데미지
             if (!this.isGodMode) {
               this.core.hp -= enemy.damage;
+              this.chargeStaticOnHit(); // 피격 시 스태틱 충전
             }
             this.createExplosion(enemy.x, enemy.y, "#ff0000", 20);
             this.enemies.splice(i, 1);
@@ -1224,6 +1250,7 @@ export class DefenseGame {
               this.currentData += gain;
               this.updateResourceDisplay(this.currentData);
               if (this.onResourceGained) this.onResourceGained(gain);
+              this.chargeStaticOnKill(); // 처치 시 스태틱 충전
             }
             
             hitEnemy = true;
@@ -1274,6 +1301,191 @@ export class DefenseGame {
             enemy.slowEndTime = null;
         }
     });
+    
+    // 8. 스태틱 시스템 업데이트
+    this.updateStaticSystem(dt);
+  }
+  
+  /**
+   * 스태틱 시스템 업데이트
+   */
+  updateStaticSystem(dt) {
+    const ss = this.staticSystem;
+    
+    // 시간 기반 충전
+    ss.currentCharge += ss.chargeRate * dt;
+    
+    // 충전량 제한
+    if (ss.currentCharge > ss.maxCharge) {
+      ss.currentCharge = ss.maxCharge;
+    }
+    
+    // 100% 충전 시 자동 발동
+    if (ss.currentCharge >= ss.maxCharge && this.enemies.length > 0) {
+      this.dischargeStatic();
+    }
+    
+    // 스파크 파티클 업데이트
+    for (let i = this.staticEffects.sparks.length - 1; i >= 0; i--) {
+      const spark = this.staticEffects.sparks[i];
+      spark.life -= dt;
+      spark.x += spark.vx * dt;
+      spark.y += spark.vy * dt;
+      spark.alpha = spark.life / spark.maxLife;
+      if (spark.life <= 0) this.staticEffects.sparks.splice(i, 1);
+    }
+    
+    // 체인 라인 업데이트
+    for (let i = this.staticEffects.chains.length - 1; i >= 0; i--) {
+      const chain = this.staticEffects.chains[i];
+      chain.life -= dt;
+      chain.alpha = chain.life / chain.maxLife;
+      if (chain.life <= 0) this.staticEffects.chains.splice(i, 1);
+    }
+    
+    // 충전량에 따른 스파크 생성 (충전 50% 이상)
+    if (ss.currentCharge > ss.maxCharge * 0.5 && Math.random() < 0.1) {
+      this.createStaticSpark();
+    }
+  }
+  
+  /**
+   * 스태틱 방전 (체인 라이트닝)
+   */
+  dischargeStatic() {
+    const ss = this.staticSystem;
+    ss.currentCharge = 0;
+    ss.lastDischargeTime = performance.now();
+    
+    if (this.enemies.length === 0) return;
+    
+    // 가장 가까운 적 찾기
+    let nearestEnemy = null;
+    let minDist = Infinity;
+    
+    this.enemies.forEach(enemy => {
+      const dist = Math.hypot(enemy.x - this.core.x, enemy.y - this.core.y);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestEnemy = enemy;
+      }
+    });
+    
+    if (!nearestEnemy) return;
+    
+    // 체인 라이트닝 시작
+    const hitEnemies = [nearestEnemy];
+    let currentTarget = nearestEnemy;
+    let prevX = this.core.x;
+    let prevY = this.core.y;
+    
+    // 첫 번째 체인 (코어 → 첫 적)
+    this.addChainLine(prevX, prevY, currentTarget.x, currentTarget.y);
+    currentTarget.hp -= ss.damage;
+    this.createExplosion(currentTarget.x, currentTarget.y, "#ffff00", 8);
+    
+    // 적 처치 체크
+    if (currentTarget.hp <= 0) {
+      const idx = this.enemies.indexOf(currentTarget);
+      if (idx !== -1) {
+        this.enemies.splice(idx, 1);
+        this.createExplosion(currentTarget.x, currentTarget.y, "#ffff00", 15);
+        const gain = 10;
+        this.currentData += gain;
+        this.updateResourceDisplay(this.currentData);
+        if (this.onResourceGained) this.onResourceGained(gain);
+      }
+    }
+    
+    // 체인 연속 (최대 chainCount 번)
+    for (let i = 1; i < ss.chainCount; i++) {
+      let nextTarget = null;
+      let nextMinDist = Infinity;
+      
+      // 아직 맞지 않은 적 중 가장 가까운 적 찾기
+      this.enemies.forEach(enemy => {
+        if (hitEnemies.includes(enemy)) return;
+        const dist = Math.hypot(enemy.x - currentTarget.x, enemy.y - currentTarget.y);
+        if (dist < ss.chainRange && dist < nextMinDist) {
+          nextMinDist = dist;
+          nextTarget = enemy;
+        }
+      });
+      
+      if (!nextTarget) break; // 더 이상 튕길 적 없음
+      
+      // 체인 라인 추가
+      this.addChainLine(currentTarget.x, currentTarget.y, nextTarget.x, nextTarget.y);
+      
+      // 데미지 (거리에 따라 감소 없이 동일)
+      nextTarget.hp -= ss.damage;
+      this.createExplosion(nextTarget.x, nextTarget.y, "#ffff00", 6);
+      
+      // 적 처치 체크
+      if (nextTarget.hp <= 0) {
+        const idx = this.enemies.indexOf(nextTarget);
+        if (idx !== -1) {
+          this.enemies.splice(idx, 1);
+          this.createExplosion(nextTarget.x, nextTarget.y, "#ffff00", 15);
+          const gain = 10;
+          this.currentData += gain;
+          this.updateResourceDisplay(this.currentData);
+          if (this.onResourceGained) this.onResourceGained(gain);
+        }
+      }
+      
+      hitEnemies.push(nextTarget);
+      currentTarget = nextTarget;
+    }
+    
+    debugLog("Defense", "Static discharged! Hit", hitEnemies.length, "enemies");
+  }
+  
+  /**
+   * 체인 라인 추가
+   */
+  addChainLine(x1, y1, x2, y2) {
+    this.staticEffects.chains.push({
+      x1, y1, x2, y2,
+      life: 0.3,
+      maxLife: 0.3,
+      alpha: 1,
+      color: "#ffff00"
+    });
+  }
+  
+  /**
+   * 스태틱 스파크 생성
+   */
+  createStaticSpark() {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 20 + Math.random() * 15;
+    const x = this.core.x + Math.cos(angle) * dist;
+    const y = this.core.y + Math.sin(angle) * dist;
+    
+    this.staticEffects.sparks.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 50,
+      vy: (Math.random() - 0.5) * 50,
+      life: 0.2 + Math.random() * 0.2,
+      maxLife: 0.4,
+      alpha: 1,
+      size: 2 + Math.random() * 3
+    });
+  }
+  
+  /**
+   * 피격 시 스태틱 충전 (코어/실드 피격 시 호출)
+   */
+  chargeStaticOnHit() {
+    this.staticSystem.currentCharge += this.staticSystem.hitChargeAmount;
+  }
+  
+  /**
+   * 처치 시 스태틱 충전
+   */
+  chargeStaticOnKill() {
+    this.staticSystem.currentCharge += this.staticSystem.killChargeAmount;
   }
 
   updateWaveDisplay() {
@@ -2008,21 +2220,95 @@ export class DefenseGame {
         this.ctx.globalAlpha = 1.0;
     });
 
-    // 6. 코어 HP 바 (삭제됨 - 코어 체력 표시 안함)
-    // const barWidth = 100;
-    // const barHeight = 10;
-    // const hpPercent = Math.max(0, this.core.hp / this.core.maxHp);
-    // this.ctx.fillStyle = "#333";
-    // this.ctx.fillRect(this.core.x - barWidth/2, this.core.y + 40, barWidth, barHeight);
-    // this.ctx.fillStyle = hpPercent > 0.3 ? "#0f0" : "#f00";
-    // this.ctx.fillRect(this.core.x - barWidth/2, this.core.y + 40, barWidth * hpPercent, barHeight);
-    // this.ctx.fillStyle = "#fff";
-    // this.ctx.font = "12px monospace";
-    // this.ctx.textAlign = "center";
-    // this.ctx.fillText(`CORE: ${Math.floor(hpPercent * 100)}%`, this.core.x, this.core.y + 65);
+    // 6. 스태틱 시각 효과
+    this.renderStaticEffects();
     
     // 줌 아웃 스케일 복원
     this.ctx.restore();
+  }
+  
+  /**
+   * 스태틱 시각 효과 렌더링
+   */
+  renderStaticEffects() {
+    const ss = this.staticSystem;
+    const se = this.staticEffects;
+    const chargeRatio = ss.currentCharge / ss.maxCharge;
+    
+    // 1. 충전 게이지 (코어 주변 원형)
+    if (chargeRatio > 0) {
+      const gaugeRadius = 35;
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + (Math.PI * 2 * chargeRatio);
+      
+      // 배경 원
+      this.ctx.beginPath();
+      this.ctx.arc(this.core.x, this.core.y, gaugeRadius, 0, Math.PI * 2);
+      this.ctx.strokeStyle = "rgba(100, 100, 0, 0.3)";
+      this.ctx.lineWidth = 4;
+      this.ctx.stroke();
+      
+      // 충전량 표시
+      this.ctx.beginPath();
+      this.ctx.arc(this.core.x, this.core.y, gaugeRadius, startAngle, endAngle);
+      const glowIntensity = 0.5 + chargeRatio * 0.5;
+      this.ctx.strokeStyle = `rgba(255, 255, 0, ${glowIntensity})`;
+      this.ctx.lineWidth = 4;
+      this.ctx.shadowColor = "#ffff00";
+      this.ctx.shadowBlur = 10 * chargeRatio;
+      this.ctx.stroke();
+      this.ctx.shadowBlur = 0;
+    }
+    
+    // 2. 스파크 파티클
+    se.sparks.forEach(spark => {
+      this.ctx.save();
+      this.ctx.globalAlpha = spark.alpha;
+      this.ctx.fillStyle = "#ffff00";
+      this.ctx.shadowColor = "#ffff00";
+      this.ctx.shadowBlur = 5;
+      this.ctx.beginPath();
+      this.ctx.arc(spark.x, spark.y, spark.size, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    });
+    
+    // 3. 체인 라이트닝 라인
+    se.chains.forEach(chain => {
+      this.ctx.save();
+      this.ctx.globalAlpha = chain.alpha;
+      this.ctx.strokeStyle = chain.color;
+      this.ctx.lineWidth = 3;
+      this.ctx.shadowColor = "#ffff00";
+      this.ctx.shadowBlur = 15;
+      
+      // 지그재그 번개 효과
+      this.ctx.beginPath();
+      this.ctx.moveTo(chain.x1, chain.y1);
+      
+      const segments = 5;
+      const dx = (chain.x2 - chain.x1) / segments;
+      const dy = (chain.y2 - chain.y1) / segments;
+      
+      for (let i = 1; i < segments; i++) {
+        const jitterX = (Math.random() - 0.5) * 20;
+        const jitterY = (Math.random() - 0.5) * 20;
+        this.ctx.lineTo(chain.x1 + dx * i + jitterX, chain.y1 + dy * i + jitterY);
+      }
+      
+      this.ctx.lineTo(chain.x2, chain.y2);
+      this.ctx.stroke();
+      this.ctx.restore();
+    });
+    
+    // 4. 충전 완료 임박 시 글로우
+    if (chargeRatio > 0.8) {
+      const pulseAlpha = 0.2 + Math.sin(Date.now() / 100) * 0.1;
+      this.ctx.beginPath();
+      this.ctx.arc(this.core.x, this.core.y, 40, 0, Math.PI * 2);
+      this.ctx.fillStyle = `rgba(255, 255, 0, ${pulseAlpha})`;
+      this.ctx.fill();
+    }
   }
   
   /**
@@ -2419,7 +2705,11 @@ export class DefenseGame {
     
     // Fire Rate가 재장전 속도에 영향 (공식: 실제 시간 = 기본 시간 / (1 + RATE * 0.1))
     const reloadSpeedMultiplier = 1 + this.helper.fireRate * 0.1;
-    const actualReloadTime = mode.reloadTime / reloadSpeedMultiplier;
+    const calculatedReloadTime = mode.reloadTime / reloadSpeedMultiplier;
+    
+    // 무기별 최소 재장전 시간 (SNIPER, LAUNCHER는 1.2초, 나머지 1.0초)
+    const minReloadTime = (mode.name === 'SNIPER' || mode.name === 'LAUNCHER') ? 1.2 : 1.0;
+    const actualReloadTime = Math.max(minReloadTime, calculatedReloadTime);
     
     const elapsed = (performance.now() - this.helper.reloadStartTime) / 1000;
     this.helper.reloadProgress = Math.min(elapsed / actualReloadTime, 1);
