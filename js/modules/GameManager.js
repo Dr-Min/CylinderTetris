@@ -2227,8 +2227,8 @@ export class GameManager {
             // 버튼 리렌더링 (레벨 업데이트)
             const levels = this.upgradeLevels.helper;
             const maxLevels = this.upgradeMaxLevels.helper;
-            const currentMode = this.defenseGame.getCurrentWeaponMode();
-            const magIncrement = this.getMagazineIncrement(currentMode.name);
+            const activeMode = this.defenseGame.getCurrentWeaponMode();
+            const magIncrement = this.getMagazineIncrement(activeMode.name);
             const newUpgrades = [
               { id: "damage", name: "Damage", increment: "+2.5", cost: 150, 
                 level: levels.damage, maxLevel: maxLevels.damage,

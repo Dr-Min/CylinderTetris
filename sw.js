@@ -1,5 +1,5 @@
-// v9.3 - All weapons have magazine, explosion/pierce logic, magazine upgrade
-const CACHE_NAME = "hacker-tetris-v17.1";
+// v9.3 - All weapons have magazine, explosion/pierce logic, magazine upgrade (fix)
+const CACHE_NAME = "hacker-tetris-v17.2";
 const ASSETS = [
   "./",
   "./index.html",
