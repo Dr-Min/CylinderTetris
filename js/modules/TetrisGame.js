@@ -746,20 +746,6 @@ export class TetrisGame {
     this.state.dropTimer = 0;
     this.state.slowModeTimer = 0;
 
-    // 퍽 효과: 스테이지 시작 시 미리 라인 지우기
-    const effects = this.getPerkEffects();
-    if (effects.startLinesCleared > 0) {
-      // 나중에 구현: 바닥 N줄 삭제하고 시작하는게 아니라, 그냥 카운트를 먹고 시작하는 것?
-      // 아니면 진짜로 빈 줄을 만드는 건 테트리스에선 의미가 없음.
-      // 여기서는 "클리어해야 할 목표 줄 수 감소"로 해석하는 게 좋음.
-      // 혹은 이미 쓰레기 줄이 있는 상태가 아니라, '유리한 상태'여야 하므로.
-      // -> 목표 달성 수에 미리 추가해줌.
-      this.state.linesClearedStage += effects.startLinesCleared;
-      console.log(
-        `Perk applied: ${effects.startLinesCleared} lines pre-hacked.`
-      );
-    }
-
     this.updateScore(0);
     this.updateLevel(1);
 

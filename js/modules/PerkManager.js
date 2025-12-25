@@ -9,7 +9,6 @@ export class PerkManager {
       bombChance: 0.0, // 기본 0으로 변경 (해금 필요)
       goldChance: 0.0,
       miscChance: 0.0, // 기타 특수 블록(Freeze, Laser) 확률
-      startLinesCleared: 0,
       reviveCount: 0,
       shopDiscount: 0.0,
     };
@@ -93,15 +92,6 @@ export class PerkManager {
         parentId: "util_root",
         effect: { scoreMultiplier: 0.2 },
       },
-      {
-        id: "util_2",
-        name: "Grid_Defrag.bat",
-        desc: "스테이지 시작 시 바닥 2줄 자동 삭제",
-        cost: 1200,
-        type: "utility",
-        parentId: "util_1",
-        effect: { startLinesCleared: 2 },
-      },
     ];
   }
 
@@ -114,7 +104,6 @@ export class PerkManager {
       bombChance: 0.0,
       goldChance: 0.0,
       miscChance: 0.0,
-      startLinesCleared: 0,
       reviveCount: 0,
       shopDiscount: 0.0,
     };
@@ -162,8 +151,6 @@ export class PerkManager {
       this.activeEffects.miscChance += effect.bombChance * 0.5;
     }
     if (effect.goldChance) this.activeEffects.goldChance += effect.goldChance;
-    if (effect.startLinesCleared)
-      this.activeEffects.startLinesCleared += effect.startLinesCleared;
     if (effect.reviveCount)
       this.activeEffects.reviveCount += effect.reviveCount;
   }

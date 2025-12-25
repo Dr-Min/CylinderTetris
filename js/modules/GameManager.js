@@ -10,20 +10,20 @@ import { InventoryManager } from "./InventoryManager.js";
 // ===== 전역 디버그 로깅 시스템 =====
 window.DEBUG_LOG_ENABLED = false; // 기본값 OFF
 
-window.debugLog = function(tag, ...args) {
+window.debugLog = function (tag, ...args) {
   if (window.DEBUG_LOG_ENABLED) {
     console.log(`[${tag}]`, ...args);
   }
 };
 
-window.debugWarn = function(tag, ...args) {
+window.debugWarn = function (tag, ...args) {
   if (window.DEBUG_LOG_ENABLED) {
     console.warn(`[${tag}]`, ...args);
   }
 };
 
 // 에러는 항상 출력 (디버그 모드 상관없이)
-window.debugError = function(tag, ...args) {
+window.debugError = function (tag, ...args) {
   console.error(`[${tag}]`, ...args);
 };
 
@@ -40,30 +40,32 @@ export class GameManager {
 
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
-        this.currentMoney += amount;
-        // 터미널에 DATA 표시 업데이트
-        this.terminal.updateData(this.currentMoney);
+      this.currentMoney += amount;
+      // 터미널에 DATA 표시 업데이트
+      this.terminal.updateData(this.currentMoney);
     };
     this.defenseGame.onDataUpdate = (amount) => {
-        // 터미널에 DATA 표시 업데이트
-        this.terminal.updateData(amount);
+      // 터미널에 DATA 표시 업데이트
+      this.terminal.updateData(amount);
     };
     this.defenseGame.onGameOver = () => this.handleDefenseGameOver();
-    
+
     // 점령 이벤트 연결
     this.defenseGame.onConquer = () => this.handleConquest();
-    
+
     // 점령 가능 상태 시 선택지 갱신
     this.defenseGame.onConquerReady = () => this.refreshCommandMenu();
-    
+
     // PAGE 업데이트 연결 (터미널에 표시)
-    this.defenseGame.onPageUpdate = (text, color) => this.terminal.updatePage(text, color);
+    this.defenseGame.onPageUpdate = (text, color) =>
+      this.terminal.updatePage(text, color);
 
     // 테트리스 게임 이벤트 연결
     this.tetrisGame.onStageClear = (lines) => this.handleBreachClear(lines);
     this.tetrisGame.onGameOver = (score) => this.handleBreachFail(score);
     this.tetrisGame.onPuzzleFail = () => this.handleBreachFail(0); // 퍼즐 실패도 동일 처리
-    this.tetrisGame.onLineCleared = (lineNum) => this.handlePuzzleLineCleared(lineNum);
+    this.tetrisGame.onLineCleared = (lineNum) =>
+      this.handlePuzzleLineCleared(lineNum);
     this.tetrisGame.getPerkEffects = () => this.perkManager.getEffects();
 
     // 게임 상태
@@ -74,28 +76,151 @@ export class GameManager {
     // 업그레이드 레벨 추적 (MAX Lv.10)
     this.upgradeLevels = {
       helper: {
-        damage: 0,       // MAX Lv.10, +2.5/Lv = 최종 +25
-        fireRate: 0,     // MAX Lv.10, +0.6/Lv = 최종 +6/s
-        range: 0,        // MAX Lv.10, +20/Lv = 최종 +200
+        damage: 0, // MAX Lv.10, +2.5/Lv = 최종 +25
+        fireRate: 0, // MAX Lv.10, +0.6/Lv = 최종 +6/s
+        range: 0, // MAX Lv.10, +20/Lv = 최종 +200
         projectileSpeed: 0, // MAX Lv.10, +50/Lv = 최종 +500
-        magazineSize: 0  // MAX Lv.10, 무기별 다름
+        magazineSize: 0, // MAX Lv.10, 무기별 다름
       },
       core: {
-        hp: 0,           // MAX Lv.10, +10/Lv = 최종 +100
+        hp: 0, // MAX Lv.10, +10/Lv = 최종 +100
         turretDamage: 0, // MAX Lv.10, +3/Lv = 최종 +30
-        turretRange: 0,  // MAX Lv.10, +15/Lv = 최종 +150
-        turretSpeed: 0,  // MAX Lv.10, +30/Lv = 최종 +300
+        turretRange: 0, // MAX Lv.10, +15/Lv = 최종 +150
+        turretSpeed: 0, // MAX Lv.10, +30/Lv = 최종 +300
         staticDamage: 0, // MAX Lv.10, +5/Lv = 최종 +50
-        staticChain: 0   // MAX Lv.10, +1/Lv = 최종 +10 (3→13)
+        staticChain: 0, // MAX Lv.10, +1/Lv = 최종 +10 (3→13)
       },
       shield: {
-        hp: 0
+        hp: 0,
       },
       ally: {
-        // 추후 추가
-      }
+        slots: 0, // MAX Lv.10, +1/Lv = 최종 +10 (10→20 슬롯)
+        hp: 0, // MAX Lv.10, 전체 바이러스 HP +10%/Lv
+        damage: 0, // MAX Lv.10, 전체 바이러스 데미지 +10%/Lv
+        speed: 0, // MAX Lv.10, 이동속도 +5%/Lv
+        respawn: 0, // MAX Lv.10, 리스폰 시간 -0.15초/Lv
+      },
     };
-    
+
+    // 아군 바이러스 타입 설정
+    this.allyConfig = {
+      mainType: "SWARM", // 메인 타입 (70% 슬롯)
+      subType: null, // 서브 타입 (30% 슬롯), null이면 메인만
+    };
+
+    // 바이러스 타입 정의 (슬롯 비용 + 기본 스탯)
+    this.virusTypes = {
+      SWARM: {
+        name: "SWARM",
+        icon: "🦠",
+        color: "#88ff88",
+        desc: "수가 많고 빠르지만 약함",
+        slotCost: 1, // 1슬롯
+        baseHp: 8,
+        baseDamage: 5,
+        baseSpeed: 180, // 120 → 180 (빠른 무리)
+        radius: 4,
+        attackType: "melee", // 몸통박치기
+        special: "explodeOnDeath", // 죽을 때 작은 폭발
+        explosionDamage: 3,
+        explosionRadius: 20,
+      },
+      TANK: {
+        name: "TANK",
+        icon: "🛡️",
+        color: "#ff8800",
+        desc: "튼튼하고 적을 끌어당김",
+        slotCost: 3, // 3슬롯
+        baseHp: 60,
+        baseDamage: 8,
+        baseSpeed: 80, // 40 → 80 (2배)
+        radius: 10,
+        attackType: "melee",
+        special: "taunt", // 도발 (어그로)
+        knockbackForce: 50,
+        tauntRadius: 100, // 도발 범위
+        tauntCooldown: 5, // 도발 쿨타임 (초)
+        aggroRadius: 120, // 패시브 어그로 범위
+      },
+      HUNTER: {
+        name: "HUNTER",
+        icon: "🎯",
+        color: "#aa00ff",
+        desc: "멀리서 탄환을 발사",
+        slotCost: 2, // 2슬롯
+        baseHp: 20,
+        baseDamage: 15,
+        baseSpeed: 110, // 60 → 110 (위치 조정 필요)
+        radius: 5,
+        attackType: "ranged", // 원거리
+        range: 150,
+        fireRate: 1.5, // 1.5초마다 발사
+        projectileSpeed: 200,
+      },
+      BOMBER: {
+        name: "BOMBER",
+        icon: "💣",
+        color: "#ff4444",
+        desc: "적에게 돌진 후 자폭",
+        slotCost: 2, // 2슬롯
+        baseHp: 15,
+        baseDamage: 0, // 직접 데미지 없음
+        baseSpeed: 150, // 80 → 150 (돌진형은 빨라야!)
+        radius: 6,
+        attackType: "suicide", // 자폭
+        explosionDamage: 40,
+        explosionRadius: 60,
+      },
+      HEALER: {
+        name: "HEALER",
+        icon: "💚",
+        color: "#00ff88",
+        desc: "주변 아군을 치유",
+        slotCost: 3, // 3슬롯
+        baseHp: 40,
+        baseDamage: 0,
+        baseSpeed: 90, // 50 → 90 (아군 따라다녀야 함)
+        radius: 7,
+        attackType: "support", // 지원형
+        healAmount: 5, // 초당 회복량
+        healRadius: 80, // 힐 범위
+      },
+    };
+
+    // 시너지 정의
+    this.synergies = {
+      "SWARM+TANK": {
+        name: "철벽 군단",
+        desc: "TANK 주변 SWARM HP +50%",
+        effect: "tankProtection",
+      },
+      "SWARM+HUNTER": {
+        name: "사냥꾼의 떼",
+        desc: "HUNTER 사망 시 SWARM 2마리 소환",
+        effect: "hunterSwarmSpawn",
+      },
+      "TANK+HUNTER": {
+        name: "엄호 사격",
+        desc: "HUNTER가 TANK 뒤에 숨음 (피격 -50%)",
+        effect: "hunterCover",
+      },
+      "SWARM+BOMBER": {
+        name: "연쇄 폭발",
+        desc: "BOMBER 폭발 시 주변 SWARM도 폭발",
+        effect: "chainExplosion",
+      },
+      "TANK+HEALER": {
+        name: "불멸의 방패",
+        desc: "TANK HP 회복량 2배",
+        effect: "tankHealBoost",
+      },
+      "HUNTER+BOMBER": {
+        name: "정밀 폭격",
+        desc: "BOMBER 폭발 범위 +30%",
+        effect: "bomberRangeBoost",
+      },
+    };
+
     // 업그레이드 상한선 정의 (MAX Level)
     this.upgradeMaxLevels = {
       helper: {
@@ -103,7 +228,7 @@ export class GameManager {
         fireRate: 10,
         range: 10,
         projectileSpeed: 10,
-        magazineSize: 10
+        magazineSize: 10,
       },
       core: {
         hp: 10,
@@ -111,11 +236,18 @@ export class GameManager {
         turretRange: 10,
         turretSpeed: 10,
         staticDamage: 10,
-        staticChain: 10
+        staticChain: 10,
       },
       shield: {
-        hp: 10
-      }
+        hp: 10,
+      },
+      ally: {
+        slots: 10,
+        hp: 10,
+        damage: 10,
+        speed: 10,
+        respawn: 10,
+      },
     };
 
     // 점령 모드 상태
@@ -378,7 +510,9 @@ export class GameManager {
       } else {
         this.switchMode("mining");
       }
-      this.terminal.printSystemMessage(`[DEBUG] Switched to ${this.activeMode}`);
+      this.terminal.printSystemMessage(
+        `[DEBUG] Switched to ${this.activeMode}`
+      );
     });
 
     createBtn("GOD MODE", () => {
@@ -404,8 +538,10 @@ export class GameManager {
         this.defenseGame.updateWaveDisplay();
         // 터미널에 PAGE 업데이트
         this.terminal.updatePage("∞ READY", "#ff3333");
-        this.terminal.printSystemMessage("[DEBUG] Skipped to MAX PAGE - CONQUER READY!");
-        
+        this.terminal.printSystemMessage(
+          "[DEBUG] Skipped to MAX PAGE - CONQUER READY!"
+        );
+
         // 선택지 다시 표시 (점령 옵션 포함)
         setTimeout(() => this.showCommandMenu(), 500);
       } else {
@@ -421,7 +557,7 @@ export class GameManager {
       border: 2px solid #ff3333;
       background: rgba(50, 0, 0, 0.5);
     `;
-    
+
     const resetLabel = document.createElement("div");
     resetLabel.innerText = "⚠️ DANGER ZONE";
     resetLabel.style.cssText = `
@@ -444,29 +580,33 @@ export class GameManager {
       font-weight: bold;
     `;
     resetBtn.onclick = () => {
-      if (confirm("⚠️ 정말로 모든 진행상황을 초기화하시겠습니까?\n\n- 점령한 스테이지\n- 저장된 데이터(돈)\n- 튜토리얼 완료 상태\n\n이 작업은 되돌릴 수 없습니다!")) {
+      if (
+        confirm(
+          "⚠️ 정말로 모든 진행상황을 초기화하시겠습니까?\n\n- 점령한 스테이지\n- 저장된 데이터(돈)\n- 튜토리얼 완료 상태\n\n이 작업은 되돌릴 수 없습니다!"
+        )
+      ) {
         // 모든 localStorage 초기화
         localStorage.clear();
-        
+
         // StageManager 점령 상태 초기화
         if (this.stageManager) {
-          this.stageManager.stages.forEach(stage => {
+          this.stageManager.stages.forEach((stage) => {
             stage.conquered = false;
           });
         }
-        
+
         // ConquestManager 초기화
         if (this.conquestManager) {
           this.conquestManager.conqueredStages = [];
         }
-        
+
         // 현재 상태 초기화
         this.currentMoney = 0;
         this.reputation = 0;
-        
+
         this.terminal.printSystemMessage("[DEBUG] ALL PROGRESS RESET!");
         this.terminal.printSystemMessage("Reloading page in 2 seconds...");
-        
+
         // 2초 후 새로고침
         setTimeout(() => {
           location.reload();
@@ -527,7 +667,7 @@ export class GameManager {
       this.tetrisGame.state.isPlaying = false;
       document.getElementById("game-ui").style.display = "none";
       document.getElementById("game-container").style.display = "none"; // Three.js 캔버스 숨김
-      
+
       // 2. 터미널 UI 조정 (디펜스 모드용)
       this.terminal.setDefenseMode(true); // 배경 투명 + 클릭 가능
       this.terminal.show(); // 터미널 메시지창 활성화 (로그용)
@@ -538,20 +678,22 @@ export class GameManager {
       // [추가] 자원 UI 동기화
       this.defenseGame.updateResourceDisplay(this.currentMoney);
 
-      // 아군 바이러스 정보 업데이트
+      // 아군 바이러스 정보 업데이트 (레거시 + 새 슬롯 시스템)
       const alliedInfo = this.conquestManager.getAlliedInfo();
       this.defenseGame.updateAlliedInfo(alliedInfo);
-      
+      this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
+
       // 장비 효과 적용
       const stats = this.equipmentManager.getTotalStats();
       this.defenseGame.turret.damage = 10 + stats.damage;
 
       // 터미널 명령어 옵션 표시
       setTimeout(async () => {
-        await this.terminal.printSystemMessage("System Idle. Ready for Operations.");
+        await this.terminal.printSystemMessage(
+          "System Idle. Ready for Operations."
+        );
         await this.showCommandMenu();
       }, 1000);
-
     } else if (mode === "breach") {
       // 1. 디펜스 정지 및 숨김
       this.defenseGame.stop();
@@ -559,7 +701,9 @@ export class GameManager {
       // 2. 터미널 및 UI 조정
       this.terminal.setTransparentMode(true);
       await this.terminal.printSystemMessage("BREACH_PROTOCOL_INITIATED");
-      await this.terminal.printSystemMessage("Objective: Clear lines to acquire Equipment.");
+      await this.terminal.printSystemMessage(
+        "Objective: Clear lines to acquire Equipment."
+      );
 
       // 3. 테트리스 시작 (장비 획득 목표)
       this.startBreachMode();
@@ -571,30 +715,31 @@ export class GameManager {
    */
   async showCommandMenu() {
     const currentStage = this.stageManager.getCurrentStage();
-    
+
     // 최대 페이지 도달 시 점령 옵션 추가
-    const isConquerReady = this.defenseGame && 
-      !this.defenseGame.isSafeZone && 
+    const isConquerReady =
+      this.defenseGame &&
+      !this.defenseGame.isSafeZone &&
       this.defenseGame.currentPage >= (this.defenseGame.maxPages || 12);
-    
+
     const choices = [
       { text: "/map (Open Stage Map)", value: "map" },
       { text: "/inventory (Equipment & Items)", value: "inventory" },
       { text: "/upgrade (System Upgrades)", value: "upgrade" },
-      { text: "/reset (Reset All Progress)", value: "reset", style: "danger" }
+      { text: "/reset (Reset All Progress)", value: "reset", style: "danger" },
     ];
-    
+
     // 점령 가능 시 빨간색 큰 선택지 추가
     if (isConquerReady) {
-      choices.unshift({ 
-        text: ">>> CONQUER THIS SECTOR <<<", 
+      choices.unshift({
+        text: ">>> CONQUER THIS SECTOR <<<",
         value: "conquer",
-        style: "conquer" // 특별 스타일
+        style: "conquer", // 특별 스타일
       });
     }
-    
+
     const choice = await this.terminal.showChoices(choices);
-    
+
     if (choice === "conquer") {
       await this.handleConquerFromTerminal();
     } else if (choice === "map") {
@@ -607,45 +752,49 @@ export class GameManager {
       await this.handleResetProgress();
     }
   }
-  
+
   /**
    * 진행상황 초기화 처리
    */
   async handleResetProgress() {
     // 확인 메시지 표시
-    await this.terminal.printSystemMessage("⚠️ WARNING: This will reset ALL progress!");
+    await this.terminal.printSystemMessage(
+      "⚠️ WARNING: This will reset ALL progress!"
+    );
     await this.terminal.printSystemMessage("- Conquered stages");
     await this.terminal.printSystemMessage("- Saved DATA (money)");
     await this.terminal.printSystemMessage("- Tutorial completion");
-    
+
     const confirmChoice = await this.terminal.showChoices([
       { text: "YES - Delete everything", value: "confirm", style: "danger" },
-      { text: "NO - Cancel", value: "cancel" }
+      { text: "NO - Cancel", value: "cancel" },
     ]);
-    
+
     if (confirmChoice === "confirm") {
       // 모든 localStorage 초기화
       localStorage.clear();
-      
+
       // StageManager 점령 상태 초기화
       if (this.stageManager) {
-        this.stageManager.stages.forEach(stage => {
+        this.stageManager.stages.forEach((stage) => {
           stage.conquered = false;
         });
       }
-      
+
       // ConquestManager 초기화
       if (this.conquestManager) {
         this.conquestManager.conqueredStages = [];
       }
-      
+
       // 현재 상태 초기화
       this.currentMoney = 0;
       this.reputation = 0;
-      
+
       await this.terminal.printSystemMessage("ALL PROGRESS RESET!");
-      await this.terminal.printSystemMessage("Reloading system in 2 seconds...");
-      
+      await this.terminal.printSystemMessage(
+        "Reloading system in 2 seconds..."
+      );
+
       // 2초 후 새로고침
       setTimeout(() => {
         location.reload();
@@ -661,54 +810,56 @@ export class GameManager {
     // 현재 선택지 영역 숨기기
     this.terminal.choiceArea.classList.add("hidden");
     this.terminal.inputLine.classList.add("hidden");
-    
+
     // 알림 메시지
     await this.terminal.printSystemMessage("!!! CONQUER READY !!!");
-    
+
     // 새 선택지 표시
     await this.showCommandMenu();
   }
-  
+
   // 터미널에서 점령 선택 시
   async handleConquerFromTerminal() {
     // 1. 점령 시작 메시지
     await this.terminal.printSystemMessage("INITIATING CONQUEST PROTOCOL...");
-    
+
     // 2. 실드 파괴 연출 완료 후 테트리스 시작 (콜백 설정)
     this.defenseGame.onConquer = () => {
       // 연출 완료 후 실행
       this.terminal.printSystemMessage("FIREWALL BREACH DETECTED!");
-      this.terminal.printSystemMessage("Objective: Clear 3 lines + Survive 3 waves.");
-      
+      this.terminal.printSystemMessage(
+        "Objective: Clear 3 lines + Survive 3 waves."
+      );
+
       // 강화 페이지 모드 설정
       this.isConquestMode = true;
       this.conquestTetrisComplete = false;
       this.defenseGame.startReinforcementMode(3); // 강화 페이지 3개
-      
+
       // 테트리스 시작
       this.startConquestTetris();
     };
-    
+
     // 3. 실드 파괴 연출 시작 (2초 후 onConquer 콜백 호출)
     this.defenseGame.handleConquerClick();
   }
-  
+
   // 점령용 테트리스 시작 (디펜스는 미니 화면에서 계속)
   startConquestTetris() {
     const targetLines = 3;
     const speed = 500;
-    
+
     // 테트리스 상단 UI 숨기기 (Mining Rate, DATA MINED 등)
     this.hideConquestTetrisUI();
-    
+
     // 미니 디펜스 패널 생성 (캔버스 포함)
     this.createMiniDefensePanel();
-    
+
     // 디펜스 메인 캔버스는 숨기고, resume() 호출
     this.defenseGame.canvas.style.display = "none";
     this.defenseGame.uiLayer.style.display = "none";
     this.defenseGame.resume();
-    
+
     // 퍼즐 모드로 테트리스 시작
     const gameContainer = document.getElementById("game-container");
     gameContainer.style.display = "block"; // 먼저 보이게
@@ -716,47 +867,47 @@ export class GameManager {
     document.getElementById("game-ui").style.display = "block";
     this.terminal.setTransparentMode(true);
     this.terminal.hide(); // 터미널 완전히 숨기기
-    
+
     // 현재 스테이지 난이도 기반으로 퍼즐 모드 시작
     const currentStage = this.stageManager.getCurrentStage();
     const difficulty = parseInt(currentStage.id) || 1;
     this.tetrisGame.startPuzzleMode(difficulty);
-    
+
     // 미니 디펜스 렌더링 시작
     this.startMiniDefenseRender();
   }
-  
+
   // 테트리스 상단 UI 숨기기 (점령 모드) - NEXT 블럭은 유지
   hideConquestTetrisUI() {
     const gameUI = document.getElementById("game-ui");
     if (!gameUI) return;
-    
+
     // LEVEL, DATA MINED만 숨기기 (NEXT 블럭은 유지)
     const levelBox = gameUI.querySelector(".level-box");
     const scoreBoard = gameUI.querySelector(".score-board");
-    
+
     if (levelBox) levelBox.style.display = "none";
     if (scoreBoard) scoreBoard.style.display = "none";
   }
-  
+
   // 테트리스 상단 UI 복구
   showConquestTetrisUI() {
     const gameUI = document.getElementById("game-ui");
     if (!gameUI) return;
-    
+
     const levelBox = gameUI.querySelector(".level-box");
     const scoreBoard = gameUI.querySelector(".score-board");
-    
+
     if (levelBox) levelBox.style.display = "";
     if (scoreBoard) scoreBoard.style.display = "";
   }
-  
+
   // 미니 디펜스 패널 생성 (상단 전체에 크게 배치)
   createMiniDefensePanel() {
     // 기존 패널 제거
     const existing = document.getElementById("mini-defense-panel");
     if (existing) existing.remove();
-    
+
     // NEXT 블록 위치 변경 (왼쪽 하단으로)
     const nextBox = document.querySelector(".next-box");
     if (nextBox) {
@@ -769,7 +920,7 @@ export class GameManager {
         z-index: 1001;
       `;
     }
-    
+
     const panel = document.createElement("div");
     panel.id = "mini-defense-panel";
     panel.style.cssText = `
@@ -787,7 +938,7 @@ export class GameManager {
       z-index: 1000;
       height: 180px;
     `;
-    
+
     // 정보 영역 (상단)
     const infoDiv = document.createElement("div");
     infoDiv.style.cssText = `
@@ -805,7 +956,7 @@ export class GameManager {
       <span id="conquest-page">⚔️ 2/3</span>
     `;
     panel.appendChild(infoDiv);
-    
+
     // 미니 캔버스 (디펜스 렌더링용) - 크게!
     const miniCanvas = document.createElement("canvas");
     miniCanvas.id = "mini-defense-canvas";
@@ -818,9 +969,9 @@ export class GameManager {
       border-radius: 3px;
     `;
     panel.appendChild(miniCanvas);
-    
+
     document.body.appendChild(panel);
-    
+
     // BGM/VIEW 버튼을 패널 외부 오른쪽에 배치 (패널 아래)
     const settingsBtnContainer = document.createElement("div");
     settingsBtnContainer.id = "conquest-settings-btns";
@@ -834,7 +985,7 @@ export class GameManager {
       pointer-events: auto;
       z-index: 1001;
     `;
-    
+
     const btnStyle = `
       padding: 8px 10px;
       font-size: 12px;
@@ -846,11 +997,11 @@ export class GameManager {
       line-height: 1.2;
       text-align: center;
     `;
-    
+
     // 원본 버튼 참조
     const origBgmBtn = document.getElementById("bgm-btn");
     const origViewBtn = document.getElementById("toggle-btn");
-    
+
     // BGM 버튼 생성
     const bgmClone = document.createElement("button");
     bgmClone.id = "conquest-bgm-btn";
@@ -869,7 +1020,7 @@ export class GameManager {
         }, 10);
       }
     });
-    
+
     // VIEW 버튼 생성
     const viewClone = document.createElement("button");
     viewClone.id = "conquest-view-btn";
@@ -888,76 +1039,83 @@ export class GameManager {
         }, 10);
       }
     });
-    
+
     settingsBtnContainer.appendChild(bgmClone);
     settingsBtnContainer.appendChild(viewClone);
     document.body.appendChild(settingsBtnContainer);
-    
+
     // 원래 settings-area 숨기기
     const settingsArea = document.querySelector(".settings-area");
     if (settingsArea) {
       settingsArea.style.display = "none";
     }
   }
-  
+
   // NEXT 블록 위치 복구 및 설정 버튼 복구
   restoreNextBoxPosition() {
     const nextBox = document.querySelector(".next-box");
     if (nextBox) {
       nextBox.style.cssText = "";
     }
-    
+
     // 정복 모드 설정 버튼 제거
-    const conquestSettingsBtns = document.getElementById("conquest-settings-btns");
+    const conquestSettingsBtns = document.getElementById(
+      "conquest-settings-btns"
+    );
     if (conquestSettingsBtns) {
       conquestSettingsBtns.remove();
     }
-    
+
     // settings-area 다시 표시
     const settingsArea = document.querySelector(".settings-area");
     if (settingsArea) {
       settingsArea.style.display = "flex";
     }
   }
-  
+
   // 미니 디펜스 렌더링 시작
   startMiniDefenseRender() {
     const miniCanvas = document.getElementById("mini-defense-canvas");
     if (!miniCanvas) return;
-    
+
     const ctx = miniCanvas.getContext("2d");
-    
+
     this.defenseMonitorLoop = () => {
       if (!this.isConquestMode) return;
-      
+
       // 미니 캔버스에 디펜스 렌더링 - 캔버스 전체를 채우도록 스케일 업
       const scaleX = miniCanvas.width / this.defenseGame.canvas.width;
       const scaleY = miniCanvas.height / this.defenseGame.canvas.height;
       const scale = Math.max(scaleX, scaleY) * 1.2; // 더 크게!
-      
+
       ctx.fillStyle = "#001100";
       ctx.fillRect(0, 0, miniCanvas.width, miniCanvas.height);
-      
+
       ctx.save();
       ctx.translate(miniCanvas.width / 2, miniCanvas.height / 2);
       ctx.scale(scale, scale);
-      ctx.translate(-this.defenseGame.canvas.width / 2, -this.defenseGame.canvas.height / 2);
-      
+      ctx.translate(
+        -this.defenseGame.canvas.width / 2,
+        -this.defenseGame.canvas.height / 2
+      );
+
       // 원본 디펜스 캔버스 복사
       ctx.drawImage(this.defenseGame.canvas, 0, 0);
       ctx.restore();
-      
+
       // 정보 업데이트
-      const hpPercent = Math.ceil((this.defenseGame.core.hp / this.defenseGame.core.maxHp) * 100);
+      const hpPercent = Math.ceil(
+        (this.defenseGame.core.hp / this.defenseGame.core.maxHp) * 100
+      );
       const page = this.defenseGame.reinforcementPage || 1;
       const maxPage = this.defenseGame.reinforcementMaxPages || 3;
-      
+
       const coreEl = document.getElementById("conquest-core-hp");
       const pageEl = document.getElementById("conquest-page");
-      
+
       if (coreEl) coreEl.textContent = `♥ ${hpPercent}%`;
       if (pageEl) pageEl.textContent = `⚔️ ${page}/${maxPage}`;
-      
+
       // HP에 따라 패널 색상 변경
       const panel = document.getElementById("mini-defense-panel");
       if (panel) {
@@ -969,7 +1127,7 @@ export class GameManager {
           panel.style.borderColor = "#ff3333";
         }
       }
-      
+
       // 강화 페이지 완료 체크
       if (this.defenseGame.reinforcementComplete) {
         // 테트리스 성공 시에만 점령 완료
@@ -981,32 +1139,32 @@ export class GameManager {
         }
         return;
       }
-      
+
       // 코어 파괴 체크
       if (this.defenseGame.core.hp <= 0) {
         this.handleConquestFail();
         return;
       }
-      
+
       requestAnimationFrame(this.defenseMonitorLoop);
     };
-    
+
     requestAnimationFrame(this.defenseMonitorLoop);
   }
-  
+
   // 테트리스 클리어 시 (점령 모드) - 바로 디펜스로 복귀
   handleConquestTetrisClear() {
     debugLog("GameManager", "handleConquestTetrisClear 호출됨");
     debugLog("GameManager", "isConquestMode:", this.isConquestMode);
-    
+
     if (!this.isConquestMode) {
       debugLog("GameManager", "isConquestMode가 false라서 리턴");
       return;
     }
-    
+
     this.conquestTetrisComplete = true;
     debugLog("GameManager", "conquestTetrisComplete = true");
-    
+
     // 테트리스 UI 정리
     this.tetrisGame.state.isPlaying = false;
     document.getElementById("game-container").style.opacity = 0;
@@ -1014,51 +1172,75 @@ export class GameManager {
     this.showConquestTetrisUI();
     this.restoreNextBoxPosition();
     debugLog("GameManager", "테트리스 UI 정리 완료");
-    
+
     // 미니 패널 제거
     const panel = document.getElementById("mini-defense-panel");
     if (panel) panel.remove();
     debugLog("GameManager", "미니 패널 제거됨");
-    
+
     // 디펜스 화면 복구 및 재개
     this.defenseGame.canvas.style.display = "block";
     this.defenseGame.uiLayer.style.display = "block";
     this.defenseGame.resume(); // 디펜스 재개! (강화 페이지 진행을 위해)
     debugLog("GameManager", "디펜스 재개됨");
-    
+
     // 터미널 복구
     debugLog("GameManager", "터미널 복구 시작");
     debugLog("GameManager", "terminal 객체:", this.terminal);
     debugLog("GameManager", "terminalLayer:", this.terminal.terminalLayer);
-    debugLog("GameManager", "terminalLayer display (before):", this.terminal.terminalLayer?.style?.display);
-    
+    debugLog(
+      "GameManager",
+      "terminalLayer display (before):",
+      this.terminal.terminalLayer?.style?.display
+    );
+
     this.terminal.setTransparentMode(false);
     debugLog("GameManager", "setTransparentMode(false) 완료");
-    
+
     this.terminal.show();
     debugLog("GameManager", "terminal.show() 완료");
-    debugLog("GameManager", "terminalLayer display (after show):", this.terminal.terminalLayer?.style?.display);
-    
+    debugLog(
+      "GameManager",
+      "terminalLayer display (after show):",
+      this.terminal.terminalLayer?.style?.display
+    );
+
     this.terminal.setDefenseMode(true);
     debugLog("GameManager", "setDefenseMode(true) 완료");
-    debugLog("GameManager", "terminalLayer display (after setDefenseMode):", this.terminal.terminalLayer?.style?.display);
-    debugLog("GameManager", "terminalLayer pointerEvents:", this.terminal.terminalLayer?.style?.pointerEvents);
-    debugLog("GameManager", "terminalLayer background:", this.terminal.terminalLayer?.style?.background);
-    debugLog("GameManager", "terminalLayer zIndex:", this.terminal.terminalLayer?.style?.zIndex);
-    
+    debugLog(
+      "GameManager",
+      "terminalLayer display (after setDefenseMode):",
+      this.terminal.terminalLayer?.style?.display
+    );
+    debugLog(
+      "GameManager",
+      "terminalLayer pointerEvents:",
+      this.terminal.terminalLayer?.style?.pointerEvents
+    );
+    debugLog(
+      "GameManager",
+      "terminalLayer background:",
+      this.terminal.terminalLayer?.style?.background
+    );
+    debugLog(
+      "GameManager",
+      "terminalLayer zIndex:",
+      this.terminal.terminalLayer?.style?.zIndex
+    );
+
     this.terminal.printSystemMessage("FIREWALL BREACHED! Defend the core!");
     debugLog("GameManager", "printSystemMessage 완료");
-    
+
     // defenseMonitorLoop가 계속 돌면서 강화 페이지 완료 체크
     debugLog("GameManager", "handleConquestTetrisClear 종료");
   }
-  
+
   // 퍼즐 줄 클리어 시 디펜스에 파동 효과
   handlePuzzleLineCleared(lineNum) {
     if (!this.isConquestMode || !this.defenseGame) return;
-    
+
     debugLog("GameManager", `퍼즐 라인 클리어: ${lineNum}줄`);
-    
+
     // 효과 적용 (1,2,3줄에 따라 다른 효과)
     switch (lineNum) {
       case 1:
@@ -1083,13 +1265,13 @@ export class GameManager {
         break;
     }
   }
-  
+
   // 퍼즐 성공 메시지 표시 (터미널 스타일 - 클리어 메시지와 동일)
   showPuzzleSuccessMessage(title, subtitle) {
     // 기존 메시지 제거
     const existing = document.getElementById("puzzle-success-msg");
     if (existing) existing.remove();
-    
+
     // 메시지 요소 생성
     const msg = document.createElement("div");
     msg.id = "puzzle-success-msg";
@@ -1104,7 +1286,7 @@ export class GameManager {
       pointer-events: none;
       animation: puzzleSuccessAnim 1.5s ease-out forwards;
     `;
-    
+
     msg.innerHTML = `
       <div style="
         color: #0f0; 
@@ -1130,7 +1312,7 @@ export class GameManager {
         ${subtitle}
       </div>
     `;
-    
+
     // 애니메이션 스타일 추가 (없으면)
     if (!document.getElementById("puzzle-success-style")) {
       const style = document.createElement("style");
@@ -1153,67 +1335,67 @@ export class GameManager {
       `;
       document.head.appendChild(style);
     }
-    
+
     document.body.appendChild(msg);
-    
+
     // 1.5초 후 제거
     setTimeout(() => {
       if (msg.parentNode) msg.remove();
     }, 1500);
   }
-  
+
   // 점령 완료
   async handleConquestComplete() {
     this.isConquestMode = false;
-    
+
     // 테트리스 정리 (혹시 아직 플레이 중이면)
     if (this.tetrisGame.state.isPlaying) {
       this.tetrisGame.state.isPlaying = false;
     }
-    
+
     // 미니 패널 제거
     const panel = document.getElementById("mini-defense-panel");
     if (panel) panel.remove();
-    
+
     // 테트리스 UI 완전 정리
     const gameContainer = document.getElementById("game-container");
     if (gameContainer) gameContainer.style.opacity = 0;
     document.getElementById("game-ui").style.display = "none";
     this.showConquestTetrisUI();
     this.restoreNextBoxPosition();
-    
+
     // 디펜스 화면 복구
     this.defenseGame.canvas.style.display = "block";
     this.defenseGame.uiLayer.style.display = "block";
-    
+
     // 점령 처리
     this.conquestManager.conquerStage();
-    
+
     // 현재 스테이지를 점령 상태로 설정
     const currentStage = this.stageManager.getCurrentStage();
     if (currentStage) {
-        this.stageManager.setConquered(currentStage.id, true);
+      this.stageManager.setConquered(currentStage.id, true);
     }
-    
+
     // 디펜스 게임에 점령 상태 설정 (시각화 + 아군 10마리)
     this.defenseGame.setConqueredState(true);
     this.defenseGame.resume(); // 디펜스 재개
-    
+
     // 터미널 표시 및 메시지
     this.terminal.setTransparentMode(false);
     this.terminal.show();
     this.terminal.setDefenseMode(true);
     await this.terminal.printSystemMessage("!!! SECTOR CONQUERED !!!");
     await this.terminal.printSystemMessage("Territory secured.");
-    
+
     // 선택지 표시
     await this.showCommandMenu();
   }
-  
+
   // 점령 실패 (코어 파괴)
   async handleConquestFail() {
     this.isConquestMode = false;
-    
+
     // 테트리스 정리
     if (this.tetrisGame.state.isPlaying) {
       this.tetrisGame.state.isPlaying = false;
@@ -1222,27 +1404,27 @@ export class GameManager {
     document.getElementById("game-ui").style.display = "none";
     this.showConquestTetrisUI(); // 상단 UI 복구
     this.restoreNextBoxPosition(); // NEXT 블록 위치 복구
-    
+
     // 미니 패널 제거
     const panel = document.getElementById("mini-defense-panel");
     if (panel) panel.remove();
-    
+
     // 디펜스 정리
     this.defenseGame.canvas.style.display = "block";
     this.defenseGame.uiLayer.style.display = "block";
-    
+
     this.terminal.setTransparentMode(false);
     this.terminal.show();
     await this.terminal.printSystemMessage("CONQUEST FAILED - Core Destroyed");
-    
+
     // 게임 오버 처리
     this.handleDefenseGameOver();
   }
-  
+
   // 점령 실패 (테트리스 실패, 점령 없이 종료)
   async handleConquestFailNoConquer() {
     this.isConquestMode = false;
-    
+
     // 테트리스 정리
     if (this.tetrisGame.state.isPlaying) {
       this.tetrisGame.state.isPlaying = false;
@@ -1251,22 +1433,22 @@ export class GameManager {
     document.getElementById("game-ui").style.display = "none";
     this.showConquestTetrisUI();
     this.restoreNextBoxPosition();
-    
+
     // 미니 패널 제거
     const panel = document.getElementById("mini-defense-panel");
     if (panel) panel.remove();
-    
+
     // 디펜스 정리 및 복구
     this.defenseGame.canvas.style.display = "block";
     this.defenseGame.uiLayer.style.display = "block";
     this.defenseGame.resume();
-    
+
     // 터미널 표시
     this.terminal.setDefenseMode(true);
     this.terminal.show();
     await this.terminal.printSystemMessage("BREACH FAILED - Conquest Aborted");
     await this.terminal.printSystemMessage("Territory NOT secured.");
-    
+
     // 명령 메뉴 표시 (점령 안 됨)
     await this.showCommandMenu();
   }
@@ -1276,12 +1458,15 @@ export class GameManager {
    */
   async showMap() {
     this.defenseGame.pause(); // 디펜스 일시정지
-    
+
     // 터미널 애니메이션 (오버레이 유지)
-    const bgOverlay = await this.playTerminalAnimation("ACCESSING STAGE MAP...", true);
-    
+    const bgOverlay = await this.playTerminalAnimation(
+      "ACCESSING STAGE MAP...",
+      true
+    );
+
     const mapData = this.stageManager.getMapData();
-    
+
     // 맵 컨테이너 (기존 오버레이 위에 생성하거나 교체)
     // 여기서는 bgOverlay를 재활용하여 자연스럽게 전환
     bgOverlay.id = "map-overlay";
@@ -1291,7 +1476,7 @@ export class GameManager {
     bgOverlay.style.padding = "20px";
     bgOverlay.style.boxSizing = "border-box";
     bgOverlay.style.overflowY = "auto";
-    
+
     // 스캔 라인 효과 추가
     const scanline = document.createElement("div");
     scanline.style.cssText = `
@@ -1330,31 +1515,37 @@ export class GameManager {
     `;
 
     // 스테이지 버튼 생성 (새 색상 규칙)
-    const accessibleIds = this.stageManager.getAccessibleStages().map(s => s.id);
-    
-    mapData.stages.forEach(stage => {
+    const accessibleIds = this.stageManager
+      .getAccessibleStages()
+      .map((s) => s.id);
+
+    mapData.stages.forEach((stage) => {
       const btn = document.createElement("button");
       btn.className = "map-stage-btn";
-      
+
       // 위치 계산 (row 0~4, col 0~2)
       const gridRow = stage.position.row + 1;
       const gridCol = stage.position.col + 1;
-      
+
       // 상태 확인
       const isCurrent = stage.id === mapData.currentStageId;
       const isAccessible = accessibleIds.includes(stage.id);
       const isConquered = stage.conquered;
       const isLocked = !isAccessible && !isConquered;
-      
+
       // 색상 설정 (우선순위: 현재 > 갈수있음 > 점령됨 > 보스 > 파밍 > 잠김)
-      let bgColor, borderColor, textColor, extraStyle = "";
-      
+      let bgColor,
+        borderColor,
+        textColor,
+        extraStyle = "";
+
       if (isCurrent) {
         // 🟢 현재 위치: 밝은 초록 + glow
         bgColor = "rgba(0, 255, 0, 0.4)";
         borderColor = "#00ff00";
         textColor = "#00ff00";
-        extraStyle = "box-shadow: 0 0 20px #00ff00, inset 0 0 10px rgba(0,255,0,0.3);";
+        extraStyle =
+          "box-shadow: 0 0 20px #00ff00, inset 0 0 10px rgba(0,255,0,0.3);";
       } else if (isAccessible && !isConquered) {
         // 🟡 갈 수 있는 곳 (미점령): 노란색 + 깜빡임
         bgColor = "rgba(255, 200, 0, 0.3)";
@@ -1392,21 +1583,23 @@ export class GameManager {
         transition: all 0.2s;
         ${extraStyle}
       `;
-      
+
       // 마커 표시
       const currentMarker = isCurrent ? "▶ " : "";
       const conqueredMarker = isConquered ? " ✓" : "";
       const lockedMarker = isLocked ? " 🔒" : "";
-      
+
       btn.innerHTML = `
-        <div style="font-weight:bold;">${currentMarker}${stage.name}${conqueredMarker}${lockedMarker}</div>
+        <div style="font-weight:bold;">${currentMarker}${
+        stage.name
+      }${conqueredMarker}${lockedMarker}</div>
         <div style="font-size:9px;margin-top:3px;">${stage.type.toUpperCase()}</div>
       `;
 
       // 클릭 이벤트 (접근 가능한 경우만)
       if (isAccessible) {
         btn.onclick = () => this.handleMapStageClick(stage, bgOverlay);
-        
+
         // 호버 효과
         btn.onmouseenter = () => {
           btn.style.transform = "scale(1.05)";
@@ -1504,36 +1697,39 @@ export class GameManager {
    */
   async handleMapStageClick(stage, overlay) {
     const result = this.stageManager.moveToStage(stage.id);
-    
+
     if (result.success) {
       // 1. 장비 선택 (안전영역 제외) - 맵 위에서 바로 진행
       if (stage.type !== "safe") {
         await this.showEquipmentSelection(stage);
       }
-      
+
       overlay.remove();
-      
+
       // 2. 스테이지 설정 적용
       this.applyStageSettings(result.stage);
-      
+
       // 3. 아군 바이러스 정보 업데이트 (playIntroAnimation 전에!)
       const alliedInfo = this.conquestManager.getAlliedInfo();
       this.defenseGame.updateAlliedInfo(alliedInfo);
-      
+      this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
+
       // 4. 기존 아군 제거 (겹침 방지) 후 게임 시작
       this.defenseGame.alliedViruses = [];
       this.defenseGame.resume();
-      
+
       // 5. 코어 강림 연출 (Canvas 내에서 처리)
       await this.defenseGame.playIntroAnimation();
-      
+
       // 6. 연출 종료 후 시스템 메시지 (타이핑 효과)
       // terminal.clear() 제거 - 메시지 축적 유지
       await this.terminal.printSystemMessage(`DEPLOYED: ${result.stage.name}`);
-      
+
       await this.showCommandMenu();
     } else {
-      await this.terminal.printSystemMessage(`ACCESS DENIED: ${result.message}`);
+      await this.terminal.printSystemMessage(
+        `ACCESS DENIED: ${result.message}`
+      );
     }
   }
 
@@ -1541,9 +1737,9 @@ export class GameManager {
    * 스테이지 진입 전 장비 선택 UI
    */
   async showEquipmentSelection(stage) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const data = this.inventoryManager.getData();
-      
+
       const overlay = document.createElement("div");
       overlay.style.cssText = `
         position: fixed;
@@ -1583,7 +1779,12 @@ export class GameManager {
       `;
 
       data.slotTypes.forEach((type, idx) => {
-        const slot = this.createSlotElement(data.equipSlots[idx], type, idx, true);
+        const slot = this.createSlotElement(
+          data.equipSlots[idx],
+          type,
+          idx,
+          true
+        );
         equipRow.appendChild(slot);
       });
       overlay.appendChild(equipRow);
@@ -1616,21 +1817,21 @@ export class GameManager {
    */
   applyStageSettings(stage) {
     // 안전영역 여부
-    this.defenseGame.isSafeZone = (stage.type === "safe");
+    this.defenseGame.isSafeZone = stage.type === "safe";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate;
     this.defenseGame.spawnRate = stage.spawnRate;
-    
+
     // 스테이지 정보 저장 (난이도 계산용)
     this.defenseGame.currentStageId = stage.id;
     this.defenseGame.stageDifficultyScale = stage.difficultyScale || 1.0;
     this.defenseGame.stageMaxPages = stage.maxPages || 12;
-    
+
     // 강화 모드 리셋 (스테이지 이동 시 항상 초기화)
     this.defenseGame.isReinforcementMode = false;
     this.defenseGame.reinforcementPage = 0;
     this.defenseGame.reinforcementComplete = false;
     this.defenseGame.conquerReady = false;
-    
+
     // 실드 상태 복구 (스테이지 이동 시 항상 리셋)
     this.defenseGame.core.shieldActive = true;
     this.defenseGame.core.shieldState = "ACTIVE";
@@ -1639,7 +1840,7 @@ export class GameManager {
     this.defenseGame.core.shieldTimer = 0;
     this.defenseGame.updateShieldBtnUI("ACTIVE", "#fff");
     this.defenseGame.shieldBtn.style.pointerEvents = "auto";
-    
+
     // 점령 상태 확인 및 적용
     if (stage.conquered && stage.type === "conquest") {
       // 점령된 스테이지 - 점령 시각화 적용
@@ -1648,7 +1849,7 @@ export class GameManager {
       // 점령되지 않은 스테이지
       this.defenseGame.isConquered = false;
       this.defenseGame.shieldBtn.style.display = "block";
-      
+
       // 페이지 시스템
       if (!stage.hasPages) {
         this.defenseGame.currentPage = 0;
@@ -1659,10 +1860,10 @@ export class GameManager {
         this.defenseGame.maxPages = stage.maxPages || 12;
       }
     }
-    
+
     // UI 업데이트
     this.defenseGame.updateWaveDisplay();
-    
+
     // 적 초기화
     this.defenseGame.enemies = [];
   }
@@ -1672,12 +1873,15 @@ export class GameManager {
    */
   async showInventory() {
     this.defenseGame.pause();
-    
+
     const data = this.inventoryManager.getData();
-    
+
     // 터미널 애니메이션 (오버레이 유지 - 디펜스 화면 안 보이게)
-    const bgOverlay = await this.playTerminalAnimation("LOADING INVENTORY...", true);
-    
+    const bgOverlay = await this.playTerminalAnimation(
+      "LOADING INVENTORY...",
+      true
+    );
+
     // 인벤토리 오버레이로 변환 (기존 오버레이 재활용)
     bgOverlay.id = "inventory-overlay";
     bgOverlay.style.cssText = `
@@ -1695,7 +1899,7 @@ export class GameManager {
       box-sizing: border-box;
       overflow-y: auto;
     `;
-    
+
     const overlay = bgOverlay; // 변수명 통일
 
     // 헤더
@@ -1722,7 +1926,12 @@ export class GameManager {
     `;
 
     data.slotTypes.forEach((type, idx) => {
-      const slot = this.createSlotElement(data.equipSlots[idx], type, idx, true);
+      const slot = this.createSlotElement(
+        data.equipSlots[idx],
+        type,
+        idx,
+        true
+      );
       equipSection.appendChild(slot);
     });
     overlay.appendChild(equipSection);
@@ -1784,13 +1993,16 @@ export class GameManager {
    */
   async showUpgrades() {
     this.defenseGame.pause();
-    
+
     // 터미널 애니메이션 (오버레이 유지)
-    const bgOverlay = await this.playTerminalAnimation("LOADING UPGRADE TERMINAL...", true);
-    
+    const bgOverlay = await this.playTerminalAnimation(
+      "LOADING UPGRADE TERMINAL...",
+      true
+    );
+
     this.showUpgradeCategories(bgOverlay);
   }
-  
+
   /**
    * 업그레이드 카테고리 선택 화면 (Depth 1)
    */
@@ -1851,13 +2063,37 @@ export class GameManager {
 
     // 카테고리 정의
     const categories = [
-      { id: "core", name: "CORE", icon: "⚡", color: "#00ffff", desc: "코어 HP, 수동 발사" },
-      { id: "helper", name: "HELPER", icon: "🔫", color: "#ffff00", desc: "조력자 공격력, 속도" },
-      { id: "ally", name: "ALLY", icon: "🦠", color: "#00aaff", desc: "아군 바이러스" },
-      { id: "shield", name: "SHIELD", icon: "🛡️", color: "#00ff88", desc: "실드 HP, 충전" }
+      {
+        id: "core",
+        name: "CORE",
+        icon: "⚡",
+        color: "#00ffff",
+        desc: "코어 HP, 수동 발사",
+      },
+      {
+        id: "helper",
+        name: "HELPER",
+        icon: "🔫",
+        color: "#ffff00",
+        desc: "조력자 공격력, 속도",
+      },
+      {
+        id: "ally",
+        name: "ALLY",
+        icon: "🦠",
+        color: "#00aaff",
+        desc: "아군 바이러스",
+      },
+      {
+        id: "shield",
+        name: "SHIELD",
+        icon: "🛡️",
+        color: "#00ff88",
+        desc: "실드 HP, 충전",
+      },
     ];
 
-    categories.forEach(cat => {
+    categories.forEach((cat) => {
       const btn = document.createElement("button");
       btn.style.cssText = `
         background: rgba(0, 30, 0, 0.8);
@@ -1870,13 +2106,13 @@ export class GameManager {
         text-align: center;
         transition: all 0.2s;
       `;
-      
+
       btn.innerHTML = `
         <div style="font-size: 28px; margin-bottom: 8px;">${cat.icon}</div>
         <div style="font-weight: bold;">${cat.name}</div>
         <div style="font-size: 10px; color: #888; margin-top: 5px;">${cat.desc}</div>
       `;
-      
+
       btn.onmouseenter = () => {
         btn.style.background = `rgba(0, 80, 40, 0.8)`;
         btn.style.boxShadow = `0 0 15px ${cat.color}`;
@@ -1885,7 +2121,7 @@ export class GameManager {
         btn.style.background = `rgba(0, 30, 0, 0.8)`;
         btn.style.boxShadow = `none`;
       };
-      
+
       btn.onclick = () => {
         if (cat.id === "helper") {
           this.showHelperUpgrades(overlay);
@@ -1897,7 +2133,7 @@ export class GameManager {
           this.showShieldUpgrades(overlay);
         }
       };
-      
+
       categoryGrid.appendChild(btn);
     });
 
@@ -1923,13 +2159,13 @@ export class GameManager {
     };
     overlay.appendChild(closeBtn);
   }
-  
+
   /**
    * 조력자 업그레이드 화면 (Depth 2)
    */
   showHelperUpgrades(overlay) {
     overlay.innerHTML = "";
-    
+
     // 헤더
     const header = document.createElement("div");
     header.style.cssText = `
@@ -1941,7 +2177,7 @@ export class GameManager {
     `;
     header.innerText = "[ HELPER UPGRADES ]";
     overlay.appendChild(header);
-    
+
     // ===== 무기 모드 탭 (상단) =====
     const weaponTabContainer = document.createElement("div");
     weaponTabContainer.style.cssText = `
@@ -1953,32 +2189,36 @@ export class GameManager {
       width: 100%;
       max-width: 350px;
     `;
-    
+
     const weaponModes = this.defenseGame.weaponModes;
     const currentMode = this.defenseGame.helper.weaponMode;
-    
-    Object.keys(weaponModes).forEach(modeName => {
+
+    Object.keys(weaponModes).forEach((modeName) => {
       const mode = weaponModes[modeName];
       const isActive = modeName === currentMode;
-      
+
       const tab = document.createElement("button");
       tab.style.cssText = `
         padding: 8px 12px;
         font-family: var(--term-font);
         font-size: 12px;
         cursor: pointer;
-        border: 2px solid ${isActive ? mode.color : '#555'};
-        background: ${isActive ? `rgba(${this.hexToRgb(mode.color)}, 0.3)` : 'rgba(0, 0, 0, 0.5)'};
-        color: ${isActive ? mode.color : '#888'};
+        border: 2px solid ${isActive ? mode.color : "#555"};
+        background: ${
+          isActive
+            ? `rgba(${this.hexToRgb(mode.color)}, 0.3)`
+            : "rgba(0, 0, 0, 0.5)"
+        };
+        color: ${isActive ? mode.color : "#888"};
         transition: all 0.2s;
         min-width: 60px;
       `;
-      
+
       tab.innerHTML = `
         <div style="font-size: 16px;">${mode.icon}</div>
         <div style="font-size: 10px;">${mode.name}</div>
       `;
-      
+
       tab.onmouseenter = () => {
         if (!isActive) {
           tab.style.borderColor = mode.color;
@@ -1987,11 +2227,11 @@ export class GameManager {
       };
       tab.onmouseleave = () => {
         if (!isActive) {
-          tab.style.borderColor = '#555';
-          tab.style.color = '#888';
+          tab.style.borderColor = "#555";
+          tab.style.color = "#888";
         }
       };
-      
+
       tab.onclick = () => {
         // 무기 모드 변경
         this.defenseGame.setWeaponMode(modeName);
@@ -2001,12 +2241,12 @@ export class GameManager {
         this.showHelperUpgrades(overlay);
         this.terminal.printSystemMessage(`WEAPON MODE: ${modeName}`);
       };
-      
+
       weaponTabContainer.appendChild(tab);
     });
-    
+
     overlay.appendChild(weaponTabContainer);
-    
+
     // 현재 무기 설명
     const currentModeInfo = weaponModes[currentMode];
     const modeDesc = document.createElement("div");
@@ -2022,7 +2262,7 @@ export class GameManager {
       modeDesc.innerHTML += ` <span style="color: #888;">(탄창: ${currentModeInfo.magazineSize})</span>`;
     }
     overlay.appendChild(modeDesc);
-    
+
     // 현재 스탯 박스 (방법 B 스타일)
     const helper = this.defenseGame.helper;
     const statsBox = document.createElement("div");
@@ -2068,71 +2308,71 @@ export class GameManager {
     const levels = this.upgradeLevels.helper;
     const maxLevels = this.upgradeMaxLevels.helper;
     const weaponMode = this.defenseGame.getCurrentWeaponMode();
-    
+
     // 탄창 증가량 계산 (무기별 다름)
     const magIncrement = this.getMagazineIncrement(weaponMode.name);
-    
+
     const upgrades = [
-      { 
-        id: "damage", 
-        name: "Damage", 
+      {
+        id: "damage",
+        name: "Damage",
         increment: "+2.5",
-        cost: 150, 
+        cost: 150,
         level: levels.damage,
         maxLevel: maxLevels.damage,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.helper.damage++;
           this.applyHelperUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "fireRate", 
-        name: "Fire Rate", 
+      {
+        id: "fireRate",
+        name: "Fire Rate",
         increment: "+0.6/s",
-        cost: 200, 
+        cost: 200,
         level: levels.fireRate,
         maxLevel: maxLevels.fireRate,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.helper.fireRate++;
           this.applyHelperUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "range", 
-        name: "Range", 
+      {
+        id: "range",
+        name: "Range",
         increment: "+20",
-        cost: 100, 
+        cost: 100,
         level: levels.range,
         maxLevel: maxLevels.range,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.helper.range++;
           this.applyHelperUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "projectileSpeed", 
-        name: "Bullet Speed", 
+      {
+        id: "projectileSpeed",
+        name: "Bullet Speed",
         increment: "+50",
-        cost: 180, 
+        cost: 180,
         level: levels.projectileSpeed,
         maxLevel: maxLevels.projectileSpeed,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.helper.projectileSpeed++;
           this.applyHelperUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "magazineSize", 
-        name: "Magazine", 
+      {
+        id: "magazineSize",
+        name: "Magazine",
         increment: `+${magIncrement}`,
-        cost: 120, 
+        cost: 120,
         level: levels.magazineSize,
         maxLevel: maxLevels.magazineSize,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.helper.magazineSize++;
           this.applyHelperUpgradeBonuses();
-        } 
-      }
+        },
+      },
     ];
 
     this.renderHelperUpgradeButtons(upgradeList, upgrades, dataInfo, statsBox);
@@ -2154,41 +2394,50 @@ export class GameManager {
     backBtn.onclick = () => this.showUpgradeCategories(overlay);
     overlay.appendChild(backBtn);
   }
-  
+
   /**
    * 조력자 업그레이드 버튼 렌더링 (MAX Level 체크 포함)
    */
   renderHelperUpgradeButtons(container, upgrades, dataInfo, statsBox) {
     container.innerHTML = "";
-    const modeColor = this.defenseGame.getCurrentWeaponMode().color || '#ffff00';
-    
-    upgrades.forEach(upgrade => {
+    const modeColor =
+      this.defenseGame.getCurrentWeaponMode().color || "#ffff00";
+
+    upgrades.forEach((upgrade) => {
       const btn = document.createElement("button");
       const isMaxLevel = upgrade.level >= upgrade.maxLevel;
       const canAfford = this.currentMoney >= upgrade.cost && !isMaxLevel;
-      
+
       btn.style.cssText = `
-        background: ${isMaxLevel ? 'rgba(0, 100, 100, 0.4)' : (canAfford ? 'rgba(50, 80, 0, 0.6)' : 'rgba(50, 50, 50, 0.5)')};
-        border: 1px solid ${isMaxLevel ? '#00ffff' : (canAfford ? modeColor : '#555')};
-        color: ${isMaxLevel ? '#00ffff' : (canAfford ? modeColor : '#666')};
+        background: ${
+          isMaxLevel
+            ? "rgba(0, 100, 100, 0.4)"
+            : canAfford
+            ? "rgba(50, 80, 0, 0.6)"
+            : "rgba(50, 50, 50, 0.5)"
+        };
+        border: 1px solid ${
+          isMaxLevel ? "#00ffff" : canAfford ? modeColor : "#555"
+        };
+        color: ${isMaxLevel ? "#00ffff" : canAfford ? modeColor : "#666"};
         padding: 10px 12px;
         font-family: var(--term-font);
         font-size: 13px;
-        cursor: ${canAfford ? 'pointer' : 'not-allowed'};
+        cursor: ${canAfford ? "pointer" : "not-allowed"};
         text-align: left;
         display: flex;
         justify-content: space-between;
         align-items: center;
       `;
-      
-      const levelDisplay = isMaxLevel ? 
-        `<span style="color: #00ffff; font-size: 11px;">MAX</span>` :
-        `<span style="color: #888; font-size: 11px;">Lv.${upgrade.level}/${upgrade.maxLevel}</span>`;
-      
-      const costDisplay = isMaxLevel ?
-        `<span style="color: #00ffff; font-size: 12px;">-</span>` :
-        `<span style="color: #ffcc00; font-size: 12px;">${upgrade.cost} MB</span>`;
-      
+
+      const levelDisplay = isMaxLevel
+        ? `<span style="color: #00ffff; font-size: 11px;">MAX</span>`
+        : `<span style="color: #888; font-size: 11px;">Lv.${upgrade.level}/${upgrade.maxLevel}</span>`;
+
+      const costDisplay = isMaxLevel
+        ? `<span style="color: #00ffff; font-size: 12px;">-</span>`
+        : `<span style="color: #ffcc00; font-size: 12px;">${upgrade.cost} MB</span>`;
+
       btn.innerHTML = `
         <div>
           <span style="font-weight: bold;">${upgrade.name}</span>
@@ -2199,17 +2448,17 @@ export class GameManager {
           ${costDisplay}
         </div>
       `;
-      
+
       btn.onclick = () => {
         if (isMaxLevel) return;
         if (this.currentMoney >= upgrade.cost) {
           this.currentMoney -= upgrade.cost;
           upgrade.effect();
           upgrade.level = this.upgradeLevels.helper[upgrade.id];
-          
+
           this.terminal.updateData(this.currentMoney);
           dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
-          
+
           // ===== 클릭 애니메이션 =====
           btn.style.transition = "all 0.15s ease-out";
           btn.style.background = "rgba(0, 200, 100, 0.8)";
@@ -2222,64 +2471,114 @@ export class GameManager {
               <span style="font-size: 16px;">✓ UPGRADED!</span>
             </div>
           `;
-          
+
           // 0.4초 후 원래대로 복구 + 레벨 업데이트
           setTimeout(() => {
             btn.style.transition = "all 0.2s ease-in";
             btn.style.transform = "scale(1)";
             btn.style.boxShadow = "none";
-            
+
             // 스탯 박스 업데이트
             this.updateHelperStatsBox(statsBox);
-            
+
             // 버튼 리렌더링 (레벨 업데이트)
             const levels = this.upgradeLevels.helper;
             const maxLevels = this.upgradeMaxLevels.helper;
             const activeMode = this.defenseGame.getCurrentWeaponMode();
             const magIncrement = this.getMagazineIncrement(activeMode.name);
             const newUpgrades = [
-              { id: "damage", name: "Damage", increment: "+2.5", cost: 150, 
-                level: levels.damage, maxLevel: maxLevels.damage,
-                effect: () => { this.upgradeLevels.helper.damage++; this.applyHelperUpgradeBonuses(); } },
-              { id: "fireRate", name: "Fire Rate", increment: "+0.6/s", cost: 200, 
-                level: levels.fireRate, maxLevel: maxLevels.fireRate,
-                effect: () => { this.upgradeLevels.helper.fireRate++; this.applyHelperUpgradeBonuses(); } },
-              { id: "range", name: "Range", increment: "+20", cost: 100, 
-                level: levels.range, maxLevel: maxLevels.range,
-                effect: () => { this.upgradeLevels.helper.range++; this.applyHelperUpgradeBonuses(); } },
-              { id: "projectileSpeed", name: "Bullet Speed", increment: "+50", cost: 180, 
-                level: levels.projectileSpeed, maxLevel: maxLevels.projectileSpeed,
-                effect: () => { this.upgradeLevels.helper.projectileSpeed++; this.applyHelperUpgradeBonuses(); } },
-              { id: "magazineSize", name: "Magazine", increment: `+${magIncrement}`, cost: 120, 
-                level: levels.magazineSize, maxLevel: maxLevels.magazineSize,
-                effect: () => { this.upgradeLevels.helper.magazineSize++; this.applyHelperUpgradeBonuses(); } }
+              {
+                id: "damage",
+                name: "Damage",
+                increment: "+2.5",
+                cost: 150,
+                level: levels.damage,
+                maxLevel: maxLevels.damage,
+                effect: () => {
+                  this.upgradeLevels.helper.damage++;
+                  this.applyHelperUpgradeBonuses();
+                },
+              },
+              {
+                id: "fireRate",
+                name: "Fire Rate",
+                increment: "+0.6/s",
+                cost: 200,
+                level: levels.fireRate,
+                maxLevel: maxLevels.fireRate,
+                effect: () => {
+                  this.upgradeLevels.helper.fireRate++;
+                  this.applyHelperUpgradeBonuses();
+                },
+              },
+              {
+                id: "range",
+                name: "Range",
+                increment: "+20",
+                cost: 100,
+                level: levels.range,
+                maxLevel: maxLevels.range,
+                effect: () => {
+                  this.upgradeLevels.helper.range++;
+                  this.applyHelperUpgradeBonuses();
+                },
+              },
+              {
+                id: "projectileSpeed",
+                name: "Bullet Speed",
+                increment: "+50",
+                cost: 180,
+                level: levels.projectileSpeed,
+                maxLevel: maxLevels.projectileSpeed,
+                effect: () => {
+                  this.upgradeLevels.helper.projectileSpeed++;
+                  this.applyHelperUpgradeBonuses();
+                },
+              },
+              {
+                id: "magazineSize",
+                name: "Magazine",
+                increment: `+${magIncrement}`,
+                cost: 120,
+                level: levels.magazineSize,
+                maxLevel: maxLevels.magazineSize,
+                effect: () => {
+                  this.upgradeLevels.helper.magazineSize++;
+                  this.applyHelperUpgradeBonuses();
+                },
+              },
             ];
-            this.renderHelperUpgradeButtons(container, newUpgrades, dataInfo, statsBox);
-            
+            this.renderHelperUpgradeButtons(
+              container,
+              newUpgrades,
+              dataInfo,
+              statsBox
+            );
+
             this.terminal.printSystemMessage(`UPGRADED: ${upgrade.name}`);
           }, 400);
-          
+
           return;
         }
       };
-      
+
       container.appendChild(btn);
     });
   }
-  
+
   /**
    * 조력자 스탯 박스 업데이트 (방법 B 스타일)
    */
   updateHelperStatsBox(element) {
     const helper = this.defenseGame.helper;
     const mode = this.defenseGame.getCurrentWeaponMode();
-    const modeColor = mode.color || '#ffff00';
-    
+    const modeColor = mode.color || "#ffff00";
+
     // 탄창 크기 (기본 + 보너스)
     const totalMagazine = mode.magazineSize + (helper.magazineBonus || 0);
-    
+
     // 특수 효과 표시
-    let specialDisplay = '';
+    let specialDisplay = "";
     if (mode.explosive) {
       specialDisplay = `<div style="color: #ff4400;">💥 폭발 반경: ${mode.explosionRadius}</div>`;
     }
@@ -2289,75 +2588,96 @@ export class GameManager {
     if (mode.projectileCount > 1) {
       specialDisplay += `<div style="color: #ff8800;">🔥 ${mode.projectileCount}발 산탄</div>`;
     }
-    
+
     element.innerHTML = `
       <div style="color: ${modeColor}; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 5px;">
         ─── Current Stats ───
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #ccc;">
-        <div>DMG: <span style="color: #fff;">${helper.damage.toFixed(1)}</span></div>
-        <div>RATE: <span style="color: #fff;">${helper.fireRate.toFixed(1)}/s</span></div>
+        <div>DMG: <span style="color: #fff;">${helper.damage.toFixed(
+          1
+        )}</span></div>
+        <div>RATE: <span style="color: #fff;">${helper.fireRate.toFixed(
+          1
+        )}/s</span></div>
         <div>RNG: <span style="color: #fff;">${helper.range}</span></div>
-        <div>BULLET: <span style="color: #fff;">${helper.projectileSpeed}</span></div>
+        <div>BULLET: <span style="color: #fff;">${
+          helper.projectileSpeed
+        }</span></div>
         <div>MAG: <span style="color: #fff;">${totalMagazine}</span></div>
-        <div>RELOAD: <span style="color: #fff;">${mode.reloadTime.toFixed(1)}s</span></div>
+        <div>RELOAD: <span style="color: #fff;">${mode.reloadTime.toFixed(
+          1
+        )}s</span></div>
       </div>
-      ${specialDisplay ? `<div style="margin-top: 8px; border-top: 1px solid #555; padding-top: 5px;">${specialDisplay}</div>` : ''}
+      ${
+        specialDisplay
+          ? `<div style="margin-top: 8px; border-top: 1px solid #555; padding-top: 5px;">${specialDisplay}</div>`
+          : ""
+      }
     `;
   }
-  
+
   /**
    * Hex 색상을 RGB 문자열로 변환
    */
   hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (result) {
-      return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`;
+      return `${parseInt(result[1], 16)}, ${parseInt(
+        result[2],
+        16
+      )}, ${parseInt(result[3], 16)}`;
     }
-    return '255, 255, 0'; // 기본값
+    return "255, 255, 0"; // 기본값
   }
-  
+
   /**
    * 조력자 업그레이드 보너스 적용
    */
   applyHelperUpgradeBonuses() {
     const levels = this.upgradeLevels.helper;
     const currentMode = this.defenseGame.getCurrentWeaponMode();
-    
+
     // 레벨당 증가량 (MAX Lv.10, 최종 보너스 동일)
     const bonusDamage = levels.damage * 2.5; // Lv.10 = +25
     const bonusFireRate = levels.fireRate * 0.6; // Lv.10 = +6/s
     const bonusRange = levels.range * 20; // Lv.10 = +200
     const bonusBulletSpeed = levels.projectileSpeed * 50; // Lv.10 = +500
-    
+
     // 탄창 보너스 (무기별 다름)
     const magIncrement = this.getMagazineIncrement(currentMode.name);
     const bonusMagazine = levels.magazineSize * magIncrement;
-    
-    this.defenseGame.applyUpgradeBonus(bonusDamage, bonusFireRate, bonusRange, bonusBulletSpeed, bonusMagazine);
+
+    this.defenseGame.applyUpgradeBonus(
+      bonusDamage,
+      bonusFireRate,
+      bonusRange,
+      bonusBulletSpeed,
+      bonusMagazine
+    );
   }
-  
+
   /**
    * 무기별 탄창 증가량 반환
    */
   getMagazineIncrement(weaponName) {
     // 무기별 탄창 증가량 (컨셉에 맞게)
     const increments = {
-      NORMAL: 2,    // 12 → 32 (+20)
-      SHOTGUN: 1,   // 6 → 16 (+10)
-      SNIPER: 1,    // 3 → 13 (+10)
-      RAPID: 5,     // 30 → 80 (+50)
-      LAUNCHER: 1   // 2 → 12 (+10)
+      NORMAL: 2, // 12 → 32 (+20)
+      SHOTGUN: 1, // 6 → 16 (+10)
+      SNIPER: 1, // 3 → 13 (+10)
+      RAPID: 5, // 30 → 80 (+50)
+      LAUNCHER: 1, // 2 → 12 (+10)
     };
     return increments[weaponName] || 1;
   }
-  
+
   /**
    * 코어 업그레이드 화면 (Depth 2) - 조력자 스타일로 리팩토링
    */
   showCoreUpgrades(overlay) {
     overlay.innerHTML = "";
-    
+
     const header = document.createElement("div");
     header.style.cssText = `
       color: #00ffff;
@@ -2368,7 +2688,7 @@ export class GameManager {
     `;
     header.innerText = "[ CORE UPGRADES ]";
     overlay.appendChild(header);
-    
+
     // 현재 스탯 박스
     const statsBox = document.createElement("div");
     statsBox.id = "core-stats-box";
@@ -2414,80 +2734,80 @@ export class GameManager {
     const levels = this.upgradeLevels.core;
     const maxLevels = this.upgradeMaxLevels.core;
     const staticSystem = this.defenseGame.staticSystem;
-    
+
     const upgrades = [
-      { 
-        id: "hp", 
-        name: "Core HP", 
+      {
+        id: "hp",
+        name: "Core HP",
         increment: "+10",
-        cost: 100, 
+        cost: 100,
         level: levels.hp,
         maxLevel: maxLevels.hp,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.core.hp++;
           this.applyCoreUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "turretDamage", 
-        name: "Turret Damage", 
+      {
+        id: "turretDamage",
+        name: "Turret Damage",
         increment: "+3",
-        cost: 120, 
+        cost: 120,
         level: levels.turretDamage,
         maxLevel: maxLevels.turretDamage,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.core.turretDamage++;
           this.applyCoreUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "turretRange", 
-        name: "Turret Range", 
+      {
+        id: "turretRange",
+        name: "Turret Range",
         increment: "+15",
-        cost: 80, 
+        cost: 80,
         level: levels.turretRange,
         maxLevel: maxLevels.turretRange,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.core.turretRange++;
           this.applyCoreUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "turretSpeed", 
-        name: "Bullet Speed", 
+      {
+        id: "turretSpeed",
+        name: "Bullet Speed",
         increment: "+30",
-        cost: 100, 
+        cost: 100,
         level: levels.turretSpeed,
         maxLevel: maxLevels.turretSpeed,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.core.turretSpeed++;
           this.applyCoreUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "staticDamage", 
-        name: "⚡ Static Damage", 
+      {
+        id: "staticDamage",
+        name: "⚡ Static Damage",
         increment: "+5",
-        cost: 150, 
+        cost: 150,
         level: levels.staticDamage,
         maxLevel: maxLevels.staticDamage,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.core.staticDamage++;
           this.applyCoreUpgradeBonuses();
-        } 
+        },
       },
-      { 
-        id: "staticChain", 
-        name: "⚡ Chain Count", 
+      {
+        id: "staticChain",
+        name: "⚡ Chain Count",
         increment: "+1",
-        cost: 200, 
+        cost: 200,
         level: levels.staticChain,
         maxLevel: maxLevels.staticChain,
-        effect: () => { 
+        effect: () => {
           this.upgradeLevels.core.staticChain++;
           this.applyCoreUpgradeBonuses();
-        } 
-      }
+        },
+      },
     ];
 
     this.renderCoreUpgradeButtons(container, upgrades, dataInfo, statsBox);
@@ -2509,7 +2829,7 @@ export class GameManager {
     backBtn.onclick = () => this.showUpgradeCategories(overlay);
     overlay.appendChild(backBtn);
   }
-  
+
   /**
    * 코어 스탯 박스 업데이트
    */
@@ -2517,132 +2837,205 @@ export class GameManager {
     const core = this.defenseGame.core;
     const turret = this.defenseGame.turret;
     const staticSystem = this.defenseGame.staticSystem;
-    
+
     element.innerHTML = `
       <div style="color: #00ffff; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 5px;">
         ─── Current Stats ───
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #ccc;">
-        <div>HP: <span style="color: #fff;">${core.hp}/${core.maxHp}</span></div>
+        <div>HP: <span style="color: #fff;">${core.hp}/${
+      core.maxHp
+    }</span></div>
         <div>T.DMG: <span style="color: #fff;">${turret.damage}</span></div>
         <div>T.RNG: <span style="color: #fff;">${turret.range}</span></div>
-        <div>T.SPD: <span style="color: #fff;">${turret.projectileSpeed}</span></div>
+        <div>T.SPD: <span style="color: #fff;">${
+          turret.projectileSpeed
+        }</span></div>
       </div>
       <div style="margin-top: 8px; border-top: 1px solid #555; padding-top: 5px; color: #ffff00;">
-        <div>⚡ Static: <span style="color: #fff;">${staticSystem.damage} DMG</span> | <span style="color: #fff;">${staticSystem.chainCount} chains</span></div>
-        <div>⚡ Charge: <span style="color: #fff;">${Math.floor(staticSystem.currentCharge)}/${staticSystem.maxCharge}</span></div>
+        <div>⚡ Static: <span style="color: #fff;">${
+          staticSystem.damage
+        } DMG</span> | <span style="color: #fff;">${
+      staticSystem.chainCount
+    } chains</span></div>
+        <div>⚡ Charge: <span style="color: #fff;">${Math.floor(
+          staticSystem.currentCharge
+        )}/${staticSystem.maxCharge}</span></div>
       </div>
     `;
   }
-  
+
   /**
    * 코어 업그레이드 버튼 렌더링
    */
   renderCoreUpgradeButtons(container, upgrades, dataInfo, statsBox) {
     container.innerHTML = "";
-    
-    upgrades.forEach(upgrade => {
+
+    upgrades.forEach((upgrade) => {
       const isMaxLevel = upgrade.level >= upgrade.maxLevel;
-      
+
       const btn = document.createElement("button");
       btn.style.cssText = `
-        background: ${isMaxLevel ? 'rgba(0, 255, 255, 0.2)' : 'rgba(0, 50, 50, 0.8)'};
-        border: 2px solid ${isMaxLevel ? '#00ffff' : '#00aaaa'};
-        color: ${isMaxLevel ? '#00ffff' : '#00ffff'};
+        background: ${
+          isMaxLevel ? "rgba(0, 255, 255, 0.2)" : "rgba(0, 50, 50, 0.8)"
+        };
+        border: 2px solid ${isMaxLevel ? "#00ffff" : "#00aaaa"};
+        color: ${isMaxLevel ? "#00ffff" : "#00ffff"};
         padding: 12px 15px;
         font-family: var(--term-font);
         font-size: 12px;
-        cursor: ${isMaxLevel ? 'default' : 'pointer'};
+        cursor: ${isMaxLevel ? "default" : "pointer"};
         text-align: left;
         transition: all 0.2s;
-        opacity: ${isMaxLevel ? '0.7' : '1'};
+        opacity: ${isMaxLevel ? "0.7" : "1"};
       `;
-      
-      const levelDisplay = isMaxLevel ? 
-        `<span style="color: #00ffff; font-weight: bold;">MAX</span>` : 
-        `Lv.${upgrade.level}/${upgrade.maxLevel}`;
-      
+
+      const levelDisplay = isMaxLevel
+        ? `<span style="color: #00ffff; font-weight: bold;">MAX</span>`
+        : `Lv.${upgrade.level}/${upgrade.maxLevel}`;
+
       btn.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>${upgrade.name} <span style="color: #88ff88;">${upgrade.increment}</span></span>
+          <span>${upgrade.name} <span style="color: #88ff88;">${
+        upgrade.increment
+      }</span></span>
           <span style="font-size: 11px;">${levelDisplay}</span>
         </div>
         <div style="font-size: 10px; color: #888; margin-top: 3px;">
-          ${isMaxLevel ? '최대 레벨 도달' : `Cost: ${upgrade.cost} DATA`}
+          ${isMaxLevel ? "최대 레벨 도달" : `Cost: ${upgrade.cost} DATA`}
         </div>
       `;
-      
+
       if (!isMaxLevel) {
         btn.onmouseenter = () => {
-          btn.style.background = 'rgba(0, 100, 100, 0.8)';
-          btn.style.borderColor = '#00ffff';
+          btn.style.background = "rgba(0, 100, 100, 0.8)";
+          btn.style.borderColor = "#00ffff";
         };
         btn.onmouseleave = () => {
-          btn.style.background = 'rgba(0, 50, 50, 0.8)';
-          btn.style.borderColor = '#00aaaa';
+          btn.style.background = "rgba(0, 50, 50, 0.8)";
+          btn.style.borderColor = "#00aaaa";
         };
-        
+
         btn.onclick = () => {
           if (this.currentMoney >= upgrade.cost) {
             this.currentMoney -= upgrade.cost;
             upgrade.effect();
-            
+
             // 클릭 애니메이션
-            btn.style.transform = 'scale(0.95)';
-            btn.style.boxShadow = '0 0 20px #00ffff';
-            
+            btn.style.transform = "scale(0.95)";
+            btn.style.boxShadow = "0 0 20px #00ffff";
+
             // UI 업데이트 (즉시)
             dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
             this.updateCoreStatsBox(statsBox);
-            
+
             // 애니메이션 후 버튼 리렌더링 (200ms 지연)
             setTimeout(() => {
-              btn.style.transform = 'scale(1)';
-              btn.style.boxShadow = 'none';
-              
+              btn.style.transform = "scale(1)";
+              btn.style.boxShadow = "none";
+
               // 버튼 리렌더링
               const levels = this.upgradeLevels.core;
               const maxLevels = this.upgradeMaxLevels.core;
               const newUpgrades = [
-                { id: "hp", name: "Core HP", increment: "+10", cost: 100, 
-                  level: levels.hp, maxLevel: maxLevels.hp,
-                  effect: () => { this.upgradeLevels.core.hp++; this.applyCoreUpgradeBonuses(); } },
-                { id: "turretDamage", name: "Turret Damage", increment: "+3", cost: 120, 
-                  level: levels.turretDamage, maxLevel: maxLevels.turretDamage,
-                  effect: () => { this.upgradeLevels.core.turretDamage++; this.applyCoreUpgradeBonuses(); } },
-                { id: "turretRange", name: "Turret Range", increment: "+15", cost: 80, 
-                  level: levels.turretRange, maxLevel: maxLevels.turretRange,
-                  effect: () => { this.upgradeLevels.core.turretRange++; this.applyCoreUpgradeBonuses(); } },
-                { id: "turretSpeed", name: "Bullet Speed", increment: "+30", cost: 100, 
-                  level: levels.turretSpeed, maxLevel: maxLevels.turretSpeed,
-                  effect: () => { this.upgradeLevels.core.turretSpeed++; this.applyCoreUpgradeBonuses(); } },
-                { id: "staticDamage", name: "⚡ Static Damage", increment: "+5", cost: 150, 
-                  level: levels.staticDamage, maxLevel: maxLevels.staticDamage,
-                  effect: () => { this.upgradeLevels.core.staticDamage++; this.applyCoreUpgradeBonuses(); } },
-                { id: "staticChain", name: "⚡ Chain Count", increment: "+1", cost: 200, 
-                  level: levels.staticChain, maxLevel: maxLevels.staticChain,
-                  effect: () => { this.upgradeLevels.core.staticChain++; this.applyCoreUpgradeBonuses(); } }
+                {
+                  id: "hp",
+                  name: "Core HP",
+                  increment: "+10",
+                  cost: 100,
+                  level: levels.hp,
+                  maxLevel: maxLevels.hp,
+                  effect: () => {
+                    this.upgradeLevels.core.hp++;
+                    this.applyCoreUpgradeBonuses();
+                  },
+                },
+                {
+                  id: "turretDamage",
+                  name: "Turret Damage",
+                  increment: "+3",
+                  cost: 120,
+                  level: levels.turretDamage,
+                  maxLevel: maxLevels.turretDamage,
+                  effect: () => {
+                    this.upgradeLevels.core.turretDamage++;
+                    this.applyCoreUpgradeBonuses();
+                  },
+                },
+                {
+                  id: "turretRange",
+                  name: "Turret Range",
+                  increment: "+15",
+                  cost: 80,
+                  level: levels.turretRange,
+                  maxLevel: maxLevels.turretRange,
+                  effect: () => {
+                    this.upgradeLevels.core.turretRange++;
+                    this.applyCoreUpgradeBonuses();
+                  },
+                },
+                {
+                  id: "turretSpeed",
+                  name: "Bullet Speed",
+                  increment: "+30",
+                  cost: 100,
+                  level: levels.turretSpeed,
+                  maxLevel: maxLevels.turretSpeed,
+                  effect: () => {
+                    this.upgradeLevels.core.turretSpeed++;
+                    this.applyCoreUpgradeBonuses();
+                  },
+                },
+                {
+                  id: "staticDamage",
+                  name: "⚡ Static Damage",
+                  increment: "+5",
+                  cost: 150,
+                  level: levels.staticDamage,
+                  maxLevel: maxLevels.staticDamage,
+                  effect: () => {
+                    this.upgradeLevels.core.staticDamage++;
+                    this.applyCoreUpgradeBonuses();
+                  },
+                },
+                {
+                  id: "staticChain",
+                  name: "⚡ Chain Count",
+                  increment: "+1",
+                  cost: 200,
+                  level: levels.staticChain,
+                  maxLevel: maxLevels.staticChain,
+                  effect: () => {
+                    this.upgradeLevels.core.staticChain++;
+                    this.applyCoreUpgradeBonuses();
+                  },
+                },
               ];
-              this.renderCoreUpgradeButtons(container, newUpgrades, dataInfo, statsBox);
+              this.renderCoreUpgradeButtons(
+                container,
+                newUpgrades,
+                dataInfo,
+                statsBox
+              );
             }, 200); // 애니메이션 후 리렌더링
-            
+
             this.terminal.printSystemMessage(`UPGRADED: ${upgrade.name}`);
           } else {
             this.terminal.printSystemMessage("NOT ENOUGH DATA!", "error");
           }
         };
       }
-      
+
       container.appendChild(btn);
     });
   }
-  
+
   /**
    * 코어 업그레이드 보너스 적용
    */
   applyCoreUpgradeBonuses() {
     const levels = this.upgradeLevels.core;
-    
+
     // 기본값
     const baseMaxHp = 100;
     const baseTurretDamage = 10;
@@ -2650,7 +3043,7 @@ export class GameManager {
     const baseTurretSpeed = 300;
     const baseStaticDamage = 10;
     const baseStaticChain = 3;
-    
+
     // 보너스 계산
     const bonusHp = levels.hp * 10;
     const bonusTurretDamage = levels.turretDamage * 3;
@@ -2658,34 +3051,37 @@ export class GameManager {
     const bonusTurretSpeed = levels.turretSpeed * 30;
     const bonusStaticDamage = levels.staticDamage * 5;
     const bonusStaticChain = levels.staticChain * 1;
-    
+
     // 적용
-    const hpDiff = (baseMaxHp + bonusHp) - this.defenseGame.core.maxHp;
+    const hpDiff = baseMaxHp + bonusHp - this.defenseGame.core.maxHp;
     this.defenseGame.core.maxHp = baseMaxHp + bonusHp;
     if (hpDiff > 0) this.defenseGame.core.hp += hpDiff; // 최대 HP 증가분만큼 현재 HP도 증가
-    
+
     this.defenseGame.turret.damage = baseTurretDamage + bonusTurretDamage;
     this.defenseGame.turret.range = baseTurretRange + bonusTurretRange;
-    this.defenseGame.turret.projectileSpeed = baseTurretSpeed + bonusTurretSpeed;
-    
+    this.defenseGame.turret.projectileSpeed =
+      baseTurretSpeed + bonusTurretSpeed;
+
     this.defenseGame.staticSystem.damage = baseStaticDamage + bonusStaticDamage;
-    this.defenseGame.staticSystem.chainCount = baseStaticChain + bonusStaticChain;
-    
+    this.defenseGame.staticSystem.chainCount =
+      baseStaticChain + bonusStaticChain;
+
     debugLog("GameManager", "Core upgrade bonus applied:", {
       maxHp: this.defenseGame.core.maxHp,
       turretDamage: this.defenseGame.turret.damage,
       turretRange: this.defenseGame.turret.range,
       staticDamage: this.defenseGame.staticSystem.damage,
-      staticChain: this.defenseGame.staticSystem.chainCount
+      staticChain: this.defenseGame.staticSystem.chainCount,
     });
   }
-  
+
   /**
-   * 아군 바이러스 업그레이드 화면 (Depth 2) - 기본 구현
+   * 아군 바이러스 업그레이드 화면 (Depth 2) - 메인/서브 + 슬롯 시스템
    */
   showAllyUpgrades(overlay) {
     overlay.innerHTML = "";
-    
+
+    // 헤더
     const header = document.createElement("div");
     header.style.cssText = `
       color: #00aaff;
@@ -2694,23 +3090,159 @@ export class GameManager {
       margin-bottom: 10px;
       text-shadow: 0 0 10px #00aaff;
     `;
-    header.innerText = "[ ALLY UPGRADES ]";
+    header.innerText = "[ ALLY CONFIGURATION ]";
     overlay.appendChild(header);
-    
-    const infoText = document.createElement("div");
-    infoText.style.cssText = `
-      color: #666;
+
+    // 현재 DATA 표시
+    const dataInfo = document.createElement("div");
+    dataInfo.id = "ally-data-display";
+    dataInfo.style.cssText = `
+      color: #00f0ff;
       font-family: var(--term-font);
       font-size: 14px;
-      margin: 40px 0;
+      margin-bottom: 15px;
+    `;
+    dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
+    overlay.appendChild(dataInfo);
+
+    // 슬롯 정보 박스
+    const slotInfo = document.createElement("div");
+    slotInfo.id = "ally-slot-info";
+    slotInfo.style.cssText = `
+      background: rgba(0, 50, 80, 0.5);
+      border: 1px solid #00aaff;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-family: var(--term-font);
+      font-size: 12px;
+      color: #aaa;
+      width: 100%;
+      max-width: 350px;
+      box-sizing: border-box;
+    `;
+    this.updateAllySlotInfo(slotInfo);
+    overlay.appendChild(slotInfo);
+
+    // 메인 컨테이너 (스크롤 가능)
+    const mainContainer = document.createElement("div");
+    mainContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      width: 100%;
+      max-width: 350px;
+      max-height: 50vh;
+      overflow-y: auto;
+    `;
+
+    // === 메인 타입 선택 ===
+    const mainSection = document.createElement("div");
+    mainSection.style.cssText = `
+      background: rgba(0, 100, 50, 0.2);
+      border: 2px solid #00ff88;
+      padding: 10px;
+    `;
+
+    const mainTitle = document.createElement("div");
+    mainTitle.style.cssText = `
+      color: #00ff88;
+      font-family: var(--term-font);
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    `;
+    mainTitle.innerText = "★ MAIN TYPE (70%)";
+    mainSection.appendChild(mainTitle);
+
+    const mainTypeGrid = document.createElement("div");
+    mainTypeGrid.id = "main-type-grid";
+    mainTypeGrid.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    `;
+    this.renderVirusTypeButtons(mainTypeGrid, "main", slotInfo);
+    mainSection.appendChild(mainTypeGrid);
+    mainContainer.appendChild(mainSection);
+
+    // === 서브 타입 선택 ===
+    const subSection = document.createElement("div");
+    subSection.style.cssText = `
+      background: rgba(100, 50, 0, 0.2);
+      border: 2px solid #ffaa00;
+      padding: 10px;
+    `;
+
+    const subTitle = document.createElement("div");
+    subTitle.style.cssText = `
+      color: #ffaa00;
+      font-family: var(--term-font);
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    `;
+    subTitle.innerText = "☆ SUB TYPE (30%) - Optional";
+    subSection.appendChild(subTitle);
+
+    const subTypeGrid = document.createElement("div");
+    subTypeGrid.id = "sub-type-grid";
+    subTypeGrid.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    `;
+    this.renderVirusTypeButtons(subTypeGrid, "sub", slotInfo);
+    subSection.appendChild(subTypeGrid);
+    mainContainer.appendChild(subSection);
+
+    // === 시너지 표시 ===
+    const synergyBox = document.createElement("div");
+    synergyBox.id = "synergy-box";
+    synergyBox.style.cssText = `
+      background: rgba(80, 0, 80, 0.3);
+      border: 1px solid #ff00ff;
+      padding: 10px;
       text-align: center;
     `;
-    infoText.innerText = "[ COMING SOON ]";
-    overlay.appendChild(infoText);
+    this.updateSynergyDisplay(synergyBox);
+    mainContainer.appendChild(synergyBox);
 
+    // === 업그레이드 섹션 ===
+    const upgradeSection = document.createElement("div");
+    upgradeSection.style.cssText = `
+      background: rgba(0, 50, 50, 0.3);
+      border: 1px solid #00aaaa;
+      padding: 10px;
+    `;
+
+    const upgradeTitle = document.createElement("div");
+    upgradeTitle.style.cssText = `
+      color: #00ffff;
+      font-family: var(--term-font);
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    `;
+    upgradeTitle.innerText = "⬆ UPGRADES";
+    upgradeSection.appendChild(upgradeTitle);
+
+    const upgradeGrid = document.createElement("div");
+    upgradeGrid.id = "ally-upgrade-grid";
+    upgradeGrid.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    `;
+    this.renderAllyUpgradeButtons(upgradeGrid, dataInfo, slotInfo);
+    upgradeSection.appendChild(upgradeGrid);
+    mainContainer.appendChild(upgradeSection);
+
+    overlay.appendChild(mainContainer);
+
+    // 뒤로가기 버튼
     const backBtn = document.createElement("button");
     backBtn.style.cssText = `
-      margin-top: 20px;
+      margin-top: 15px;
       background: transparent;
       border: 1px solid #888;
       color: #888;
@@ -2723,13 +3255,422 @@ export class GameManager {
     backBtn.onclick = () => this.showUpgradeCategories(overlay);
     overlay.appendChild(backBtn);
   }
-  
+
+  /**
+   * 슬롯 정보 업데이트
+   */
+  updateAllySlotInfo(element) {
+    const baseSlots = 12;
+    const bonusSlots = this.upgradeLevels.ally.slots;
+    const totalSlots = baseSlots + bonusSlots;
+
+    const { mainCount, subCount, mainType, subType } =
+      this.calculateAllyDistribution();
+    const mainSlots = mainType
+      ? mainCount * this.virusTypes[mainType].slotCost
+      : 0;
+    const subSlots = subType ? subCount * this.virusTypes[subType].slotCost : 0;
+    const usedSlots = mainSlots + subSlots;
+
+    element.innerHTML = `
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span style="color: #00aaff;">TOTAL SLOTS:</span>
+        <span style="color: #fff;">${usedSlots} / ${totalSlots}</span>
+      </div>
+      <div style="background: #333; height: 8px; border-radius: 4px; overflow: hidden;">
+        <div style="background: linear-gradient(90deg, #00ff88 0%, #00ff88 ${
+          (mainSlots / totalSlots) * 100
+        }%, #ffaa00 ${(mainSlots / totalSlots) * 100}%, #ffaa00 ${
+      (usedSlots / totalSlots) * 100
+    }%, #333 ${
+      (usedSlots / totalSlots) * 100
+    }%); height: 100%; width: 100%;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px;">
+        <span style="color: #00ff88;">● Main: ${mainCount}마리 (${mainSlots}슬롯)</span>
+        <span style="color: #ffaa00;">● Sub: ${subCount}마리 (${subSlots}슬롯)</span>
+      </div>
+      <div style="margin-top: 5px; color: #888; font-size: 10px;">
+        최소 보장: 3마리 | 메인 70% / 서브 30% (남은 슬롯 자동 충원)
+      </div>
+    `;
+  }
+
+  /**
+   * 아군 분배 계산 (슬롯 기반)
+   */
+  calculateAllyDistribution() {
+    const baseSlots = 12;
+    const bonusSlots = this.upgradeLevels.ally.slots;
+    const totalSlots = baseSlots + bonusSlots;
+
+    const mainType = this.allyConfig.mainType;
+    const subType = this.allyConfig.subType;
+
+    const mainCost = mainType ? this.virusTypes[mainType].slotCost : 1;
+    const subCost = subType ? this.virusTypes[subType].slotCost : 1;
+
+    let mainCount = 0;
+    let subCount = 0;
+
+    if (!subType) {
+      // 서브 없음: 전부 메인
+      mainCount = Math.floor(totalSlots / mainCost);
+    } else {
+      // 메인 70%, 서브 30% 기본 할당
+      const mainSlots = Math.floor(totalSlots * 0.7);
+      const subSlots = totalSlots - mainSlots;
+
+      mainCount = Math.floor(mainSlots / mainCost);
+      subCount = Math.floor(subSlots / subCost);
+
+      // 남은 슬롯 계산
+      let usedSlots = mainCount * mainCost + subCount * subCost;
+      let remainingSlots = totalSlots - usedSlots;
+
+      // 남은 슬롯으로 더 채우기 (서브 우선, 안되면 메인)
+      while (remainingSlots > 0) {
+        if (remainingSlots >= subCost) {
+          subCount++;
+          remainingSlots -= subCost;
+        } else if (remainingSlots >= mainCost) {
+          mainCount++;
+          remainingSlots -= mainCost;
+        } else {
+          break; // 더 이상 채울 수 없음
+        }
+      }
+    }
+
+    // 최소 3마리 보장
+    const total = mainCount + subCount;
+    if (total < 3) {
+      mainCount = Math.max(3, mainCount);
+    }
+
+    return { mainCount, subCount, mainType, subType, totalSlots };
+  }
+
+  /**
+   * 바이러스 타입 버튼 렌더링
+   */
+  renderVirusTypeButtons(container, slot, slotInfoElement) {
+    container.innerHTML = "";
+
+    const currentType =
+      slot === "main" ? this.allyConfig.mainType : this.allyConfig.subType;
+
+    // 서브 슬롯에는 "없음" 옵션 추가
+    if (slot === "sub") {
+      const noneBtn = document.createElement("button");
+      const isSelected = currentType === null;
+      noneBtn.style.cssText = `
+        background: ${
+          isSelected ? "rgba(100, 100, 100, 0.5)" : "rgba(30, 30, 30, 0.5)"
+        };
+        border: 2px solid ${isSelected ? "#ffffff" : "#555"};
+        color: ${isSelected ? "#fff" : "#888"};
+        padding: 8px 4px;
+        font-family: var(--term-font);
+        font-size: 10px;
+        cursor: pointer;
+        text-align: center;
+      `;
+      noneBtn.innerHTML = `<div style="font-size: 16px;">✗</div><div>없음</div>`;
+      noneBtn.onclick = () => {
+        this.allyConfig.subType = null;
+        this.renderVirusTypeButtons(container, slot, slotInfoElement);
+        this.updateAllySlotInfo(slotInfoElement);
+        this.updateSynergyDisplay(document.getElementById("synergy-box"));
+      };
+      container.appendChild(noneBtn);
+    }
+
+    Object.entries(this.virusTypes).forEach(([typeKey, typeData]) => {
+      const btn = document.createElement("button");
+      const isSelected = currentType === typeKey;
+      const isDisabled = slot === "sub" && typeKey === this.allyConfig.mainType;
+
+      btn.style.cssText = `
+        background: ${
+          isSelected ? `${typeData.color}33` : "rgba(30, 30, 30, 0.5)"
+        };
+        border: 2px solid ${
+          isSelected ? typeData.color : isDisabled ? "#333" : "#555"
+        };
+        color: ${isDisabled ? "#444" : typeData.color};
+        padding: 8px 4px;
+        font-family: var(--term-font);
+        font-size: 10px;
+        cursor: ${isDisabled ? "not-allowed" : "pointer"};
+        text-align: center;
+        opacity: ${isDisabled ? "0.4" : "1"};
+      `;
+
+      btn.innerHTML = `
+        <div style="font-size: 16px;">${typeData.icon}</div>
+        <div>${typeData.name}</div>
+        <div style="color: #888; font-size: 9px;">${typeData.slotCost}슬롯</div>
+      `;
+
+      if (!isDisabled) {
+        btn.onclick = () => {
+          if (slot === "main") {
+            this.allyConfig.mainType = typeKey;
+            // 메인과 같으면 서브 해제
+            if (this.allyConfig.subType === typeKey) {
+              this.allyConfig.subType = null;
+            }
+            // 메인 그리드 + 서브 그리드 둘 다 업데이트
+            this.renderVirusTypeButtons(container, slot, slotInfoElement);
+            const subGrid = document.getElementById("sub-type-grid");
+            if (subGrid)
+              this.renderVirusTypeButtons(subGrid, "sub", slotInfoElement);
+          } else {
+            this.allyConfig.subType = typeKey;
+            this.renderVirusTypeButtons(container, slot, slotInfoElement);
+          }
+          this.updateAllySlotInfo(slotInfoElement);
+          this.updateSynergyDisplay(document.getElementById("synergy-box"));
+        };
+      }
+
+      container.appendChild(btn);
+    });
+  }
+
+  /**
+   * 시너지 표시 업데이트
+   */
+  updateSynergyDisplay(element) {
+    if (!element) return;
+
+    const main = this.allyConfig.mainType;
+    const sub = this.allyConfig.subType;
+
+    if (!sub) {
+      // 순수 특화 보너스
+      const typeData = this.virusTypes[main];
+      element.innerHTML = `
+        <div style="color: #ff00ff; font-family: var(--term-font); font-size: 12px; margin-bottom: 5px;">
+          🔗 PURE SPECIALIZATION
+        </div>
+        <div style="color: #fff; font-family: var(--term-font); font-size: 14px;">
+          ${typeData.icon} ${main} 순수 특화
+        </div>
+        <div style="color: #aaa; font-family: var(--term-font); font-size: 11px; margin-top: 5px;">
+          해당 타입 능력치 +30%
+        </div>
+      `;
+      return;
+    }
+
+    // 시너지 찾기
+    const synergyKey1 = `${main}+${sub}`;
+    const synergyKey2 = `${sub}+${main}`;
+    const synergy = this.synergies[synergyKey1] || this.synergies[synergyKey2];
+
+    if (synergy) {
+      element.innerHTML = `
+        <div style="color: #ff00ff; font-family: var(--term-font); font-size: 12px; margin-bottom: 5px;">
+          🔗 SYNERGY ACTIVE!
+        </div>
+        <div style="color: #fff; font-family: var(--term-font); font-size: 14px;">
+          "${synergy.name}"
+        </div>
+        <div style="color: #aaa; font-family: var(--term-font); font-size: 11px; margin-top: 5px;">
+          ${synergy.desc}
+        </div>
+      `;
+    } else {
+      element.innerHTML = `
+        <div style="color: #666; font-family: var(--term-font); font-size: 12px;">
+          🔗 시너지 없음
+        </div>
+        <div style="color: #888; font-family: var(--term-font); font-size: 11px; margin-top: 5px;">
+          다른 조합을 시도해보세요!
+        </div>
+      `;
+    }
+  }
+
+  /**
+   * 아군 업그레이드 버튼 렌더링
+   */
+  renderAllyUpgradeButtons(container, dataInfo, slotInfo) {
+    container.innerHTML = "";
+
+    const levels = this.upgradeLevels.ally;
+    const maxLevels = this.upgradeMaxLevels.ally;
+
+    const upgrades = [
+      {
+        id: "slots",
+        name: "슬롯 확장",
+        increment: "+1 슬롯",
+        cost: 200,
+        level: levels.slots,
+        maxLevel: maxLevels.slots,
+        effect: () => {
+          this.upgradeLevels.ally.slots++;
+        },
+      },
+      {
+        id: "hp",
+        name: "바이러스 HP",
+        increment: "+10%",
+        cost: 150,
+        level: levels.hp,
+        maxLevel: maxLevels.hp,
+        effect: () => {
+          this.upgradeLevels.ally.hp++;
+        },
+      },
+      {
+        id: "damage",
+        name: "바이러스 데미지",
+        increment: "+10%",
+        cost: 180,
+        level: levels.damage,
+        maxLevel: maxLevels.damage,
+        effect: () => {
+          this.upgradeLevels.ally.damage++;
+        },
+      },
+      {
+        id: "speed",
+        name: "이동 속도",
+        increment: "+5%",
+        cost: 120,
+        level: levels.speed,
+        maxLevel: maxLevels.speed,
+        effect: () => {
+          this.upgradeLevels.ally.speed++;
+        },
+      },
+      {
+        id: "respawn",
+        name: "리스폰 속도",
+        increment: "-0.15초",
+        cost: 100,
+        level: levels.respawn,
+        maxLevel: maxLevels.respawn,
+        effect: () => {
+          this.upgradeLevels.ally.respawn++;
+        },
+      },
+    ];
+
+    upgrades.forEach((upgrade) => {
+      const isMaxLevel = upgrade.level >= upgrade.maxLevel;
+      const canAfford = this.currentMoney >= upgrade.cost && !isMaxLevel;
+
+      const btn = document.createElement("button");
+      btn.style.cssText = `
+        background: ${
+          isMaxLevel
+            ? "rgba(0, 100, 100, 0.4)"
+            : canAfford
+            ? "rgba(0, 80, 80, 0.6)"
+            : "rgba(50, 50, 50, 0.5)"
+        };
+        border: 1px solid ${
+          isMaxLevel ? "#00ffff" : canAfford ? "#00aaff" : "#555"
+        };
+        color: ${isMaxLevel ? "#00ffff" : canAfford ? "#00aaff" : "#666"};
+        padding: 8px 10px;
+        font-family: var(--term-font);
+        font-size: 11px;
+        cursor: ${canAfford ? "pointer" : "not-allowed"};
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      `;
+
+      const levelDisplay = isMaxLevel
+        ? `<span style="color: #00ffff; font-size: 10px;">MAX</span>`
+        : `<span style="color: #888; font-size: 10px;">Lv.${upgrade.level}/${upgrade.maxLevel}</span>`;
+
+      const costDisplay = isMaxLevel
+        ? `<span style="color: #00ffff; font-size: 10px;">-</span>`
+        : `<span style="color: #ffcc00; font-size: 10px;">${upgrade.cost} MB</span>`;
+
+      btn.innerHTML = `
+        <div>
+          <span style="font-weight: bold;">${upgrade.name}</span>
+          <span style="color: #aaa; margin-left: 6px;">${upgrade.increment}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          ${levelDisplay}
+          ${costDisplay}
+        </div>
+      `;
+
+      btn.onclick = () => {
+        if (isMaxLevel || !canAfford) return;
+
+        this.currentMoney -= upgrade.cost;
+        upgrade.effect();
+
+        // UI 업데이트
+        this.terminal.updateData(this.currentMoney);
+        dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
+        this.updateAllySlotInfo(slotInfo);
+        this.renderAllyUpgradeButtons(container, dataInfo, slotInfo);
+
+        this.terminal.printSystemMessage(`UPGRADED: ${upgrade.name}`);
+      };
+
+      container.appendChild(btn);
+    });
+  }
+
+  /**
+   * 아군 바이러스 설정 정보 가져오기 (DefenseGame용)
+   */
+  getAllyConfiguration() {
+    const { mainCount, subCount, mainType, subType } =
+      this.calculateAllyDistribution();
+    const levels = this.upgradeLevels.ally;
+
+    // 업그레이드 보너스 계산
+    const hpMultiplier = 1 + levels.hp * 0.1; // +10%/Lv
+    const damageMultiplier = 1 + levels.damage * 0.1; // +10%/Lv
+    const speedMultiplier = 1 + levels.speed * 0.05; // +5%/Lv
+    const respawnReduction = levels.respawn * 0.15; // -0.15초/Lv
+
+    // 시너지 확인
+    const synergyKey1 = `${mainType}+${subType}`;
+    const synergyKey2 = `${subType}+${mainType}`;
+    const synergy = this.synergies[synergyKey1] || this.synergies[synergyKey2];
+
+    // 순수 특화 보너스 (서브 없을 때)
+    const isPureSpecialization = !subType;
+
+    return {
+      mainType,
+      subType,
+      mainCount,
+      subCount,
+      mainTypeData: this.virusTypes[mainType],
+      subTypeData: subType ? this.virusTypes[subType] : null,
+      hpMultiplier,
+      damageMultiplier,
+      speedMultiplier,
+      respawnTime: Math.max(0.5, 2 - respawnReduction), // 기본 2초, 최소 0.5초
+      synergy: synergy || null,
+      isPureSpecialization,
+      pureBonus: isPureSpecialization ? 1.3 : 1.0, // 순수 특화 +30%
+    };
+  }
+
   /**
    * 실드 업그레이드 화면 (Depth 2) - 기본 구현
    */
   showShieldUpgrades(overlay) {
     overlay.innerHTML = "";
-    
+
     const header = document.createElement("div");
     header.style.cssText = `
       color: #00ff88;
@@ -2740,7 +3681,7 @@ export class GameManager {
     `;
     header.innerText = "[ SHIELD UPGRADES ]";
     overlay.appendChild(header);
-    
+
     // 현재 스탯 표시
     const core = this.defenseGame.core;
     const statsInfo = document.createElement("div");
@@ -2780,19 +3721,25 @@ export class GameManager {
     `;
 
     const upgrades = [
-      { 
-        id: "shield_hp", 
-        name: "Shield HP +20", 
-        cost: 150, 
+      {
+        id: "shield_hp",
+        name: "Shield HP +20",
+        cost: 150,
         desc: `현재: ${core.shieldMaxHp}`,
-        effect: () => { 
-          this.defenseGame.core.shieldMaxHp += 20; 
-          this.defenseGame.core.shieldHp += 20; 
-        } 
-      }
+        effect: () => {
+          this.defenseGame.core.shieldMaxHp += 20;
+          this.defenseGame.core.shieldHp += 20;
+        },
+      },
     ];
 
-    this.renderUpgradeButtons(upgradeList, upgrades, dataInfo, statsInfo, "shield");
+    this.renderUpgradeButtons(
+      upgradeList,
+      upgrades,
+      dataInfo,
+      statsInfo,
+      "shield"
+    );
     overlay.appendChild(upgradeList);
 
     const backBtn = document.createElement("button");
@@ -2810,26 +3757,28 @@ export class GameManager {
     backBtn.onclick = () => this.showUpgradeCategories(overlay);
     overlay.appendChild(backBtn);
   }
-  
+
   /**
    * 업그레이드 버튼 렌더링 공통 함수
    */
   renderUpgradeButtons(container, upgrades, dataInfo, statsInfo, category) {
-    upgrades.forEach(upgrade => {
+    upgrades.forEach((upgrade) => {
       const btn = document.createElement("button");
       const canAfford = this.currentMoney >= upgrade.cost;
-      
+
       btn.style.cssText = `
-        background: ${canAfford ? 'rgba(0, 100, 50, 0.5)' : 'rgba(50, 50, 50, 0.5)'};
-        border: 1px solid ${canAfford ? '#00ff00' : '#555'};
-        color: ${canAfford ? '#00ff00' : '#666'};
+        background: ${
+          canAfford ? "rgba(0, 100, 50, 0.5)" : "rgba(50, 50, 50, 0.5)"
+        };
+        border: 1px solid ${canAfford ? "#00ff00" : "#555"};
+        color: ${canAfford ? "#00ff00" : "#666"};
         padding: 12px 15px;
         font-family: var(--term-font);
         font-size: 14px;
-        cursor: ${canAfford ? 'pointer' : 'not-allowed'};
+        cursor: ${canAfford ? "pointer" : "not-allowed"};
         text-align: left;
       `;
-      
+
       btn.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>${upgrade.name}</span>
@@ -2837,14 +3786,14 @@ export class GameManager {
         </div>
         <div style="font-size: 11px; color: #888; margin-top: 3px;">${upgrade.desc}</div>
       `;
-      
+
       btn.onclick = () => {
         if (this.currentMoney >= upgrade.cost) {
           this.currentMoney -= upgrade.cost;
           upgrade.effect();
           this.terminal.updateData(this.currentMoney);
           dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
-          
+
           // 스탯 정보 업데이트
           if (category === "helper") {
             this.updateHelperStatsDisplay(statsInfo);
@@ -2861,25 +3810,29 @@ export class GameManager {
               <div>Shield HP: ${core.shieldHp}/${core.shieldMaxHp}</div>
             `;
           }
-          
+
           // 모든 버튼 상태 업데이트
-          container.querySelectorAll('button').forEach(b => {
-            const cost = parseInt(b.querySelector('span[style*="ffcc00"]')?.textContent) || 0;
+          container.querySelectorAll("button").forEach((b) => {
+            const cost =
+              parseInt(b.querySelector('span[style*="ffcc00"]')?.textContent) ||
+              0;
             const afford = this.currentMoney >= cost;
-            b.style.background = afford ? 'rgba(0, 100, 50, 0.5)' : 'rgba(50, 50, 50, 0.5)';
-            b.style.borderColor = afford ? '#00ff00' : '#555';
-            b.style.color = afford ? '#00ff00' : '#666';
-            b.style.cursor = afford ? 'pointer' : 'not-allowed';
+            b.style.background = afford
+              ? "rgba(0, 100, 50, 0.5)"
+              : "rgba(50, 50, 50, 0.5)";
+            b.style.borderColor = afford ? "#00ff00" : "#555";
+            b.style.color = afford ? "#00ff00" : "#666";
+            b.style.cursor = afford ? "pointer" : "not-allowed";
           });
-          
+
           this.terminal.printSystemMessage(`UPGRADED: ${upgrade.name}`);
         }
       };
-      
+
       container.appendChild(btn);
     });
   }
-  
+
   /**
    * 조력자 스탯 표시 업데이트
    */
@@ -2888,7 +3841,9 @@ export class GameManager {
     element.innerHTML = `
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
         <div>Damage: <span style="color: #ffff00;">${helper.damage}</span></div>
-        <div>Fire Rate: <span style="color: #ffff00;">${helper.fireRate.toFixed(1)}/s</span></div>
+        <div>Fire Rate: <span style="color: #ffff00;">${helper.fireRate.toFixed(
+          1
+        )}/s</span></div>
         <div>Range: <span style="color: #ffff00;">${helper.range}</span></div>
         <div>Speed: <span style="color: #ffff00;">${helper.speed}</span></div>
       </div>
@@ -2903,8 +3858,8 @@ export class GameManager {
     slot.style.cssText = `
       width: 50px;
       height: 50px;
-      border: 1px solid ${isEquipSlot ? '#00ff00' : '#555'};
-      background: ${item ? 'rgba(0, 100, 50, 0.5)' : 'rgba(0, 0, 0, 0.3)'};
+      border: 1px solid ${isEquipSlot ? "#00ff00" : "#555"};
+      background: ${item ? "rgba(0, 100, 50, 0.5)" : "rgba(0, 0, 0, 0.3)"};
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -2918,7 +3873,8 @@ export class GameManager {
 
     if (isEquipSlot) {
       const typeLabel = document.createElement("div");
-      typeLabel.style.cssText = "font-size: 6px; color: #00ff00; margin-bottom: 2px;";
+      typeLabel.style.cssText =
+        "font-size: 6px; color: #00ff00; margin-bottom: 2px;";
       typeLabel.innerText = slotType;
       slot.appendChild(typeLabel);
     }
@@ -2954,7 +3910,7 @@ export class GameManager {
    * @returns {Promise<HTMLElement|void>} keepOverlay가 true면 오버레이 요소 반환
    */
   async playTerminalAnimation(text, keepOverlay = false) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const overlay = document.createElement("div");
       overlay.style.cssText = `
         position: fixed;
@@ -3004,7 +3960,7 @@ export class GameManager {
    * 스테이지 진입 애니메이션 (코어 낙하)
    */
   async playCoreDropAnimation() {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const overlay = document.createElement("div");
       overlay.style.cssText = `
         position: fixed;
@@ -3039,8 +3995,9 @@ export class GameManager {
 
       // 착지 효과
       setTimeout(() => {
-        core.style.boxShadow = "0 0 50px #00ffff, 0 0 100px #0066ff, 0 0 150px #00ffff";
-        
+        core.style.boxShadow =
+          "0 0 50px #00ffff, 0 0 100px #0066ff, 0 0 150px #00ffff";
+
         setTimeout(() => {
           overlay.style.opacity = "0";
           overlay.style.transition = "opacity 0.5s";
@@ -3101,7 +4058,7 @@ export class GameManager {
     this.currentMoney = 0; // 시작 머니는 0에서 보너스 합산
     this.perkManager.activeEffects.scoreMultiplier = 1.0;
     this.perkManager.activeEffects.shopDiscount = 0.0;
-    
+
     let bonusMoney = 0;
     let bonusScore = 0;
     let bonusLuck = 0;
@@ -3291,7 +4248,7 @@ export class GameManager {
       const choice = await this.terminal.showChoices([
         { text: "/return_base (Defense Mode)", value: "defense" },
         { text: "/access_darknet (Open Shop)", value: "shop" },
-        { text: "/continue_mining (Next Batch)", value: "next" }
+        { text: "/continue_mining (Next Batch)", value: "next" },
       ]);
 
       if (choice === "shop") {
@@ -3330,7 +4287,7 @@ export class GameManager {
   startBreachMode() {
     const targetLines = 10; // 고정 목표 라인 수
     const speed = 600; // 적당한 속도
-    
+
     setTimeout(() => {
       document.getElementById("game-container").style.display = "block"; // 먼저 보이게
       document.getElementById("game-container").style.opacity = 1;
@@ -3397,157 +4354,164 @@ export class GameManager {
       else document.getElementById("game-over-screen").appendChild(repEl);
     }
     repEl.innerText = `REPUTATION GAINED: ${earnedRep} (TOTAL: ${this.reputation})`;
-    
+
     // 게임오버 시 리셋 버튼 동작을 가로채서 GameManager가 처리해야 함.
     // 현재는 location.reload()가 걸려있을 수 있음. -> index.html 확인 필요.
     // 하지만 여기서 Defense 모드로 복귀시켜주는게 더 자연스러움.
     // "SYSTEM FAILURE. RETURNING TO SAFE MODE..."
-    
+
     // 일단 기존 구조 유지 (재시작 버튼 클릭 시 페이지 리로드)
   }
 
   async handleBreachClear(lines) {
-      debugLog("GameManager", "handleBreachClear 호출됨, lines:", lines);
-      debugLog("GameManager", "isConquestMode:", this.isConquestMode);
-      
-      // 점령 모드인 경우 별도 처리
-      if (this.isConquestMode) {
-          debugLog("GameManager", "점령 모드이므로 handleConquestTetrisClear 호출");
-          this.handleConquestTetrisClear();
-          return;
-      }
-      
-      // 일반 브리치 모드 - 장비 획득
-      const item = this.equipmentManager.generateEquipment(this.defenseGame.currentPage || 1);
-      this.equipmentManager.addItem(item);
-      
-      // 연출
-      this.tetrisGame.state.isPlaying = false;
-      document.getElementById("game-ui").style.display = "none";
-      this.terminal.setTransparentMode(false);
-      this.terminal.show();
-      
-      await this.terminal.typeText("THREAT ELIMINATED.", 30);
-      await this.terminal.typeText("Security Systems Restored.", 20);
-      await this.terminal.typeText(`[LOOT ACQUIRED]`, 30);
-      
-      await this.terminal.typeText(`> ${item.name}`, 30); 
-      await this.terminal.typeText(`Power: ${item.stats.power}`, 20);
-      
-      if (this.equipmentManager.autoEquip(item)) {
-           await this.terminal.typeText("(Auto Equipped!)", 20);
-      }
-      
-      await this.terminal.waitForEnter();
-      
-      // 디펜스로 복귀 (장비 효과 적용)
-      this.switchMode("defense");
+    debugLog("GameManager", "handleBreachClear 호출됨, lines:", lines);
+    debugLog("GameManager", "isConquestMode:", this.isConquestMode);
+
+    // 점령 모드인 경우 별도 처리
+    if (this.isConquestMode) {
+      debugLog("GameManager", "점령 모드이므로 handleConquestTetrisClear 호출");
+      this.handleConquestTetrisClear();
+      return;
+    }
+
+    // 일반 브리치 모드 - 장비 획득
+    const item = this.equipmentManager.generateEquipment(
+      this.defenseGame.currentPage || 1
+    );
+    this.equipmentManager.addItem(item);
+
+    // 연출
+    this.tetrisGame.state.isPlaying = false;
+    document.getElementById("game-ui").style.display = "none";
+    this.terminal.setTransparentMode(false);
+    this.terminal.show();
+
+    await this.terminal.typeText("THREAT ELIMINATED.", 30);
+    await this.terminal.typeText("Security Systems Restored.", 20);
+    await this.terminal.typeText(`[LOOT ACQUIRED]`, 30);
+
+    await this.terminal.typeText(`> ${item.name}`, 30);
+    await this.terminal.typeText(`Power: ${item.stats.power}`, 20);
+
+    if (this.equipmentManager.autoEquip(item)) {
+      await this.terminal.typeText("(Auto Equipped!)", 20);
+    }
+
+    await this.terminal.waitForEnter();
+
+    // 디펜스로 복귀 (장비 효과 적용)
+    this.switchMode("defense");
   }
 
   async handleBreachFail(score) {
-      // 점령 모드인 경우 별도 처리
-      if (this.isConquestMode) {
-          // 테트리스 실패 = 페널티 (적 증가)
-          this.tetrisGame.state.isPlaying = false;
-          
-          // 테트리스 완전히 숨기기 (중요!)
-          document.getElementById("game-container").style.display = "none";
-          document.getElementById("game-ui").style.display = "none";
-          this.showConquestTetrisUI(); // 상단 UI 복구
-          this.restoreNextBoxPosition(); // NEXT 블록 위치 복구
-          
-          // 터미널을 디펜스 모드로 설정 (투명 배경 + 캔버스 클릭 가능)
-          this.terminal.setDefenseMode(true);
-          this.terminal.show();
-          
-          this.terminal.printSystemMessage("BREACH DEFENSE FAILED!");
-          this.terminal.printSystemMessage("Enemy reinforcements incoming!");
-          
-          // 적 다수 스폰 (페널티)
-          for (let i = 0; i < 5; i++) {
-              this.defenseGame.spawnEnemy();
-          }
-          
-          // 디펜스 화면 복구
-          this.defenseGame.canvas.style.display = "block";
-          this.defenseGame.uiLayer.style.display = "block";
-          
-          // 미니 패널 제거
-          const panel = document.getElementById("mini-defense-panel");
-          if (panel) panel.remove();
-          
-          // 디펜스는 계속 (강화 페이지 완료까지)
-          // defenseMonitorLoop가 계속 돌아감
-          return;
-      }
-      
-      // 일반 브리치 모드 - 패배 시 복귀
+    // 점령 모드인 경우 별도 처리
+    if (this.isConquestMode) {
+      // 테트리스 실패 = 페널티 (적 증가)
       this.tetrisGame.state.isPlaying = false;
-      document.getElementById("game-container").style.opacity = 0;
+
+      // 테트리스 완전히 숨기기 (중요!)
+      document.getElementById("game-container").style.display = "none";
       document.getElementById("game-ui").style.display = "none";
-      this.terminal.setTransparentMode(false);
+      this.showConquestTetrisUI(); // 상단 UI 복구
+      this.restoreNextBoxPosition(); // NEXT 블록 위치 복구
+
+      // 터미널을 디펜스 모드로 설정 (투명 배경 + 캔버스 클릭 가능)
+      this.terminal.setDefenseMode(true);
       this.terminal.show();
-      
-      await this.terminal.typeText("DEFENSE FAILED.", 50);
-      await this.terminal.typeText("Systems compromised...", 30);
-      await this.terminal.typeText("Returning to core defense.", 30);
-      
-      await new Promise(r => setTimeout(r, 1500));
-      
-      this.switchMode("defense");
+
+      this.terminal.printSystemMessage("BREACH DEFENSE FAILED!");
+      this.terminal.printSystemMessage("Enemy reinforcements incoming!");
+
+      // 적 다수 스폰 (페널티)
+      for (let i = 0; i < 5; i++) {
+        this.defenseGame.spawnEnemy();
+      }
+
+      // 디펜스 화면 복구
+      this.defenseGame.canvas.style.display = "block";
+      this.defenseGame.uiLayer.style.display = "block";
+
+      // 미니 패널 제거
+      const panel = document.getElementById("mini-defense-panel");
+      if (panel) panel.remove();
+
+      // 디펜스는 계속 (강화 페이지 완료까지)
+      // defenseMonitorLoop가 계속 돌아감
+      return;
+    }
+
+    // 일반 브리치 모드 - 패배 시 복귀
+    this.tetrisGame.state.isPlaying = false;
+    document.getElementById("game-container").style.opacity = 0;
+    document.getElementById("game-ui").style.display = "none";
+    this.terminal.setTransparentMode(false);
+    this.terminal.show();
+
+    await this.terminal.typeText("DEFENSE FAILED.", 50);
+    await this.terminal.typeText("Systems compromised...", 30);
+    await this.terminal.typeText("Returning to core defense.", 30);
+
+    await new Promise((r) => setTimeout(r, 1500));
+
+    this.switchMode("defense");
   }
 
   async handleConquest() {
-      // 1. 점령 로직 실행 (병합 등 계산)
-      const result = this.conquestManager.conquerStage();
-      
-      // 2. 터미널 연출
-      this.terminal.setDefenseMode(false); 
-      
-      await this.terminal.typeText("!!! SYSTEM CONQUERED !!!", 30);
-      await this.terminal.typeText(`Total Conquered: ${result.total}`, 20);
-      await this.terminal.typeText(`Mining Rate: ${result.miningRate}/sec`, 20);
-      
-      if (result.total % 2 === 0) {
-           await this.terminal.typeText(">> SECTORS MERGED <<", 30);
-           await this.terminal.typeText(`Allied Virus Level Up: ${result.level}`, 30);
-      }
-      
-      await this.terminal.waitForEnter();
-      
-      // 3. 디펜스 게임에 아군 정보 업데이트
-      const alliedInfo = this.conquestManager.getAlliedInfo();
-      this.defenseGame.updateAlliedInfo(alliedInfo);
-      
-      // 4. 다시 디펜스 모드로 복귀 (다음 스테이지 느낌으로)
-      this.terminal.setDefenseMode(true);
-      this.terminal.printSystemMessage("ADVANCING TO NEXT SECTOR...");
-      
-      // 난이도 상승 등 추가 처리가 필요하다면 여기서
+    // 1. 점령 로직 실행 (병합 등 계산)
+    const result = this.conquestManager.conquerStage();
+
+    // 2. 터미널 연출
+    this.terminal.setDefenseMode(false);
+
+    await this.terminal.typeText("!!! SYSTEM CONQUERED !!!", 30);
+    await this.terminal.typeText(`Total Conquered: ${result.total}`, 20);
+    await this.terminal.typeText(`Mining Rate: ${result.miningRate}/sec`, 20);
+
+    if (result.total % 2 === 0) {
+      await this.terminal.typeText(">> SECTORS MERGED <<", 30);
+      await this.terminal.typeText(
+        `Allied Virus Level Up: ${result.level}`,
+        30
+      );
+    }
+
+    await this.terminal.waitForEnter();
+
+    // 3. 디펜스 게임에 아군 정보 업데이트
+    const alliedInfo = this.conquestManager.getAlliedInfo();
+    this.defenseGame.updateAlliedInfo(alliedInfo);
+    this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
+
+    // 4. 다시 디펜스 모드로 복귀 (다음 스테이지 느낌으로)
+    this.terminal.setDefenseMode(true);
+    this.terminal.printSystemMessage("ADVANCING TO NEXT SECTOR...");
+
+    // 난이도 상승 등 추가 처리가 필요하다면 여기서
   }
 
   async handleDefenseGameOver() {
     // 1. UI 연출 (붉은색 경고)
     this.terminal.setDefenseMode(false); // 다시 배경 어둡게
-    
+
     // 붉은색 텍스트 스타일
-    const errorStyle = "color: #ff3333; font-weight: bold; text-shadow: 0 0 10px #f00;";
-    
+    const errorStyle =
+      "color: #ff3333; font-weight: bold; text-shadow: 0 0 10px #f00;";
+
     // 긴급 메시지 출력
     await this.terminal.typeText("!!! WARNING !!!", 10);
     await this.terminal.typeText("CORE INTEGRITY REACHED 0%", 10);
     await this.terminal.typeText("SYSTEM CRITICAL FAILURE.", 30);
     await this.terminal.typeText("ALL PROCESSES TERMINATED.", 20);
-    
-    await new Promise(r => setTimeout(r, 1000));
-    
+
+    await new Promise((r) => setTimeout(r, 1000));
+
     // 재시작 선택지
     const choice = await this.terminal.showChoices([
-        { text: "SYSTEM REBOOT (Restart Game)", value: "reboot" }
+      { text: "SYSTEM REBOOT (Restart Game)", value: "reboot" },
     ]);
 
     if (choice === "reboot") {
-        location.reload(); // 페이지 새로고침
+      location.reload(); // 페이지 새로고침
     }
   }
 }
