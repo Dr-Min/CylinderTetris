@@ -1,5 +1,5 @@
 // v9.5 - Static hit charge + increased chain range
-const CACHE_NAME = "hacker-tetris-v18.2";
+const CACHE_NAME = "hacker-tetris-v18.3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -40,26 +40,29 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   console.log("[SW] Activating:", CACHE_NAME);
   e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log("[SW] Deleting old cache:", key);
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => {
-      // 모든 클라이언트에게 업데이트 알림
-      return self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({
-            type: "SW_UPDATED",
-            version: CACHE_NAME
+    caches
+      .keys()
+      .then((keys) => {
+        return Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_NAME) {
+              console.log("[SW] Deleting old cache:", key);
+              return caches.delete(key);
+            }
+          })
+        );
+      })
+      .then(() => {
+        // 모든 클라이언트에게 업데이트 알림
+        return self.clients.matchAll().then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({
+              type: "SW_UPDATED",
+              version: CACHE_NAME,
+            });
           });
         });
-      });
-    })
+      })
   );
   return self.clients.claim();
 });
@@ -86,14 +89,17 @@ self.addEventListener("fetch", (e) => {
     // 기타 리소스는 캐시 우선
     e.respondWith(
       caches.match(e.request).then((response) => {
-        return response || fetch(e.request).then((fetchResponse) => {
-          // 캐시에 저장
-          const responseClone = fetchResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(e.request, responseClone);
-          });
-          return fetchResponse;
-        });
+        return (
+          response ||
+          fetch(e.request).then((fetchResponse) => {
+            // 캐시에 저장
+            const responseClone = fetchResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(e.request, responseClone);
+            });
+            return fetchResponse;
+          })
+        );
       })
     );
   }

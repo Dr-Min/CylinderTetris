@@ -41,6 +41,7 @@ export class GameManager {
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
       this.currentMoney += amount;
+      this.saveMoney(); // 자동 저장
       // 터미널에 DATA 표시 업데이트
       this.terminal.updateData(this.currentMoney);
     };
@@ -70,7 +71,7 @@ export class GameManager {
 
     // 게임 상태
     this.activeMode = "none"; // 'defense', 'breach'
-    this.currentMoney = 0; // Data (Money)
+    this.currentMoney = this.loadSavedMoney(); // localStorage에서 로드
     this.reputation = 0; // Reputation
 
     // 업그레이드 레벨 추적 (MAX Lv.10)
@@ -138,9 +139,9 @@ export class GameManager {
         attackType: "melee",
         special: "taunt", // 도발 (어그로)
         knockbackForce: 50,
-        tauntRadius: 100, // 도발 범위
-        tauntCooldown: 5, // 도발 쿨타임 (초)
-        aggroRadius: 120, // 패시브 어그로 범위
+        tauntRadius: 150, // 도발 범위 (확대)
+        tauntCooldown: 4, // 도발 쿨타임 (초)
+        aggroRadius: 180, // 패시브 어그로 범위 (확대)
       },
       HUNTER: {
         name: "HUNTER",
@@ -2453,6 +2454,7 @@ export class GameManager {
         if (isMaxLevel) return;
         if (this.currentMoney >= upgrade.cost) {
           this.currentMoney -= upgrade.cost;
+          this.saveMoney(); // 자동 저장
           upgrade.effect();
           upgrade.level = this.upgradeLevels.helper[upgrade.id];
 
@@ -2919,6 +2921,7 @@ export class GameManager {
         btn.onclick = () => {
           if (this.currentMoney >= upgrade.cost) {
             this.currentMoney -= upgrade.cost;
+            this.saveMoney(); // 자동 저장
             upgrade.effect();
 
             // 클릭 애니메이션
@@ -3611,6 +3614,7 @@ export class GameManager {
         if (isMaxLevel || !canAfford) return;
 
         this.currentMoney -= upgrade.cost;
+        this.saveMoney(); // 자동 저장
         upgrade.effect();
 
         // UI 업데이트
@@ -3790,6 +3794,7 @@ export class GameManager {
       btn.onclick = () => {
         if (this.currentMoney >= upgrade.cost) {
           this.currentMoney -= upgrade.cost;
+          this.saveMoney(); // 자동 저장
           upgrade.effect();
           this.terminal.updateData(this.currentMoney);
           dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
@@ -4089,6 +4094,7 @@ export class GameManager {
     });
 
     this.currentMoney += bonusMoney;
+    if (bonusMoney > 0) this.saveMoney(); // 보너스 있으면 저장
     this.perkManager.activeEffects.scoreMultiplier += bonusScore;
     this.perkManager.activeEffects.bombChance += bonusLuck;
     this.perkManager.activeEffects.goldChance += bonusLuck;
@@ -4210,6 +4216,7 @@ export class GameManager {
     // 획득한 데이터 계산
     const earnedData = (linesCleared || 0) * 100;
     this.currentMoney += earnedData;
+    this.saveMoney(); // 자동 저장
 
     // --- 클리어 연출 시작 ---
     await this.terminal.showMiningCompleteSequence();
@@ -4269,6 +4276,7 @@ export class GameManager {
       const { perkId, cost } = e.detail;
       if (this.currentMoney >= cost) {
         this.currentMoney -= cost;
+        this.saveMoney(); // 자동 저장
         this.perkManager.unlock(perkId);
         this.terminal.showShop(this.perkManager, this.currentMoney).then(() => {
           this.switchMode("defense"); // 상점 나가면 디펜스로 복귀
@@ -4490,7 +4498,12 @@ export class GameManager {
   }
 
   async handleDefenseGameOver() {
-    // 1. UI 연출 (붉은색 경고)
+    // 1. 게임 오버 페널티 적용 (30%만 유지)
+    const oldMoney = this.currentMoney;
+    const newMoney = this.applyGameOverPenalty();
+    const lostMoney = oldMoney - newMoney;
+
+    // 2. UI 연출 (붉은색 경고)
     this.terminal.setDefenseMode(false); // 다시 배경 어둡게
 
     // 붉은색 텍스트 스타일
@@ -4503,6 +4516,11 @@ export class GameManager {
     await this.terminal.typeText("SYSTEM CRITICAL FAILURE.", 30);
     await this.terminal.typeText("ALL PROCESSES TERMINATED.", 20);
 
+    // 자원 손실 표시
+    await new Promise((r) => setTimeout(r, 500));
+    await this.terminal.typeText(`DATA LOSS: -${lostMoney} MB (70% lost)`, 15);
+    await this.terminal.typeText(`REMAINING DATA: ${newMoney} MB`, 15);
+
     await new Promise((r) => setTimeout(r, 1000));
 
     // 재시작 선택지
@@ -4513,5 +4531,76 @@ export class GameManager {
     if (choice === "reboot") {
       location.reload(); // 페이지 새로고침
     }
+  }
+
+  // === 자원 영구 저장 (localStorage) ===
+
+  /**
+   * 자원을 localStorage에 저장
+   */
+  saveMoney() {
+    try {
+      localStorage.setItem(
+        "cylinderTetris_money",
+        this.currentMoney.toString()
+      );
+    } catch (e) {
+      console.warn("Failed to save money to localStorage:", e);
+    }
+  }
+
+  /**
+   * localStorage에서 자원 로드
+   */
+  loadSavedMoney() {
+    try {
+      const saved = localStorage.getItem("cylinderTetris_money");
+      if (saved !== null) {
+        const amount = parseInt(saved, 10);
+        if (!isNaN(amount) && amount >= 0) {
+          console.log(`[GameManager] Loaded saved money: ${amount}`);
+          return amount;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load money from localStorage:", e);
+    }
+    return 0; // 저장된 값이 없으면 0
+  }
+
+  /**
+   * 자원 추가 (자동 저장)
+   */
+  addMoney(amount) {
+    this.currentMoney += amount;
+    this.saveMoney();
+    this.terminal.updateData(this.currentMoney);
+  }
+
+  /**
+   * 자원 차감 (자동 저장)
+   */
+  spendMoney(amount) {
+    if (this.currentMoney >= amount) {
+      this.currentMoney -= amount;
+      this.saveMoney();
+      this.terminal.updateData(this.currentMoney);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 게임 오버 시 자원 페널티 (30%만 유지)
+   */
+  applyGameOverPenalty() {
+    const remainingPercent = 0.3; // 30% 유지
+    const oldMoney = this.currentMoney;
+    this.currentMoney = Math.floor(this.currentMoney * remainingPercent);
+    this.saveMoney();
+    console.log(
+      `[GameManager] Game Over Penalty: ${oldMoney} → ${this.currentMoney} (30% kept)`
+    );
+    return this.currentMoney;
   }
 }

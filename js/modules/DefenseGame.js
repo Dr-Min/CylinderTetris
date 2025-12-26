@@ -1044,6 +1044,9 @@ export class DefenseGame {
       }
     }
 
+    // 0.7 시너지 효과 적용 (매 프레임)
+    this.applySynergyEffects(dt);
+
     // 0.8 아군 바이러스 로직 (타입별 행동) - for 루프로 안전하게 처리
     for (let idx = this.alliedViruses.length - 1; idx >= 0; idx--) {
       const v = this.alliedViruses[idx];
@@ -1130,12 +1133,18 @@ export class DefenseGame {
       // 이동 (타겟 방향으로)
       const dx = targetX - enemy.x;
       const dy = targetY - enemy.y;
-      const dist = Math.hypot(dx, dy);
+      const distToTarget = Math.hypot(dx, dy);
 
-      // 쉴드 충돌 체크 (Active 상태일 때만)
+      // 코어와의 거리 (실드/코어 충돌용)
+      const distToCore = Math.hypot(
+        this.core.x - enemy.x,
+        this.core.y - enemy.y
+      );
+
+      // 쉴드 충돌 체크 (Active 상태일 때만) - 코어와의 거리로 판정!
       if (
         this.core.shieldActive &&
-        dist < this.core.shieldRadius + enemy.radius
+        distToCore < this.core.shieldRadius + enemy.radius
       ) {
         // 쉴드 피격
         this.core.shieldHp -= 10; // 적 하나당 내구도 10 감소
@@ -1157,8 +1166,8 @@ export class DefenseGame {
         continue;
       }
 
-      // 코어 충돌 체크 (쉴드 없거나 뚫림)
-      if (dist < this.core.radius + enemy.radius) {
+      // 코어 충돌 체크 (쉴드 없거나 뚫림) - 코어와의 거리로 판정!
+      if (distToCore < this.core.radius + enemy.radius) {
         // 갓모드가 아닐 때만 데미지
         if (!this.isGodMode) {
           this.core.hp -= enemy.damage;
@@ -1197,10 +1206,10 @@ export class DefenseGame {
       }
 
       // 이동 적용 (슬로우 효과 반영)
-      if (dist > 0) {
+      if (distToTarget > 0) {
         const slowMult = enemy.slowMultiplier || 1;
-        enemy.x += (dx / dist) * enemy.speed * slowMult * dt;
-        enemy.y += (dy / dist) * enemy.speed * slowMult * dt;
+        enemy.x += (dx / distToTarget) * enemy.speed * slowMult * dt;
+        enemy.y += (dy / distToTarget) * enemy.speed * slowMult * dt;
       }
     }
 
@@ -2070,13 +2079,26 @@ export class DefenseGame {
       if (dist < explosionRange) {
         // 자폭!
         v.exploded = true;
+
+        // 정밀 폭격 시너지: HUNTER+BOMBER = 폭발 범위 +30%
+        let explosionRadius = v.explosionRadius;
+        if (this.alliedConfig?.synergy?.effect === "bomberRangeBoost") {
+          explosionRadius = Math.floor(explosionRadius * 1.3);
+        }
+
         this.handleExplosion(
           v.x,
           v.y,
-          v.explosionRadius,
+          explosionRadius,
           v.explosionDamage,
           v.color
         );
+
+        // 연쇄 폭발 시너지: SWARM+BOMBER = 주변 SWARM도 폭발
+        if (this.alliedConfig?.synergy?.effect === "chainExplosion") {
+          this.triggerChainExplosion(v.x, v.y, explosionRadius);
+        }
+
         v.hp = 0; // 사망 처리 트리거
       } else {
         // 적에게 부드럽게 돌진 (약간 불규칙하게)
@@ -2167,6 +2189,93 @@ export class DefenseGame {
 
     // 배리어 내부 진입 방지
     this.keepOutsideBarrier(v);
+  }
+
+  // === 연쇄 폭발 (SWARM+BOMBER 시너지) ===
+  triggerChainExplosion(x, y, triggerRadius) {
+    const chainRange = triggerRadius + 30; // 폭발 범위 + 여유
+    const swarms = this.alliedViruses.filter(
+      (v) => v.virusType === "SWARM" && v.hp > 0 && !v.chainExploded
+    );
+
+    for (const swarm of swarms) {
+      const dist = Math.hypot(swarm.x - x, swarm.y - y);
+      if (dist < chainRange) {
+        // SWARM 연쇄 폭발
+        swarm.chainExploded = true;
+        swarm.hp = 0; // 사망 처리
+
+        // 작은 폭발 효과
+        this.handleExplosion(
+          swarm.x,
+          swarm.y,
+          swarm.explosionRadius || 25,
+          (swarm.explosionDamage || 5) * 2, // 연쇄 폭발은 2배 데미지
+          swarm.color
+        );
+      }
+    }
+  }
+
+  // === 시너지 효과 적용 ===
+  applySynergyEffects(dt) {
+    if (!this.alliedConfig?.synergy) return;
+
+    const synergy = this.alliedConfig.synergy;
+    const effect = synergy.effect;
+
+    // TANK 위치 캐싱 (여러 시너지에서 사용)
+    const tanks = this.alliedViruses.filter(
+      (v) => v.virusType === "TANK" && v.hp > 0
+    );
+
+    switch (effect) {
+      case "tankProtection":
+        // 철벽 군단: TANK 주변 100px 내 SWARM HP +50% (버프 상태 관리)
+        this.alliedViruses.forEach((v) => {
+          if (v.virusType !== "SWARM") return;
+
+          let nearTank = false;
+          for (const tank of tanks) {
+            const dist = Math.hypot(v.x - tank.x, v.y - tank.y);
+            if (dist < 100) {
+              nearTank = true;
+              break;
+            }
+          }
+
+          // 버프 상태 관리
+          if (nearTank && !v.tankProtectionBuff) {
+            v.tankProtectionBuff = true;
+            v.maxHp = Math.floor(v.baseMaxHp * 1.5); // HP 최대치 +50%
+            v.hp = Math.min(v.hp, v.maxHp);
+          } else if (!nearTank && v.tankProtectionBuff) {
+            v.tankProtectionBuff = false;
+            v.maxHp = v.baseMaxHp;
+            v.hp = Math.min(v.hp, v.maxHp);
+          }
+        });
+        break;
+
+      case "hunterCover":
+        // 엄호 사격: HUNTER가 TANK 근처 80px 내에 있으면 받는 데미지 -50% (플래그 설정)
+        this.alliedViruses.forEach((v) => {
+          if (v.virusType !== "HUNTER") return;
+
+          let nearTank = false;
+          for (const tank of tanks) {
+            const dist = Math.hypot(v.x - tank.x, v.y - tank.y);
+            if (dist < 80) {
+              nearTank = true;
+              break;
+            }
+          }
+          v.hasCover = nearTank; // 데미지 계산에서 사용
+        });
+        break;
+
+      // chainExplosion, bomberRangeBoost는 폭발/생성 시 적용
+    }
   }
 
   // === 유틸리티 함수들 ===
@@ -3888,38 +3997,55 @@ export class DefenseGame {
     }
   }
 
-  // 도발 이펙트 (원형 파동)
+  // 도발 이펙트 (깔끔한 원형 파동)
   createTauntEffect(x, y, radius, color) {
-    // 파동 이펙트 추가
-    this.particles.push({
+    // 파동 링 효과 (shockwave 사용)
+    this.shockwaves.push({
       x: x,
       y: y,
-      vx: 0,
-      vy: 0,
-      life: 0.5,
-      maxLife: 0.5,
+      radius: 10,
+      maxRadius: radius,
+      speed: 300,
       alpha: 0.8,
       color: color,
-      size: radius,
-      type: "taunt", // 특수 타입
-      char: "",
+      lineWidth: 3,
+      isTaunt: true, // 도발 전용
     });
 
-    // 적 방향으로 뻗어나가는 파티클
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i) / 8;
-      this.particles.push({
+    // 두 번째 파동 (약간 지연)
+    setTimeout(() => {
+      if (!this.isRunning) return;
+      this.shockwaves.push({
         x: x,
         y: y,
-        vx: Math.cos(angle) * 100,
-        vy: Math.sin(angle) * 100,
-        life: 0.3,
-        maxLife: 0.3,
-        alpha: 1,
+        radius: 10,
+        maxRadius: radius * 0.7,
+        speed: 250,
+        alpha: 0.5,
         color: "#ffffff",
-        size: 8,
-        char: "⚡",
+        lineWidth: 2,
+        isTaunt: true,
       });
+    }, 100);
+
+    // 모바일 아니면 추가 이펙트: 작은 파티클들
+    if (!this.isMobile) {
+      const particleCount = 6;
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 * i) / particleCount;
+        this.particles.push({
+          x: x + Math.cos(angle) * 20,
+          y: y + Math.sin(angle) * 20,
+          vx: Math.cos(angle) * 80,
+          vy: Math.sin(angle) * 80,
+          life: 0.4,
+          maxLife: 0.4,
+          alpha: 0.8,
+          color: color,
+          size: 4,
+          char: "●",
+        });
+      }
     }
   }
 
@@ -4305,6 +4431,7 @@ export class DefenseGame {
       targetY: this.core.y + Math.sin(angle) * targetRadius,
       hp: hp,
       maxHp: hp,
+      baseMaxHp: hp, // 시너지용 기본 HP
       damage: damage,
       speed: speed,
       angle: angle,
@@ -4329,6 +4456,11 @@ export class DefenseGame {
       knockbackForce: typeData.knockbackForce || 0,
       healAmount: typeData.healAmount || 0,
       healRadius: typeData.healRadius || 0,
+
+      // TANK 도발 속성
+      tauntRadius: typeData.tauntRadius || 0,
+      tauntCooldown: typeData.tauntCooldown || 0,
+      aggroRadius: typeData.aggroRadius || 0,
 
       // 리스폰 시간 (config에서)
       respawnTime: config.respawnTime,
