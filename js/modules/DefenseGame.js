@@ -3544,15 +3544,30 @@ export class DefenseGame {
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
 
-      // 0w0 얼굴 그리기 (12시 고정 + 발사 방향으로 살짝 이동)
+      // 0w0 얼굴 그리기 (12시 고정 + 발사 시에만 살짝 움직임)
       this.ctx.save();
       this.ctx.translate(h.x, h.y);
       
-      // 발사 방향에 따른 얼굴 오프셋 (살짝만 움직임)
-      // turret.angle: 0 = 오른쪽, -π/2 = 위, π/2 = 아래, π = 왼쪽
-      const lookStrength = h.radius * 0.15; // 움직임 강도 (최대 15% 반지름만큼)
-      const lookX = Math.cos(this.turret.angle) * lookStrength;
-      const lookY = Math.sin(this.turret.angle) * lookStrength;
+      // 발사 후 시간 경과에 따른 얼굴 오프셋 계산
+      const now = performance.now();
+      const timeSinceFire = now - (h.lastFireTime || 0);
+      const lookDuration = 200; // 200ms 동안 바라봄
+      const returnDuration = 300; // 300ms 동안 복귀
+      
+      let lookIntensity = 0;
+      if (timeSinceFire < lookDuration) {
+        // 발사 직후 - 최대 강도
+        lookIntensity = 1;
+      } else if (timeSinceFire < lookDuration + returnDuration) {
+        // 복귀 중 - 서서히 감소
+        lookIntensity = 1 - (timeSinceFire - lookDuration) / returnDuration;
+      }
+      // else: 0 (12시 고정)
+      
+      const lookStrength = h.radius * 0.2 * lookIntensity; // 발사 시 20% 이동
+      const fireAngle = h.lastFireAngle || 0;
+      const lookX = Math.cos(fireAngle) * lookStrength;
+      const lookY = Math.sin(fireAngle) * lookStrength;
       
       // 기본 위치 (12시 방향) + 발사 방향 오프셋
       const faceOffsetX = lookX;
@@ -4463,6 +4478,10 @@ export class DefenseGame {
     const dy = target.y - this.helper.y;
     const dist = Math.hypot(dx, dy);
     const baseAngle = Math.atan2(dy, dx);
+    
+    // 발사 각도 저장 (얼굴 움직임용)
+    this.helper.lastFireAngle = baseAngle;
+    this.helper.lastFireTime = performance.now();
 
     const speed = this.helper.projectileSpeed || 400;
     const projectileCount = mode.projectileCount || 1;
