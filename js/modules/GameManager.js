@@ -888,14 +888,16 @@ export class GameManager {
     const recallSuccess = await this.startRecallCasting(5000);
     
     if (recallSuccess) {
-      // 귀환 성공
+      // 귀환 성공 - 위로 올라가는 연출
+      await this.defenseGame.playOutroAnimation();
+      
       await this.terminal.printSystemMessage("✅ RECALL COMPLETE!");
       await this.terminal.printSystemMessage("Returning to Safe Zone...");
       
       // 획득 아이템 선택 화면 표시
       await this.showLootSummary();
       
-      // Safe Zone (스테이지 0)으로 이동
+      // Safe Zone (스테이지 0)으로 이동 (드랍 연출 포함)
       await this.moveToStage(0);
     } else {
       // 귀환 실패 (피격으로 취소됨)
@@ -980,27 +982,28 @@ export class GameManager {
       
       Object.values(borders).forEach(b => borderContainer.appendChild(b));
       
-      // 하단 정보 표시
+      // 코어 위에 정보 표시 (화면 중앙 약간 위)
       const infoBar = document.createElement("div");
       infoBar.style.cssText = `
         position: fixed;
-        bottom: 20px;
+        top: 35%;
         left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.8);
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.85);
         border: 2px solid #00aaff;
-        padding: 10px 30px;
+        padding: 15px 40px;
         font-family: var(--term-font);
         color: #00aaff;
         font-size: 16px;
         z-index: 99999;
         text-align: center;
         box-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+        border-radius: 10px;
       `;
       infoBar.innerHTML = `
         <div style="margin-bottom: 5px;">🏃 RECALLING...</div>
-        <div id="recall-time" style="font-size: 24px; font-weight: bold;">5.0s</div>
-        <div style="color: #ff6666; font-size: 11px; margin-top: 5px;">⚠️ 피격 시 취소됨</div>
+        <div id="recall-time" style="font-size: 28px; font-weight: bold;">5.0s</div>
+        <div style="color: #ff6666; font-size: 12px; margin-top: 8px;">⚠️ 피격 시 취소됨</div>
       `;
       
       borderContainer.appendChild(infoBar);
@@ -1093,18 +1096,21 @@ export class GameManager {
     this.stageManager.saveState();
     this.applyStageSettings(stage);
     
-    // 디펜스 게임 재시작 (드랍 연출 포함)
-    this.defenseGame.stop();
+    // 디펜스 게임 설정 적용
     this.defenseGame.isSafeZone = stage.type === "safe";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate || 2;
     
-    // 아군 정보 업데이트
+    // 아군 정보 업데이트 (playIntroAnimation 전에!)
     const alliedInfo = this.conquestManager.getAlliedInfo();
     this.defenseGame.updateAlliedInfo(alliedInfo);
     this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
     
-    // 드랍 연출과 함께 시작
-    this.defenseGame.playIntroAnimation();
+    // 기존 아군 제거 (겹침 방지) 후 게임 재개
+    this.defenseGame.alliedViruses = [];
+    this.defenseGame.resume();
+    
+    // 드랍 연출과 함께 시작 (await으로 완료 대기)
+    await this.defenseGame.playIntroAnimation();
     
     await this.terminal.printSystemMessage(`Arrived at: ${stage.name}`);
     await this.showCommandMenu();

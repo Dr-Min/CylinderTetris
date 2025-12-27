@@ -4449,6 +4449,48 @@ export class DefenseGame {
     });
   }
 
+  /**
+   * 스테이지 이탈 연출 (위로 슈웅 올라감)
+   * 귀환 시 사용
+   */
+  playOutroAnimation() {
+    return new Promise((resolve) => {
+      const duration = 400; // 400ms
+      const startTime = performance.now();
+      const startScale = 1;
+      const endScale = 0.01; // 거의 점으로
+
+      // 연출 중에는 적 생성 중지
+      const originalSpawnRate = this.enemySpawnTimer;
+      this.enemySpawnTimer = 99999;
+
+      const animateAscend = (now) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // ease-out quint (처음에 빠르게, 끝에 느리게)
+        const easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
+
+        // 스케일: 1x → 0.01x (작아지면서 올라감)
+        this.core.scale = startScale - (startScale - endScale) * easeOutQuint(progress);
+
+        // Y 위치도 위로 이동
+        this.core.y = this.canvas.height / 2 - (this.canvas.height * 0.5) * easeOutQuint(progress);
+
+        if (progress < 1) {
+          requestAnimationFrame(animateAscend);
+        } else {
+          // 완료
+          this.core.scale = endScale;
+          this.enemySpawnTimer = originalSpawnRate;
+          resolve();
+        }
+      };
+
+      requestAnimationFrame(animateAscend);
+    });
+  }
+
   // 착지 충격 효과 (화면 번쩍 + 흔들림 + 충격파)
   impactEffect() {
     // 1. 화면 번쩍 (흰색 플래시)
