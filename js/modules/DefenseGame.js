@@ -3548,17 +3548,12 @@ export class DefenseGame {
       this.ctx.save();
       this.ctx.translate(h.x, h.y);
       
-      // 발사 후 시간 경과에 따른 얼굴 오프셋 계산
+      // 발사 후 시간 경과에 따른 얼굴 오프셋 계산 (faceLook 전용 속성 사용)
       const now = performance.now();
-      const lastFire = h.lastFireTime || 0;
+      const lastFire = h.faceLookTime || 0;
       const timeSinceFire = now - lastFire;
       const lookDuration = 200; // 200ms 동안 바라봄
       const returnDuration = 300; // 300ms 동안 복귀
-      
-      // 디버깅: 항상 체크 (가끔만 출력)
-      if (Math.random() < 0.01) {
-        console.log("[HELPER DEBUG] now:", now.toFixed(0), "lastFire:", lastFire.toFixed(0), "timeSinceFire:", timeSinceFire.toFixed(0), "h===this.helper:", h === this.helper);
-      }
       
       let lookIntensity = 0;
       if (timeSinceFire < lookDuration) {
@@ -3570,13 +3565,8 @@ export class DefenseGame {
       }
       // else: 0 (12시 고정)
       
-      // 디버깅 로그 (움직일 때)
-      if (lookIntensity > 0) {
-        console.log("[HELPER FACE] intensity:", lookIntensity.toFixed(2), "angle:", (h.lastFireAngle || 0).toFixed(2));
-      }
-      
       const lookStrength = h.radius * 0.2 * lookIntensity; // 발사 시 20% 이동
-      const fireAngle = h.lastFireAngle || 0;
+      const fireAngle = h.faceLookAngle || 0;
       const lookX = Math.cos(fireAngle) * lookStrength;
       const lookY = Math.sin(fireAngle) * lookStrength;
       
@@ -4490,10 +4480,10 @@ export class DefenseGame {
     const dist = Math.hypot(dx, dy);
     const baseAngle = Math.atan2(dy, dx);
     
-    // 발사 각도 저장 (얼굴 움직임용)
-    this.helper.lastFireAngle = baseAngle;
-    this.helper.lastFireTime = performance.now();
-    console.log("[HELPER FIRE] angle:", baseAngle.toFixed(2), "time:", this.helper.lastFireTime);
+    // 발사 각도 저장 (얼굴 움직임용) - faceLook 전용 속성
+    this.helper.faceLookAngle = baseAngle;
+    this.helper.faceLookTime = performance.now();
+    console.log("[HELPER FIRE] angle:", baseAngle.toFixed(2), "time:", this.helper.faceLookTime);
 
     const speed = this.helper.projectileSpeed || 400;
     const projectileCount = mode.projectileCount || 1;
