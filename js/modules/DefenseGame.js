@@ -4450,16 +4450,18 @@ export class DefenseGame {
   }
 
   /**
-   * 스테이지 이탈 연출 (위로 멀어지는 원근법)
-   * 귀환 시 사용 - 드랍 애니메이션의 역방향
+   * 스테이지 이탈 연출 (카메라 뒤로 사라짐)
+   * 귀환 시 사용 - 스케일 커지면서 위로 이동 후 화면 밖으로
    */
   playOutroAnimation() {
     return new Promise((resolve) => {
       const isMobile = window.innerWidth <= 768;
-      const duration = isMobile ? 250 : 300; // 드랍과 동일한 시간
+      const duration = isMobile ? 300 : 400;
       const startTime = performance.now();
       const startScale = 1;
-      const endScale = isMobile ? 20.0 : 50.0; // 드랍의 역방향 (커지면서 멀어짐)
+      const endScale = 3; // 3배까지만 커짐 (화면 밖으로 나가면서)
+      const startY = this.canvas.height / 2;
+      const endY = -this.canvas.height; // 화면 위쪽 밖으로
 
       // 연출 중에는 적 생성 중지
       const originalSpawnRate = this.enemySpawnTimer;
@@ -4469,17 +4471,22 @@ export class DefenseGame {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // ease-in quint (드랍의 역방향)
-        const easeInQuint = (t) => t * t * t * t * t;
+        // ease-in cubic (점점 빨라지며)
+        const easeInCubic = (t) => t * t * t;
+        const easedProgress = easeInCubic(progress);
 
-        // 스케일: 1x → 50x (커지면서 멀어지는 원근법)
-        this.core.scale = startScale + (endScale - startScale) * easeInQuint(progress);
+        // 스케일: 1x → 3x (커지면서)
+        this.core.scale = startScale + (endScale - startScale) * easedProgress;
+        
+        // Y 위치: 중앙 → 화면 위 밖으로 (카메라 뒤로 지나감)
+        this.core.y = startY + (endY - startY) * easedProgress;
 
         if (progress < 1) {
           requestAnimationFrame(animateAscend);
         } else {
-          // 완료
-          this.core.scale = endScale;
+          // 완료 - 화면 밖으로 사라짐
+          this.core.scale = 1; // 리셋
+          this.core.y = this.canvas.height / 2; // 리셋
           this.enemySpawnTimer = originalSpawnRate;
           resolve();
         }

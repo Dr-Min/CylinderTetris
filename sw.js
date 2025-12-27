@@ -1,5 +1,5 @@
-// v9.5.8 - Fix recall animation (perspective) + compact UI
-const CACHE_NAME = "hacker-tetris-v19.1";
+// v9.5.9 - Recall animation fly through camera + 2-line UI
+const CACHE_NAME = "hacker-tetris-v19.2";
 const ASSETS = [
   "./",
   "./index.html",
