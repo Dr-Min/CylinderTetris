@@ -5276,10 +5276,14 @@ export class GameManager {
    */
   saveMoney() {
     try {
+      console.log(`[GameManager] Saving money: ${this.currentMoney}`);
       localStorage.setItem(
         "cylinderTetris_money",
         this.currentMoney.toString()
       );
+      // 저장 확인
+      const verify = localStorage.getItem("cylinderTetris_money");
+      console.log(`[GameManager] ✓ Verified saved: ${verify}`);
     } catch (e) {
       console.warn("Failed to save money to localStorage:", e);
     }
@@ -5291,12 +5295,17 @@ export class GameManager {
   loadSavedMoney() {
     try {
       const saved = localStorage.getItem("cylinderTetris_money");
+      console.log(`[GameManager] Raw localStorage value: "${saved}"`);
       if (saved !== null) {
         const amount = parseInt(saved, 10);
         if (!isNaN(amount) && amount >= 0) {
-          console.log(`[GameManager] Loaded saved money: ${amount}`);
+          console.log(`[GameManager] ✓ Loaded saved money: ${amount}`);
           return amount;
+        } else {
+          console.warn(`[GameManager] Invalid saved value: ${saved} -> parsed: ${amount}`);
         }
+      } else {
+        console.log(`[GameManager] No saved money found (key: cylinderTetris_money)`);
       }
     } catch (e) {
       console.warn("Failed to load money from localStorage:", e);
