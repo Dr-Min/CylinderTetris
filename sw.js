@@ -1,5 +1,5 @@
-// v9.5.4 - Fix shield HP access path
-const CACHE_NAME = "hacker-tetris-v18.7";
+// v9.5.5 - Fix moveToStage function
+const CACHE_NAME = "hacker-tetris-v18.8";
 const ASSETS = [
   "./",
   "./index.html",

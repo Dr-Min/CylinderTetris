@@ -1025,8 +1025,9 @@ export class GameManager {
       return;
     }
     
-    // 스테이지 설정 적용
-    this.stageManager.setCurrentStage(stageId);
+    // 스테이지 이동 (StageManager에서 현재 스테이지 업데이트)
+    this.stageManager.currentStageId = stageId;
+    this.stageManager.saveState();
     this.applyStageSettings(stage);
     
     // 디펜스 게임 재시작
