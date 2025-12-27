@@ -1,5 +1,5 @@
-// v9.5.9 - Recall animation fly through camera + 2-line UI
-const CACHE_NAME = "hacker-tetris-v19.2";
+// v9.6.0 - Recall fly through camera + game start drop animation
+const CACHE_NAME = "hacker-tetris-v19.3";
 const ASSETS = [
   "./",
   "./index.html",

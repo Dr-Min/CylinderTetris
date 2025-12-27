@@ -771,27 +771,30 @@ export class GameManager {
       this.terminal.show(); // 터미널 메시지창 활성화 (로그용)
       await this.terminal.printSystemMessage("DEFENSE_PROTOCOL_INITIATED");
 
-      // 3. 디펜스 게임 시작
-      this.defenseGame.start();
-      // [추가] 자원 UI 동기화
-      this.defenseGame.updateResourceDisplay(this.currentMoney);
-
-      // 아군 바이러스 정보 업데이트 (레거시 + 새 슬롯 시스템)
+      // 3. 아군 바이러스 정보 업데이트 (playIntroAnimation 전에!)
       const alliedInfo = this.conquestManager.getAlliedInfo();
       this.defenseGame.updateAlliedInfo(alliedInfo);
       this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
+      
+      // 4. 기존 아군 제거 후 게임 재개
+      this.defenseGame.alliedViruses = [];
+      this.defenseGame.resume();
+      
+      // 5. 코어 드랍 연출
+      await this.defenseGame.playIntroAnimation();
+      
+      // [추가] 자원 UI 동기화
+      this.defenseGame.updateResourceDisplay(this.currentMoney);
 
       // 장비 효과 적용
       const stats = this.equipmentManager.getTotalStats();
       this.defenseGame.turret.damage = 10 + stats.damage;
 
       // 터미널 명령어 옵션 표시
-      setTimeout(async () => {
-        await this.terminal.printSystemMessage(
-          "System Idle. Ready for Operations."
-        );
-        await this.showCommandMenu();
-      }, 1000);
+      await this.terminal.printSystemMessage(
+        "System Idle. Ready for Operations."
+      );
+      await this.showCommandMenu();
     } else if (mode === "breach") {
       // 1. 디펜스 정지 및 숨김
       this.defenseGame.stop();
