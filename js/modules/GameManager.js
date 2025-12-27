@@ -838,7 +838,7 @@ export class GameManager {
     
     // 안전지역이 아닐 때 귀환 옵션 추가
     if (this.defenseGame && !this.defenseGame.isSafeZone) {
-      const shieldHp = this.defenseGame.state?.shieldHp || 0;
+      const shieldHp = this.defenseGame.core?.shieldHp || 0;
       const canRecall = shieldHp > 0;
       choices.push({
         text: canRecall 
@@ -871,7 +871,7 @@ export class GameManager {
    * 조건: 실드 > 0, 5초 캐스팅 (피격 시 취소)
    */
   async handleRecall() {
-    const shieldHp = this.defenseGame.state?.shieldHp || 0;
+    const shieldHp = this.defenseGame.core?.shieldHp || 0;
     
     // 실드 체크
     if (shieldHp <= 0) {
@@ -913,7 +913,7 @@ export class GameManager {
   startRecallCasting(duration) {
     return new Promise((resolve) => {
       const startTime = Date.now();
-      const startShieldHp = this.defenseGame.state?.shieldHp || 0;
+      const startShieldHp = this.defenseGame.core?.shieldHp || 0;
       const startCoreHp = this.defenseGame.core?.hp || 0;
       
       // 캐스팅 UI 오버레이 생성
@@ -979,7 +979,7 @@ export class GameManager {
         timeText.textContent = `${(remaining / 1000).toFixed(1)}s remaining`;
         
         // 피격 감지 (실드 또는 코어 HP 감소)
-        const currentShieldHp = this.defenseGame.state?.shieldHp || 0;
+        const currentShieldHp = this.defenseGame.core?.shieldHp || 0;
         const currentCoreHp = this.defenseGame.core?.hp || 0;
         
         if (currentShieldHp < startShieldHp || currentCoreHp < startCoreHp) {

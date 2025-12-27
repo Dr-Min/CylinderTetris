@@ -1,5 +1,5 @@
-// v9.5.3 - Recall to Safe Zone feature
-const CACHE_NAME = "hacker-tetris-v18.6";
+// v9.5.4 - Fix shield HP access path
+const CACHE_NAME = "hacker-tetris-v18.7";
 const ASSETS = [
   "./",
   "./index.html",
