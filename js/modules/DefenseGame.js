@@ -3550,9 +3550,15 @@ export class DefenseGame {
       
       // 발사 후 시간 경과에 따른 얼굴 오프셋 계산
       const now = performance.now();
-      const timeSinceFire = now - (h.lastFireTime || 0);
+      const lastFire = h.lastFireTime || 0;
+      const timeSinceFire = now - lastFire;
       const lookDuration = 200; // 200ms 동안 바라봄
       const returnDuration = 300; // 300ms 동안 복귀
+      
+      // 디버깅: 항상 체크 (가끔만 출력)
+      if (Math.random() < 0.01) {
+        console.log("[HELPER DEBUG] now:", now.toFixed(0), "lastFire:", lastFire.toFixed(0), "timeSinceFire:", timeSinceFire.toFixed(0), "h===this.helper:", h === this.helper);
+      }
       
       let lookIntensity = 0;
       if (timeSinceFire < lookDuration) {
@@ -3564,9 +3570,9 @@ export class DefenseGame {
       }
       // else: 0 (12시 고정)
       
-      // 디버깅 로그 (가끔만)
-      if (lookIntensity > 0 && Math.random() < 0.05) {
-        console.log("[HELPER FACE] intensity:", lookIntensity.toFixed(2), "timeSinceFire:", timeSinceFire.toFixed(0), "lastFireTime:", h.lastFireTime);
+      // 디버깅 로그 (움직일 때)
+      if (lookIntensity > 0) {
+        console.log("[HELPER FACE] intensity:", lookIntensity.toFixed(2), "angle:", (h.lastFireAngle || 0).toFixed(2));
       }
       
       const lookStrength = h.radius * 0.2 * lookIntensity; // 발사 시 20% 이동
