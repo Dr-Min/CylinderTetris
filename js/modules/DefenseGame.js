@@ -2701,65 +2701,99 @@ export class DefenseGame {
     this.collectorViruses.push({
       x: this.core.x + Math.cos(angle) * spawnDist,
       y: this.core.y + Math.sin(angle) * spawnDist,
+      vx: 0, // 속도 기반 이동용
+      vy: 0,
       targetX,
       targetY,
-      speed: 150,
+      speed: 120, // 약간 느리게
       state: "toItem", // toItem -> returning
       carriedItem: null,
-      spawnTime: performance.now()
+      spawnTime: performance.now(),
+      wobblePhase: Math.random() * Math.PI * 2, // 흔들림용
+      wobbleSpeed: 5 + Math.random() * 3, // 개별 흔들림 속도
+      pathOffset: (Math.random() - 0.5) * 40 // 경로 오프셋
     });
   }
   
   /**
-   * 수집 바이러스 업데이트
+   * 수집 바이러스 업데이트 (자연스러운 움직임)
    */
   updateCollectorViruses(dt) {
     for (let i = this.collectorViruses.length - 1; i >= 0; i--) {
       const v = this.collectorViruses[i];
       
+      // 흔들림 업데이트
+      v.wobblePhase += dt * v.wobbleSpeed;
+      
+      let targetX, targetY;
+      
       if (v.state === "toItem") {
-        // 아이템으로 이동
-        const dx = v.targetX - v.x;
-        const dy = v.targetY - v.y;
-        const dist = Math.hypot(dx, dy);
+        targetX = v.targetX;
+        targetY = v.targetY;
         
-        if (dist < 10) {
+        const dist = Math.hypot(targetX - v.x, targetY - v.y);
+        
+        if (dist < 15) {
           // 아이템 도착 - 픽업
           const droppedItem = this.droppedItems.find(
-            d => !d.collected && Math.hypot(d.x - v.x, d.y - v.y) < 20
+            d => !d.collected && Math.hypot(d.x - v.x, d.y - v.y) < 25
           );
           
           if (droppedItem) {
             droppedItem.collected = true;
             v.carriedItem = droppedItem.item;
             v.state = "returning";
+            // 복귀 시 속도 증가 (신나서 빨리 돌아옴)
+            v.speed = 180;
           } else {
-            // 아이템이 없으면 그냥 복귀
             v.state = "returning";
           }
-        } else {
-          // 이동
-          v.x += (dx / dist) * v.speed * dt;
-          v.y += (dy / dist) * v.speed * dt;
+          continue;
         }
       } else if (v.state === "returning") {
-        // 코어로 복귀
-        const dx = this.core.x - v.x;
-        const dy = this.core.y - v.y;
-        const dist = Math.hypot(dx, dy);
+        targetX = this.core.x;
+        targetY = this.core.y;
         
-        if (dist < 20) {
+        const dist = Math.hypot(targetX - v.x, targetY - v.y);
+        
+        if (dist < 25) {
           // 코어 도착 - 아이템 전달
           if (v.carriedItem && this.onItemCollected) {
             this.onItemCollected(v.carriedItem);
           }
+          // 도착 이펙트
+          this.createExplosion(v.x, v.y, "#00ff88", 5);
           this.collectorViruses.splice(i, 1);
           continue;
         }
+      } else {
+        continue;
+      }
+      
+      // 부드러운 가속도 기반 이동 (smoothMoveToward와 유사)
+      const dx = targetX - v.x;
+      const dy = targetY - v.y;
+      const dist = Math.hypot(dx, dy);
+      
+      if (dist > 1) {
+        // 목표 방향 속도
+        const targetVx = (dx / dist) * v.speed;
+        const targetVy = (dy / dist) * v.speed;
         
-        // 이동
-        v.x += (dx / dist) * v.speed * dt;
-        v.y += (dy / dist) * v.speed * dt;
+        // 부드러운 가속 (관성)
+        const accel = 8;
+        v.vx += (targetVx - v.vx) * accel * dt;
+        v.vy += (targetVy - v.vy) * accel * dt;
+        
+        // 지그재그 흔들림 (수직 방향으로)
+        const wobbleAmount = Math.sin(v.wobblePhase) * 25;
+        const perpAngle = Math.atan2(dy, dx) + Math.PI / 2;
+        const wobbleX = Math.cos(perpAngle) * wobbleAmount * dt;
+        const wobbleY = Math.sin(perpAngle) * wobbleAmount * dt;
+        
+        // 위치 업데이트
+        v.x += v.vx * dt + wobbleX;
+        v.y += v.vy * dt + wobbleY;
       }
     }
     
@@ -2817,39 +2851,104 @@ export class DefenseGame {
   }
   
   /**
-   * 수집 바이러스 렌더링
+   * 수집 바이러스 렌더링 (자연스러운 시각 효과)
    */
   renderCollectorViruses() {
     const ctx = this.ctx;
+    const time = performance.now() / 1000;
     
     this.collectorViruses.forEach(v => {
-      const size = 6;
+      const baseSize = 6;
       
       ctx.save();
       
-      // 몸체
-      ctx.fillStyle = v.carriedItem ? "#00ff88" : "#88ffaa";
+      // 떨림/숨쉬기 효과
+      const wobble = Math.sin(time * 5 + v.wobblePhase) * 1.5;
+      const breathe = 1 + Math.sin(time * 3 + v.wobblePhase * 2) * 0.1;
+      const size = baseSize * breathe;
+      
+      // 위치 오프셋 (살아있는 느낌)
+      const offsetX = wobble * 0.4;
+      const offsetY = Math.cos(time * 4 + v.wobblePhase) * 0.8;
+      
+      const drawX = v.x + offsetX;
+      const drawY = v.y + offsetY;
+      
+      // 이동 방향에 따른 기울임
+      const moveAngle = Math.atan2(v.vy || 0, v.vx || 0);
+      const speed = Math.hypot(v.vx || 0, v.vy || 0);
+      const tilt = (speed / v.speed) * 0.2;
+      
+      ctx.translate(drawX, drawY);
+      ctx.rotate(tilt * Math.sin(moveAngle));
+      
+      // 그림자 (깊이감)
+      ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
       ctx.beginPath();
-      ctx.arc(v.x, v.y, size, 0, Math.PI * 2);
+      ctx.ellipse(2, 3, size * 0.8, size * 0.4, 0, 0, Math.PI * 2);
       ctx.fill();
       
-      // 눈
+      // 몸체 - 아이템 들고있으면 더 밝게
+      const bodyColor = v.carriedItem ? "#00ff88" : "#88ffcc";
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.arc(0, 0, size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 테두리
+      ctx.strokeStyle = v.carriedItem ? "#00aa55" : "#55aa88";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      // 눈 (이동 방향 바라보기)
+      const eyeOffsetX = (v.vx || 0) / v.speed * 1.5 || 0;
+      const eyeOffsetY = (v.vy || 0) / v.speed * 1 || 0;
+      
       ctx.fillStyle = "#000";
       ctx.beginPath();
-      ctx.arc(v.x - 2, v.y - 1, 1.5, 0, Math.PI * 2);
-      ctx.arc(v.x + 2, v.y - 1, 1.5, 0, Math.PI * 2);
+      ctx.arc(-2 + eyeOffsetX, -1 + eyeOffsetY, 1.2, 0, Math.PI * 2);
+      ctx.arc(2 + eyeOffsetX, -1 + eyeOffsetY, 1.2, 0, Math.PI * 2);
       ctx.fill();
       
-      // 아이템 들고있으면 표시
-      if (v.carriedItem) {
-        ctx.font = "8px Arial";
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#fff";
-        ctx.fillText(v.carriedItem.icon, v.x, v.y - 10);
-      }
+      // 눈 하이라이트
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(-1.5 + eyeOffsetX, -1.5 + eyeOffsetY, 0.5, 0, Math.PI * 2);
+      ctx.arc(2.5 + eyeOffsetX, -1.5 + eyeOffsetY, 0.5, 0, Math.PI * 2);
+      ctx.fill();
       
       ctx.restore();
+      
+      // 아이템 들고있으면 머리 위에 표시 (별도 렌더링)
+      if (v.carriedItem) {
+        ctx.save();
+        const floatY = Math.sin(time * 6) * 2;
+        
+        // 아이템 글로우
+        const itemColor = this.getItemRarityColor(v.carriedItem.rarity);
+        ctx.shadowColor = itemColor;
+        ctx.shadowBlur = 8;
+        
+        ctx.font = "10px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(v.carriedItem.icon, drawX, drawY - 12 + floatY);
+        ctx.restore();
+      }
     });
+  }
+  
+  /**
+   * 아이템 등급별 색상 반환
+   */
+  getItemRarityColor(rarity) {
+    const colors = {
+      common: "#ffffff",
+      rare: "#00aaff", 
+      legendary: "#ffaa00"
+    };
+    return colors[rarity] || "#ffffff";
   }
 
   render() {
