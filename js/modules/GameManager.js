@@ -4789,11 +4789,13 @@ export class GameManager {
   }
 
   applyPermanentEffects() {
-    // 효과 초기화
-    this.currentMoney = 0; // 시작 머니는 0에서 보너스 합산
+    // 효과 초기화 (저장된 money는 유지!)
+    // this.currentMoney는 loadSavedMoney()에서 이미 로드됨
     this.perkManager.activeEffects.scoreMultiplier = 1.0;
     this.perkManager.activeEffects.shopDiscount = 0.0;
 
+    // 시작 머니 보너스는 별도 저장 (새 게임 시작 시에만 적용)
+    this.startMoneyBonus = 0;
     let bonusMoney = 0;
     let bonusScore = 0;
     let bonusLuck = 0;
@@ -4823,8 +4825,9 @@ export class GameManager {
       }
     });
 
-    this.currentMoney += bonusMoney;
-    if (bonusMoney > 0) this.saveMoney(); // 보너스 있으면 저장
+    // 시작 머니 보너스는 저장만 해두고, 새 게임 시작 시에만 적용
+    this.startMoneyBonus = bonusMoney;
+    // currentMoney는 건드리지 않음 (이미 로드된 값 유지)
     this.perkManager.activeEffects.scoreMultiplier += bonusScore;
     this.perkManager.activeEffects.bombChance += bonusLuck;
     this.perkManager.activeEffects.goldChance += bonusLuck;
