@@ -40,6 +40,9 @@ export class GameManager {
     this.inventoryManager = new InventoryManager(); // 인벤토리 매니저 추가
     this.itemDatabase = new ItemDatabase(); // 아이템 데이터베이스
     this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
+    
+    // 디버그용 아이템 드롭률 (null이면 기본값 사용, 0~1 범위)
+    this.debugItemDropRate = null;
 
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
@@ -451,6 +454,88 @@ export class GameManager {
         `[DEBUG] Score Mult set to ${e.target.value}`
       );
     };
+
+    // 3. 아이템 드롭률 조절
+    const dropRateContainer = document.createElement("div");
+    dropRateContainer.style.cssText = `
+      margin: 15px 0;
+      padding: 10px;
+      border: 1px solid #ffaa00;
+      background: rgba(50, 30, 0, 0.5);
+    `;
+    
+    const dropRateTitle = document.createElement("div");
+    dropRateTitle.style.cssText = "color: #ffaa00; margin-bottom: 8px; font-weight: bold;";
+    dropRateTitle.innerText = "📦 ITEM DROP RATE";
+    dropRateContainer.appendChild(dropRateTitle);
+    
+    const dropRateRow = document.createElement("div");
+    dropRateRow.style.cssText = "display: flex; align-items: center; gap: 10px;";
+    
+    const dropRateSlider = document.createElement("input");
+    dropRateSlider.type = "range";
+    dropRateSlider.id = "dbg-drop-rate";
+    dropRateSlider.min = "0";
+    dropRateSlider.max = "100";
+    dropRateSlider.value = "5"; // 기본 5%
+    dropRateSlider.style.cssText = "flex: 1; accent-color: #ffaa00;";
+    
+    const dropRateValue = document.createElement("span");
+    dropRateValue.id = "dbg-drop-rate-value";
+    dropRateValue.style.cssText = "color: #ffaa00; min-width: 45px; text-align: right;";
+    dropRateValue.innerText = "5%";
+    
+    dropRateSlider.oninput = (e) => {
+      const val = parseInt(e.target.value);
+      dropRateValue.innerText = `${val}%`;
+      this.debugItemDropRate = val / 100;
+      this.terminal.printSystemMessage(`[DEBUG] Item Drop Rate: ${val}%`);
+    };
+    
+    dropRateRow.appendChild(dropRateSlider);
+    dropRateRow.appendChild(dropRateValue);
+    dropRateContainer.appendChild(dropRateRow);
+    
+    // 100% 드롭 버튼
+    const dropTestBtns = document.createElement("div");
+    dropTestBtns.style.cssText = "display: flex; gap: 5px; margin-top: 8px;";
+    
+    const btn100 = document.createElement("button");
+    btn100.innerText = "100%";
+    btn100.style.cssText = "flex:1; background:#553300; color:#ffaa00; border:1px solid #ffaa00; cursor:pointer; padding:3px;";
+    btn100.onclick = () => {
+      dropRateSlider.value = "100";
+      dropRateValue.innerText = "100%";
+      this.debugItemDropRate = 1.0;
+      this.terminal.printSystemMessage("[DEBUG] Item Drop Rate: 100%");
+    };
+    
+    const btn50 = document.createElement("button");
+    btn50.innerText = "50%";
+    btn50.style.cssText = "flex:1; background:#553300; color:#ffaa00; border:1px solid #ffaa00; cursor:pointer; padding:3px;";
+    btn50.onclick = () => {
+      dropRateSlider.value = "50";
+      dropRateValue.innerText = "50%";
+      this.debugItemDropRate = 0.5;
+      this.terminal.printSystemMessage("[DEBUG] Item Drop Rate: 50%");
+    };
+    
+    const btnReset = document.createElement("button");
+    btnReset.innerText = "기본값";
+    btnReset.style.cssText = "flex:1; background:#333; color:#0f0; border:1px solid #0f0; cursor:pointer; padding:3px;";
+    btnReset.onclick = () => {
+      dropRateSlider.value = "5";
+      dropRateValue.innerText = "5%";
+      this.debugItemDropRate = null; // null = 기본값 사용
+      this.terminal.printSystemMessage("[DEBUG] Item Drop Rate: DEFAULT (5%)");
+    };
+    
+    dropTestBtns.appendChild(btn100);
+    dropTestBtns.appendChild(btn50);
+    dropTestBtns.appendChild(btnReset);
+    dropRateContainer.appendChild(dropTestBtns);
+    
+    debugPanel.appendChild(dropRateContainer);
 
     // ===== 콘솔 로그 토글 체크박스 =====
     const logToggleContainer = document.createElement("div");
@@ -1289,12 +1374,16 @@ export class GameManager {
    * @param {number} lineNum - 클리어한 줄 수
    */
   tryTetrisItemDrop(lineNum) {
-    // 줄당 10% 확률 (1줄=10%, 2줄=20%, 3줄=30%, 4줄=40%)
-    let dropChance = 0.10 * lineNum;
+    // 디버그 드롭률이 설정되어 있으면 사용, 아니면 줄당 10%
+    let dropChance = this.debugItemDropRate !== null 
+      ? this.debugItemDropRate 
+      : 0.10 * lineNum;
     
-    // 장착 아이템 효과로 드롭률 증가
-    const effects = this.inventoryManager.getEquippedEffects();
-    dropChance += effects.dropRate;
+    // 장착 아이템 효과로 드롭률 증가 (디버그 모드가 아닐 때만)
+    if (this.debugItemDropRate === null) {
+      const effects = this.inventoryManager.getEquippedEffects();
+      dropChance += effects.dropRate;
+    }
     
     // 확률 체크
     if (Math.random() > dropChance) return;
@@ -1324,12 +1413,14 @@ export class GameManager {
    * @param {string} source - 'defense' 또는 'tetris'
    */
   tryItemDrop(x, y, source) {
-    // 기본 드롭 확률: 5%
-    let dropChance = 0.05;
+    // 디버그 드롭률이 설정되어 있으면 사용, 아니면 기본값 5%
+    let dropChance = this.debugItemDropRate !== null ? this.debugItemDropRate : 0.05;
     
-    // 장착 아이템 효과로 드롭률 증가
-    const effects = this.inventoryManager.getEquippedEffects();
-    dropChance += effects.dropRate;
+    // 장착 아이템 효과로 드롭률 증가 (디버그 모드가 아닐 때만)
+    if (this.debugItemDropRate === null) {
+      const effects = this.inventoryManager.getEquippedEffects();
+      dropChance += effects.dropRate;
+    }
     
     // 확률 체크
     if (Math.random() > dropChance) return;
