@@ -1,5 +1,5 @@
 // v9.7.2 - Terminal style green text instead of speech bubbles
-const CACHE_NAME = "hacker-tetris-v22.2";
+const CACHE_NAME = "hacker-tetris-v22.3";
 const ASSETS = [
   "./",
   "./index.html",
