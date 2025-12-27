@@ -778,6 +778,12 @@ export class GameManager {
       
       // 4. 기존 아군 제거 후 게임 시작
       this.defenseGame.alliedViruses = [];
+      
+      // Safe Zone이면 아군 바이러스 미리 배치
+      if (this.defenseGame.isSafeZone) {
+        this.defenseGame.spawnSafeZoneAllies();
+      }
+      
       this.defenseGame.start(); // start()로 게임 시작!
       
       // 5. 코어 드랍 연출
@@ -1112,6 +1118,12 @@ export class GameManager {
     
     // 기존 아군 제거 (겹침 방지) 후 게임 재개
     this.defenseGame.alliedViruses = [];
+    
+    // Safe Zone이면 아군 바이러스 미리 배치
+    if (stage.type === "safe") {
+      this.defenseGame.spawnSafeZoneAllies();
+    }
+    
     this.defenseGame.resume();
     
     // 드랍 연출과 함께 시작 (await으로 완료 대기)
@@ -2610,6 +2622,11 @@ export class GameManager {
     this.defenseGame.reinforcementPage = 0;
     this.defenseGame.reinforcementComplete = false;
     this.defenseGame.conquerReady = false;
+    
+    // Safe Zone이면 아군 바이러스 미리 배치
+    if (stage.type === "safe") {
+      this.defenseGame.spawnSafeZoneAllies();
+    }
 
     // 실드 상태 복구 (스테이지 이동 시 항상 리셋)
     this.defenseGame.core.shieldActive = true;

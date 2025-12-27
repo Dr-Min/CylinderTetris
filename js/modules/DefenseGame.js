@@ -3762,6 +3762,11 @@ export class DefenseGame {
   }
 
   spawnEnemy() {
+    // Safe Zone에서는 적 소환 안함
+    if (this.isSafeZone) {
+      return;
+    }
+    
     const angle = Math.random() * Math.PI * 2;
     const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 50;
 
@@ -3800,6 +3805,87 @@ export class DefenseGame {
       maxHp: Math.floor(baseHp * difficultyScale),
       damage: 10,
     });
+  }
+
+  // Safe Zone 전용: 아군 바이러스 미리 배치
+  spawnSafeZoneAllies() {
+    if (!this.isSafeZone) return;
+    
+    // 기존 아군 제거
+    this.alliedViruses = [];
+    
+    // 바이러스 타입 정의 (Safe Zone용)
+    const virusTypes = {
+      SWARM: { color: "#88ff88", baseHp: 8, baseDamage: 5, baseSpeed: 180, radius: 6, attackType: "melee" },
+      TANK: { color: "#ff8800", baseHp: 60, baseDamage: 8, baseSpeed: 80, radius: 12, attackType: "melee", tauntRadius: 150, aggroRadius: 180 },
+      HUNTER: { color: "#aa00ff", baseHp: 20, baseDamage: 15, baseSpeed: 110, radius: 8, attackType: "ranged", range: 150, fireRate: 1.5, projectileSpeed: 200 },
+      BOMBER: { color: "#ff4444", baseHp: 15, baseDamage: 0, baseSpeed: 150, radius: 9, attackType: "suicide", explosionDamage: 40, explosionRadius: 60 },
+      HEALER: { color: "#00ff88", baseHp: 40, baseDamage: 0, baseSpeed: 90, radius: 8, attackType: "support", healAmount: 5, healRadius: 80 }
+    };
+    
+    // 다양한 타입의 아군 배치 (6~10마리)
+    const types = ["SWARM", "SWARM", "TANK", "HUNTER", "BOMBER", "HEALER", "SWARM", "HUNTER"];
+    const count = 6 + Math.floor(Math.random() * 5); // 6~10마리
+    
+    for (let i = 0; i < count; i++) {
+      const type = types[i % types.length];
+      const typeData = virusTypes[type];
+      
+      if (!typeData) continue;
+      
+      // 코어 주변 랜덤 위치
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 60 + Math.random() * 120; // 60~180 거리
+      
+      const ally = {
+        x: this.core.x + Math.cos(angle) * distance,
+        y: this.core.y + Math.sin(angle) * distance,
+        radius: typeData.radius || 8,
+        speed: typeData.baseSpeed || 100,
+        hp: typeData.baseHp || 20,
+        maxHp: typeData.baseHp || 20,
+        damage: typeData.baseDamage || 10,
+        type: type,
+        color: typeData.color || "#88ff88",
+        attackType: typeData.attackType || "melee",
+        // 움직임 관련
+        vx: 0,
+        vy: 0,
+        wanderTargetX: null,
+        wanderTargetY: null,
+        wanderTimer: 0,
+        wanderDuration: 2 + Math.random() * 4,
+        isIdle: Math.random() < 0.3,
+        // 타입별 특수 속성
+        ...(type === "TANK" && { 
+          tauntCooldown: 0, 
+          tauntRadius: typeData.tauntRadius || 150,
+          aggroRadius: typeData.aggroRadius || 180
+        }),
+        ...(type === "HUNTER" && { 
+          fireRate: typeData.fireRate || 1.5, 
+          fireCooldown: 0,
+          range: typeData.range || 150,
+          projectileSpeed: typeData.projectileSpeed || 200
+        }),
+        ...(type === "BOMBER" && { 
+          explosionDamage: typeData.explosionDamage || 40,
+          explosionRadius: typeData.explosionRadius || 60
+        }),
+        ...(type === "HEALER" && { 
+          healAmount: typeData.healAmount || 5,
+          healRadius: typeData.healRadius || 80
+        }),
+        ...(type === "SWARM" && {
+          explosionDamage: 3,
+          explosionRadius: 20
+        })
+      };
+      
+      this.alliedViruses.push(ally);
+    }
+    
+    console.log(`[SafeZone] Spawned ${this.alliedViruses.length} allied viruses`);
   }
 
   // 스테이지 기본 난이도 계산 (스테이지 ID + difficultyScale 기반)
@@ -5166,21 +5252,21 @@ export class DefenseGame {
       ctx.save();
       ctx.globalAlpha = bubble.opacity;
       
-      // 터미널 스타일 텍스트 (말풍선 없이)
-      const textY = v.y - v.radius - 12;
+      // 터미널 스타일 텍스트 (배경 없이 글자만)
+      const textY = v.y - v.radius - 15;
       
-      ctx.font = "bold 9px 'VT323', 'Courier New', monospace";
+      // 폰트 크기 키움
+      ctx.font = "bold 13px 'VT323', 'Courier New', monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       
-      // 그림자/글로우 효과 (가독성)
-      ctx.shadowColor = "#000";
-      ctx.shadowBlur = 3;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
+      // 외곽선 효과 (가독성 - 배경 대신)
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.strokeText(bubble.text, v.x, textY);
       
       // 초록색 터미널 텍스트
-      ctx.fillStyle = "#00ff41"; // 터미널 그린
+      ctx.fillStyle = "#00ff41";
       ctx.fillText(bubble.text, v.x, textY);
       
       ctx.restore();
