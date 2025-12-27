@@ -3703,73 +3703,68 @@ export class DefenseGame {
       this.ctx.fillRect(e.x - 10, e.y - 20, 20 * hpPct, 4);
     });
 
-    // 코어 스케일 적용 (원근감 효과)
-    const coreScale = this.core.scale || 1;
-    const scaledRadius = this.core.radius * coreScale;
+    // 탈출 애니메이션 중에는 코어 렌더링 완전 스킵
+    if (!this.isOutroPlaying) {
+      // 코어 스케일 적용 (원근감 효과)
+      const coreScale = this.core.scale || 1;
+      const scaledRadius = this.core.radius * coreScale;
 
-    // 코어 시각적 위치 (발사 시 움직임 효과 포함)
-    const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
-    const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
-    
-    // 탈출 애니메이션 중 투명도 적용
-    const coreAlpha = this.core.outroAlpha !== undefined ? this.core.outroAlpha : 1;
+      // 코어 시각적 위치 (발사 시 움직임 효과 포함)
+      const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
+      const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
 
-    // 3. 코어 및 포탑 (포탑 발사대 삭제) - 시각적 오프셋 적용
-    this.ctx.save();
-    this.ctx.globalAlpha = coreAlpha;
-    this.ctx.translate(coreVisualX, coreVisualY);
-    this.ctx.rotate(this.turret.angle);
-    // 발사대 그리기 삭제됨
-    this.ctx.restore();
+      // 3. 코어 및 포탑 (포탑 발사대 삭제) - 시각적 오프셋 적용
+      this.ctx.save();
+      this.ctx.translate(coreVisualX, coreVisualY);
+      this.ctx.rotate(this.turret.angle);
+      this.ctx.restore();
 
-    this.ctx.save();
-    this.ctx.globalAlpha = coreAlpha;
-    this.ctx.beginPath();
-    this.ctx.arc(coreVisualX, coreVisualY, scaledRadius, 0, Math.PI * 2);
-    this.ctx.fillStyle = this.core.color;
-    this.ctx.fill();
-    this.ctx.lineWidth = 3 * coreScale;
-    this.ctx.strokeStyle = "#ffffff";
-    this.ctx.stroke();
-    this.ctx.restore();
+      this.ctx.beginPath();
+      this.ctx.arc(coreVisualX, coreVisualY, scaledRadius, 0, Math.PI * 2);
+      this.ctx.fillStyle = this.core.color;
+      this.ctx.fill();
+      this.ctx.lineWidth = 3 * coreScale;
+      this.ctx.strokeStyle = "#ffffff";
+      this.ctx.stroke();
 
-    // 코어 체력 퍼센트 표시 (코어 아래에 표시)
-    if (this.showCoreHP !== false) {
-      const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
+      // 코어 체력 퍼센트 표시 (코어 아래에 표시)
+      if (this.showCoreHP !== false) {
+        const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
 
-      // 글리치 오프셋
-      const offsetX = this.glitchText ? this.glitchOffset?.x || 0 : 0;
-      const offsetY = this.glitchText ? this.glitchOffset?.y || 0 : 0;
+        // 글리치 오프셋
+        const offsetX = this.glitchText ? this.glitchOffset?.x || 0 : 0;
+        const offsetY = this.glitchText ? this.glitchOffset?.y || 0 : 0;
 
-      this.ctx.font = `bold ${14 * coreScale}px monospace`;
-      this.ctx.textAlign = "center";
-      this.ctx.textBaseline = "middle";
+        this.ctx.font = `bold ${14 * coreScale}px monospace`;
+        this.ctx.textAlign = "center";
+        this.ctx.textBaseline = "middle";
 
-      // 글리치 효과: 색상 분리
-      if (this.glitchText) {
-        // 빨간색 오프셋
-        this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+        // 글리치 효과: 색상 분리
+        if (this.glitchText) {
+          // 빨간색 오프셋
+          this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+          this.ctx.fillText(
+            `${hpPercent}%`,
+            coreVisualX + offsetX - 2,
+            coreVisualY + scaledRadius + 20 + offsetY
+          );
+          // 파란색 오프셋
+          this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
+          this.ctx.fillText(
+            `${hpPercent}%`,
+            coreVisualX + offsetX + 2,
+            coreVisualY + scaledRadius + 20 + offsetY
+          );
+        }
+
+        // 메인 텍스트
+        this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
         this.ctx.fillText(
           `${hpPercent}%`,
-          coreVisualX + offsetX - 2,
-          coreVisualY + scaledRadius + 20 + offsetY
-        );
-        // 파란색 오프셋
-        this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
-        this.ctx.fillText(
-          `${hpPercent}%`,
-          coreVisualX + offsetX + 2,
+          coreVisualX + offsetX,
           coreVisualY + scaledRadius + 20 + offsetY
         );
       }
-
-      // 메인 텍스트
-      this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
-      this.ctx.fillText(
-        `${hpPercent}%`,
-        coreVisualX + offsetX,
-        coreVisualY + scaledRadius + 20 + offsetY
-      );
     }
 
     // 4. 파티클 (글리치 스타일)
@@ -5052,43 +5047,59 @@ export class DefenseGame {
     }
   }
   
-  // 착지 사운드 재생 (Web Audio API)
+  // 착지 사운드 재생 (Web Audio API) - 묵직한 쿵! 소리
   playImpactSound() {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
       
-      // 저주파 충격음 생성
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
+      // 1. 저주파 베이스 (쿵하는 묵직한 소리)
+      const bass = audioCtx.createOscillator();
+      const bassGain = audioCtx.createGain();
+      bass.type = 'sine';
+      bass.frequency.setValueAtTime(60, now);
+      bass.frequency.exponentialRampToValueAtTime(20, now + 0.3);
+      bassGain.gain.setValueAtTime(0.8, now);
+      bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      bass.connect(bassGain);
+      bassGain.connect(audioCtx.destination);
+      bass.start(now);
+      bass.stop(now + 0.4);
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
+      // 2. 중저주파 펀치 (타격감)
+      const punch = audioCtx.createOscillator();
+      const punchGain = audioCtx.createGain();
+      punch.type = 'triangle';
+      punch.frequency.setValueAtTime(150, now);
+      punch.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+      punchGain.gain.setValueAtTime(0.6, now);
+      punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      punch.connect(punchGain);
+      punchGain.connect(audioCtx.destination);
+      punch.start(now);
+      punch.stop(now + 0.15);
       
-      // 임팩트 사운드 설정 (저음 + 빠른 감쇠)
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(80, audioCtx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
-      
-      gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-      
-      oscillator.start(audioCtx.currentTime);
-      oscillator.stop(audioCtx.currentTime + 0.2);
-      
-      // 노이즈 추가 (충격 느낌)
-      const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+      // 3. 짧은 노이즈 버스트 (충격파 느낌)
+      const bufferSize = audioCtx.sampleRate * 0.08;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const noiseData = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < noiseData.length; i++) {
-        noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+      for (let i = 0; i < bufferSize; i++) {
+        // 빠르게 감쇠하는 노이즈
+        noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
       }
       
-      const noiseSource = audioCtx.createBufferSource();
+      const noise = audioCtx.createBufferSource();
       const noiseGain = audioCtx.createGain();
-      noiseSource.buffer = noiseBuffer;
-      noiseSource.connect(noiseGain);
+      const lowpass = audioCtx.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.value = 400; // 저역만 통과 (묵직함)
+      
+      noise.buffer = noiseBuffer;
+      noise.connect(lowpass);
+      lowpass.connect(noiseGain);
       noiseGain.connect(audioCtx.destination);
-      noiseGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      noiseSource.start(audioCtx.currentTime);
+      noiseGain.gain.setValueAtTime(0.5, now);
+      noise.start(now);
     } catch (e) {
       console.log("Audio not supported:", e);
     }
@@ -5096,6 +5107,9 @@ export class DefenseGame {
   
   // Safe Zone 글리치 텍스트 표시
   showSafeZoneText() {
+    const isMobile = window.innerWidth <= 768;
+    const fontSize = isMobile ? 28 : 48;
+    
     // 글리치 컨테이너 생성
     const container = document.createElement("div");
     container.id = "safezone-text";
@@ -5107,11 +5121,12 @@ export class DefenseGame {
       z-index: 10000;
       pointer-events: none;
       font-family: 'Courier New', monospace;
-      font-size: 48px;
+      font-size: ${fontSize}px;
       font-weight: bold;
       color: #00ff00;
       text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
       opacity: 0;
+      white-space: nowrap;
     `;
     container.textContent = "SAFE ZONE";
     document.body.appendChild(container);
