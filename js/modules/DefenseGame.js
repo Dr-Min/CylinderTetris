@@ -3544,15 +3544,19 @@ export class DefenseGame {
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
 
-      // 0w0 얼굴 그리기 (12시 방향으로 몰림)
+      // 0w0 얼굴 그리기 (발사 방향을 바라봄!)
       this.ctx.save();
       this.ctx.translate(h.x, h.y);
       
-      // 얼굴 전체를 위로 올림 (12시 방향)
+      // 발사 방향으로 회전 (turret.angle 사용)
+      // turret.angle은 0 = 오른쪽, -π/2 = 위쪽이므로 π/2 보정
+      this.ctx.rotate(this.turret.angle + Math.PI / 2);
+      
+      // 얼굴 전체를 앞으로 밀어냄 (발사 방향)
       const faceOffsetY = -h.radius * 0.25;
       
       // 눈 (0 0) - 작은 검은 동그라미
-      const eyeRadius = h.radius * 0.12; // 더 작게!
+      const eyeRadius = h.radius * 0.12;
       const eyeY = faceOffsetY - h.radius * 0.1;
       const eyeSpacing = h.radius * 0.3;
       
