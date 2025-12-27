@@ -1,5 +1,5 @@
-// v9.5.2 - Loot selection screen async fix
-const CACHE_NAME = "hacker-tetris-v18.5";
+// v9.5.3 - Recall to Safe Zone feature
+const CACHE_NAME = "hacker-tetris-v18.6";
 const ASSETS = [
   "./",
   "./index.html",

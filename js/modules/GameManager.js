@@ -835,6 +835,19 @@ export class GameManager {
         style: "conquer", // 특별 스타일
       });
     }
+    
+    // 안전지역이 아닐 때 귀환 옵션 추가
+    if (this.defenseGame && !this.defenseGame.isSafeZone) {
+      const shieldHp = this.defenseGame.state?.shieldHp || 0;
+      const canRecall = shieldHp > 0;
+      choices.push({
+        text: canRecall 
+          ? `/recall (Return to Safe Zone) [Shield: ${shieldHp}]`
+          : `/recall (UNAVAILABLE - No Shield)`,
+        value: "recall",
+        style: canRecall ? "warning" : "disabled",
+      });
+    }
 
     const choice = await this.terminal.showChoices(choices);
 
@@ -848,7 +861,187 @@ export class GameManager {
       await this.showUpgrades();
     } else if (choice === "reset") {
       await this.handleResetProgress();
+    } else if (choice === "recall") {
+      await this.handleRecall();
     }
+  }
+  
+  /**
+   * 귀환 기능 - Safe Zone으로 복귀
+   * 조건: 실드 > 0, 5초 캐스팅 (피격 시 취소)
+   */
+  async handleRecall() {
+    const shieldHp = this.defenseGame.state?.shieldHp || 0;
+    
+    // 실드 체크
+    if (shieldHp <= 0) {
+      await this.terminal.printSystemMessage("⚠️ RECALL FAILED: Shield required!");
+      await this.terminal.printSystemMessage("You need at least 1 Shield HP to recall.");
+      await this.showCommandMenu();
+      return;
+    }
+    
+    await this.terminal.printSystemMessage("🏃 INITIATING RECALL...");
+    await this.terminal.printSystemMessage("Stay alive for 5 seconds!");
+    
+    // 캐스팅 시작
+    const recallSuccess = await this.startRecallCasting(5000);
+    
+    if (recallSuccess) {
+      // 귀환 성공
+      await this.terminal.printSystemMessage("✅ RECALL COMPLETE!");
+      await this.terminal.printSystemMessage("Returning to Safe Zone...");
+      
+      // 획득 아이템 선택 화면 표시
+      await this.showLootSummary();
+      
+      // Safe Zone (스테이지 0)으로 이동
+      await this.moveToStage(0);
+    } else {
+      // 귀환 실패 (피격으로 취소됨)
+      await this.terminal.printSystemMessage("❌ RECALL INTERRUPTED!");
+      await this.terminal.printSystemMessage("You took damage during recall.");
+      await this.showCommandMenu();
+    }
+  }
+  
+  /**
+   * 귀환 캐스팅 - 5초 동안 피격 감지
+   * @param {number} duration 캐스팅 시간 (ms)
+   * @returns {Promise<boolean>} 성공 여부
+   */
+  startRecallCasting(duration) {
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      const startShieldHp = this.defenseGame.state?.shieldHp || 0;
+      const startCoreHp = this.defenseGame.core?.hp || 0;
+      
+      // 캐스팅 UI 오버레이 생성
+      const overlay = document.createElement("div");
+      overlay.id = "recall-casting-overlay";
+      overlay.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        border: 3px solid #00aaff;
+        padding: 30px 50px;
+        z-index: 99999;
+        text-align: center;
+        font-family: var(--term-font);
+        box-shadow: 0 0 30px rgba(0, 170, 255, 0.5);
+      `;
+      
+      const title = document.createElement("div");
+      title.style.cssText = "color: #00aaff; font-size: 18px; margin-bottom: 15px;";
+      title.textContent = "🏃 RECALLING...";
+      
+      const progressBar = document.createElement("div");
+      progressBar.style.cssText = `
+        width: 200px;
+        height: 20px;
+        background: rgba(0, 50, 100, 0.5);
+        border: 2px solid #00aaff;
+        margin-bottom: 10px;
+        overflow: hidden;
+      `;
+      
+      const progressFill = document.createElement("div");
+      progressFill.style.cssText = `
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #00aaff, #00ffff);
+        transition: width 0.1s linear;
+      `;
+      progressBar.appendChild(progressFill);
+      
+      const timeText = document.createElement("div");
+      timeText.style.cssText = "color: #888; font-size: 14px;";
+      
+      const warningText = document.createElement("div");
+      warningText.style.cssText = "color: #ff4444; font-size: 12px; margin-top: 10px;";
+      warningText.textContent = "⚠️ Taking damage will cancel recall!";
+      
+      overlay.appendChild(title);
+      overlay.appendChild(progressBar);
+      overlay.appendChild(timeText);
+      overlay.appendChild(warningText);
+      document.body.appendChild(overlay);
+      
+      // 캐스팅 업데이트 인터벌
+      const updateInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, duration - elapsed);
+        const progress = Math.min(100, (elapsed / duration) * 100);
+        
+        progressFill.style.width = `${progress}%`;
+        timeText.textContent = `${(remaining / 1000).toFixed(1)}s remaining`;
+        
+        // 피격 감지 (실드 또는 코어 HP 감소)
+        const currentShieldHp = this.defenseGame.state?.shieldHp || 0;
+        const currentCoreHp = this.defenseGame.core?.hp || 0;
+        
+        if (currentShieldHp < startShieldHp || currentCoreHp < startCoreHp) {
+          // 피격됨 - 캐스팅 취소
+          clearInterval(updateInterval);
+          overlay.style.borderColor = "#ff4444";
+          title.style.color = "#ff4444";
+          title.textContent = "❌ INTERRUPTED!";
+          progressFill.style.background = "#ff4444";
+          
+          setTimeout(() => {
+            overlay.remove();
+            resolve(false);
+          }, 500);
+          return;
+        }
+        
+        // 캐스팅 완료
+        if (elapsed >= duration) {
+          clearInterval(updateInterval);
+          overlay.style.borderColor = "#00ff00";
+          title.style.color = "#00ff00";
+          title.textContent = "✅ RECALL COMPLETE!";
+          progressFill.style.background = "#00ff00";
+          
+          setTimeout(() => {
+            overlay.remove();
+            resolve(true);
+          }, 500);
+        }
+      }, 100);
+    });
+  }
+  
+  /**
+   * 특정 스테이지로 이동
+   * @param {number} stageId 스테이지 ID
+   */
+  async moveToStage(stageId) {
+    const stage = this.stageManager.getStage(stageId);
+    if (!stage) {
+      console.error(`Stage ${stageId} not found!`);
+      return;
+    }
+    
+    // 스테이지 설정 적용
+    this.stageManager.setCurrentStage(stageId);
+    this.applyStageSettings(stage);
+    
+    // 디펜스 게임 재시작
+    this.defenseGame.stop();
+    this.defenseGame.isSafeZone = stage.type === "safe";
+    this.defenseGame.safeZoneSpawnRate = stage.spawnRate || 2;
+    this.defenseGame.start();
+    
+    // 아군 정보 업데이트
+    const alliedInfo = this.conquestManager.getAlliedInfo();
+    this.defenseGame.updateAlliedInfo(alliedInfo);
+    this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
+    
+    await this.terminal.printSystemMessage(`Arrived at: ${stage.name}`);
+    await this.showCommandMenu();
   }
 
   /**
