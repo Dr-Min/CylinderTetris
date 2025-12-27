@@ -1,5 +1,5 @@
-// v9.5 - Static hit charge + increased chain range
-const CACHE_NAME = "hacker-tetris-v18.3";
+// v9.5.1 - DATA save bug fix + debug logging
+const CACHE_NAME = "hacker-tetris-v18.4";
 const ASSETS = [
   "./",
   "./index.html",

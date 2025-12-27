@@ -5276,7 +5276,13 @@ export class GameManager {
    */
   saveMoney() {
     try {
-      console.log(`[GameManager] Saving money: ${this.currentMoney}`);
+      // 0으로 저장되는 경우 스택 트레이스 출력 (문제 추적용)
+      if (this.currentMoney === 0) {
+        console.warn(`[GameManager] ⚠️ Saving 0! Stack trace:`);
+        console.trace();
+      } else {
+        console.log(`[GameManager] Saving money: ${this.currentMoney}`);
+      }
       localStorage.setItem(
         "cylinderTetris_money",
         this.currentMoney.toString()
