@@ -1,5 +1,5 @@
-// v9.6.1 - Fix game start (resume -> start)
-const CACHE_NAME = "hacker-tetris-v19.4";
+// v9.7.0 - Allied virus dialogue system + eyes + size adjustment
+const CACHE_NAME = "hacker-tetris-v19.5";
 const ASSETS = [
   "./",
   "./index.html",
@@ -16,6 +16,7 @@ const ASSETS = [
   "./js/modules/EquipmentManager.js",
   "./js/modules/StageManager.js",
   "./js/modules/InventoryManager.js",
+  "./js/data/virusDialogues.json",
   "./manifest.json",
   "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
   "https://fonts.googleapis.com/css2?family=VT323&display=swap",

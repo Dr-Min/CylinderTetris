@@ -308,6 +308,11 @@ export class DefenseGame {
     // 아이템 시스템
     this.droppedItems = []; // 바닥에 떨어진 아이템들
     this.collectorViruses = []; // 수집 바이러스들
+    
+    // 대사 시스템
+    this.virusDialogues = null; // JSON에서 로드
+    this.activeSpeechBubbles = []; // 현재 표시 중인 대사들
+    this.loadVirusDialogues(); // 대사 로드
 
     // 웨이브 관리
     this.waveTimer = 0;
@@ -1065,6 +1070,17 @@ export class DefenseGame {
     
     // 0.75 아이템 수집 바이러스 업데이트
     this.updateCollectorViruses(dt);
+    
+    // 0.76 말풍선 업데이트
+    this.updateSpeechBubbles();
+    
+    // 0.77 랜덤 idle 대사 (낮은 확률)
+    if (Math.random() < 0.001) { // 약 60초에 1번 (0.1% * 60fps * 60s)
+      const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
+      if (randomAlly) {
+        this.tryVirusSpeech(randomAlly, 'idle', 1.0);
+      }
+    }
 
     // 0.8 아군 바이러스 로직 (타입별 행동) - for 루프로 안전하게 처리
     for (let idx = this.alliedViruses.length - 1; idx >= 0; idx--) {
@@ -1344,6 +1360,10 @@ export class DefenseGame {
               this.updateResourceDisplay(this.currentData);
               if (this.onResourceGained) this.onResourceGained(gain);
               this.chargeStaticOnKill(); // 처치 시 스태틱 충전
+              
+              // 처치 대사 (15% 확률) - 투사체 발사한 아군 찾기
+              const shooter = this.alliedViruses.find(v => v.virusType === 'HUNTER');
+              if (shooter) this.tryVirusSpeech(shooter, 'kill', 0.15);
             }
 
             hitEnemy = true;
@@ -1890,6 +1910,9 @@ export class DefenseGame {
 
     this.alliedViruses.push(newAlly);
     this.createExplosion(newAlly.x, newAlly.y, newAlly.color, 5);
+    
+    // 스폰 대사 (50% 확률)
+    this.tryVirusSpeech(newAlly, 'spawn', 0.5);
 
     debugLog(
       "DefenseGame",
@@ -1976,6 +1999,8 @@ export class DefenseGame {
         // 도발 이펙트 (도발한 적이 있을 때만)
         if (tauntedCount > 0) {
           this.createTauntEffect(v.x, v.y, tauntRadius, v.color);
+          // 도발 대사 (80% 확률)
+          this.tryVirusSpeech(v, 'taunt', 0.8);
         }
       }
     }
@@ -1988,6 +2013,9 @@ export class DefenseGame {
         // 충돌: 전투
         const damage = v.damage || 10;
         nearestEnemy.hp -= damage;
+        
+        // 전투 대사 (5% 확률)
+        this.tryVirusSpeech(v, 'battle', 0.05);
 
         // TANK 넉백 효과 (도발 후에도 밀어냄)
         if (v.virusType === "TANK" && v.knockbackForce > 0) {
@@ -2000,6 +2028,11 @@ export class DefenseGame {
         const receivedDamage =
           v.virusType === "TANK" ? Math.floor(damage * 0.3) : damage;
         v.hp -= receivedDamage;
+        
+        // 피격 대사 (10% 확률)
+        if (receivedDamage > 0) {
+          this.tryVirusSpeech(v, 'hurt', 0.1);
+        }
 
         this.createExplosion(
           (v.x + nearestEnemy.x) / 2,
@@ -2011,6 +2044,8 @@ export class DefenseGame {
         // 적 처치
         if (nearestEnemy.hp <= 0) {
           this.killEnemy(nearestEnemy);
+          // 처치 대사 (20% 확률)
+          this.tryVirusSpeech(v, 'kill', 0.2);
         }
       } else {
         // 부드러운 추적 이동
@@ -2098,6 +2133,9 @@ export class DefenseGame {
       if (dist < explosionRange) {
         // 자폭!
         v.exploded = true;
+        
+        // 폭발 대사 (100% 확률 - 자폭이므로)
+        this.tryVirusSpeech(v, 'explode', 1.0);
 
         // 정밀 폭격 시너지: HUNTER+BOMBER = 폭발 범위 +30%
         let explosionRadius = v.explosionRadius;
@@ -2170,6 +2208,9 @@ export class DefenseGame {
             color: "#00ff88",
             size: 3,
           });
+          
+          // 힐 대사 (10% 확률)
+          this.tryVirusSpeech(v, 'heal', 0.1);
         }
       }
     });
@@ -3149,20 +3190,27 @@ export class DefenseGame {
           this.ctx.beginPath();
           this.ctx.arc(0, 0, v.radius, 0, Math.PI * 2);
           this.ctx.fill();
-          // 눈 효과 (생동감) - 모바일 포함
-          this.ctx.fillStyle = "#ffffff";
-          const eyeOffset = v.radius * 0.3;
-          this.ctx.beginPath();
-          this.ctx.arc(
-            eyeOffset,
-            -eyeOffset * 0.5,
-            v.radius * 0.2,
-            0,
-            Math.PI * 2
-          );
-          this.ctx.fill();
           break;
       }
+      
+      // 눈 그리기 (모든 타입 공통) - 이동 방향 바라봄
+      const eyeScale = v.radius * 0.25;
+      const eyeOffsetX = (v.vx || 0) / (v.speed || 100) * eyeScale * 0.8;
+      const eyeOffsetY = (v.vy || 0) / (v.speed || 100) * eyeScale * 0.5;
+      
+      // 검은 눈
+      this.ctx.fillStyle = "#000";
+      this.ctx.beginPath();
+      this.ctx.arc(-v.radius * 0.3 + eyeOffsetX, -v.radius * 0.15 + eyeOffsetY, eyeScale, 0, Math.PI * 2);
+      this.ctx.arc(v.radius * 0.3 + eyeOffsetX, -v.radius * 0.15 + eyeOffsetY, eyeScale, 0, Math.PI * 2);
+      this.ctx.fill();
+      
+      // 흰색 하이라이트
+      this.ctx.fillStyle = "#fff";
+      this.ctx.beginPath();
+      this.ctx.arc(-v.radius * 0.25 + eyeOffsetX, -v.radius * 0.25 + eyeOffsetY, eyeScale * 0.4, 0, Math.PI * 2);
+      this.ctx.arc(v.radius * 0.35 + eyeOffsetX, -v.radius * 0.25 + eyeOffsetY, eyeScale * 0.4, 0, Math.PI * 2);
+      this.ctx.fill();
 
       // HP 바 (데미지 입으면 표시)
       if (v.hp < v.maxHp) {
@@ -3477,6 +3525,9 @@ export class DefenseGame {
     // 7. 드롭 아이템 및 수집 바이러스
     this.renderDroppedItems();
     this.renderCollectorViruses();
+    
+    // 말풍선 렌더링
+    this.renderSpeechBubbles();
 
     // 줌 아웃 스케일 복원
     this.ctx.restore();
@@ -4930,6 +4981,148 @@ export class DefenseGame {
         }
       };
       requestAnimationFrame(animateShield);
+    });
+  }
+  
+  // === 대사 시스템 ===
+  
+  /**
+   * 대사 JSON 로드
+   */
+  async loadVirusDialogues() {
+    try {
+      const response = await fetch('./js/data/virusDialogues.json');
+      this.virusDialogues = await response.json();
+      console.log('[DefenseGame] Virus dialogues loaded:', Object.keys(this.virusDialogues));
+    } catch (e) {
+      console.warn('[DefenseGame] Failed to load virus dialogues:', e);
+      this.virusDialogues = { battle: [], idle: [], hurt: [], kill: [] };
+    }
+  }
+  
+  /**
+   * 랜덤 대사 가져오기
+   * @param {string} category 대사 카테고리 (battle, idle, hurt, kill, spawn, etc.)
+   */
+  getRandomDialogue(category) {
+    if (!this.virusDialogues || !this.virusDialogues[category]) return null;
+    const dialogues = this.virusDialogues[category];
+    if (dialogues.length === 0) return null;
+    return dialogues[Math.floor(Math.random() * dialogues.length)];
+  }
+  
+  /**
+   * 말풍선 생성
+   * @param {object} virus 바이러스 객체
+   * @param {string} text 대사 텍스트
+   * @param {number} duration 표시 시간 (ms)
+   */
+  createSpeechBubble(virus, text, duration = 1500) {
+    if (!text) return;
+    
+    // 이미 말하고 있으면 스킵
+    if (virus.isSpeaking) return;
+    virus.isSpeaking = true;
+    
+    const bubble = {
+      virus: virus,
+      text: text,
+      startTime: performance.now(),
+      duration: duration,
+      opacity: 1
+    };
+    
+    this.activeSpeechBubbles.push(bubble);
+    
+    // 일정 시간 후 말하기 가능
+    setTimeout(() => {
+      virus.isSpeaking = false;
+    }, duration + 500);
+  }
+  
+  /**
+   * 아군 바이러스가 특정 상황에서 대사
+   * @param {object} virus 바이러스 객체
+   * @param {string} situation 상황 (battle, hurt, kill, idle, spawn)
+   * @param {number} chance 확률 (0~1)
+   */
+  tryVirusSpeech(virus, situation, chance = 0.1) {
+    if (Math.random() > chance) return;
+    const text = this.getRandomDialogue(situation);
+    if (text) {
+      this.createSpeechBubble(virus, text);
+    }
+  }
+  
+  /**
+   * 말풍선 업데이트
+   */
+  updateSpeechBubbles() {
+    const now = performance.now();
+    
+    // 만료된 말풍선 제거
+    this.activeSpeechBubbles = this.activeSpeechBubbles.filter(bubble => {
+      const elapsed = now - bubble.startTime;
+      if (elapsed > bubble.duration) {
+        return false;
+      }
+      // 페이드아웃
+      if (elapsed > bubble.duration - 300) {
+        bubble.opacity = 1 - (elapsed - (bubble.duration - 300)) / 300;
+      }
+      return true;
+    });
+  }
+  
+  /**
+   * 말풍선 렌더링
+   */
+  renderSpeechBubbles() {
+    const ctx = this.ctx;
+    
+    this.activeSpeechBubbles.forEach(bubble => {
+      const v = bubble.virus;
+      if (!v) return;
+      
+      ctx.save();
+      ctx.globalAlpha = bubble.opacity;
+      
+      // 말풍선 배경
+      const padding = 4;
+      ctx.font = "bold 10px sans-serif";
+      const textWidth = ctx.measureText(bubble.text).width;
+      const bubbleWidth = textWidth + padding * 2;
+      const bubbleHeight = 14;
+      const bubbleX = v.x - bubbleWidth / 2;
+      const bubbleY = v.y - v.radius - 20;
+      
+      // 배경
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.beginPath();
+      ctx.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 4);
+      ctx.fill();
+      
+      // 테두리
+      ctx.strokeStyle = v.color || "#88ff88";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      // 꼬리 (삼각형)
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.beginPath();
+      ctx.moveTo(v.x - 4, bubbleY + bubbleHeight);
+      ctx.lineTo(v.x, bubbleY + bubbleHeight + 5);
+      ctx.lineTo(v.x + 4, bubbleY + bubbleHeight);
+      ctx.closePath();
+      ctx.fill();
+      
+      // 텍스트
+      ctx.fillStyle = "#333";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(bubble.text, v.x, bubbleY + bubbleHeight / 2);
+      
+      ctx.restore();
     });
   }
 }

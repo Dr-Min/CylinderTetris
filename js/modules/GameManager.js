@@ -135,7 +135,7 @@ export class GameManager {
         baseHp: 8,
         baseDamage: 5,
         baseSpeed: 180, // 120 → 180 (빠른 무리)
-        radius: 4,
+        radius: 6, // 수집 바이러스와 비슷
         attackType: "melee", // 몸통박치기
         special: "explodeOnDeath", // 죽을 때 작은 폭발
         explosionDamage: 3,
@@ -150,7 +150,7 @@ export class GameManager {
         baseHp: 60,
         baseDamage: 8,
         baseSpeed: 80, // 40 → 80 (2배)
-        radius: 10,
+        radius: 12, // 가장 큼
         attackType: "melee",
         special: "taunt", // 도발 (어그로)
         knockbackForce: 50,
@@ -167,7 +167,7 @@ export class GameManager {
         baseHp: 20,
         baseDamage: 15,
         baseSpeed: 110, // 60 → 110 (위치 조정 필요)
-        radius: 5,
+        radius: 8, // 중간
         attackType: "ranged", // 원거리
         range: 150,
         fireRate: 1.5, // 1.5초마다 발사
@@ -182,7 +182,7 @@ export class GameManager {
         baseHp: 15,
         baseDamage: 0, // 직접 데미지 없음
         baseSpeed: 150, // 80 → 150 (돌진형은 빨라야!)
-        radius: 6,
+        radius: 9, // 중간~큼
         attackType: "suicide", // 자폭
         explosionDamage: 40,
         explosionRadius: 60,
@@ -196,7 +196,7 @@ export class GameManager {
         baseHp: 40,
         baseDamage: 0,
         baseSpeed: 90, // 50 → 90 (아군 따라다녀야 함)
-        radius: 7,
+        radius: 8, // 중간
         attackType: "support", // 지원형
         healAmount: 5, // 초당 회복량
         healRadius: 80, // 힐 범위
