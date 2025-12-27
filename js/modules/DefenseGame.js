@@ -3703,68 +3703,65 @@ export class DefenseGame {
       this.ctx.fillRect(e.x - 10, e.y - 20, 20 * hpPct, 4);
     });
 
-    // 탈출 애니메이션 중에는 코어 렌더링 완전 스킵
-    if (!this.isOutroPlaying) {
-      // 코어 스케일 적용 (원근감 효과)
-      const coreScale = this.core.scale || 1;
-      const scaledRadius = this.core.radius * coreScale;
+    // 코어 스케일 적용 (원근감 효과 + 탈출 애니메이션)
+    const coreScale = this.core.scale || 1;
+    const scaledRadius = this.core.radius * coreScale;
 
-      // 코어 시각적 위치 (발사 시 움직임 효과 포함)
-      const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
-      const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
+    // 코어 시각적 위치 (발사 시 움직임 효과 포함)
+    const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
+    const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
 
-      // 3. 코어 및 포탑 (포탑 발사대 삭제) - 시각적 오프셋 적용
-      this.ctx.save();
-      this.ctx.translate(coreVisualX, coreVisualY);
-      this.ctx.rotate(this.turret.angle);
-      this.ctx.restore();
+    // 3. 코어 및 포탑 (포탑 발사대 삭제) - 시각적 오프셋 적용
+    this.ctx.save();
+    this.ctx.translate(coreVisualX, coreVisualY);
+    this.ctx.rotate(this.turret.angle);
+    this.ctx.restore();
 
-      this.ctx.beginPath();
-      this.ctx.arc(coreVisualX, coreVisualY, scaledRadius, 0, Math.PI * 2);
-      this.ctx.fillStyle = this.core.color;
-      this.ctx.fill();
-      this.ctx.lineWidth = 3 * coreScale;
-      this.ctx.strokeStyle = "#ffffff";
-      this.ctx.stroke();
+    this.ctx.beginPath();
+    this.ctx.arc(coreVisualX, coreVisualY, scaledRadius, 0, Math.PI * 2);
+    this.ctx.fillStyle = this.core.color;
+    this.ctx.fill();
+    this.ctx.lineWidth = 3 * coreScale;
+    this.ctx.strokeStyle = "#ffffff";
+    this.ctx.stroke();
 
-      // 코어 체력 퍼센트 표시 (코어 아래에 표시)
-      if (this.showCoreHP !== false) {
-        const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
+    // 코어 체력 퍼센트 표시 (탈출 중에는 숨김)
+    if (this.showCoreHP !== false && !this.isOutroPlaying) {
+      const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
 
-        // 글리치 오프셋
-        const offsetX = this.glitchText ? this.glitchOffset?.x || 0 : 0;
-        const offsetY = this.glitchText ? this.glitchOffset?.y || 0 : 0;
+      // 글리치 오프셋
+      const offsetX = this.glitchText ? this.glitchOffset?.x || 0 : 0;
+      const offsetY = this.glitchText ? this.glitchOffset?.y || 0 : 0;
 
-        this.ctx.font = `bold ${14 * coreScale}px monospace`;
-        this.ctx.textAlign = "center";
-        this.ctx.textBaseline = "middle";
+      this.ctx.font = `bold ${14 * coreScale}px monospace`;
+      this.ctx.textAlign = "center";
+      this.ctx.textBaseline = "middle";
 
-        // 글리치 효과: 색상 분리
-        if (this.glitchText) {
-          // 빨간색 오프셋
-          this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-          this.ctx.fillText(
-            `${hpPercent}%`,
-            coreVisualX + offsetX - 2,
-            coreVisualY + scaledRadius + 20 + offsetY
-          );
-          // 파란색 오프셋
-          this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
-          this.ctx.fillText(
-            `${hpPercent}%`,
-            coreVisualX + offsetX + 2,
-            coreVisualY + scaledRadius + 20 + offsetY
-          );
-        }
-
-        // 메인 텍스트
-        this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
+      // 글리치 효과: 색상 분리
+      if (this.glitchText) {
+        // 빨간색 오프셋
+        this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
         this.ctx.fillText(
           `${hpPercent}%`,
-          coreVisualX + offsetX,
+          coreVisualX + offsetX - 2,
+          coreVisualY + scaledRadius + 20 + offsetY
+        );
+        // 파란색 오프셋
+        this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
+        this.ctx.fillText(
+          `${hpPercent}%`,
+          coreVisualX + offsetX + 2,
           coreVisualY + scaledRadius + 20 + offsetY
         );
       }
+
+      // 메인 텍스트
+      this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
+      this.ctx.fillText(
+        `${hpPercent}%`,
+        coreVisualX + offsetX,
+        coreVisualY + scaledRadius + 20 + offsetY
+      );
     }
 
     // 4. 파티클 (글리치 스타일)
@@ -4972,35 +4969,32 @@ export class DefenseGame {
   playOutroAnimation() {
     return new Promise((resolve) => {
       const isMobile = window.innerWidth <= 768;
-      const duration = isMobile ? 250 : 300;
+      const duration = isMobile ? 300 : 400;
       const startTime = performance.now();
       const startScale = 1;
-      const endScale = isMobile ? 20.0 : 50.0;
+      const endScale = isMobile ? 30.0 : 50.0;
 
-      // 연출 중에는 적 생성 중지
+      // 연출 중에는 적 생성 중지 + HP 표시 숨김
       const originalSpawnRate = this.enemySpawnTimer;
       this.enemySpawnTimer = 99999;
-      
-      // 코어 숨기기 (애니메이션 중 중앙에 남는 문제 해결)
       this.isOutroPlaying = true;
 
       const animateAscend = (now) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
+        // ease-in quint (점점 빨라지며 카메라를 뚫고 지나감)
         const easeInQuint = (t) => t * t * t * t * t;
         const easedProgress = easeInQuint(progress);
 
-        // 스케일 커지면서 투명해짐
+        // 스케일만 커짐 - 코어가 화면을 가득 채우며 지나감
         this.core.scale = startScale + (endScale - startScale) * easedProgress;
-        this.core.outroAlpha = 1 - easedProgress; // 점점 투명
 
         if (progress < 1) {
           requestAnimationFrame(animateAscend);
         } else {
-          // 완료 - 리셋
+          // 완료 - 리셋 (Safe Zone 전환 직전)
           this.core.scale = 1;
-          this.core.outroAlpha = 1;
           this.isOutroPlaying = false;
           this.enemySpawnTimer = originalSpawnRate;
           resolve();
