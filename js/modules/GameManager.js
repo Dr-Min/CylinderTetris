@@ -906,7 +906,7 @@ export class GameManager {
   }
   
   /**
-   * 귀환 캐스팅 - 5초 동안 피격 감지
+   * 귀환 캐스팅 - 5초 동안 피격 감지 (테두리 효과 UI)
    * @param {number} duration 캐스팅 시간 (ms)
    * @returns {Promise<boolean>} 성공 여부
    */
@@ -916,67 +916,112 @@ export class GameManager {
       const startShieldHp = this.defenseGame.core?.shieldHp || 0;
       const startCoreHp = this.defenseGame.core?.hp || 0;
       
-      // 캐스팅 UI 오버레이 생성
-      const overlay = document.createElement("div");
-      overlay.id = "recall-casting-overlay";
-      overlay.style.cssText = `
+      // 테두리 효과 컨테이너
+      const borderContainer = document.createElement("div");
+      borderContainer.id = "recall-border-effect";
+      borderContainer.style.cssText = `
         position: fixed;
-        top: 50%;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        z-index: 99998;
+      `;
+      
+      // 4개의 테두리 (상, 하, 좌, 우)
+      const borders = {
+        top: document.createElement("div"),
+        bottom: document.createElement("div"),
+        left: document.createElement("div"),
+        right: document.createElement("div")
+      };
+      
+      const borderThickness = 8;
+      const glowColor = "0, 170, 255"; // 기본 파란색
+      
+      borders.top.style.cssText = `
+        position: absolute; top: 0; left: 0; right: 0;
+        height: ${borderThickness}px;
+        background: linear-gradient(90deg, transparent, rgba(${glowColor}, 0.8), transparent);
+        box-shadow: 0 0 20px rgba(${glowColor}, 0.8), inset 0 0 10px rgba(${glowColor}, 0.5);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.1s linear;
+      `;
+      
+      borders.bottom.style.cssText = `
+        position: absolute; bottom: 0; left: 0; right: 0;
+        height: ${borderThickness}px;
+        background: linear-gradient(90deg, transparent, rgba(${glowColor}, 0.8), transparent);
+        box-shadow: 0 0 20px rgba(${glowColor}, 0.8), inset 0 0 10px rgba(${glowColor}, 0.5);
+        transform: scaleX(0);
+        transform-origin: right;
+        transition: transform 0.1s linear;
+      `;
+      
+      borders.left.style.cssText = `
+        position: absolute; top: 0; left: 0; bottom: 0;
+        width: ${borderThickness}px;
+        background: linear-gradient(180deg, transparent, rgba(${glowColor}, 0.8), transparent);
+        box-shadow: 0 0 20px rgba(${glowColor}, 0.8), inset 0 0 10px rgba(${glowColor}, 0.5);
+        transform: scaleY(0);
+        transform-origin: bottom;
+        transition: transform 0.1s linear;
+      `;
+      
+      borders.right.style.cssText = `
+        position: absolute; top: 0; right: 0; bottom: 0;
+        width: ${borderThickness}px;
+        background: linear-gradient(180deg, transparent, rgba(${glowColor}, 0.8), transparent);
+        box-shadow: 0 0 20px rgba(${glowColor}, 0.8), inset 0 0 10px rgba(${glowColor}, 0.5);
+        transform: scaleY(0);
+        transform-origin: top;
+        transition: transform 0.1s linear;
+      `;
+      
+      Object.values(borders).forEach(b => borderContainer.appendChild(b));
+      
+      // 하단 정보 표시
+      const infoBar = document.createElement("div");
+      infoBar.style.cssText = `
+        position: fixed;
+        bottom: 20px;
         left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.9);
-        border: 3px solid #00aaff;
-        padding: 30px 50px;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid #00aaff;
+        padding: 10px 30px;
+        font-family: var(--term-font);
+        color: #00aaff;
+        font-size: 16px;
         z-index: 99999;
         text-align: center;
-        font-family: var(--term-font);
-        box-shadow: 0 0 30px rgba(0, 170, 255, 0.5);
+        box-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+      `;
+      infoBar.innerHTML = `
+        <div style="margin-bottom: 5px;">🏃 RECALLING...</div>
+        <div id="recall-time" style="font-size: 24px; font-weight: bold;">5.0s</div>
+        <div style="color: #ff6666; font-size: 11px; margin-top: 5px;">⚠️ 피격 시 취소됨</div>
       `;
       
-      const title = document.createElement("div");
-      title.style.cssText = "color: #00aaff; font-size: 18px; margin-bottom: 15px;";
-      title.textContent = "🏃 RECALLING...";
+      borderContainer.appendChild(infoBar);
+      document.body.appendChild(borderContainer);
       
-      const progressBar = document.createElement("div");
-      progressBar.style.cssText = `
-        width: 200px;
-        height: 20px;
-        background: rgba(0, 50, 100, 0.5);
-        border: 2px solid #00aaff;
-        margin-bottom: 10px;
-        overflow: hidden;
-      `;
-      
-      const progressFill = document.createElement("div");
-      progressFill.style.cssText = `
-        width: 0%;
-        height: 100%;
-        background: linear-gradient(90deg, #00aaff, #00ffff);
-        transition: width 0.1s linear;
-      `;
-      progressBar.appendChild(progressFill);
-      
-      const timeText = document.createElement("div");
-      timeText.style.cssText = "color: #888; font-size: 14px;";
-      
-      const warningText = document.createElement("div");
-      warningText.style.cssText = "color: #ff4444; font-size: 12px; margin-top: 10px;";
-      warningText.textContent = "⚠️ Taking damage will cancel recall!";
-      
-      overlay.appendChild(title);
-      overlay.appendChild(progressBar);
-      overlay.appendChild(timeText);
-      overlay.appendChild(warningText);
-      document.body.appendChild(overlay);
+      const timeDisplay = infoBar.querySelector("#recall-time");
       
       // 캐스팅 업데이트 인터벌
       const updateInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
         const remaining = Math.max(0, duration - elapsed);
-        const progress = Math.min(100, (elapsed / duration) * 100);
+        const progress = Math.min(1, elapsed / duration);
         
-        progressFill.style.width = `${progress}%`;
-        timeText.textContent = `${(remaining / 1000).toFixed(1)}s remaining`;
+        // 테두리 점점 채우기 (4방향 동시에)
+        borders.top.style.transform = `scaleX(${progress})`;
+        borders.bottom.style.transform = `scaleX(${progress})`;
+        borders.left.style.transform = `scaleY(${progress})`;
+        borders.right.style.transform = `scaleY(${progress})`;
+        
+        // 시간 표시 업데이트
+        timeDisplay.textContent = `${(remaining / 1000).toFixed(1)}s`;
         
         // 피격 감지 (실드 또는 코어 HP 감소)
         const currentShieldHp = this.defenseGame.core?.shieldHp || 0;
@@ -985,30 +1030,48 @@ export class GameManager {
         if (currentShieldHp < startShieldHp || currentCoreHp < startCoreHp) {
           // 피격됨 - 캐스팅 취소
           clearInterval(updateInterval);
-          overlay.style.borderColor = "#ff4444";
-          title.style.color = "#ff4444";
-          title.textContent = "❌ INTERRUPTED!";
-          progressFill.style.background = "#ff4444";
+          
+          // 빨간색으로 변경
+          const redGlow = "255, 68, 68";
+          Object.values(borders).forEach(b => {
+            b.style.background = `linear-gradient(90deg, transparent, rgba(${redGlow}, 0.8), transparent)`;
+            b.style.boxShadow = `0 0 30px rgba(${redGlow}, 1)`;
+          });
+          infoBar.style.borderColor = "#ff4444";
+          infoBar.style.boxShadow = "0 0 30px rgba(255, 68, 68, 0.8)";
+          infoBar.innerHTML = `
+            <div style="color: #ff4444; font-size: 20px;">❌ INTERRUPTED!</div>
+            <div style="color: #ff6666; font-size: 12px; margin-top: 5px;">피격으로 귀환 취소됨</div>
+          `;
           
           setTimeout(() => {
-            overlay.remove();
+            borderContainer.remove();
             resolve(false);
-          }, 500);
+          }, 800);
           return;
         }
         
         // 캐스팅 완료
         if (elapsed >= duration) {
           clearInterval(updateInterval);
-          overlay.style.borderColor = "#00ff00";
-          title.style.color = "#00ff00";
-          title.textContent = "✅ RECALL COMPLETE!";
-          progressFill.style.background = "#00ff00";
+          
+          // 초록색으로 변경
+          const greenGlow = "0, 255, 0";
+          Object.values(borders).forEach(b => {
+            b.style.background = `linear-gradient(90deg, transparent, rgba(${greenGlow}, 0.8), transparent)`;
+            b.style.boxShadow = `0 0 30px rgba(${greenGlow}, 1)`;
+          });
+          infoBar.style.borderColor = "#00ff00";
+          infoBar.style.boxShadow = "0 0 30px rgba(0, 255, 0, 0.8)";
+          infoBar.innerHTML = `
+            <div style="color: #00ff00; font-size: 20px;">✅ RECALL COMPLETE!</div>
+            <div style="color: #88ff88; font-size: 12px; margin-top: 5px;">안전지역으로 이동 중...</div>
+          `;
           
           setTimeout(() => {
-            overlay.remove();
+            borderContainer.remove();
             resolve(true);
-          }, 500);
+          }, 800);
         }
       }, 100);
     });
@@ -1030,16 +1093,18 @@ export class GameManager {
     this.stageManager.saveState();
     this.applyStageSettings(stage);
     
-    // 디펜스 게임 재시작
+    // 디펜스 게임 재시작 (드랍 연출 포함)
     this.defenseGame.stop();
     this.defenseGame.isSafeZone = stage.type === "safe";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate || 2;
-    this.defenseGame.start();
     
     // 아군 정보 업데이트
     const alliedInfo = this.conquestManager.getAlliedInfo();
     this.defenseGame.updateAlliedInfo(alliedInfo);
     this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
+    
+    // 드랍 연출과 함께 시작
+    this.defenseGame.playIntroAnimation();
     
     await this.terminal.printSystemMessage(`Arrived at: ${stage.name}`);
     await this.showCommandMenu();

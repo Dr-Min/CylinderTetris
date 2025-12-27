@@ -1,5 +1,5 @@
-// v9.5.5 - Fix moveToStage function
-const CACHE_NAME = "hacker-tetris-v18.8";
+// v9.5.6 - Recall border effect UI + drop animation
+const CACHE_NAME = "hacker-tetris-v18.9";
 const ASSETS = [
   "./",
   "./index.html",
