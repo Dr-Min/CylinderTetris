@@ -1,5 +1,5 @@
-// v9.7.1 - Safe Zone wander behavior + chat dialogues + reduced idle frequency
-const CACHE_NAME = "hacker-tetris-v19.6";
+// v9.7.2 - Terminal style green text instead of speech bubbles
+const CACHE_NAME = "hacker-tetris-v19.8";
 const ASSETS = [
   "./",
   "./index.html",

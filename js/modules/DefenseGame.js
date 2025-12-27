@@ -5166,40 +5166,22 @@ export class DefenseGame {
       ctx.save();
       ctx.globalAlpha = bubble.opacity;
       
-      // 말풍선 배경
-      const padding = 4;
-      ctx.font = "bold 10px sans-serif";
-      const textWidth = ctx.measureText(bubble.text).width;
-      const bubbleWidth = textWidth + padding * 2;
-      const bubbleHeight = 14;
-      const bubbleX = v.x - bubbleWidth / 2;
-      const bubbleY = v.y - v.radius - 20;
+      // 터미널 스타일 텍스트 (말풍선 없이)
+      const textY = v.y - v.radius - 12;
       
-      // 배경
-      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-      ctx.beginPath();
-      ctx.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 4);
-      ctx.fill();
-      
-      // 테두리
-      ctx.strokeStyle = v.color || "#88ff88";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      
-      // 꼬리 (삼각형)
-      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-      ctx.beginPath();
-      ctx.moveTo(v.x - 4, bubbleY + bubbleHeight);
-      ctx.lineTo(v.x, bubbleY + bubbleHeight + 5);
-      ctx.lineTo(v.x + 4, bubbleY + bubbleHeight);
-      ctx.closePath();
-      ctx.fill();
-      
-      // 텍스트
-      ctx.fillStyle = "#333";
+      ctx.font = "bold 9px 'VT323', 'Courier New', monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(bubble.text, v.x, bubbleY + bubbleHeight / 2);
+      
+      // 그림자/글로우 효과 (가독성)
+      ctx.shadowColor = "#000";
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+      
+      // 초록색 터미널 텍스트
+      ctx.fillStyle = "#00ff41"; // 터미널 그린
+      ctx.fillText(bubble.text, v.x, textY);
       
       ctx.restore();
     });
