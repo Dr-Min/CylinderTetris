@@ -304,6 +304,10 @@ export class DefenseGame {
     this.particles = [];
     this.alliedViruses = []; // 아군 바이러스 (배리어 밖)
     this.shockwaves = []; // 파동 효과
+    
+    // 아이템 시스템
+    this.droppedItems = []; // 바닥에 떨어진 아이템들
+    this.collectorViruses = []; // 수집 바이러스들
 
     // 웨이브 관리
     this.waveTimer = 0;
@@ -335,6 +339,18 @@ export class DefenseGame {
     this.onGameOver = null;
     this.onConquer = null; // 점령 요청 콜백
     this.onConquerReady = null; // 점령 가능 상태 콜백 (선택지 갱신용)
+    this.onEnemyKilled = null; // 적 처치 콜백 (아이템 드롭용)
+    this.onItemCollected = null; // 아이템 수집 완료 콜백
+    
+    // 아이템 효과 getter (GameManager에서 설정)
+    this.getItemEffects = () => ({
+      convert: 0,
+      chain: 0,
+      chainRadius: 0,
+      lifesteal: 0,
+      attackSpeed: 0,
+      dropRate: 0
+    });
 
     // 점령 가능 상태
     this.conquerReady = false;
@@ -1046,6 +1062,9 @@ export class DefenseGame {
 
     // 0.7 시너지 효과 적용 (매 프레임)
     this.applySynergyEffects(dt);
+    
+    // 0.75 아이템 수집 바이러스 업데이트
+    this.updateCollectorViruses(dt);
 
     // 0.8 아군 바이러스 로직 (타입별 행동) - for 루프로 안전하게 처리
     for (let idx = this.alliedViruses.length - 1; idx >= 0; idx--) {
@@ -2420,6 +2439,17 @@ export class DefenseGame {
       this.currentData += gain;
       this.updateResourceDisplay(this.currentData);
       if (this.onResourceGained) this.onResourceGained(gain);
+      
+      // 아이템 드롭 콜백 호출 (적 위치 전달)
+      if (this.onEnemyKilled) {
+        this.onEnemyKilled(enemy.x, enemy.y);
+      }
+      
+      // 아이템 효과: 쉴드 회복 (lifesteal)
+      const effects = this.getItemEffects();
+      if (effects.lifesteal > 0 && this.core.shieldHp < this.core.shieldMaxHp) {
+        this.core.shieldHp = Math.min(this.core.shieldMaxHp, this.core.shieldHp + effects.lifesteal);
+      }
     }
   }
 
@@ -2640,6 +2670,186 @@ export class DefenseGame {
     ctx.stroke();
 
     ctx.restore();
+  }
+
+  // ===== 아이템 드롭/수집 시스템 =====
+  
+  /**
+   * 바닥에 아이템 생성 (GameManager에서 호출)
+   */
+  spawnDroppedItem(x, y, item) {
+    this.droppedItems.push({
+      x,
+      y,
+      item,
+      spawnTime: performance.now(),
+      collected: false,
+      pulsePhase: Math.random() * Math.PI * 2
+    });
+    
+    // 수집 바이러스 생성
+    this.spawnCollectorVirus(x, y);
+  }
+  
+  /**
+   * 코어에서 수집 바이러스 생성
+   */
+  spawnCollectorVirus(targetX, targetY) {
+    const angle = Math.random() * Math.PI * 2;
+    const spawnDist = 30;
+    
+    this.collectorViruses.push({
+      x: this.core.x + Math.cos(angle) * spawnDist,
+      y: this.core.y + Math.sin(angle) * spawnDist,
+      targetX,
+      targetY,
+      speed: 150,
+      state: "toItem", // toItem -> returning
+      carriedItem: null,
+      spawnTime: performance.now()
+    });
+  }
+  
+  /**
+   * 수집 바이러스 업데이트
+   */
+  updateCollectorViruses(dt) {
+    for (let i = this.collectorViruses.length - 1; i >= 0; i--) {
+      const v = this.collectorViruses[i];
+      
+      if (v.state === "toItem") {
+        // 아이템으로 이동
+        const dx = v.targetX - v.x;
+        const dy = v.targetY - v.y;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist < 10) {
+          // 아이템 도착 - 픽업
+          const droppedItem = this.droppedItems.find(
+            d => !d.collected && Math.hypot(d.x - v.x, d.y - v.y) < 20
+          );
+          
+          if (droppedItem) {
+            droppedItem.collected = true;
+            v.carriedItem = droppedItem.item;
+            v.state = "returning";
+          } else {
+            // 아이템이 없으면 그냥 복귀
+            v.state = "returning";
+          }
+        } else {
+          // 이동
+          v.x += (dx / dist) * v.speed * dt;
+          v.y += (dy / dist) * v.speed * dt;
+        }
+      } else if (v.state === "returning") {
+        // 코어로 복귀
+        const dx = this.core.x - v.x;
+        const dy = this.core.y - v.y;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist < 20) {
+          // 코어 도착 - 아이템 전달
+          if (v.carriedItem && this.onItemCollected) {
+            this.onItemCollected(v.carriedItem);
+          }
+          this.collectorViruses.splice(i, 1);
+          continue;
+        }
+        
+        // 이동
+        v.x += (dx / dist) * v.speed * dt;
+        v.y += (dy / dist) * v.speed * dt;
+      }
+    }
+    
+    // 수집된 아이템 정리
+    this.droppedItems = this.droppedItems.filter(d => !d.collected);
+  }
+  
+  /**
+   * 바닥 아이템 렌더링
+   */
+  renderDroppedItems() {
+    const ctx = this.ctx;
+    const now = performance.now();
+    
+    this.droppedItems.forEach(d => {
+      if (d.collected) return;
+      
+      const age = (now - d.spawnTime) / 1000;
+      const pulse = 1 + Math.sin(d.pulsePhase + age * 4) * 0.15;
+      const size = 12 * pulse;
+      
+      // 등급별 색상
+      const colors = {
+        common: "#ffffff",
+        rare: "#00aaff",
+        legendary: "#ffaa00"
+      };
+      const color = colors[d.item.rarity] || "#ffffff";
+      
+      // 글로우 효과
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 15;
+      
+      // 아이콘 배경
+      ctx.fillStyle = `rgba(0, 0, 0, 0.7)`;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 테두리
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // 아이콘
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `${size}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(d.item.icon, d.x, d.y);
+      
+      ctx.restore();
+    });
+  }
+  
+  /**
+   * 수집 바이러스 렌더링
+   */
+  renderCollectorViruses() {
+    const ctx = this.ctx;
+    
+    this.collectorViruses.forEach(v => {
+      const size = 6;
+      
+      ctx.save();
+      
+      // 몸체
+      ctx.fillStyle = v.carriedItem ? "#00ff88" : "#88ffaa";
+      ctx.beginPath();
+      ctx.arc(v.x, v.y, size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 눈
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(v.x - 2, v.y - 1, 1.5, 0, Math.PI * 2);
+      ctx.arc(v.x + 2, v.y - 1, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 아이템 들고있으면 표시
+      if (v.carriedItem) {
+        ctx.font = "8px Arial";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(v.carriedItem.icon, v.x, v.y - 10);
+      }
+      
+      ctx.restore();
+    });
   }
 
   render() {
@@ -3164,6 +3374,10 @@ export class DefenseGame {
 
     // 6. 스태틱 시각 효과
     this.renderStaticEffects();
+    
+    // 7. 드롭 아이템 및 수집 바이러스
+    this.renderDroppedItems();
+    this.renderCollectorViruses();
 
     // 줌 아웃 스케일 복원
     this.ctx.restore();
@@ -4072,6 +4286,8 @@ export class DefenseGame {
       this.projectiles = [];
       this.particles = [];
       this.alliedViruses = [];
+      this.droppedItems = [];
+      this.collectorViruses = [];
       this.core.shieldRadius = 0;
       this.core.x = centerX;
       this.core.y = centerY;

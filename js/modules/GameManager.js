@@ -6,6 +6,7 @@ import { ConquestManager } from "./ConquestManager.js";
 import { EquipmentManager } from "./EquipmentManager.js";
 import { StageManager } from "./StageManager.js";
 import { InventoryManager } from "./InventoryManager.js";
+import { ItemDatabase } from "./ItemDatabase.js";
 
 // ===== 전역 디버그 로깅 시스템 =====
 window.DEBUG_LOG_ENABLED = false; // 기본값 OFF
@@ -37,6 +38,8 @@ export class GameManager {
     this.equipmentManager = new EquipmentManager();
     this.stageManager = new StageManager();
     this.inventoryManager = new InventoryManager(); // 인벤토리 매니저 추가
+    this.itemDatabase = new ItemDatabase(); // 아이템 데이터베이스
+    this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
 
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
@@ -60,6 +63,15 @@ export class GameManager {
     // PAGE 업데이트 연결 (터미널에 표시)
     this.defenseGame.onPageUpdate = (text, color) =>
       this.terminal.updatePage(text, color);
+    
+    // 적 처치 시 아이템 드롭 콜백
+    this.defenseGame.onEnemyKilled = (x, y) => this.tryItemDrop(x, y, "defense");
+    
+    // 아이템 수집 완료 콜백 (수집 바이러스가 코어에 도착했을 때)
+    this.defenseGame.onItemCollected = (item) => this.handleItemCollected(item);
+    
+    // 아이템 효과 getter 연결
+    this.defenseGame.getItemEffects = () => this.inventoryManager.getEquippedEffects();
 
     // 테트리스 게임 이벤트 연결
     this.tetrisGame.onStageClear = (lines) => this.handleBreachClear(lines);
@@ -1236,8 +1248,11 @@ export class GameManager {
     debugLog("GameManager", "handleConquestTetrisClear 종료");
   }
 
-  // 퍼즐 줄 클리어 시 디펜스에 파동 효과
+  // 퍼즐 줄 클리어 시 디펜스에 파동 효과 + 아이템 드롭 확률
   handlePuzzleLineCleared(lineNum) {
+    // 테트리스에서 줄 클리어 시 아이템 드롭 (줄 수에 비례한 확률)
+    this.tryTetrisItemDrop(lineNum);
+    
     if (!this.isConquestMode || !this.defenseGame) return;
 
     debugLog("GameManager", `퍼즐 라인 클리어: ${lineNum}줄`);
@@ -1265,6 +1280,207 @@ export class GameManager {
         this.showPuzzleSuccessMessage("MEGA CLEAR!", "WAVE SENT - DEVASTATION");
         break;
     }
+  }
+
+  // ===== 아이템 시스템 =====
+  
+  /**
+   * 테트리스 줄 클리어 시 아이템 드롭 (시각적 드롭 없이 바로 인벤토리에 추가)
+   * @param {number} lineNum - 클리어한 줄 수
+   */
+  tryTetrisItemDrop(lineNum) {
+    // 줄당 10% 확률 (1줄=10%, 2줄=20%, 3줄=30%, 4줄=40%)
+    let dropChance = 0.10 * lineNum;
+    
+    // 장착 아이템 효과로 드롭률 증가
+    const effects = this.inventoryManager.getEquippedEffects();
+    dropChance += effects.dropRate;
+    
+    // 확률 체크
+    if (Math.random() > dropChance) return;
+    
+    // 아이템 생성
+    const item = this.itemDatabase.generateRandomItem();
+    
+    debugLog("GameManager", `테트리스 아이템 드롭! ${item.name}`);
+    
+    // 현재 스테이지 획득 목록에 추가
+    this.collectedItemsThisStage.push(item);
+    
+    // 인벤토리에 바로 추가
+    const result = this.inventoryManager.addToInventory(item);
+    
+    if (result.success) {
+      this.showItemDropNotification(item);
+    } else {
+      this.showItemDropNotification(item, true);
+    }
+  }
+  
+  /**
+   * 아이템 드롭 시도 (디펜스 모드 - 적 위치에 시각적 드롭)
+   * @param {number} x - 드롭 위치 X
+   * @param {number} y - 드롭 위치 Y
+   * @param {string} source - 'defense' 또는 'tetris'
+   */
+  tryItemDrop(x, y, source) {
+    // 기본 드롭 확률: 5%
+    let dropChance = 0.05;
+    
+    // 장착 아이템 효과로 드롭률 증가
+    const effects = this.inventoryManager.getEquippedEffects();
+    dropChance += effects.dropRate;
+    
+    // 확률 체크
+    if (Math.random() > dropChance) return;
+    
+    // 아이템 생성
+    const item = this.itemDatabase.generateRandomItem();
+    
+    debugLog("GameManager", `아이템 드롭! ${item.name} at (${x}, ${y})`);
+    
+    // DefenseGame에 드롭 아이템 생성
+    if (this.defenseGame && this.activeMode === "defense") {
+      this.defenseGame.spawnDroppedItem(x, y, item);
+    }
+  }
+  
+  /**
+   * 아이템 수집 완료 처리 (수집 바이러스가 코어에 도착했을 때)
+   */
+  handleItemCollected(item) {
+    debugLog("GameManager", `아이템 수집됨: ${item.name}`);
+    
+    // 현재 스테이지 획득 목록에 추가
+    this.collectedItemsThisStage.push(item);
+    
+    // 인벤토리에 추가
+    const result = this.inventoryManager.addToInventory(item);
+    
+    if (result.success) {
+      // 획득 알림 표시
+      this.showItemDropNotification(item);
+    } else {
+      // 인벤토리 가득 참 알림
+      this.showItemDropNotification(item, true);
+    }
+  }
+  
+  /**
+   * 아이템 획득 알림 표시
+   */
+  showItemDropNotification(item, inventoryFull = false) {
+    // 기존 알림 제거
+    const existing = document.getElementById("item-drop-notification");
+    if (existing) existing.remove();
+    
+    const color = this.itemDatabase.getRarityColor(item.rarity);
+    
+    const notification = document.createElement("div");
+    notification.id = "item-drop-notification";
+    notification.style.cssText = `
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid ${color};
+      padding: 15px 25px;
+      border-radius: 8px;
+      z-index: 99999;
+      text-align: center;
+      animation: itemPopIn 0.3s ease-out;
+      box-shadow: 0 0 20px ${color}40;
+    `;
+    
+    notification.innerHTML = `
+      <div style="font-size: 24px; margin-bottom: 5px;">${item.icon}</div>
+      <div style="color: ${color}; font-weight: bold; font-size: 14px;">${item.name}</div>
+      <div style="color: #888; font-size: 11px; margin-top: 3px;">
+        ${inventoryFull ? "⚠️ 인벤토리 가득참!" : item.description}
+      </div>
+    `;
+    
+    // 애니메이션 스타일 추가
+    if (!document.getElementById("item-notification-style")) {
+      const style = document.createElement("style");
+      style.id = "item-notification-style";
+      style.textContent = `
+        @keyframes itemPopIn {
+          0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
+          70% { transform: translateX(-50%) scale(1.1); }
+          100% { transform: translateX(-50%) scale(1); opacity: 1; }
+        }
+        @keyframes itemFadeOut {
+          0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(notification);
+    
+    // 2초 후 페이드아웃
+    setTimeout(() => {
+      notification.style.animation = "itemFadeOut 0.3s ease-in forwards";
+      setTimeout(() => notification.remove(), 300);
+    }, 2000);
+  }
+  
+  /**
+   * 스테이지 클리어 시 획득 아이템 요약 표시
+   */
+  showLootSummary() {
+    if (this.collectedItemsThisStage.length === 0) return;
+    
+    const overlay = document.createElement("div");
+    overlay.id = "loot-summary-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 99998;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+    `;
+    
+    let itemsHtml = this.collectedItemsThisStage.map(item => {
+      const color = this.itemDatabase.getRarityColor(item.rarity);
+      return `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; 
+                    border: 1px solid ${color}40; border-radius: 5px; margin: 5px 0;">
+          <span style="font-size: 20px;">${item.icon}</span>
+          <span style="color: ${color}; font-weight: bold;">${item.name}</span>
+        </div>
+      `;
+    }).join("");
+    
+    overlay.innerHTML = `
+      <div style="color: #00ff00; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
+        📦 LOOT ACQUIRED
+      </div>
+      <div style="max-height: 300px; overflow-y: auto; padding: 10px;">
+        ${itemsHtml}
+      </div>
+      <div style="color: #666; font-size: 12px; margin-top: 20px;">
+        클릭하여 계속...
+      </div>
+    `;
+    
+    overlay.onclick = () => {
+      overlay.style.animation = "fadeOut 0.3s ease-in forwards";
+      setTimeout(() => overlay.remove(), 300);
+    };
+    
+    document.body.appendChild(overlay);
+    
+    // 획득 목록 초기화
+    this.collectedItemsThisStage = [];
   }
 
   // 퍼즐 성공 메시지 표시 (터미널 스타일 - 클리어 메시지와 동일)
@@ -1817,6 +2033,9 @@ export class GameManager {
    * 스테이지 설정을 DefenseGame에 적용
    */
   applyStageSettings(stage) {
+    // 스테이지 시작 시 획득 아이템 목록 초기화
+    this.collectedItemsThisStage = [];
+    
     // 안전영역 여부
     this.defenseGame.isSafeZone = stage.type === "safe";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate;
@@ -4406,6 +4625,9 @@ export class GameManager {
     }
 
     await this.terminal.waitForEnter();
+    
+    // 획득 아이템 요약 표시
+    this.showLootSummary();
 
     // 디펜스로 복귀 (장비 효과 적용)
     this.switchMode("defense");
