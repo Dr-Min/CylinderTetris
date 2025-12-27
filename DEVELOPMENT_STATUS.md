@@ -4,7 +4,7 @@
 
 ---
 
-## 🆕 최신 업데이트 (v9.3.1)
+## 🆕 최신 업데이트 (v9.3.2)
 
 ### 🐛 버그 수정
 
@@ -15,6 +15,13 @@
   - `loadSavedMoney()`로 로드된 값 유지
   - 시작 머니 보너스는 `startMoneyBonus` 변수에 저장만 하고, 새 게임 시작 시에만 적용
   - DATA가 매번 0으로 초기화되는 문제 해결
+
+#### 아이템 선택 화면 타이밍 수정
+- **문제**: 아이템 선택 화면이 점령 완료 시 표시되지 않음
+- **수정**:
+  - `handleConquestComplete`에 `showLootSummary()` 추가
+  - `showLootSelectionScreen()`을 Promise 반환하도록 수정
+  - 선택 완료 후에만 다음 단계로 진행
 
 ---
 

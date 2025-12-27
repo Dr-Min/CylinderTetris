@@ -1515,21 +1515,27 @@ export class GameManager {
   /**
    * 스테이지 클리어 시 아이템 선택 화면
    * 획득한 아이템 중 인벤토리에 넣을 것을 선택
+   * @returns {Promise} 선택 완료 시 resolve
    */
-  showLootSummary() {
+  async showLootSummary() {
     // 획득한 아이템이 없으면 스킵
     if (this.collectedItemsThisStage.length === 0) return;
     
-    // 선택 화면으로 이동
-    this.showLootSelectionScreen();
+    // 선택 화면으로 이동 (완료될 때까지 대기)
+    await this.showLootSelectionScreen();
   }
   
   /**
    * 아이템 선택 화면 (인벤토리에 넣을 아이템 선택)
+   * @returns {Promise} 선택 완료 시 resolve
    */
   showLootSelectionScreen() {
+    return new Promise((resolve) => {
     const lootItems = [...this.collectedItemsThisStage]; // 복사본
     const inventoryData = this.inventoryManager.getData();
+    
+    // Promise resolve를 저장 (버튼 클릭 시 호출)
+    this._lootSelectionResolve = resolve;
     
     const overlay = document.createElement("div");
     overlay.id = "loot-selection-overlay";
@@ -1725,6 +1731,7 @@ export class GameManager {
     
     document.body.appendChild(overlay);
     render();
+    }); // Promise 닫기
   }
   
   /**
@@ -1750,7 +1757,14 @@ export class GameManager {
     
     // 오버레이 제거
     overlay.style.animation = "fadeOut 0.3s ease-in forwards";
-    setTimeout(() => overlay.remove(), 300);
+    setTimeout(() => {
+      overlay.remove();
+      // Promise resolve 호출 (화면이 완전히 닫힌 후)
+      if (this._lootSelectionResolve) {
+        this._lootSelectionResolve();
+        this._lootSelectionResolve = null;
+      }
+    }, 300);
   }
 
   // 퍼즐 성공 메시지 표시 (터미널 스타일 - 클리어 메시지와 동일)
@@ -1874,6 +1888,9 @@ export class GameManager {
     this.terminal.setDefenseMode(true);
     await this.terminal.printSystemMessage("!!! SECTOR CONQUERED !!!");
     await this.terminal.printSystemMessage("Territory secured.");
+
+    // 획득 아이템 선택 화면 표시
+    await this.showLootSummary();
 
     // 선택지 표시
     await this.showCommandMenu();

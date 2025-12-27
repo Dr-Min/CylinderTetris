@@ -1,5 +1,5 @@
-// v9.5.1 - DATA save bug fix + debug logging
-const CACHE_NAME = "hacker-tetris-v18.4";
+// v9.5.2 - Loot selection screen async fix
+const CACHE_NAME = "hacker-tetris-v18.5";
 const ASSETS = [
   "./",
   "./index.html",
