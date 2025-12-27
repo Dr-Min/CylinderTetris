@@ -899,17 +899,30 @@ export class GameManager {
     const recallSuccess = await this.startRecallCasting(5000);
     
     if (recallSuccess) {
+      console.log("[RECALL] 1. 탈출 애니메이션 시작");
+      
       // 귀환 성공 - 위로 올라가는 연출
       await this.defenseGame.playOutroAnimation();
+      
+      console.log("[RECALL] 2. 애니메이션 완료 - 게임 중지");
+      
+      // 게임 중지 (렌더링 멈춤)
+      this.defenseGame.stop();
       
       await this.terminal.printSystemMessage("✅ RECALL COMPLETE!");
       await this.terminal.printSystemMessage("Returning to Safe Zone...");
       
+      console.log("[RECALL] 3. 아이템 선택 화면");
+      
       // 획득 아이템 선택 화면 표시
       await this.showLootSummary();
       
+      console.log("[RECALL] 4. Safe Zone으로 이동");
+      
       // Safe Zone (스테이지 0)으로 이동 (드랍 연출 포함)
       await this.moveToStage(0);
+      
+      console.log("[RECALL] 5. 완료");
     } else {
       // 귀환 실패 (피격으로 취소됨)
       await this.terminal.printSystemMessage("❌ RECALL INTERRUPTED!");

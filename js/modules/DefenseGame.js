@@ -897,6 +897,8 @@ export class DefenseGame {
   resume() {
     if (!this.isRunning) {
       this.isRunning = true;
+      this.canvas.style.display = "block";
+      this.uiLayer.style.display = "block";
       this.lastTime = performance.now();
       requestAnimationFrame((t) => this.animate(t));
     }
@@ -4968,6 +4970,7 @@ export class DefenseGame {
    */
   playOutroAnimation() {
     return new Promise((resolve) => {
+      console.log("[OUTRO] 애니메이션 시작");
       
       const isMobile = window.innerWidth <= 768;
       const duration = isMobile ? 400 : 500;
@@ -4976,13 +4979,23 @@ export class DefenseGame {
       const endScale = isMobile ? 30.0 : 50.0;
 
       // 연출 중에는 적 생성 중지 + HP 표시 숨김
-      const originalSpawnRate = this.enemySpawnTimer;
       this.enemySpawnTimer = 99999;
       this.isOutroPlaying = true;
       
-      // 게임이 멈춰있어도 렌더링하기 위해 isRunning 강제 true
-      const wasRunning = this.isRunning;
-      this.isRunning = true;
+      // 화면 덮는 검은 오버레이 (페이드인용)
+      const overlay = document.createElement("div");
+      overlay.id = "outro-overlay";
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: #000;
+        opacity: 0;
+        z-index: 9998;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      `;
+      document.body.appendChild(overlay);
 
       const animateAscend = (now) => {
         const elapsed = now - startTime;
@@ -4995,17 +5008,33 @@ export class DefenseGame {
         // 스케일만 커짐 - 코어가 화면을 가득 채우며 지나감
         this.core.scale = startScale + (endScale - startScale) * easedProgress;
         
+        // 마지막 30%에서 페이드 투 블랙
+        if (progress > 0.7) {
+          const fadeProgress = (progress - 0.7) / 0.3;
+          overlay.style.opacity = fadeProgress.toString();
+        }
+        
+        console.log("[OUTRO] progress:", progress.toFixed(2), "scale:", this.core.scale.toFixed(1));
+        
         // 강제 렌더링 (메인 루프가 안 돌아도 보이게)
         this.render();
 
         if (progress < 1) {
           requestAnimationFrame(animateAscend);
         } else {
-          // 완료 - 리셋 (Safe Zone 전환 직전)
+          console.log("[OUTRO] 애니메이션 완료 - 화면 검정");
+          // 완료 - 화면은 검정 상태로 유지
+          overlay.style.opacity = "1";
+          
+          // 0.5초 후 오버레이 제거 (moveToStage가 처리)
+          setTimeout(() => {
+            overlay.remove();
+            console.log("[OUTRO] 오버레이 제거");
+          }, 500);
+          
+          // 스케일 리셋 (화면이 검정이라 안 보임)
           this.core.scale = 1;
           this.isOutroPlaying = false;
-          this.isRunning = wasRunning;
-          this.enemySpawnTimer = originalSpawnRate;
           resolve();
         }
       };
