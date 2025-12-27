@@ -1074,11 +1074,24 @@ export class DefenseGame {
     // 0.76 말풍선 업데이트
     this.updateSpeechBubbles();
     
-    // 0.77 랜덤 idle 대사 (낮은 확률)
-    if (Math.random() < 0.001) { // 약 60초에 1번 (0.1% * 60fps * 60s)
-      const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
-      if (randomAlly) {
-        this.tryVirusSpeech(randomAlly, 'idle', 1.0);
+    // 0.77 랜덤 대사
+    if (this.isSafeZone) {
+      // Safe Zone: 더 자주, 대화/혼잣말
+      if (Math.random() < 0.0003) { // 약 3분에 1번
+        const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
+        if (randomAlly) {
+          // 50% 대화, 50% 혼잣말
+          const category = Math.random() < 0.5 ? 'safeChat' : 'safeSolo';
+          this.tryVirusSpeech(randomAlly, category, 1.0);
+        }
+      }
+    } else {
+      // 전투 중: 매우 드물게 idle 대사
+      if (Math.random() < 0.00005) { // 약 5분에 1번
+        const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
+        if (randomAlly) {
+          this.tryVirusSpeech(randomAlly, 'idle', 1.0);
+        }
       }
     }
 
@@ -2388,6 +2401,12 @@ export class DefenseGame {
 
   // 유동적인 순찰 (물결치듯)
   fluidPatrol(v, dt, baseRadius = 95) {
+    // Safe Zone에서는 자유롭게 돌아다님
+    if (this.isSafeZone) {
+      this.safeZoneWander(v, dt);
+      return;
+    }
+    
     // 초기화
     if (!v.patrolAngle) v.patrolAngle = v.angle || Math.random() * Math.PI * 2;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
@@ -2412,6 +2431,66 @@ export class DefenseGame {
     // 약간의 랜덤 움직임 (자연스러움)
     v.x += (Math.random() - 0.5) * 0.5;
     v.y += (Math.random() - 0.5) * 0.5;
+  }
+  
+  // Safe Zone 전용: 자유롭게 돌아다님
+  safeZoneWander(v, dt) {
+    // 초기화
+    if (!v.wanderTargetX || !v.wanderTargetY || !v.wanderTimer) {
+      v.wanderTargetX = this.core.x + (Math.random() - 0.5) * 200;
+      v.wanderTargetY = this.core.y + (Math.random() - 0.5) * 200;
+      v.wanderTimer = 0;
+      v.wanderDuration = 2 + Math.random() * 4; // 2~6초
+      v.isIdle = Math.random() < 0.3; // 30% 확률로 가만히 있기
+    }
+    
+    v.wanderTimer += dt;
+    
+    // 시간이 지나면 새 목표 설정
+    if (v.wanderTimer >= v.wanderDuration) {
+      v.wanderTimer = 0;
+      v.wanderDuration = 2 + Math.random() * 5;
+      
+      // 가끔 다른 바이러스 근처로 이동 (대화하러)
+      if (Math.random() < 0.4 && this.alliedViruses.length > 1) {
+        const others = this.alliedViruses.filter(a => a !== v);
+        const target = others[Math.floor(Math.random() * others.length)];
+        v.wanderTargetX = target.x + (Math.random() - 0.5) * 40;
+        v.wanderTargetY = target.y + (Math.random() - 0.5) * 40;
+        v.isIdle = false;
+      } else {
+        // 랜덤 위치
+        const wanderRadius = 100 + Math.random() * 80;
+        const wanderAngle = Math.random() * Math.PI * 2;
+        v.wanderTargetX = this.core.x + Math.cos(wanderAngle) * wanderRadius;
+        v.wanderTargetY = this.core.y + Math.sin(wanderAngle) * wanderRadius;
+        v.isIdle = Math.random() < 0.3;
+      }
+    }
+    
+    // 가만히 있는 상태
+    if (v.isIdle) {
+      // 약간의 흔들림만
+      v.x += (Math.random() - 0.5) * 0.3;
+      v.y += (Math.random() - 0.5) * 0.3;
+      return;
+    }
+    
+    // 목표 위치로 천천히 이동
+    const dist = Math.hypot(v.wanderTargetX - v.x, v.wanderTargetY - v.y);
+    
+    if (dist > 5) {
+      // 매우 느리게, 여유롭게 이동
+      this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.15);
+    } else {
+      // 도착하면 잠시 쉬기
+      v.isIdle = true;
+      v.wanderTimer = v.wanderDuration - 1; // 1초 후 다시 이동
+    }
+    
+    // 약간의 랜덤 흔들림
+    v.x += (Math.random() - 0.5) * 0.3;
+    v.y += (Math.random() - 0.5) * 0.3;
   }
 
   // 배리어 내부 진입 방지 + 최대 거리 제한

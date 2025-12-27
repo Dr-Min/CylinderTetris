@@ -1,5 +1,5 @@
-// v9.7.0 - Allied virus dialogue system + eyes + size adjustment
-const CACHE_NAME = "hacker-tetris-v19.5";
+// v9.7.1 - Safe Zone wander behavior + chat dialogues + reduced idle frequency
+const CACHE_NAME = "hacker-tetris-v19.6";
 const ASSETS = [
   "./",
   "./index.html",
