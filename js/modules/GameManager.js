@@ -1995,15 +1995,17 @@ export class GameManager {
         background: rgba(0, 50, 0, 0.3);
       `;
 
-      data.slotTypes.forEach((type, idx) => {
-        const slot = this.createSlotElement(
+      // 장착 슬롯 4개 표시 (해금 여부에 따라)
+      for (let idx = 0; idx < 4; idx++) {
+        const isUnlocked = idx < data.unlockedSlots;
+        const slot = this.createEquipSlotElement(
           data.equipSlots[idx],
-          type,
           idx,
-          true
+          isUnlocked,
+          true // readOnly
         );
         equipRow.appendChild(slot);
-      });
+      }
       overlay.appendChild(equipRow);
 
       // 출발 버튼
@@ -2145,15 +2147,21 @@ export class GameManager {
       background: rgba(0, 50, 0, 0.3);
     `;
 
-    data.slotTypes.forEach((type, idx) => {
-      const slot = this.createSlotElement(
+    // 장착 슬롯 4개 표시
+    for (let idx = 0; idx < 4; idx++) {
+      const isUnlocked = idx < data.unlockedSlots;
+      const slot = this.createEquipSlotElement(
         data.equipSlots[idx],
-        type,
         idx,
-        true
+        isUnlocked,
+        false // 클릭 가능
       );
+      
+      // 슬롯 클릭 이벤트 (해금되지 않은 슬롯은 해금, 해금된 슬롯은 해제)
+      slot.onclick = () => this.handleEquipSlotClick(idx, data, overlay);
+      
       equipSection.appendChild(slot);
-    });
+    }
     overlay.appendChild(equipSection);
 
     // 라벨
@@ -2180,7 +2188,13 @@ export class GameManager {
     `;
 
     data.inventory.forEach((item, idx) => {
-      const slot = this.createSlotElement(item, null, idx, false);
+      const slot = this.createInventorySlotElement(item, idx);
+      
+      // 인벤토리 아이템 클릭 = 장착 시도
+      if (item) {
+        slot.onclick = () => this.handleInventoryItemClick(idx, overlay);
+      }
+      
       invGrid.appendChild(slot);
     });
     overlay.appendChild(invGrid);
@@ -4075,7 +4089,234 @@ export class GameManager {
   }
 
   /**
-   * 슬롯 요소 생성
+   * 새 아이템 시스템용 장착 슬롯 요소 생성
+   */
+  createEquipSlotElement(item, index, isUnlocked, readOnly = false) {
+    const slot = document.createElement("div");
+    
+    const bgColor = !isUnlocked ? "rgba(50, 50, 50, 0.5)" 
+                  : item ? "rgba(0, 100, 50, 0.5)" 
+                  : "rgba(0, 0, 0, 0.3)";
+    const borderColor = !isUnlocked ? "#333" : item ? "#00ff00" : "#555";
+    
+    slot.style.cssText = `
+      width: 55px;
+      height: 55px;
+      border: 2px solid ${borderColor};
+      background: ${bgColor};
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: var(--term-font);
+      font-size: 8px;
+      color: #fff;
+      cursor: ${readOnly || !isUnlocked ? "default" : "pointer"};
+      transition: all 0.2s;
+      border-radius: 5px;
+    `;
+
+    if (!isUnlocked) {
+      // 잠긴 슬롯
+      const lockIcon = document.createElement("div");
+      lockIcon.style.cssText = "font-size: 16px; color: #555;";
+      lockIcon.innerText = "🔒";
+      slot.appendChild(lockIcon);
+      
+      const cost = this.inventoryManager.slotUnlockCosts[index - 1];
+      if (cost) {
+        const costLabel = document.createElement("div");
+        costLabel.style.cssText = "font-size: 7px; color: #666; margin-top: 2px;";
+        costLabel.innerText = `${cost} DATA`;
+        slot.appendChild(costLabel);
+      }
+    } else if (item) {
+      // 아이템 있음
+      const color = this.itemDatabase.getRarityColor(item.rarity);
+      
+      const icon = document.createElement("div");
+      icon.style.cssText = `font-size: 18px;`;
+      icon.innerText = item.icon;
+      slot.appendChild(icon);
+      
+      const name = document.createElement("div");
+      name.style.cssText = `font-size: 6px; color: ${color}; text-align: center; margin-top: 2px;`;
+      name.innerText = item.name.split(" ")[0]; // 첫 단어만
+      slot.appendChild(name);
+    } else {
+      // 빈 슬롯
+      const empty = document.createElement("div");
+      empty.style.cssText = "color: #444; font-size: 10px;";
+      empty.innerText = "EMPTY";
+      slot.appendChild(empty);
+    }
+
+    if (isUnlocked && !readOnly) {
+      slot.onmouseenter = () => {
+        slot.style.borderColor = "#00ff00";
+        slot.style.boxShadow = "0 0 10px #00ff0050";
+      };
+      slot.onmouseleave = () => {
+        slot.style.borderColor = item ? "#00ff00" : "#555";
+        slot.style.boxShadow = "none";
+      };
+    }
+
+    return slot;
+  }
+
+  /**
+   * 인벤토리 슬롯 요소 생성
+   */
+  createInventorySlotElement(item, index) {
+    const slot = document.createElement("div");
+    
+    const bgColor = item ? "rgba(0, 80, 50, 0.5)" : "rgba(0, 0, 0, 0.3)";
+    const borderColor = item ? this.itemDatabase.getRarityColor(item.rarity) : "#333";
+    
+    slot.style.cssText = `
+      width: 50px;
+      height: 50px;
+      border: 1px solid ${borderColor};
+      background: ${bgColor};
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: var(--term-font);
+      cursor: ${item ? "pointer" : "default"};
+      transition: all 0.2s;
+      border-radius: 3px;
+    `;
+
+    if (item) {
+      const color = this.itemDatabase.getRarityColor(item.rarity);
+      
+      const icon = document.createElement("div");
+      icon.style.cssText = `font-size: 16px;`;
+      icon.innerText = item.icon;
+      slot.appendChild(icon);
+      
+      const name = document.createElement("div");
+      name.style.cssText = `font-size: 5px; color: ${color}; text-align: center;`;
+      name.innerText = item.name.split(" ").slice(0, 2).join(" ");
+      slot.appendChild(name);
+      
+      slot.onmouseenter = () => {
+        slot.style.boxShadow = `0 0 8px ${color}`;
+        slot.style.transform = "scale(1.05)";
+      };
+      slot.onmouseleave = () => {
+        slot.style.boxShadow = "none";
+        slot.style.transform = "scale(1)";
+      };
+    } else {
+      slot.style.opacity = "0.3";
+    }
+
+    return slot;
+  }
+
+  /**
+   * 장착 슬롯 클릭 처리
+   */
+  handleEquipSlotClick(slotIdx, data, overlay) {
+    const isUnlocked = slotIdx < data.unlockedSlots;
+    
+    if (!isUnlocked) {
+      // 슬롯 해금 시도
+      const result = this.inventoryManager.unlockSlot(this.currentMoney, (cost) => {
+        this.currentMoney -= cost;
+        this.saveMoney();
+        this.terminal.updateData(this.currentMoney);
+      });
+      
+      if (result.success) {
+        this.showNotification(result.message, "#00ff00");
+        this.refreshInventoryUI(overlay);
+      } else {
+        this.showNotification(result.message, "#ff0000");
+      }
+    } else if (data.equipSlots[slotIdx]) {
+      // 장착 해제
+      const result = this.inventoryManager.unequip(slotIdx);
+      if (result.success) {
+        this.showNotification(result.message, "#ffaa00");
+        this.refreshInventoryUI(overlay);
+      } else {
+        this.showNotification(result.message, "#ff0000");
+      }
+    }
+  }
+
+  /**
+   * 인벤토리 아이템 클릭 처리 (첫 번째 빈 슬롯에 장착)
+   */
+  handleInventoryItemClick(invIdx, overlay) {
+    const data = this.inventoryManager.getData();
+    
+    // 첫 번째 빈 해금 슬롯 찾기
+    let targetSlot = -1;
+    for (let i = 0; i < data.unlockedSlots; i++) {
+      if (!data.equipSlots[i]) {
+        targetSlot = i;
+        break;
+      }
+    }
+    
+    if (targetSlot === -1) {
+      this.showNotification("모든 슬롯이 사용 중!", "#ff0000");
+      return;
+    }
+    
+    const result = this.inventoryManager.equip(invIdx, targetSlot);
+    if (result.success) {
+      this.showNotification(result.message, "#00ff00");
+      this.refreshInventoryUI(overlay);
+    } else {
+      this.showNotification(result.message, "#ff0000");
+    }
+  }
+
+  /**
+   * 인벤토리 UI 새로고침
+   */
+  refreshInventoryUI(overlay) {
+    overlay.remove();
+    this.showInventory();
+  }
+
+  /**
+   * 간단한 알림 표시
+   */
+  showNotification(message, color = "#00ff00") {
+    const existing = document.getElementById("simple-notification");
+    if (existing) existing.remove();
+    
+    const notif = document.createElement("div");
+    notif.id = "simple-notification";
+    notif.style.cssText = `
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      border: 1px solid ${color};
+      color: ${color};
+      padding: 10px 20px;
+      font-family: var(--term-font);
+      font-size: 12px;
+      z-index: 99999;
+      border-radius: 5px;
+    `;
+    notif.innerText = message;
+    document.body.appendChild(notif);
+    
+    setTimeout(() => notif.remove(), 2000);
+  }
+
+  /**
+   * 슬롯 요소 생성 (레거시)
    */
   createSlotElement(item, slotType, index, isEquipSlot) {
     const slot = document.createElement("div");
