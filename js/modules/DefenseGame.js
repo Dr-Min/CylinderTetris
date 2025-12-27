@@ -3710,14 +3710,20 @@ export class DefenseGame {
     // 코어 시각적 위치 (발사 시 움직임 효과 포함)
     const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
     const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
+    
+    // 탈출 애니메이션 중 투명도 적용
+    const coreAlpha = this.core.outroAlpha !== undefined ? this.core.outroAlpha : 1;
 
     // 3. 코어 및 포탑 (포탑 발사대 삭제) - 시각적 오프셋 적용
     this.ctx.save();
+    this.ctx.globalAlpha = coreAlpha;
     this.ctx.translate(coreVisualX, coreVisualY);
     this.ctx.rotate(this.turret.angle);
     // 발사대 그리기 삭제됨
     this.ctx.restore();
 
+    this.ctx.save();
+    this.ctx.globalAlpha = coreAlpha;
     this.ctx.beginPath();
     this.ctx.arc(coreVisualX, coreVisualY, scaledRadius, 0, Math.PI * 2);
     this.ctx.fillStyle = this.core.color;
@@ -3725,6 +3731,7 @@ export class DefenseGame {
     this.ctx.lineWidth = 3 * coreScale;
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.stroke();
+    this.ctx.restore();
 
     // 코어 체력 퍼센트 표시 (코어 아래에 표시)
     if (this.showCoreHP !== false) {
@@ -4970,32 +4977,36 @@ export class DefenseGame {
   playOutroAnimation() {
     return new Promise((resolve) => {
       const isMobile = window.innerWidth <= 768;
-      const duration = isMobile ? 250 : 300; // 드랍과 동일
+      const duration = isMobile ? 250 : 300;
       const startTime = performance.now();
       const startScale = 1;
-      const endScale = isMobile ? 20.0 : 50.0; // 드랍의 역방향 (카메라 뒤로)
+      const endScale = isMobile ? 20.0 : 50.0;
 
       // 연출 중에는 적 생성 중지
       const originalSpawnRate = this.enemySpawnTimer;
       this.enemySpawnTimer = 99999;
+      
+      // 코어 숨기기 (애니메이션 중 중앙에 남는 문제 해결)
+      this.isOutroPlaying = true;
 
       const animateAscend = (now) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // ease-in quint (드랍의 역방향 - 점점 빨라지며)
         const easeInQuint = (t) => t * t * t * t * t;
         const easedProgress = easeInQuint(progress);
 
-        // 스케일만 커짐 (Y 위치는 그대로 중앙!)
-        // 카메라를 향해 다가와서 뒤로 지나감
+        // 스케일 커지면서 투명해짐
         this.core.scale = startScale + (endScale - startScale) * easedProgress;
+        this.core.outroAlpha = 1 - easedProgress; // 점점 투명
 
         if (progress < 1) {
           requestAnimationFrame(animateAscend);
         } else {
           // 완료 - 리셋
           this.core.scale = 1;
+          this.core.outroAlpha = 1;
+          this.isOutroPlaying = false;
           this.enemySpawnTimer = originalSpawnRate;
           resolve();
         }
@@ -5005,8 +5016,11 @@ export class DefenseGame {
     });
   }
 
-  // 착지 충격 효과 (화면 번쩍 + 흔들림 + 충격파)
+  // 착지 충격 효과 (화면 번쩍 + 흔들림 + 충격파 + 사운드)
   impactEffect() {
+    // 0. 착지 사운드 (쾅!)
+    this.playImpactSound();
+    
     // 1. 화면 번쩍 (흰색 플래시)
     const flash = document.createElement("div");
     flash.style.cssText = `
@@ -5031,6 +5045,158 @@ export class DefenseGame {
 
     // 3. 충격파 파티클
     this.spawnShockwave();
+    
+    // 4. Safe Zone이면 글리치 텍스트 표시
+    if (this.isSafeZone) {
+      setTimeout(() => this.showSafeZoneText(), 300);
+    }
+  }
+  
+  // 착지 사운드 재생 (Web Audio API)
+  playImpactSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // 저주파 충격음 생성
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      // 임팩트 사운드 설정 (저음 + 빠른 감쇠)
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(80, audioCtx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
+      
+      gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.2);
+      
+      // 노이즈 추가 (충격 느낌)
+      const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+      const noiseData = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseData.length; i++) {
+        noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+      }
+      
+      const noiseSource = audioCtx.createBufferSource();
+      const noiseGain = audioCtx.createGain();
+      noiseSource.buffer = noiseBuffer;
+      noiseSource.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noiseGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      noiseSource.start(audioCtx.currentTime);
+    } catch (e) {
+      console.log("Audio not supported:", e);
+    }
+  }
+  
+  // Safe Zone 글리치 텍스트 표시
+  showSafeZoneText() {
+    // 글리치 컨테이너 생성
+    const container = document.createElement("div");
+    container.id = "safezone-text";
+    container.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10000;
+      pointer-events: none;
+      font-family: 'Courier New', monospace;
+      font-size: 48px;
+      font-weight: bold;
+      color: #00ff00;
+      text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+      opacity: 0;
+    `;
+    container.textContent = "SAFE ZONE";
+    document.body.appendChild(container);
+    
+    // 글리치 애니메이션
+    let glitchCount = 0;
+    const maxGlitches = 12;
+    
+    const glitchInterval = setInterval(() => {
+      glitchCount++;
+      
+      // 글리치 효과: 위치 떨림 + 색상 분리 + 깜빡임
+      const offsetX = (Math.random() - 0.5) * 20;
+      const offsetY = (Math.random() - 0.5) * 10;
+      const skewX = (Math.random() - 0.5) * 5;
+      
+      container.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) skewX(${skewX}deg)`;
+      container.style.opacity = Math.random() > 0.3 ? "1" : "0.5";
+      
+      // 색상 분리 효과 (치직 느낌)
+      if (Math.random() > 0.5) {
+        container.style.textShadow = `
+          ${Math.random() * 5}px 0 #ff0000,
+          ${-Math.random() * 5}px 0 #00ffff,
+          0 0 10px #00ff00,
+          0 0 20px #00ff00
+        `;
+      } else {
+        container.style.textShadow = "0 0 10px #00ff00, 0 0 20px #00ff00";
+      }
+      
+      // 글리치 사운드 (치직)
+      if (glitchCount <= 6 && Math.random() > 0.5) {
+        this.playGlitchSound();
+      }
+      
+      if (glitchCount >= maxGlitches) {
+        clearInterval(glitchInterval);
+        // 안정화 후 페이드아웃
+        container.style.transform = "translate(-50%, -50%)";
+        container.style.textShadow = "0 0 10px #00ff00, 0 0 20px #00ff00";
+        container.style.opacity = "1";
+        
+        setTimeout(() => {
+          container.style.transition = "opacity 0.5s";
+          container.style.opacity = "0";
+          setTimeout(() => container.remove(), 500);
+        }, 1000);
+      }
+    }, 80);
+  }
+  
+  // 글리치 사운드 (치직)
+  playGlitchSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // 노이즈 버퍼
+      const bufferSize = audioCtx.sampleRate * 0.05;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const noiseData = noiseBuffer.getChannelData(0);
+      
+      for (let i = 0; i < bufferSize; i++) {
+        noiseData[i] = (Math.random() * 2 - 1) * 0.5;
+      }
+      
+      const noiseSource = audioCtx.createBufferSource();
+      const gainNode = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      
+      filter.type = 'highpass';
+      filter.frequency.value = 2000;
+      
+      noiseSource.buffer = noiseBuffer;
+      noiseSource.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      
+      noiseSource.start(audioCtx.currentTime);
+    } catch (e) {
+      // Audio not supported
+    }
   }
 
   // 글리치 효과로 HP 표시
