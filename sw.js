@@ -1,5 +1,5 @@
-// v9.6.0 - Recall fly through camera + game start drop animation
-const CACHE_NAME = "hacker-tetris-v19.3";
+// v9.6.1 - Fix game start (resume -> start)
+const CACHE_NAME = "hacker-tetris-v19.4";
 const ASSETS = [
   "./",
   "./index.html",

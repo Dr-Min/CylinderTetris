@@ -776,9 +776,9 @@ export class GameManager {
       this.defenseGame.updateAlliedInfo(alliedInfo);
       this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
       
-      // 4. 기존 아군 제거 후 게임 재개
+      // 4. 기존 아군 제거 후 게임 시작
       this.defenseGame.alliedViruses = [];
-      this.defenseGame.resume();
+      this.defenseGame.start(); // start()로 게임 시작!
       
       // 5. 코어 드랍 연출
       await this.defenseGame.playIntroAnimation();
