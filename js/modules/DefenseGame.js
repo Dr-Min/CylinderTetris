@@ -3564,6 +3564,11 @@ export class DefenseGame {
       }
       // else: 0 (12시 고정)
       
+      // 디버깅 로그 (가끔만)
+      if (lookIntensity > 0 && Math.random() < 0.05) {
+        console.log("[HELPER FACE] intensity:", lookIntensity.toFixed(2), "timeSinceFire:", timeSinceFire.toFixed(0), "lastFireTime:", h.lastFireTime);
+      }
+      
       const lookStrength = h.radius * 0.2 * lookIntensity; // 발사 시 20% 이동
       const fireAngle = h.lastFireAngle || 0;
       const lookX = Math.cos(fireAngle) * lookStrength;
@@ -4482,6 +4487,7 @@ export class DefenseGame {
     // 발사 각도 저장 (얼굴 움직임용)
     this.helper.lastFireAngle = baseAngle;
     this.helper.lastFireTime = performance.now();
+    console.log("[HELPER FIRE] angle:", baseAngle.toFixed(2), "time:", this.helper.lastFireTime);
 
     const speed = this.helper.projectileSpeed || 400;
     const projectileCount = mode.projectileCount || 1;
