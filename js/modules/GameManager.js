@@ -1438,23 +1438,16 @@ export class GameManager {
   
   /**
    * 아이템 수집 완료 처리 (수집 바이러스가 코어에 도착했을 때)
+   * 인벤토리에 바로 넣지 않고, 스테이지 끝날 때 선택하도록 저장만 함
    */
   handleItemCollected(item) {
     debugLog("GameManager", `아이템 수집됨: ${item.name}`);
     
-    // 현재 스테이지 획득 목록에 추가
+    // 현재 스테이지 획득 목록에만 추가 (인벤토리에 바로 안 넣음)
     this.collectedItemsThisStage.push(item);
     
-    // 인벤토리에 추가
-    const result = this.inventoryManager.addToInventory(item);
-    
-    if (result.success) {
-      // 획득 알림 표시
-      this.showItemDropNotification(item);
-    } else {
-      // 인벤토리 가득 참 알림
-      this.showItemDropNotification(item, true);
-    }
+    // 획득 알림 표시 (수집됨 표시)
+    this.showItemDropNotification(item);
   }
   
   /**
@@ -1520,58 +1513,244 @@ export class GameManager {
   }
   
   /**
-   * 스테이지 클리어 시 획득 아이템 요약 표시
+   * 스테이지 클리어 시 아이템 선택 화면
+   * 획득한 아이템 중 인벤토리에 넣을 것을 선택
    */
   showLootSummary() {
+    // 획득한 아이템이 없으면 스킵
     if (this.collectedItemsThisStage.length === 0) return;
     
+    // 선택 화면으로 이동
+    this.showLootSelectionScreen();
+  }
+  
+  /**
+   * 아이템 선택 화면 (인벤토리에 넣을 아이템 선택)
+   */
+  showLootSelectionScreen() {
+    const lootItems = [...this.collectedItemsThisStage]; // 복사본
+    const inventoryData = this.inventoryManager.getData();
+    
     const overlay = document.createElement("div");
-    overlay.id = "loot-summary-overlay";
+    overlay.id = "loot-selection-overlay";
     overlay.style.cssText = `
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.95);
       z-index: 99998;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.3s ease-out;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      font-family: var(--term-font);
     `;
     
-    let itemsHtml = this.collectedItemsThisStage.map(item => {
-      const color = this.itemDatabase.getRarityColor(item.rarity);
-      return `
-        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; 
-                    border: 1px solid ${color}40; border-radius: 5px; margin: 5px 0;">
-          <span style="font-size: 20px;">${item.icon}</span>
-          <span style="color: ${color}; font-weight: bold;">${item.name}</span>
+    // 선택 상태 추적
+    let selectedLootIndex = null;
+    
+    const render = () => {
+      const invData = this.inventoryManager.getData();
+      const emptySlots = invData.inventory.filter(s => s === null).length;
+      
+      overlay.innerHTML = `
+        <div style="color: #ffaa00; font-size: 20px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 0 10px #ffaa00;">
+          📦 LOOT ACQUIRED (${lootItems.length}개)
         </div>
+        <div style="color: #888; font-size: 11px; margin-bottom: 15px;">
+          아이템을 클릭해서 인벤토리에 추가 | 인벤토리 빈칸: ${emptySlots}/20
+        </div>
+        
+        <div id="loot-items-container" style="
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          max-width: 400px;
+          padding: 15px;
+          border: 2px solid #ffaa00;
+          background: rgba(50, 30, 0, 0.3);
+          margin-bottom: 15px;
+          min-height: 60px;
+        "></div>
+        
+        <div style="color: #00ff00; font-size: 14px; margin: 10px 0;">
+          YOUR INVENTORY
+        </div>
+        
+        <div id="inventory-grid" style="
+          display: grid;
+          grid-template-columns: repeat(10, 40px);
+          gap: 4px;
+          padding: 10px;
+          border: 2px solid #00ff00;
+          background: rgba(0, 30, 0, 0.3);
+          margin-bottom: 15px;
+        "></div>
+        
+        <div id="data-conversion-info" style="
+          color: #888;
+          font-size: 11px;
+          margin-bottom: 15px;
+          text-align: center;
+        "></div>
+        
+        <button id="confirm-loot-btn" style="
+          padding: 12px 40px;
+          background: rgba(0, 100, 0, 0.5);
+          border: 2px solid #00ff00;
+          color: #00ff00;
+          font-family: var(--term-font);
+          font-size: 14px;
+          cursor: pointer;
+        ">[ CONFIRM ]</button>
       `;
-    }).join("");
-    
-    overlay.innerHTML = `
-      <div style="color: #00ff00; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
-        📦 LOOT ACQUIRED
-      </div>
-      <div style="max-height: 300px; overflow-y: auto; padding: 10px;">
-        ${itemsHtml}
-      </div>
-      <div style="color: #666; font-size: 12px; margin-top: 20px;">
-        클릭하여 계속...
-      </div>
-    `;
-    
-    overlay.onclick = () => {
-      overlay.style.animation = "fadeOut 0.3s ease-in forwards";
-      setTimeout(() => overlay.remove(), 300);
+      
+      // 획득 아이템 렌더링
+      const lootContainer = overlay.querySelector("#loot-items-container");
+      lootItems.forEach((item, idx) => {
+        const color = this.itemDatabase.getRarityColor(item.rarity);
+        const dataValue = this.itemDatabase.getItemDataValue(item);
+        
+        const itemEl = document.createElement("div");
+        itemEl.style.cssText = `
+          width: 45px;
+          height: 55px;
+          border: 2px solid ${color};
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          border-radius: 5px;
+          ${selectedLootIndex === idx ? 'box-shadow: 0 0 15px ' + color + '; transform: scale(1.1);' : ''}
+        `;
+        itemEl.innerHTML = `
+          <div style="font-size: 18px;">${item.icon}</div>
+          <div style="font-size: 6px; color: ${color}; text-align: center;">${item.name.split(' ')[0]}</div>
+          <div style="font-size: 7px; color: #888;">+${dataValue}</div>
+        `;
+        
+        itemEl.onclick = () => {
+          // 인벤토리에 빈 공간이 있으면 바로 추가
+          const result = this.inventoryManager.addToInventory(item);
+          if (result.success) {
+            lootItems.splice(idx, 1);
+            this.showNotification(`${item.name} 추가됨!`, color);
+            render();
+          } else {
+            // 빈 공간 없으면 선택 상태로
+            selectedLootIndex = idx;
+            this.showNotification("인벤토리에서 교체할 아이템 선택", "#ffaa00");
+            render();
+          }
+        };
+        
+        lootContainer.appendChild(itemEl);
+      });
+      
+      if (lootItems.length === 0) {
+        lootContainer.innerHTML = '<div style="color: #666;">모든 아이템을 인벤토리에 추가했습니다</div>';
+      }
+      
+      // 인벤토리 렌더링
+      const invGrid = overlay.querySelector("#inventory-grid");
+      invData.inventory.forEach((item, idx) => {
+        const slot = document.createElement("div");
+        const color = item ? this.itemDatabase.getRarityColor(item.rarity) : "#333";
+        
+        slot.style.cssText = `
+          width: 40px;
+          height: 40px;
+          border: 1px solid ${color};
+          background: ${item ? 'rgba(0, 50, 30, 0.5)' : 'rgba(0, 0, 0, 0.3)'};
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          cursor: ${item ? 'pointer' : 'default'};
+          transition: all 0.2s;
+          border-radius: 3px;
+        `;
+        
+        if (item) {
+          slot.innerHTML = `
+            <div style="font-size: 14px;">${item.icon}</div>
+            <div style="font-size: 5px; color: ${color};">${item.name.split(' ')[0]}</div>
+          `;
+          
+          slot.onclick = () => {
+            if (selectedLootIndex !== null) {
+              // 선택된 루트 아이템과 교체
+              const lootItem = lootItems[selectedLootIndex];
+              const oldItem = this.inventoryManager.inventory[idx];
+              
+              // 교체
+              this.inventoryManager.inventory[idx] = lootItem;
+              this.inventoryManager.saveState();
+              
+              // 기존 아이템은 루트 목록으로
+              lootItems.splice(selectedLootIndex, 1, oldItem);
+              
+              selectedLootIndex = null;
+              this.showNotification(`${lootItem.name} ↔ ${oldItem.name} 교체!`, "#00ff00");
+              render();
+            }
+          };
+        }
+        
+        invGrid.appendChild(slot);
+      });
+      
+      // DATA 변환 정보 표시
+      if (lootItems.length > 0) {
+        let totalData = 0;
+        lootItems.forEach(item => {
+          totalData += this.itemDatabase.getItemDataValue(item);
+        });
+        
+        const infoEl = overlay.querySelector("#data-conversion-info");
+        infoEl.innerHTML = `⚠️ 남은 ${lootItems.length}개 아이템은 <span style="color: #ffaa00;">${totalData} DATA</span>로 자동 변환됩니다`;
+      }
+      
+      // 확인 버튼
+      overlay.querySelector("#confirm-loot-btn").onclick = () => {
+        this.finalizeLootSelection(lootItems, overlay);
+      };
     };
     
     document.body.appendChild(overlay);
+    render();
+  }
+  
+  /**
+   * 루트 선택 완료 - 남은 아이템 DATA로 변환
+   */
+  finalizeLootSelection(remainingItems, overlay) {
+    let totalData = 0;
+    
+    remainingItems.forEach(item => {
+      totalData += this.itemDatabase.getItemDataValue(item);
+    });
+    
+    if (totalData > 0) {
+      this.currentMoney += totalData;
+      this.saveMoney();
+      this.terminal.updateData(this.currentMoney);
+      
+      this.showNotification(`${remainingItems.length}개 아이템 → ${totalData} DATA 변환!`, "#ffaa00");
+    }
     
     // 획득 목록 초기화
     this.collectedItemsThisStage = [];
+    
+    // 오버레이 제거
+    overlay.style.animation = "fadeOut 0.3s ease-in forwards";
+    setTimeout(() => overlay.remove(), 300);
   }
 
   // 퍼즐 성공 메시지 표시 (터미널 스타일 - 클리어 메시지와 동일)

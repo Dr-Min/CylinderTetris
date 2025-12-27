@@ -152,6 +152,20 @@ export class ItemDatabase {
             rare: 0.25,      // 25%
             legendary: 0.05  // 5%
         };
+        
+        // 등급별 DATA 변환 가격
+        this.rarityDataValue = {
+            common: 50,
+            rare: 150,
+            legendary: 500
+        };
+    }
+    
+    /**
+     * 아이템을 DATA로 변환할 때의 가치
+     */
+    getItemDataValue(item) {
+        return this.rarityDataValue[item.rarity] || 50;
     }
 
     /**
