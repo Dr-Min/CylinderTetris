@@ -4968,8 +4968,9 @@ export class DefenseGame {
    */
   playOutroAnimation() {
     return new Promise((resolve) => {
+      
       const isMobile = window.innerWidth <= 768;
-      const duration = isMobile ? 300 : 400;
+      const duration = isMobile ? 400 : 500;
       const startTime = performance.now();
       const startScale = 1;
       const endScale = isMobile ? 30.0 : 50.0;
@@ -4978,6 +4979,10 @@ export class DefenseGame {
       const originalSpawnRate = this.enemySpawnTimer;
       this.enemySpawnTimer = 99999;
       this.isOutroPlaying = true;
+      
+      // 게임이 멈춰있어도 렌더링하기 위해 isRunning 강제 true
+      const wasRunning = this.isRunning;
+      this.isRunning = true;
 
       const animateAscend = (now) => {
         const elapsed = now - startTime;
@@ -4989,6 +4994,9 @@ export class DefenseGame {
 
         // 스케일만 커짐 - 코어가 화면을 가득 채우며 지나감
         this.core.scale = startScale + (endScale - startScale) * easedProgress;
+        
+        // 강제 렌더링 (메인 루프가 안 돌아도 보이게)
+        this.render();
 
         if (progress < 1) {
           requestAnimationFrame(animateAscend);
@@ -4996,6 +5004,7 @@ export class DefenseGame {
           // 완료 - 리셋 (Safe Zone 전환 직전)
           this.core.scale = 1;
           this.isOutroPlaying = false;
+          this.isRunning = wasRunning;
           this.enemySpawnTimer = originalSpawnRate;
           resolve();
         }
