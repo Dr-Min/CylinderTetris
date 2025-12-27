@@ -779,12 +779,14 @@ export class GameManager {
       // 4. 기존 아군 제거 후 게임 시작
       this.defenseGame.alliedViruses = [];
       
-      // Safe Zone이면 아군 바이러스 미리 배치
-      if (this.defenseGame.isSafeZone) {
-        this.defenseGame.spawnSafeZoneAllies();
-      }
-      
-      this.defenseGame.start(); // start()로 게임 시작!
+    // Safe Zone이면 아군 바이러스 미리 배치
+    console.log("[DEBUG] switchMode defense - isSafeZone:", this.defenseGame.isSafeZone);
+    if (this.defenseGame.isSafeZone) {
+      console.log("[DEBUG] Calling spawnSafeZoneAllies from switchMode");
+      this.defenseGame.spawnSafeZoneAllies();
+    }
+    
+    this.defenseGame.start(); // start()로 게임 시작!
       
       // 5. 코어 드랍 연출
       await this.defenseGame.playIntroAnimation();
@@ -1120,7 +1122,9 @@ export class GameManager {
     this.defenseGame.alliedViruses = [];
     
     // Safe Zone이면 아군 바이러스 미리 배치
+    console.log("[DEBUG] moveToStage - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
     if (stage.type === "safe") {
+      console.log("[DEBUG] Calling spawnSafeZoneAllies from moveToStage");
       this.defenseGame.spawnSafeZoneAllies();
     }
     
@@ -2502,6 +2506,13 @@ export class GameManager {
 
       // 4. 기존 아군 제거 (겹침 방지) 후 게임 시작
       this.defenseGame.alliedViruses = [];
+      
+      // Safe Zone이면 아군 바이러스 미리 배치 (제거 후에 해야 함!)
+      if (result.stage.type === "safe") {
+        console.log("[DEBUG] Calling spawnSafeZoneAllies from handleMapStageClick");
+        this.defenseGame.spawnSafeZoneAllies();
+      }
+      
       this.defenseGame.resume();
 
       // 5. 코어 강림 연출 (Canvas 내에서 처리)
@@ -2623,10 +2634,9 @@ export class GameManager {
     this.defenseGame.reinforcementComplete = false;
     this.defenseGame.conquerReady = false;
     
-    // Safe Zone이면 아군 바이러스 미리 배치
-    if (stage.type === "safe") {
-      this.defenseGame.spawnSafeZoneAllies();
-    }
+    // Safe Zone 아군 배치는 alliedViruses = [] 이후에 해야 하므로
+    // 여기서는 설정만 하고, 실제 spawn은 호출하는 쪽에서 처리
+    console.log("[DEBUG] applyStageSettings - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
 
     // 실드 상태 복구 (스테이지 이동 시 항상 리셋)
     this.defenseGame.core.shieldActive = true;

@@ -1076,12 +1076,12 @@ export class DefenseGame {
     
     // 0.77 랜덤 대사
     if (this.isSafeZone) {
-      // Safe Zone: 더 자주, 대화/혼잣말
-      if (Math.random() < 0.0003) { // 약 3분에 1번
+      // Safe Zone: 매우 자주 대화! (약 2~3초에 1번)
+      if (Math.random() < 0.008) {
         const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
         if (randomAlly) {
-          // 50% 대화, 50% 혼잣말
-          const category = Math.random() < 0.5 ? 'safeChat' : 'safeSolo';
+          // 70% 대화, 30% 혼잣말
+          const category = Math.random() < 0.7 ? 'safeChat' : 'safeSolo';
           this.tryVirusSpeech(randomAlly, category, 1.0);
         }
       }
@@ -1260,6 +1260,9 @@ export class DefenseGame {
         enemy.y += (dy / distToTarget) * enemy.speed * slowMult * dt;
       }
     }
+
+    // 2.5. 모든 바이러스 겹침 방지 (분리)
+    this.separateAllViruses();
 
     // 3. 포탑 로직 (수동 발사만 - 자동 발사는 조력자가 담당)
     let nearestEnemy = null;
@@ -2403,6 +2406,10 @@ export class DefenseGame {
   fluidPatrol(v, dt, baseRadius = 95) {
     // Safe Zone에서는 자유롭게 돌아다님
     if (this.isSafeZone) {
+      if (!this._safeZoneLogOnce) {
+        console.log("[DEBUG] fluidPatrol -> safeZoneWander (isSafeZone:", this.isSafeZone, ")");
+        this._safeZoneLogOnce = true;
+      }
       this.safeZoneWander(v, dt);
       return;
     }
@@ -2433,68 +2440,242 @@ export class DefenseGame {
     v.y += (Math.random() - 0.5) * 0.5;
   }
   
-  // Safe Zone 전용: 자유롭게 돌아다님
+  // Safe Zone 전용: 홈 기반 자유로운 돌아다니기
   safeZoneWander(v, dt) {
+    const screenW = this.canvas.width;
+    const screenH = this.canvas.height;
+    const margin = 40;
+    
+    // 홈이 없으면 현재 위치를 홈으로
+    if (!v.homeX) {
+      v.homeX = v.x;
+      v.homeY = v.y;
+      v.homeRadius = 80 + Math.random() * 60;
+    }
+    
+    // 홈 근처 랜덤 위치
+    const getNearHomePos = () => {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * v.homeRadius;
+      let x = v.homeX + Math.cos(angle) * dist;
+      let y = v.homeY + Math.sin(angle) * dist;
+      // 화면 경계 체크
+      x = Math.max(margin, Math.min(screenW - margin, x));
+      y = Math.max(margin, Math.min(screenH - margin, y));
+      return { x, y };
+    };
+    
     // 초기화
-    if (!v.wanderTargetX || !v.wanderTargetY || !v.wanderTimer) {
-      v.wanderTargetX = this.core.x + (Math.random() - 0.5) * 200;
-      v.wanderTargetY = this.core.y + (Math.random() - 0.5) * 200;
-      v.wanderTimer = 0;
-      v.wanderDuration = 2 + Math.random() * 4; // 2~6초
-      v.isIdle = Math.random() < 0.3; // 30% 확률로 가만히 있기
-    }
-    
-    v.wanderTimer += dt;
-    
-    // 시간이 지나면 새 목표 설정
-    if (v.wanderTimer >= v.wanderDuration) {
-      v.wanderTimer = 0;
-      v.wanderDuration = 2 + Math.random() * 5;
+    if (v.safeState === undefined) {
+      v.safeState = 'wander';
+      v.stateTimer = 0;
+      v.stateDuration = 3 + Math.random() * 4;
+      v.chatPartner = null;
+      v.chatOffsetAngle = Math.random() * Math.PI * 2;
       
-      // 가끔 다른 바이러스 근처로 이동 (대화하러)
-      if (Math.random() < 0.4 && this.alliedViruses.length > 1) {
-        const others = this.alliedViruses.filter(a => a !== v);
-        const target = others[Math.floor(Math.random() * others.length)];
-        v.wanderTargetX = target.x + (Math.random() - 0.5) * 40;
-        v.wanderTargetY = target.y + (Math.random() - 0.5) * 40;
-        v.isIdle = false;
-      } else {
-        // 랜덤 위치
-        const wanderRadius = 100 + Math.random() * 80;
-        const wanderAngle = Math.random() * Math.PI * 2;
-        v.wanderTargetX = this.core.x + Math.cos(wanderAngle) * wanderRadius;
-        v.wanderTargetY = this.core.y + Math.sin(wanderAngle) * wanderRadius;
-        v.isIdle = Math.random() < 0.3;
-      }
+      // 초기 목표: 홈 근처
+      const pos = getNearHomePos();
+      v.wanderTargetX = pos.x;
+      v.wanderTargetY = pos.y;
     }
     
-    // 가만히 있는 상태
-    if (v.isIdle) {
-      // 약간의 흔들림만
-      v.x += (Math.random() - 0.5) * 0.3;
-      v.y += (Math.random() - 0.5) * 0.3;
-      return;
+    v.stateTimer += dt;
+    
+    // 상태별 행동
+    switch (v.safeState) {
+      case 'wander':
+        // 홈 근처에서 돌아다니기
+        if (v.stateTimer >= v.stateDuration) {
+          v.stateTimer = 0;
+          
+          const roll = Math.random();
+          
+          if (roll < 0.5 && this.alliedViruses.length > 1) {
+            // 50%: 근처에 있는 친구에게 다가가기 (홈에서 200px 이내)
+            const nearbyFriends = this.alliedViruses.filter(a => 
+              a !== v && 
+              a.safeState !== 'approaching' &&
+              Math.hypot(a.x - v.homeX, a.y - v.homeY) < 250
+            );
+            
+            if (nearbyFriends.length > 0) {
+              v.chatPartner = nearbyFriends[Math.floor(Math.random() * nearbyFriends.length)];
+              v.safeState = 'approaching';
+              v.stateDuration = 4 + Math.random() * 3;
+            } else {
+              // 근처에 친구 없으면 홈에서 놀기
+              const pos = getNearHomePos();
+              v.wanderTargetX = pos.x;
+              v.wanderTargetY = pos.y;
+              v.stateDuration = 3 + Math.random() * 3;
+            }
+          } else if (roll < 0.65) {
+            // 15%: 멀리 있는 친구 방문하기 (모험!)
+            const farFriends = this.alliedViruses.filter(a => 
+              a !== v && 
+              Math.hypot(a.homeX - v.homeX, a.homeY - v.homeY) > 150
+            );
+            
+            if (farFriends.length > 0) {
+              v.chatPartner = farFriends[Math.floor(Math.random() * farFriends.length)];
+              v.safeState = 'approaching';
+              v.stateDuration = 6 + Math.random() * 4; // 멀리 가니까 시간 더 줌
+            }
+          } else {
+            // 35%: 홈 근처에서 산책
+            const pos = getNearHomePos();
+            v.wanderTargetX = pos.x;
+            v.wanderTargetY = pos.y;
+            v.stateDuration = 2 + Math.random() * 4;
+          }
+        }
+        
+        // 목표로 이동
+        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
+        break;
+        
+      case 'approaching':
+        // 대화 상대에게 다가가기
+        if (!v.chatPartner || v.chatPartner.hp <= 0) {
+          v.safeState = 'wander';
+          v.chatPartner = null;
+          break;
+        }
+        
+        const distToPartner = Math.hypot(v.chatPartner.x - v.x, v.chatPartner.y - v.y);
+        
+        if (distToPartner < 25) {
+          // 충분히 가까움 - 대화 시작!
+          v.safeState = 'chatting';
+          v.stateTimer = 0;
+          v.stateDuration = 4 + Math.random() * 6; // 4~10초 대화
+          v.chatOffsetAngle = Math.atan2(v.y - v.chatPartner.y, v.x - v.chatPartner.x);
+        } else if (v.stateTimer >= v.stateDuration) {
+          // 시간 초과 - 포기
+          v.safeState = 'wander';
+          v.chatPartner = null;
+        } else {
+          // 상대방에게 이동
+          this.smoothMoveToward(v, v.chatPartner.x, v.chatPartner.y, dt, 0.5);
+        }
+        break;
+        
+      case 'chatting':
+        // 대화 중 - 상대방 옆에 붙어있기
+        if (!v.chatPartner || v.chatPartner.hp <= 0) {
+          v.safeState = 'wander';
+          v.chatPartner = null;
+          break;
+        }
+        
+        if (v.stateTimer >= v.stateDuration) {
+          // 대화 끝 - 60% 확률로 같이 걷기
+          if (Math.random() < 0.6) {
+            v.safeState = 'walkingTogether';
+            v.stateTimer = 0;
+            v.stateDuration = 4 + Math.random() * 4; // 4~8초 같이 걷기
+            
+            // 함께 갈 목표: 둘 중 하나의 홈 방향 (자연스럽게 헤어지기)
+            const targetHome = Math.random() < 0.5 ? v : v.chatPartner;
+            if (targetHome && targetHome.homeX) {
+              const angle = Math.random() * Math.PI * 2;
+              const dist = Math.random() * (targetHome.homeRadius || 80);
+              v.wanderTargetX = targetHome.homeX + Math.cos(angle) * dist;
+              v.wanderTargetY = targetHome.homeY + Math.sin(angle) * dist;
+            } else {
+              v.wanderTargetX = v.x + (Math.random() - 0.5) * 100;
+              v.wanderTargetY = v.y + (Math.random() - 0.5) * 100;
+            }
+          } else {
+            v.safeState = 'wander';
+            v.chatPartner = null;
+          }
+        } else {
+          // 상대방 옆에 붙어있기
+          const stickDist = 18;
+          const targetX = v.chatPartner.x + Math.cos(v.chatOffsetAngle) * stickDist;
+          const targetY = v.chatPartner.y + Math.sin(v.chatOffsetAngle) * stickDist;
+          
+          v.x += (targetX - v.x) * 0.1;
+          v.y += (targetY - v.y) * 0.1;
+          
+          // 미세한 떨림 (살아있는 느낌)
+          v.x += (Math.random() - 0.5) * 0.3;
+          v.y += (Math.random() - 0.5) * 0.3;
+        }
+        break;
+        
+      case 'walkingTogether':
+        // 함께 걷기 - 상대방과 같이 이동
+        if (!v.chatPartner || v.chatPartner.hp <= 0) {
+          v.safeState = 'wander';
+          v.chatPartner = null;
+          break;
+        }
+        
+        if (v.stateTimer >= v.stateDuration) {
+          v.safeState = 'wander';
+          v.chatPartner = null;
+        } else {
+          // 목표 위치로 함께 이동
+          this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
+          
+          // 상대방도 같은 목표로 유도 (부드럽게)
+          if (v.chatPartner.safeState === 'chatting' || v.chatPartner.safeState === 'walkingTogether') {
+            v.chatPartner.wanderTargetX = v.wanderTargetX + (Math.random() - 0.5) * 30;
+            v.chatPartner.wanderTargetY = v.wanderTargetY + (Math.random() - 0.5) * 30;
+          }
+          
+          // 상대방과 가까이 유지
+          const distToPartner2 = Math.hypot(v.chatPartner.x - v.x, v.chatPartner.y - v.y);
+          if (distToPartner2 > 40) {
+            // 너무 멀어지면 기다리기
+            const pullX = (v.chatPartner.x - v.x) * 0.02;
+            const pullY = (v.chatPartner.y - v.y) * 0.02;
+            v.x += pullX;
+            v.y += pullY;
+          }
+        }
+        break;
     }
     
-    // 목표 위치로 천천히 이동
-    const dist = Math.hypot(v.wanderTargetX - v.x, v.wanderTargetY - v.y);
+    // 코어에서 밀어내는 힘 (가까울수록 강하게)
+    const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
+    const pushStartDist = 200; // 200px 이내면 밀어내기 시작
     
-    if (dist > 5) {
-      // 매우 느리게, 여유롭게 이동
-      this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.15);
-    } else {
-      // 도착하면 잠시 쉬기
-      v.isIdle = true;
-      v.wanderTimer = v.wanderDuration - 1; // 1초 후 다시 이동
+    if (distFromCore < pushStartDist && distFromCore > 0) {
+      const pushStrength = (1 - distFromCore / pushStartDist) * 2.5; // 0~2.5 강도
+      const pushAngle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
+      
+      // 밖으로 밀어내기
+      v.x += Math.cos(pushAngle) * pushStrength;
+      v.y += Math.sin(pushAngle) * pushStrength;
     }
     
-    // 약간의 랜덤 흔들림
-    v.x += (Math.random() - 0.5) * 0.3;
-    v.y += (Math.random() - 0.5) * 0.3;
+    // 화면 경계 체크
+    v.x = Math.max(margin, Math.min(screenW - margin, v.x));
+    v.y = Math.max(margin, Math.min(screenH - margin, v.y));
+    v.wanderTargetX = Math.max(margin, Math.min(screenW - margin, v.wanderTargetX || v.x));
+    v.wanderTargetY = Math.max(margin, Math.min(screenH - margin, v.wanderTargetY || v.y));
   }
 
   // 배리어 내부 진입 방지 + 최대 거리 제한
   keepOutsideBarrier(v) {
+    // Safe Zone에서는 자유롭게! (거리 제한 없음)
+    if (this.isSafeZone) {
+      // 배리어 내부만 막기 (코어 안으로는 못 들어감)
+      const barrierRadius = this.core.shieldRadius || 70;
+      const minDistance = barrierRadius + v.radius + 5;
+      const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
+      
+      if (distFromCore < minDistance) {
+        const angle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
+        v.x = this.core.x + Math.cos(angle) * minDistance;
+        v.y = this.core.y + Math.sin(angle) * minDistance;
+      }
+      return; // Safe Zone에서는 여기서 끝!
+    }
+    
     const barrierRadius = this.core.shieldRadius || 70;
     const minDistance = barrierRadius + v.radius + 5;
     const maxDistance = 250; // 코어에서 최대 거리
@@ -2547,6 +2728,52 @@ export class DefenseGame {
   // 레거시 호환용
   patrolAlly(v, dt) {
     this.fluidPatrol(v, dt);
+  }
+
+  // 모든 바이러스 분리 (겹침 방지)
+  separateAllViruses() {
+    const allEntities = [];
+    
+    // 아군 바이러스 수집
+    this.alliedViruses.forEach(v => {
+      allEntities.push({ entity: v, type: 'ally' });
+    });
+    
+    // 적군 바이러스 수집
+    this.enemies.forEach(e => {
+      allEntities.push({ entity: e, type: 'enemy' });
+    });
+    
+    // 수집 바이러스 (아이템 가져가는 애들)
+    this.collectorViruses.forEach(c => {
+      allEntities.push({ entity: c, type: 'collector' });
+    });
+    
+    // 모든 쌍에 대해 분리
+    for (let i = 0; i < allEntities.length; i++) {
+      for (let j = i + 1; j < allEntities.length; j++) {
+        const a = allEntities[i].entity;
+        const b = allEntities[j].entity;
+        
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = (a.radius || 8) + (b.radius || 8) + 2; // 약간의 여유
+        
+        if (dist < minDist && dist > 0) {
+          // 겹침! 서로 밀어내기
+          const overlap = minDist - dist;
+          const pushX = (dx / dist) * overlap * 0.5;
+          const pushY = (dy / dist) * overlap * 0.5;
+          
+          // 양쪽 다 밀어내기
+          a.x -= pushX;
+          a.y -= pushY;
+          b.x += pushX;
+          b.y += pushY;
+        }
+      }
+    }
   }
 
   killEnemy(enemy) {
@@ -3020,21 +3247,11 @@ export class DefenseGame {
       ctx.lineWidth = 1;
       ctx.stroke();
       
-      // 눈 (이동 방향 바라보기)
-      const eyeOffsetX = (v.vx || 0) / v.speed * 1.5 || 0;
-      const eyeOffsetY = (v.vy || 0) / v.speed * 1 || 0;
-      
+      // 눈 (단순 검은 점)
       ctx.fillStyle = "#000";
       ctx.beginPath();
-      ctx.arc(-2 + eyeOffsetX, -1 + eyeOffsetY, 1.2, 0, Math.PI * 2);
-      ctx.arc(2 + eyeOffsetX, -1 + eyeOffsetY, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // 눈 하이라이트
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(-1.5 + eyeOffsetX, -1.5 + eyeOffsetY, 0.5, 0, Math.PI * 2);
-      ctx.arc(2.5 + eyeOffsetX, -1.5 + eyeOffsetY, 0.5, 0, Math.PI * 2);
+      ctx.arc(-2, -1, 1.5, 0, Math.PI * 2);
+      ctx.arc(2, -1, 1.5, 0, Math.PI * 2);
       ctx.fill();
       
       ctx.restore();
@@ -3272,23 +3489,13 @@ export class DefenseGame {
           break;
       }
       
-      // 눈 그리기 (모든 타입 공통) - 이동 방향 바라봄
-      const eyeScale = v.radius * 0.25;
-      const eyeOffsetX = (v.vx || 0) / (v.speed || 100) * eyeScale * 0.8;
-      const eyeOffsetY = (v.vy || 0) / (v.speed || 100) * eyeScale * 0.5;
+      // 눈 그리기 (모든 타입 공통) - 단순 검은 점
+      const eyeSize = v.radius * 0.2;
       
-      // 검은 눈
       this.ctx.fillStyle = "#000";
       this.ctx.beginPath();
-      this.ctx.arc(-v.radius * 0.3 + eyeOffsetX, -v.radius * 0.15 + eyeOffsetY, eyeScale, 0, Math.PI * 2);
-      this.ctx.arc(v.radius * 0.3 + eyeOffsetX, -v.radius * 0.15 + eyeOffsetY, eyeScale, 0, Math.PI * 2);
-      this.ctx.fill();
-      
-      // 흰색 하이라이트
-      this.ctx.fillStyle = "#fff";
-      this.ctx.beginPath();
-      this.ctx.arc(-v.radius * 0.25 + eyeOffsetX, -v.radius * 0.25 + eyeOffsetY, eyeScale * 0.4, 0, Math.PI * 2);
-      this.ctx.arc(v.radius * 0.35 + eyeOffsetX, -v.radius * 0.25 + eyeOffsetY, eyeScale * 0.4, 0, Math.PI * 2);
+      this.ctx.arc(-v.radius * 0.3, -v.radius * 0.1, eyeSize, 0, Math.PI * 2);
+      this.ctx.arc(v.radius * 0.3, -v.radius * 0.1, eyeSize, 0, Math.PI * 2);
       this.ctx.fill();
 
       // HP 바 (데미지 입으면 표시)
@@ -3319,7 +3526,7 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // 조력자(Helper) 그리기 - 배리어 내부
+    // 조력자(Helper) 그리기 - 배리어 내부 (0w0 얼굴!)
     if (this.helper && this.helper.x !== 0) {
       const h = this.helper;
       const mode = this.getCurrentWeaponMode();
@@ -3335,17 +3542,43 @@ export class DefenseGame {
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
 
-      // 조력자 발사 방향 표시 (작은 삼각형)
+      // 0w0 얼굴 그리기 (12시 방향으로 몰림)
       this.ctx.save();
       this.ctx.translate(h.x, h.y);
-      this.ctx.rotate(h.angle);
-      this.ctx.fillStyle = "#ffffff";
+      
+      // 얼굴 전체를 위로 올림 (12시 방향)
+      const faceOffsetY = -h.radius * 0.25;
+      
+      // 눈 (0 0) - 작은 검은 동그라미
+      const eyeRadius = h.radius * 0.12; // 더 작게!
+      const eyeY = faceOffsetY - h.radius * 0.1;
+      const eyeSpacing = h.radius * 0.3;
+      
+      // 왼쪽 눈 - 검은색으로 꽉 채움
+      this.ctx.fillStyle = "#000";
       this.ctx.beginPath();
-      this.ctx.moveTo(h.radius + 3, 0);
-      this.ctx.lineTo(h.radius - 2, -4);
-      this.ctx.lineTo(h.radius - 2, 4);
-      this.ctx.closePath();
+      this.ctx.arc(-eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
       this.ctx.fill();
+      
+      // 오른쪽 눈 - 검은색으로 꽉 채움
+      this.ctx.fillStyle = "#000";
+      this.ctx.beginPath();
+      this.ctx.arc(eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
+      this.ctx.fill();
+      
+      // 입 (w) - 귀여운 고양이 입
+      const mouthY = faceOffsetY + h.radius * 0.2;
+      const mouthWidth = h.radius * 0.4;
+      
+      this.ctx.strokeStyle = "#000";
+      this.ctx.lineWidth = 1.2;
+      this.ctx.beginPath();
+      // w 모양 그리기
+      this.ctx.moveTo(-mouthWidth, mouthY);
+      this.ctx.quadraticCurveTo(-mouthWidth * 0.5, mouthY + h.radius * 0.15, 0, mouthY);
+      this.ctx.quadraticCurveTo(mouthWidth * 0.5, mouthY + h.radius * 0.15, mouthWidth, mouthY);
+      this.ctx.stroke();
+      
       this.ctx.restore();
 
       // ===== 재장전 시각 효과 =====
@@ -3764,8 +3997,10 @@ export class DefenseGame {
   spawnEnemy() {
     // Safe Zone에서는 적 소환 안함
     if (this.isSafeZone) {
+      console.log("[DEBUG] spawnEnemy blocked - isSafeZone:", this.isSafeZone);
       return;
     }
+    console.log("[DEBUG] spawnEnemy called - isSafeZone:", this.isSafeZone);
     
     const angle = Math.random() * Math.PI * 2;
     const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 50;
@@ -3809,7 +4044,11 @@ export class DefenseGame {
 
   // Safe Zone 전용: 아군 바이러스 미리 배치
   spawnSafeZoneAllies() {
-    if (!this.isSafeZone) return;
+    console.log("[DEBUG] spawnSafeZoneAllies called - isSafeZone:", this.isSafeZone);
+    if (!this.isSafeZone) {
+      console.log("[DEBUG] spawnSafeZoneAllies aborted - not Safe Zone");
+      return;
+    }
     
     // 기존 아군 제거
     this.alliedViruses = [];
@@ -3823,9 +4062,9 @@ export class DefenseGame {
       HEALER: { color: "#00ff88", baseHp: 40, baseDamage: 0, baseSpeed: 90, radius: 8, attackType: "support", healAmount: 5, healRadius: 80 }
     };
     
-    // 다양한 타입의 아군 배치 (6~10마리)
-    const types = ["SWARM", "SWARM", "TANK", "HUNTER", "BOMBER", "HEALER", "SWARM", "HUNTER"];
-    const count = 6 + Math.floor(Math.random() * 5); // 6~10마리
+    // 다양한 타입의 아군 배치 (12~18마리로 증가)
+    const types = ["SWARM", "SWARM", "SWARM", "TANK", "HUNTER", "HUNTER", "BOMBER", "HEALER", "SWARM", "HUNTER", "SWARM", "BOMBER"];
+    const count = 12 + Math.floor(Math.random() * 7); // 12~18마리
     
     for (let i = 0; i < count; i++) {
       const type = types[i % types.length];
@@ -3833,29 +4072,69 @@ export class DefenseGame {
       
       if (!typeData) continue;
       
-      // 코어 주변 랜덤 위치
-      const angle = Math.random() * Math.PI * 2;
-      const distance = 60 + Math.random() * 120; // 60~180 거리
+      // 코어에서 멀리! 화면 가장자리에 홈 배치
+      const margin = 40;
+      const screenW = this.canvas.width;
+      const screenH = this.canvas.height;
+      const coreX = this.core.x;
+      const coreY = this.core.y;
+      
+      // 화면을 4구역으로 나눠서 골고루 배치
+      const zone = i % 4; // 0: 좌상, 1: 우상, 2: 좌하, 3: 우하
+      let spawnX, spawnY;
+      
+      switch (zone) {
+        case 0: // 좌상단
+          spawnX = margin + Math.random() * (screenW * 0.35 - margin);
+          spawnY = margin + Math.random() * (screenH * 0.35 - margin);
+          break;
+        case 1: // 우상단
+          spawnX = screenW * 0.65 + Math.random() * (screenW * 0.35 - margin);
+          spawnY = margin + Math.random() * (screenH * 0.35 - margin);
+          break;
+        case 2: // 좌하단
+          spawnX = margin + Math.random() * (screenW * 0.35 - margin);
+          spawnY = screenH * 0.65 + Math.random() * (screenH * 0.35 - margin);
+          break;
+        case 3: // 우하단
+          spawnX = screenW * 0.65 + Math.random() * (screenW * 0.35 - margin);
+          spawnY = screenH * 0.65 + Math.random() * (screenH * 0.35 - margin);
+          break;
+      }
+      
+      // 혹시 코어 근처(150px)면 더 밀어내기
+      const distFromCore = Math.hypot(spawnX - coreX, spawnY - coreY);
+      if (distFromCore < 150) {
+        const pushAngle = Math.atan2(spawnY - coreY, spawnX - coreX);
+        spawnX = coreX + Math.cos(pushAngle) * 180;
+        spawnY = coreY + Math.sin(pushAngle) * 180;
+      }
       
       const ally = {
-        x: this.core.x + Math.cos(angle) * distance,
-        y: this.core.y + Math.sin(angle) * distance,
+        x: spawnX,
+        y: spawnY,
         radius: typeData.radius || 8,
         speed: typeData.baseSpeed || 100,
         hp: typeData.baseHp || 20,
         maxHp: typeData.baseHp || 20,
+        baseMaxHp: typeData.baseHp || 20,
         damage: typeData.baseDamage || 10,
-        type: type,
+        virusType: type, // 렌더링에서 모양 결정에 사용
         color: typeData.color || "#88ff88",
         attackType: typeData.attackType || "melee",
+        // 홈 영역 (소프트 앵커) - 스폰 위치가 홈
+        homeX: spawnX,
+        homeY: spawnY,
+        homeRadius: 80 + Math.random() * 60, // 홈 근처 반경 (80~140px)
         // 움직임 관련
         vx: 0,
         vy: 0,
+        wobblePhase: Math.random() * Math.PI * 2, // 떨림 효과용
         wanderTargetX: null,
         wanderTargetY: null,
         wanderTimer: 0,
         wanderDuration: 2 + Math.random() * 4,
-        isIdle: Math.random() < 0.3,
+        isIdle: Math.random() < 0.2, // 20%만 쉬기
         // 타입별 특수 속성
         ...(type === "TANK" && { 
           tauntCooldown: 0, 
@@ -4600,7 +4879,19 @@ export class DefenseGame {
       this.enemies = [];
       this.projectiles = [];
       this.particles = [];
-      this.alliedViruses = [];
+      
+      console.log("[DEBUG] playIntroAnimation - isSafeZone:", this.isSafeZone, "alliedViruses before:", this.alliedViruses.length);
+      
+      // Safe Zone에서는 아군 유지 (이미 놀고 있어야 함)
+      if (!this.isSafeZone) {
+        console.log("[DEBUG] playIntroAnimation - CLEARING alliedViruses (not Safe Zone)");
+        this.alliedViruses = [];
+      } else {
+        console.log("[DEBUG] playIntroAnimation - KEEPING alliedViruses (Safe Zone)");
+      }
+      
+      console.log("[DEBUG] playIntroAnimation - alliedViruses after:", this.alliedViruses.length);
+      
       this.droppedItems = [];
       this.collectorViruses = [];
       this.core.shieldRadius = 0;
@@ -4646,7 +4937,14 @@ export class DefenseGame {
 
             // 글리치 효과로 체력 표시 (예외 처리 추가)
             this.glitchShowHP()
-              .then(() => this.spawnAlliesSequentially())
+              .then(() => {
+                // Safe Zone에서는 이미 아군이 놀고 있으므로 스폰 스킵
+                if (this.isSafeZone) {
+                  console.log("[DEBUG] playIntroAnimation - SKIPPING spawnAlliesSequentially (Safe Zone)");
+                  return Promise.resolve();
+                }
+                return this.spawnAlliesSequentially();
+              })
               .then(() => this.expandShield())
               .then(resolve)
               .catch((err) => {
