@@ -4450,15 +4450,16 @@ export class DefenseGame {
   }
 
   /**
-   * 스테이지 이탈 연출 (위로 슈웅 올라감)
-   * 귀환 시 사용
+   * 스테이지 이탈 연출 (위로 멀어지는 원근법)
+   * 귀환 시 사용 - 드랍 애니메이션의 역방향
    */
   playOutroAnimation() {
     return new Promise((resolve) => {
-      const duration = 400; // 400ms
+      const isMobile = window.innerWidth <= 768;
+      const duration = isMobile ? 250 : 300; // 드랍과 동일한 시간
       const startTime = performance.now();
       const startScale = 1;
-      const endScale = 0.01; // 거의 점으로
+      const endScale = isMobile ? 20.0 : 50.0; // 드랍의 역방향 (커지면서 멀어짐)
 
       // 연출 중에는 적 생성 중지
       const originalSpawnRate = this.enemySpawnTimer;
@@ -4468,14 +4469,11 @@ export class DefenseGame {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // ease-out quint (처음에 빠르게, 끝에 느리게)
-        const easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
+        // ease-in quint (드랍의 역방향)
+        const easeInQuint = (t) => t * t * t * t * t;
 
-        // 스케일: 1x → 0.01x (작아지면서 올라감)
-        this.core.scale = startScale - (startScale - endScale) * easeOutQuint(progress);
-
-        // Y 위치도 위로 이동
-        this.core.y = this.canvas.height / 2 - (this.canvas.height * 0.5) * easeOutQuint(progress);
+        // 스케일: 1x → 50x (커지면서 멀어지는 원근법)
+        this.core.scale = startScale + (endScale - startScale) * easeInQuint(progress);
 
         if (progress < 1) {
           requestAnimationFrame(animateAscend);

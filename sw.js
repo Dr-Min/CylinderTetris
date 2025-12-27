@@ -1,5 +1,5 @@
-// v9.5.7 - Recall outro animation + info above core
-const CACHE_NAME = "hacker-tetris-v19.0";
+// v9.5.8 - Fix recall animation (perspective) + compact UI
+const CACHE_NAME = "hacker-tetris-v19.1";
 const ASSETS = [
   "./",
   "./index.html",

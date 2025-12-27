@@ -982,28 +982,30 @@ export class GameManager {
       
       Object.values(borders).forEach(b => borderContainer.appendChild(b));
       
-      // 코어 위에 정보 표시 (화면 중앙 약간 위)
+      // 코어 위에 정보 표시 (컴팩트하게)
       const infoBar = document.createElement("div");
       infoBar.style.cssText = `
         position: fixed;
-        top: 35%;
+        top: 38%;
         left: 50%;
         transform: translate(-50%, -50%);
         background: rgba(0, 0, 0, 0.85);
         border: 2px solid #00aaff;
-        padding: 15px 40px;
+        padding: 8px 25px;
         font-family: var(--term-font);
         color: #00aaff;
-        font-size: 16px;
+        font-size: 12px;
         z-index: 99999;
         text-align: center;
-        box-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
-        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0, 170, 255, 0.5);
+        border-radius: 6px;
       `;
       infoBar.innerHTML = `
-        <div style="margin-bottom: 5px;">🏃 RECALLING...</div>
-        <div id="recall-time" style="font-size: 28px; font-weight: bold;">5.0s</div>
-        <div style="color: #ff6666; font-size: 12px; margin-top: 8px;">⚠️ 피격 시 취소됨</div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span>🏃 RECALL</span>
+          <span id="recall-time" style="font-size: 16px; font-weight: bold;">5.0s</span>
+          <span style="color: #ff6666; font-size: 10px;">⚠️ 피격 시 취소</span>
+        </div>
       `;
       
       borderContainer.appendChild(infoBar);
