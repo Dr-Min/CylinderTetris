@@ -73,11 +73,53 @@ export class TerminalUI {
 
     // 엔터키 리스너 (showChoices나 waitForEnter에서 사용)
     this.cmdInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && this.onInputEnter) {
-        this.onInputEnter(this.cmdInput.value.trim());
-        this.cmdInput.value = ""; // 입력 후 초기화
+      if (e.key === "Enter") {
+        const text = this.cmdInput.value.trim();
+        
+        // 글로벌 명령어 체크 (어떤 상황에서든 동작)
+        if (this.handleGlobalCommand(text)) {
+          this.cmdInput.value = "";
+          return;
+        }
+        
+        // 일반 핸들러
+        if (this.onInputEnter) {
+          this.onInputEnter(text);
+          this.cmdInput.value = "";
+        }
       }
     });
+  }
+
+  // 글로벌 명령어 처리 (/debug 등)
+  handleGlobalCommand(text) {
+    const cmd = text.toLowerCase();
+    
+    if (cmd === "/debug") {
+      this.toggleDebugPanel();
+      return true;
+    }
+    
+    if (cmd === "/help") {
+      this.printSystemMessage("=== 글로벌 명령어 ===");
+      this.printSystemMessage("/debug - 디버그 패널 열기/닫기");
+      this.printSystemMessage("/help - 도움말 표시");
+      return true;
+    }
+    
+    return false;
+  }
+
+  // 디버그 패널 토글
+  toggleDebugPanel() {
+    const debugPanel = document.getElementById("debug-panel");
+    if (debugPanel) {
+      const isHidden = debugPanel.style.display === "none";
+      debugPanel.style.display = isHidden ? "block" : "none";
+      this.printSystemMessage(`[DEBUG] Panel ${isHidden ? "OPENED" : "CLOSED"}`);
+    } else {
+      this.printSystemMessage("[ERROR] Debug panel not initialized");
+    }
   }
 
   // 데이터 마이닝 완료 연출

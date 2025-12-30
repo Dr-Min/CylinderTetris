@@ -1,10 +1,70 @@
 # 🎮 HACKER'S BASE - Development Status
 
-> 마지막 업데이트: 2024-12-28 (v9.7.3)
+> 마지막 업데이트: 2024-12-31 (v9.7.8)
 
 ---
 
-## 🆕 최신 업데이트 (v9.7.3)
+## 🆕 최신 업데이트 (v9.7.8)
+
+### 🔧 디버그 시스템 개선
+- **카테고리별 로그 ON/OFF**: 디버그 패널에서 개별 카테고리 체크박스로 원하는 로그만 활성화
+  - Defense, AllyMovement, Synergy, Enemy, GameManager, TerminalUI, Item, Combat
+- **`/debug` 명령어 추가**: 터미널에서 `/debug` 입력 시 모바일에서도 디버그 패널 열기/닫기 가능
+- **로그 통합**: 기존 `console.log` 직접 호출 → `debugLog(tag, ...)` 시스템으로 통합
+
+### 🔧 아군 바이러스 이동 영역 버그 수정 (v9.7.7)
+- **문제**: 세로로 긴 모바일 화면에서 원형 제한이 가로 기준으로 설정되어 바이러스가 185px 원 안에만 갇힘
+- **해결**: 원형(circle) 경계 → 사각형(rectangle) 화면 경계로 변경
+  - X: 30 ~ (canvas.width - 30)
+  - Y: 30 ~ (canvas.height - 30)
+
+---
+
+## 📜 이전 업데이트 (v9.7.4)
+
+### 🐛 아군 바이러스 시스템 버그 수정
+
+#### 슬롯 배치 로직 수정
+- **문제**: 70/30 비율이 슬롯 기준이라 마리수 비율이 의도와 다르게 작동
+  - 예: TANK(3슬롯) 메인 + SWARM(1슬롯) 서브 → 2:6 = 25:75 (메인이 서브보다 적음!)
+- **해결**: 메인 > 서브 마리수 보장 + 총 마리수 최대화 알고리즘
+  - 가능한 모든 조합 탐색하여 조건 만족하는 최적 조합 선택
+  - 예: TANK 3 + SWARM 2 = 5마리 (메인 > 서브 조건 만족)
+
+#### 시너지 시스템 버그 수정
+- **hunterCover (엄호 사격) 미구현 수정**
+  - 문제: `hasCover` 플래그만 설정하고 실제 데미지 감소 로직 없었음
+  - 해결: 근접 전투 데미지 계산에서 `hasCover` 체크 → 50% 데미지 감소 적용
+  
+- **시너지 체크 방식 통일**
+  - 모든 시너지 효과가 `this.alliedConfig?.synergy?.effect`로 체크
+  - 일관된 방식으로 시너지 효과 적용
+
+#### 시너지 효과 현황
+| 시너지 | 효과 | AI 행동 | 상태 |
+|--------|------|---------|------|
+| tankProtection (철벽 군단) | TANK 주변 SWARM HP +50% | SWARM이 TANK 주변에서 활동 | ✅ |
+| hunterCover (엄호 사격) | HUNTER가 TANK 뒤에 있으면 피격 -50% | HUNTER가 TANK 뒤에서 사격 | ✅ |
+| hunterSwarmSpawn (사냥꾼의 떼) | HUNTER 사망 시 SWARM 2마리 소환 | - | ✅ |
+| chainExplosion (연쇄 폭발) | BOMBER 폭발 시 주변 SWARM도 폭발 | - | ✅ |
+| bomberRangeBoost (정밀 폭격) | BOMBER 폭발 범위 +30% | - | ✅ |
+| tankHealBoost (불멸의 방패) | TANK HP 회복량 2배 | HEALER가 TANK 우선 케어 | ✅ |
+
+#### 시너지 AI 행동 패턴 추가
+- **hunterCover**: HUNTER가 TANK 뒤쪽(적 반대편)에 위치하며 원거리 공격
+- **tankProtection**: SWARM이 TANK 주변 100px 내에서 활동, 적 추적 시 TANK 근처 유지
+- **tankHealBoost**: HEALER가 TANK를 우선적으로 따라다니며 회복
+
+#### 아군 바이러스 이동 영역 개선
+- **안쪽 한계**: `pushStartDist` 200px → 100px로 축소 (코어에서 밀어내는 범위)
+- **바깥쪽 한계**: 하드코딩 250px → **화면 크기 기반 동적 설정**
+  - `maxDistance = min(화면너비/2, 화면높이/2) - 30`
+  - 모바일: 약 150~200px, PC: 약 350~400px
+- 결과: 아군이 더 넓은 영역에서 활동 가능, 적 추격 범위 증가
+
+---
+
+## 🔄 이전 업데이트 (v9.7.3)
 
 ### 🎬 탈출/착지 애니메이션 완성
 

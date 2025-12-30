@@ -1,5 +1,5 @@
-// v9.7.2 - Terminal style green text instead of speech bubbles
-const CACHE_NAME = "hacker-tetris-v22.7";
+// v9.7.9 - Improved debug log format for ally movement
+const CACHE_NAME = "hacker-tetris-v23.3";
 const ASSETS = [
   "./",
   "./index.html",

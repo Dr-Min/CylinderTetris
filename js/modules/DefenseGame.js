@@ -457,12 +457,10 @@ export class DefenseGame {
       );
     });
 
-    // 5. 아군 바이러스 위치 검증 (NaN 또는 코어에서 너무 멀면 재배치)
+    // 5. 아군 바이러스 위치 검증 (NaN만 재배치, 거리는 keepOutsideBarrier에서 처리)
     this.alliedViruses.forEach((v) => {
-      const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
-      const maxAllowedDist = 300; // 코어에서 최대 허용 거리
-
-      if (isNaN(v.x) || isNaN(v.y) || distFromCore > maxAllowedDist) {
+      // NaN 체크만 (거리 제한은 keepOutsideBarrier에서 동적으로 처리)
+      if (isNaN(v.x) || isNaN(v.y)) {
         // 코어 주변으로 재배치
         const angle = Math.random() * Math.PI * 2;
         const dist = 80 + Math.random() * 40;
@@ -470,7 +468,7 @@ export class DefenseGame {
         v.y = this.core.y + Math.sin(angle) * dist;
         v.vx = 0;
         v.vy = 0;
-        debugWarn("Defense", "Allied virus repositioned (too far or invalid)");
+        debugWarn("Defense", "Allied virus repositioned (invalid position)");
       }
     });
 
@@ -1966,8 +1964,8 @@ export class DefenseGame {
 
     this.createExplosion(v.x, v.y, v.color, 8);
 
-    // 시너지 효과: 헌터 사망 시 SWARM 소환
-    if (v.synergy?.effect === "hunterSwarmSpawn" && v.virusType === "HUNTER") {
+    // 시너지 효과: 헌터 사망 시 SWARM 소환 (SWARM+HUNTER 시너지)
+    if (this.alliedConfig?.synergy?.effect === "hunterSwarmSpawn" && v.virusType === "HUNTER") {
       this.spawnSynergySwarm(v.x, v.y, 2);
     }
 
@@ -1988,6 +1986,24 @@ export class DefenseGame {
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
+
+    // 🛡️ 시너지: tankProtection - SWARM이 TANK 주변에서 활동
+    const hasTankProtectionSynergy = this.alliedConfig?.synergy?.effect === "tankProtection";
+    let anchorTank = null;
+    
+    if (hasTankProtectionSynergy && v.virusType === "SWARM") {
+      // 가장 가까운 TANK 찾기
+      let minTankDist = Infinity;
+      for (const ally of this.alliedViruses) {
+        if (ally.virusType === "TANK" && ally.hp > 0) {
+          const tankDist = Math.hypot(ally.x - v.x, ally.y - v.y);
+          if (tankDist < minTankDist) {
+            minTankDist = tankDist;
+            anchorTank = ally;
+          }
+        }
+      }
+    }
 
     // TANK 전용: 도발 스킬 (액티브)
     if (v.virusType === "TANK" && v.special === "taunt") {
@@ -2042,9 +2058,19 @@ export class DefenseGame {
           nearestEnemy.y += Math.sin(angle) * v.knockbackForce;
         }
 
-        // 받는 데미지 (TANK는 적게 받음)
-        const receivedDamage =
-          v.virusType === "TANK" ? Math.floor(damage * 0.3) : damage;
+        // 받는 데미지 계산
+        let receivedDamage = damage;
+        
+        // TANK는 기본 70% 데미지 감소
+        if (v.virusType === "TANK") {
+          receivedDamage = Math.floor(damage * 0.3);
+        }
+        
+        // 엄호 사격 시너지 (hunterCover): HUNTER가 TANK 뒤에 있으면 50% 감소
+        if (v.hasCover) {
+          receivedDamage = Math.floor(receivedDamage * 0.5);
+        }
+        
         v.hp -= receivedDamage;
         
         // 피격 대사 (10% 확률)
@@ -2066,12 +2092,40 @@ export class DefenseGame {
           this.tryVirusSpeech(v, 'kill', 0.2);
         }
       } else {
-        // 부드러운 추적 이동
-        this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.2);
+        // 🛡️ tankProtection 시너지: TANK 근처에서 적 공격
+        if (hasTankProtectionSynergy && anchorTank && v.virusType === "SWARM") {
+          const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
+          const protectionRange = 100; // 보호 범위
+          
+          // TANK 범위 밖이면 TANK 쪽으로 이동하면서 적도 추적
+          if (tankDist > protectionRange) {
+            // TANK와 적 사이 중간 지점으로 이동
+            const midX = (anchorTank.x + nearestEnemy.x) / 2;
+            const midY = (anchorTank.y + nearestEnemy.y) / 2;
+            this.smoothMoveToward(v, midX, midY, dt, 1.0);
+          } else {
+            // TANK 범위 내: 적 추적
+            this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.2);
+          }
+        } else {
+          // 기본 행동: 부드러운 추적 이동
+          this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.2);
+        }
       }
     } else {
-      // 유동적인 순찰
-      this.fluidPatrol(v, dt);
+      // 적이 없을 때
+      if (hasTankProtectionSynergy && anchorTank && v.virusType === "SWARM") {
+        // 시너지: TANK 근처에서 대기
+        const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
+        if (tankDist > 80) {
+          this.smoothMoveToward(v, anchorTank.x, anchorTank.y, dt, 0.6);
+        } else {
+          this.fluidPatrol(v, dt, 60); // TANK 근처에서 좁은 순찰
+        }
+      } else {
+        // 유동적인 순찰
+        this.fluidPatrol(v, dt);
+      }
     }
 
     // 배리어 내부 진입 방지
@@ -2091,9 +2145,26 @@ export class DefenseGame {
     // 공격 타이머 업데이트
     v.attackTimer = (v.attackTimer || 0) + dt;
 
+    // 🛡️ 시너지: hunterCover - TANK 근처에서 엄호받으며 공격
+    const hasHunterCoverSynergy = this.alliedConfig?.synergy?.effect === "hunterCover";
+    let anchorTank = null;
+    
+    if (hasHunterCoverSynergy) {
+      // 가장 가까운 TANK 찾기
+      let minTankDist = Infinity;
+      for (const ally of this.alliedViruses) {
+        if (ally.virusType === "TANK" && ally.hp > 0) {
+          const tankDist = Math.hypot(ally.x - v.x, ally.y - v.y);
+          if (tankDist < minTankDist) {
+            minTankDist = tankDist;
+            anchorTank = ally;
+          }
+        }
+      }
+    }
+
     if (nearestEnemy) {
       const dist = Math.hypot(nearestEnemy.x - v.x, nearestEnemy.y - v.y);
-      const optimalDist = 100; // 최적 거리
 
       if (dist < searchRange) {
         // 사거리 내: 발사
@@ -2103,31 +2174,68 @@ export class DefenseGame {
           v.attackTimer = 0;
         }
 
-        // 적정 거리 유지 (가까우면 후퇴, 멀면 접근)
-        if (dist < optimalDist * 0.6) {
-          // 후퇴 (부드럽게)
-          const awayX = v.x + (v.x - nearestEnemy.x);
-          const awayY = v.y + (v.y - nearestEnemy.y);
-          this.smoothMoveToward(v, awayX, awayY, dt, 0.8);
-        } else if (dist > optimalDist * 1.5) {
-          // 접근
-          this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 0.6);
+        // 🛡️ hunterCover 시너지: TANK 뒤에서 공격
+        if (hasHunterCoverSynergy && anchorTank) {
+          const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
+          const coverRange = 80; // 엄호 범위
+          
+          if (tankDist > coverRange) {
+            // TANK 근처로 이동 (TANK 뒤쪽 위치 계산)
+            const enemyToTankAngle = Math.atan2(
+              anchorTank.y - nearestEnemy.y,
+              anchorTank.x - nearestEnemy.x
+            );
+            // TANK 뒤쪽 (적 반대편) 위치
+            const behindX = anchorTank.x + Math.cos(enemyToTankAngle) * 40;
+            const behindY = anchorTank.y + Math.sin(enemyToTankAngle) * 40;
+            this.smoothMoveToward(v, behindX, behindY, dt, 1.0);
+          } else {
+            // TANK 근처에서 측면 이동 (strafing)
+            const strafeAngle = Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x) + Math.PI / 2;
+            const strafeX = v.x + Math.cos(strafeAngle) * 20;
+            const strafeY = v.y + Math.sin(strafeAngle) * 20;
+            this.smoothMoveToward(v, strafeX, strafeY, dt, 0.3);
+          }
         } else {
-          // 최적 거리: 측면 이동 (strafing)
-          const strafeAngle =
-            Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x) +
-            Math.PI / 2;
-          const strafeX = v.x + Math.cos(strafeAngle) * 30;
-          const strafeY = v.y + Math.sin(strafeAngle) * 30;
-          this.smoothMoveToward(v, strafeX, strafeY, dt, 0.4);
+          // 기본 행동: 적정 거리 유지
+          const optimalDist = 100;
+          
+          if (dist < optimalDist * 0.6) {
+            // 후퇴 (부드럽게)
+            const awayX = v.x + (v.x - nearestEnemy.x);
+            const awayY = v.y + (v.y - nearestEnemy.y);
+            this.smoothMoveToward(v, awayX, awayY, dt, 0.8);
+          } else if (dist > optimalDist * 1.5) {
+            // 접근
+            this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 0.6);
+          } else {
+            // 최적 거리: 측면 이동 (strafing)
+            const strafeAngle =
+              Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x) +
+              Math.PI / 2;
+            const strafeX = v.x + Math.cos(strafeAngle) * 30;
+            const strafeY = v.y + Math.sin(strafeAngle) * 30;
+            this.smoothMoveToward(v, strafeX, strafeY, dt, 0.4);
+          }
         }
       } else {
         // 사거리 밖: 부드럽게 접근
         this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 0.8);
       }
     } else {
-      // 유동적인 순찰
-      this.fluidPatrol(v, dt);
+      // 적이 없을 때
+      if (hasHunterCoverSynergy && anchorTank) {
+        // 시너지: TANK 근처에서 대기
+        const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
+        if (tankDist > 60) {
+          this.smoothMoveToward(v, anchorTank.x, anchorTank.y, dt, 0.5);
+        } else {
+          this.fluidPatrol(v, dt, 40); // TANK 근처에서 좁은 순찰
+        }
+      } else {
+        // 유동적인 순찰
+        this.fluidPatrol(v, dt);
+      }
     }
 
     // 배리어 내부 진입 방지
@@ -2207,6 +2315,24 @@ export class DefenseGame {
     const healRadius = v.healRadius || 80;
     const healAmount = (v.healAmount || 5) * dt;
 
+    // 🛡️ 시너지: tankHealBoost - TANK 우선 케어
+    const hasTankHealBoostSynergy = this.alliedConfig?.synergy?.effect === "tankHealBoost";
+    let priorityTank = null;
+    
+    if (hasTankHealBoostSynergy) {
+      // 가장 HP가 낮은 TANK 찾기
+      let lowestTankHpPercent = 1;
+      for (const ally of this.alliedViruses) {
+        if (ally.virusType === "TANK" && ally.hp > 0) {
+          const hpPercent = ally.hp / ally.maxHp;
+          if (hpPercent < lowestTankHpPercent) {
+            lowestTankHpPercent = hpPercent;
+            priorityTank = ally;
+          }
+        }
+      }
+    }
+
     this.alliedViruses.forEach((ally) => {
       if (ally === v) return;
       const dist = Math.hypot(ally.x - v.x, ally.y - v.y);
@@ -2233,8 +2359,8 @@ export class DefenseGame {
       }
     });
 
-    // 시너지: TANK+HEALER = 탱크 힐 2배
-    if (v.synergy?.effect === "tankHealBoost") {
+    // 시너지: TANK+HEALER = 탱크 힐 2배 (불멸의 방패)
+    if (hasTankHealBoostSynergy) {
       this.alliedViruses.forEach((ally) => {
         if (ally.virusType === "TANK") {
           const dist = Math.hypot(ally.x - v.x, ally.y - v.y);
@@ -2245,24 +2371,39 @@ export class DefenseGame {
       });
     }
 
-    // 부상당한 아군 찾기 (가장 HP가 낮은)
-    let woundedAlly = null;
-    let lowestHpPercent = 1;
-    this.alliedViruses.forEach((ally) => {
-      if (ally === v) return;
-      const hpPercent = ally.hp / ally.maxHp;
-      if (hpPercent < lowestHpPercent && hpPercent < 0.8) {
-        lowestHpPercent = hpPercent;
-        woundedAlly = ally;
+    // 이동 우선순위 결정
+    if (hasTankHealBoostSynergy && priorityTank) {
+      // 🛡️ 시너지: TANK 우선 따라다니기
+      const tankDist = Math.hypot(priorityTank.x - v.x, priorityTank.y - v.y);
+      const tankHpPercent = priorityTank.hp / priorityTank.maxHp;
+      
+      if (tankHpPercent < 0.8 || tankDist > healRadius) {
+        // TANK가 다치거나 범위 밖이면 TANK에게 이동
+        this.smoothMoveToward(v, priorityTank.x, priorityTank.y, dt, 0.7);
+      } else {
+        // TANK 근처에서 대기
+        this.fluidPatrol(v, dt, 50);
       }
-    });
-
-    if (woundedAlly) {
-      // 부상당한 아군에게 부드럽게 이동
-      this.smoothMoveToward(v, woundedAlly.x, woundedAlly.y, dt, 0.5);
     } else {
-      // 코어 근처에서 유동적 순찰 (좁은 범위)
-      this.fluidPatrol(v, dt, 75);
+      // 기본 행동: 부상당한 아군 찾기 (가장 HP가 낮은)
+      let woundedAlly = null;
+      let lowestHpPercent = 1;
+      this.alliedViruses.forEach((ally) => {
+        if (ally === v) return;
+        const hpPercent = ally.hp / ally.maxHp;
+        if (hpPercent < lowestHpPercent && hpPercent < 0.8) {
+          lowestHpPercent = hpPercent;
+          woundedAlly = ally;
+        }
+      });
+
+      if (woundedAlly) {
+        // 부상당한 아군에게 부드럽게 이동
+        this.smoothMoveToward(v, woundedAlly.x, woundedAlly.y, dt, 0.5);
+      } else {
+        // 코어 근처에서 유동적 순찰 (좁은 범위)
+        this.fluidPatrol(v, dt, 75);
+      }
     }
 
     // 배리어 내부 진입 방지
@@ -2448,11 +2589,22 @@ export class DefenseGame {
     const screenH = this.canvas.height;
     const margin = 40;
     
-    // 홈이 없으면 현재 위치를 홈으로
+    // 코어 안쪽 영역 (배리어)
+    const barrierRadius = (this.core.shieldRadius || 70) + 20;
+    
+    // 홈이 없으면 화면 전체에서 랜덤 위치를 홈으로 (코어 제외)
     if (!v.homeX) {
-      v.homeX = v.x;
-      v.homeY = v.y;
-      v.homeRadius = 80 + Math.random() * 60;
+      // 화면 전체에서 랜덤 위치 생성 (코어 안쪽 제외)
+      let homeX, homeY, distFromCore;
+      do {
+        homeX = margin + Math.random() * (screenW - margin * 2);
+        homeY = margin + Math.random() * (screenH - margin * 2);
+        distFromCore = Math.hypot(homeX - this.core.x, homeY - this.core.y);
+      } while (distFromCore < barrierRadius); // 코어 안쪽이면 다시 생성
+      
+      v.homeX = homeX;
+      v.homeY = homeY;
+      v.homeRadius = 60 + Math.random() * 80; // 홈 반경도 좀 더 넓게
     }
     
     // 홈 근처 랜덤 위치
@@ -2643,10 +2795,10 @@ export class DefenseGame {
     
     // 코어에서 밀어내는 힘 (가까울수록 강하게)
     const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
-    const pushStartDist = 200; // 200px 이내면 밀어내기 시작
+    const pushStartDist = 100; // 100px 이내면 밀어내기 시작
     
     if (distFromCore < pushStartDist && distFromCore > 0) {
-      const pushStrength = (1 - distFromCore / pushStartDist) * 2.5; // 0~2.5 강도
+      const pushStrength = (1 - distFromCore / pushStartDist) * 2.0; // 0~2.0 강도
       const pushAngle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
       
       // 밖으로 밀어내기
@@ -2663,12 +2815,28 @@ export class DefenseGame {
 
   // 배리어 내부 진입 방지 + 최대 거리 제한
   keepOutsideBarrier(v) {
+    // 🔍 디버그 로그 (1초에 1번만)
+    if (!this._debugLogTimer) this._debugLogTimer = 0;
+    this._debugLogTimer += 0.016; // 약 60fps 기준
+    const shouldLog = this._debugLogTimer > 1 && v === this.alliedViruses[0]; // 첫 번째 바이러스만
+    if (shouldLog) this._debugLogTimer = 0;
+    
     // Safe Zone에서는 자유롭게! (거리 제한 없음)
     if (this.isSafeZone) {
       // 배리어 내부만 막기 (코어 안으로는 못 들어감)
       const barrierRadius = this.core.shieldRadius || 70;
       const minDistance = barrierRadius + v.radius + 5;
       const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
+      
+      if (shouldLog) {
+        const margin = 30;
+        debugLog("AllyMovement", `[Safe Zone]
+  📱 화면: ${this.canvas.width} x ${this.canvas.height}
+  🎯 코어: (${Math.round(this.core.x)}, ${Math.round(this.core.y)})
+  📐 이동가능 영역: X(${margin} ~ ${this.canvas.width - margin}), Y(${margin} ~ ${this.canvas.height - margin})
+  🚫 코어 근처 금지: ${Math.round(minDistance)}px 이내
+  🦠 현재 위치: (${Math.round(v.x)}, ${Math.round(v.y)}) / 코어거리: ${Math.round(distFromCore)}px`);
+      }
       
       if (distFromCore < minDistance) {
         const angle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
@@ -2680,12 +2848,27 @@ export class DefenseGame {
     
     const barrierRadius = this.core.shieldRadius || 70;
     const minDistance = barrierRadius + v.radius + 5;
-    const maxDistance = 250; // 코어에서 최대 거리
+    const margin = 30; // 화면 가장자리 여유
+    
+    // 화면 경계 (원형 제한 대신 사각형 경계 사용)
+    const minX = margin;
+    const maxX = this.canvas.width - margin;
+    const minY = margin;
+    const maxY = this.canvas.height - margin;
 
     const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
     const angle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
 
-    // 너무 가까우면 밀어내기
+    if (shouldLog) {
+      debugLog("AllyMovement", `[Battle]
+  📱 화면: ${this.canvas.width} x ${this.canvas.height}
+  🎯 코어: (${Math.round(this.core.x)}, ${Math.round(this.core.y)})
+  📐 이동가능 영역: X(${minX} ~ ${maxX}), Y(${minY} ~ ${maxY})
+  🚫 코어 근처 금지: ${Math.round(minDistance)}px 이내
+  🦠 현재 위치: (${Math.round(v.x)}, ${Math.round(v.y)}) / 코어거리: ${Math.round(distFromCore)}px`);
+    }
+
+    // 너무 가까우면 밀어내기 (코어 보호)
     if (distFromCore < minDistance) {
       v.x = this.core.x + Math.cos(angle) * minDistance;
       v.y = this.core.y + Math.sin(angle) * minDistance;
@@ -2700,25 +2883,17 @@ export class DefenseGame {
       }
     }
 
-    // 너무 멀면 강제로 돌아오기
-    if (distFromCore > maxDistance) {
-      // 부드럽게 당기기
-      const pullStrength = 0.1;
-      const targetDist = maxDistance - 20;
-      const targetX = this.core.x + Math.cos(angle) * targetDist;
-      const targetY = this.core.y + Math.sin(angle) * targetDist;
-
-      v.x += (targetX - v.x) * pullStrength;
-      v.y += (targetY - v.y) * pullStrength;
-
-      // 바깥으로 가는 속도 감소
-      if (v.vx !== undefined) {
-        const dot = v.vx * Math.cos(angle) + v.vy * Math.sin(angle);
-        if (dot > 0) {
-          v.vx *= 0.8;
-          v.vy *= 0.8;
-        }
-      }
+    // 화면 경계 체크 (원형 제한 대신 사각형 경계)
+    let wasOutside = false;
+    if (v.x < minX) { v.x = minX; wasOutside = true; }
+    if (v.x > maxX) { v.x = maxX; wasOutside = true; }
+    if (v.y < minY) { v.y = minY; wasOutside = true; }
+    if (v.y > maxY) { v.y = maxY; wasOutside = true; }
+    
+    // 경계에 닿으면 속도 감소
+    if (wasOutside && v.vx !== undefined) {
+      v.vx *= 0.5;
+      v.vy *= 0.5;
     }
   }
 

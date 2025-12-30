@@ -9,16 +9,35 @@ import { InventoryManager } from "./InventoryManager.js";
 import { ItemDatabase } from "./ItemDatabase.js";
 
 // ===== 전역 디버그 로깅 시스템 =====
-window.DEBUG_LOG_ENABLED = false; // 기본값 OFF
+window.DEBUG_LOG_ENABLED = false; // 전체 디버그 ON/OFF
+
+// 카테고리별 디버그 플래그
+window.DEBUG_CATEGORIES = {
+  Defense: true,       // 디펜스 게임 일반
+  AllyMovement: true,  // 아군 바이러스 이동
+  Synergy: true,       // 시너지 효과
+  Enemy: false,        // 적 스폰/AI
+  GameManager: true,   // 게임 매니저
+  TerminalUI: false,   // 터미널 UI
+  Item: false,         // 아이템 드롭/수집
+  Combat: false,       // 전투 데미지 계산
+};
 
 window.debugLog = function (tag, ...args) {
-  if (window.DEBUG_LOG_ENABLED) {
+  if (!window.DEBUG_LOG_ENABLED) return;
+  
+  // 카테고리 확인 (없는 태그는 기본 true)
+  const categoryEnabled = window.DEBUG_CATEGORIES[tag] ?? true;
+  if (categoryEnabled) {
     console.log(`[${tag}]`, ...args);
   }
 };
 
 window.debugWarn = function (tag, ...args) {
-  if (window.DEBUG_LOG_ENABLED) {
+  if (!window.DEBUG_LOG_ENABLED) return;
+  
+  const categoryEnabled = window.DEBUG_CATEGORIES[tag] ?? true;
+  if (categoryEnabled) {
     console.warn(`[${tag}]`, ...args);
   }
 };
@@ -537,42 +556,121 @@ export class GameManager {
     
     debugPanel.appendChild(dropRateContainer);
 
-    // ===== 콘솔 로그 토글 체크박스 =====
-    const logToggleContainer = document.createElement("div");
-    logToggleContainer.style.cssText = `
+    // ===== 콘솔 로그 시스템 =====
+    const logSection = document.createElement("div");
+    logSection.style.cssText = `
       margin: 15px 0;
       padding: 10px;
       border: 1px dashed #0f0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     `;
+
+    // 메인 토글 (전체 ON/OFF)
+    const mainToggleRow = document.createElement("div");
+    mainToggleRow.style.cssText = "display:flex; align-items:center; gap:10px; margin-bottom:10px;";
 
     const logToggleCheckbox = document.createElement("input");
     logToggleCheckbox.type = "checkbox";
     logToggleCheckbox.id = "dbg-console-log";
     logToggleCheckbox.checked = window.DEBUG_LOG_ENABLED;
-    logToggleCheckbox.style.cssText = `
-      width: 18px;
-      height: 18px;
-      accent-color: #0f0;
-      cursor: pointer;
-    `;
+    logToggleCheckbox.style.cssText = "width:18px; height:18px; accent-color:#0f0; cursor:pointer;";
     logToggleCheckbox.onchange = (e) => {
       window.DEBUG_LOG_ENABLED = e.target.checked;
       const status = e.target.checked ? "ON" : "OFF";
       this.terminal.printSystemMessage(`[DEBUG] Console Logs: ${status}`);
       console.log(`[DEBUG] Console logging ${status}`);
+      // 카테고리 패널 표시/숨기기
+      categoryPanel.style.display = e.target.checked ? "block" : "none";
     };
 
     const logToggleLabel = document.createElement("label");
     logToggleLabel.htmlFor = "dbg-console-log";
-    logToggleLabel.innerText = "Console Logs (ON/OFF)";
-    logToggleLabel.style.cursor = "pointer";
+    logToggleLabel.innerText = "📋 Console Logs";
+    logToggleLabel.style.cssText = "cursor:pointer; font-weight:bold;";
 
-    logToggleContainer.appendChild(logToggleCheckbox);
-    logToggleContainer.appendChild(logToggleLabel);
-    debugPanel.appendChild(logToggleContainer);
+    mainToggleRow.appendChild(logToggleCheckbox);
+    mainToggleRow.appendChild(logToggleLabel);
+    logSection.appendChild(mainToggleRow);
+
+    // 카테고리별 체크박스 패널 (접혀있음)
+    const categoryPanel = document.createElement("div");
+    categoryPanel.style.cssText = `
+      display: ${window.DEBUG_LOG_ENABLED ? "block" : "none"};
+      margin-top: 10px;
+      padding: 8px;
+      background: rgba(0,50,0,0.5);
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+    `;
+
+    // 카테고리 정의 (이름, 설명)
+    const categories = [
+      { key: "Defense", label: "🛡️ 디펜스 일반" },
+      { key: "AllyMovement", label: "🦠 아군 이동" },
+      { key: "Synergy", label: "⚡ 시너지 효과" },
+      { key: "Enemy", label: "👾 적 스폰/AI" },
+      { key: "GameManager", label: "🎮 게임 매니저" },
+      { key: "TerminalUI", label: "💻 터미널 UI" },
+      { key: "Item", label: "📦 아이템" },
+      { key: "Combat", label: "⚔️ 전투 계산" },
+    ];
+
+    categories.forEach(({ key, label }) => {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex; align-items:center; gap:8px; margin:4px 0;";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = `dbg-cat-${key}`;
+      cb.checked = window.DEBUG_CATEGORIES[key] ?? true;
+      cb.style.cssText = "width:14px; height:14px; accent-color:#0f0; cursor:pointer;";
+      cb.onchange = (e) => {
+        window.DEBUG_CATEGORIES[key] = e.target.checked;
+        console.log(`[DEBUG] Category '${key}': ${e.target.checked ? "ON" : "OFF"}`);
+      };
+
+      const lbl = document.createElement("label");
+      lbl.htmlFor = `dbg-cat-${key}`;
+      lbl.innerText = label;
+      lbl.style.cssText = "cursor:pointer; font-size:12px;";
+
+      row.appendChild(cb);
+      row.appendChild(lbl);
+      categoryPanel.appendChild(row);
+    });
+
+    // 전체 켜기/끄기 버튼
+    const allBtns = document.createElement("div");
+    allBtns.style.cssText = "display:flex; gap:5px; margin-top:8px;";
+
+    const allOnBtn = document.createElement("button");
+    allOnBtn.innerText = "전체 ON";
+    allOnBtn.style.cssText = "flex:1; background:#003300; color:#0f0; border:1px solid #0f0; cursor:pointer; padding:3px; font-size:11px;";
+    allOnBtn.onclick = () => {
+      categories.forEach(({ key }) => {
+        window.DEBUG_CATEGORIES[key] = true;
+        document.getElementById(`dbg-cat-${key}`).checked = true;
+      });
+      console.log("[DEBUG] All categories ON");
+    };
+
+    const allOffBtn = document.createElement("button");
+    allOffBtn.innerText = "전체 OFF";
+    allOffBtn.style.cssText = "flex:1; background:#330000; color:#f00; border:1px solid #f00; cursor:pointer; padding:3px; font-size:11px;";
+    allOffBtn.onclick = () => {
+      categories.forEach(({ key }) => {
+        window.DEBUG_CATEGORIES[key] = false;
+        document.getElementById(`dbg-cat-${key}`).checked = false;
+      });
+      console.log("[DEBUG] All categories OFF");
+    };
+
+    allBtns.appendChild(allOnBtn);
+    allBtns.appendChild(allOffBtn);
+    categoryPanel.appendChild(allBtns);
+
+    logSection.appendChild(categoryPanel);
+    debugPanel.appendChild(logSection);
 
     // Buttons Container
     const btnContainer = document.createElement("div");
@@ -4131,6 +4229,8 @@ export class GameManager {
 
   /**
    * 아군 분배 계산 (슬롯 기반)
+   * - 메인 > 서브 마리수 보장
+   * - 슬롯 효율 최대화 (총 마리수 최대)
    */
   calculateAllyDistribution() {
     const baseSlots = 12;
@@ -4150,35 +4250,53 @@ export class GameManager {
       // 서브 없음: 전부 메인
       mainCount = Math.floor(totalSlots / mainCost);
     } else {
-      // 메인 70%, 서브 30% 기본 할당
-      const mainSlots = Math.floor(totalSlots * 0.7);
-      const subSlots = totalSlots - mainSlots;
+      // 전략: 메인 > 서브 조건을 만족하면서 총 마리수 최대화
+      let bestMain = 0;
+      let bestSub = 0;
+      let bestTotal = 0;
 
-      mainCount = Math.floor(mainSlots / mainCost);
-      subCount = Math.floor(subSlots / subCost);
+      // 가능한 모든 메인 수에 대해 탐색
+      const maxMain = Math.floor(totalSlots / mainCost);
 
-      // 남은 슬롯 계산
-      let usedSlots = mainCount * mainCost + subCount * subCost;
-      let remainingSlots = totalSlots - usedSlots;
+      for (let m = 1; m <= maxMain; m++) {
+        const usedByMain = m * mainCost;
+        const remainingForSub = totalSlots - usedByMain;
+        const s = Math.floor(remainingForSub / subCost);
 
-      // 남은 슬롯으로 더 채우기 (서브 우선, 안되면 메인)
-      while (remainingSlots > 0) {
-        if (remainingSlots >= subCost) {
-          subCount++;
-          remainingSlots -= subCost;
-        } else if (remainingSlots >= mainCost) {
-          mainCount++;
-          remainingSlots -= mainCost;
-        } else {
-          break; // 더 이상 채울 수 없음
+        const total = m + s;
+
+        // 메인 > 서브 조건 만족하고, 서브 최소 1마리, 총 마리수 최대
+        if (m > s && s >= 1 && total > bestTotal) {
+          bestMain = m;
+          bestSub = s;
+          bestTotal = total;
         }
       }
+
+      // 조합을 못 찾은 경우 (서브 슬롯 코스트가 매우 작아서 항상 서브가 많아짐)
+      if (bestMain === 0) {
+        // 메인 우선 배치: 슬롯이 허용하는 만큼 메인을 채우고, 서브는 최소화
+        // 메인 최소 2마리, 서브 1마리로 시작
+        bestMain = Math.min(2, Math.floor(totalSlots / mainCost));
+        const usedByMain = bestMain * mainCost;
+        bestSub = Math.min(1, Math.floor((totalSlots - usedByMain) / subCost));
+        
+        // 남은 슬롯을 메인으로 채우기
+        let remaining = totalSlots - bestMain * mainCost - bestSub * subCost;
+        while (remaining >= mainCost) {
+          bestMain++;
+          remaining -= mainCost;
+        }
+      }
+
+      mainCount = bestMain;
+      subCount = bestSub;
     }
 
     // 최소 3마리 보장
     const total = mainCount + subCount;
     if (total < 3) {
-      mainCount = Math.max(3, mainCount);
+      mainCount = Math.max(3 - subCount, mainCount);
     }
 
     return { mainCount, subCount, mainType, subType, totalSlots };
