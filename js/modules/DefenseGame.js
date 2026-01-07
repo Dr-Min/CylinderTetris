@@ -1,6 +1,11 @@
+import { BGMManager } from "./BGMManager.js";
+
 export class DefenseGame {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
+    
+    // BGM 매니저 (트랙 기반 음악 시스템)
+    this.bgmManager = new BGMManager();
 
     // 캔버스 생성 (body에 직접 부착하여 game-container와 분리)
     this.canvas = document.createElement("canvas");
@@ -139,6 +144,9 @@ export class DefenseGame {
     // 게임 상태 변수
     this.isRunning = false;
     this.lastTime = 0;
+
+    // BGM 상태 (BGMManager로 위임)
+    this.currentBGMTrack = null;
 
     // 포탑 설정 (수동 발사용 - 자동 발사는 조력자가 담당)
     this.turret = {
@@ -876,6 +884,13 @@ export class DefenseGame {
     this.updateWaveDisplay();
     this.updateShieldBtnUI("ACTIVE", "#fff");
 
+    // BGM 시작 (트랙 선택)
+    if (this.isSafeZone) {
+      this.playBGMTrack('SAFE_ZONE');
+    } else {
+      this.playBGMTrack('DEFENSE');
+    }
+
     this.lastTime = performance.now();
     this.animate(this.lastTime);
     debugLog("Defense", "Mode Started");
@@ -885,11 +900,17 @@ export class DefenseGame {
     this.isRunning = false;
     this.canvas.style.display = "none";
     this.uiLayer.style.display = "none"; // UI 숨김
+    
+    // BGM 정지
+    this.bgmManager.stop();
   }
 
   pause() {
     this.isRunning = false;
     // 캔버스와 UI는 보이지만 업데이트 중지
+    
+    // BGM 정지
+    this.bgmManager.stop();
   }
 
   resume() {
@@ -899,6 +920,11 @@ export class DefenseGame {
       this.uiLayer.style.display = "block";
       this.lastTime = performance.now();
       requestAnimationFrame((t) => this.animate(t));
+      
+      // BGM 재개 (이전 트랙으로)
+      if (this.currentBGMTrack) {
+        this.bgmManager.play(this.currentBGMTrack);
+      }
     }
   }
 
@@ -1031,8 +1057,8 @@ export class DefenseGame {
         }
       }
     }
-    // 일반 페이지 모드
-    else if (!this.isSafeZone && this.currentPage <= (this.maxPages || 12)) {
+    // 일반 페이지 모드 (점령 완료 상태가 아닐 때만)
+    else if (!this.isSafeZone && !this.isConquered && this.currentPage <= (this.maxPages || 12)) {
       const maxPages = this.maxPages || 12;
       const diffScale = this.stageDifficultyScale || 1.0;
 
@@ -1124,15 +1150,16 @@ export class DefenseGame {
       }
     }
 
-    // 1. 적 생성
-    // 적 생성 (안전영역이면 느리게)
-    const currentSpawnRate = this.isSafeZone
-      ? this.safeZoneSpawnRate
-      : this.spawnRate;
-    this.waveTimer += dt;
-    if (this.waveTimer > currentSpawnRate) {
-      this.spawnEnemy();
-      this.waveTimer = 0;
+    // 1. 적 생성 (점령 완료 상태가 아닐 때만)
+    if (!this.isConquered) {
+      const currentSpawnRate = this.isSafeZone
+        ? this.safeZoneSpawnRate
+        : this.spawnRate;
+      this.waveTimer += dt;
+      if (this.waveTimer > currentSpawnRate) {
+        this.spawnEnemy();
+        this.waveTimer = 0;
+      }
     }
 
     // 2. 적 이동 및 충돌
@@ -1638,20 +1665,34 @@ export class DefenseGame {
       // 점령 완료 상태
       text = "🚩 점령지";
       color = "#00ff00";
+      this.playBGMTrack('SAFE_ZONE'); // 점령지는 안전
     } else if (this.isReinforcementMode) {
-      // 강화 페이지 모드
+      // 강화 페이지 모드 - FINAL 트랙
       text = `⚔️ ${this.reinforcementPage}/${this.reinforcementMaxPages}`;
       color = "#ff3333";
+      this.playBGMTrack('FINAL');
+      this.bgmManager.updateTempo(this.reinforcementPage, this.reinforcementMaxPages);
     } else if (this.isSafeZone) {
       text = "SAFE ZONE";
       color = "#00ff00";
+      this.playBGMTrack('SAFE_ZONE');
     } else if (this.currentPage > maxPages) {
-      // 최대 페이지 초과 = 무한대 모드
+      // 최대 페이지 초과 = 무한대 모드 - FINAL 트랙
       text = "∞ READY";
       color = "#ff3333";
+      this.playBGMTrack('FINAL');
+      this.bgmManager.updateTempo(maxPages, maxPages);
     } else {
       text = `PAGE: ${this.currentPage} / ${maxPages}`;
       color = "#00f0ff";
+      
+      // 페이지 10 이상이면 FINAL 트랙으로 전환
+      if (this.currentPage >= 10) {
+        this.playBGMTrack('FINAL');
+      } else {
+        this.playBGMTrack('DEFENSE');
+      }
+      this.bgmManager.updateTempo(this.currentPage, maxPages);
     }
 
     // 콜백으로 터미널에 업데이트
@@ -2022,11 +2063,11 @@ export class DefenseGame {
             enemy.tauntedBy = v; // 이 탱커에게 도발당함
             tauntedCount++;
 
-            // 도발당한 적 끌어당기기
-            const pullForce = 30;
+            // 도발당한 적 끌어당기기 - 속도 기반 부드러운 당김
+            const pullSpeed = 150; // 속도로 변환 (부드러운 애니메이션)
             const angle = Math.atan2(v.y - enemy.y, v.x - enemy.x);
-            enemy.x += Math.cos(angle) * pullForce;
-            enemy.y += Math.sin(angle) * pullForce;
+            enemy.knockbackVx = (enemy.knockbackVx || 0) + Math.cos(angle) * pullSpeed;
+            enemy.knockbackVy = (enemy.knockbackVy || 0) + Math.sin(angle) * pullSpeed;
           }
         }
 
@@ -2051,11 +2092,12 @@ export class DefenseGame {
         // 전투 대사 (5% 확률)
         this.tryVirusSpeech(v, 'battle', 0.05);
 
-        // TANK 넉백 효과 (도발 후에도 밀어냄)
+        // TANK 넉백 효과 (도발 후에도 밀어냄) - 속도 기반 부드러운 넉백
         if (v.virusType === "TANK" && v.knockbackForce > 0) {
           const angle = Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x);
-          nearestEnemy.x += Math.cos(angle) * v.knockbackForce;
-          nearestEnemy.y += Math.sin(angle) * v.knockbackForce;
+          const knockbackSpeed = v.knockbackForce * 4; // 속도로 변환 (부드러운 애니메이션)
+          nearestEnemy.knockbackVx = (nearestEnemy.knockbackVx || 0) + Math.cos(angle) * knockbackSpeed;
+          nearestEnemy.knockbackVy = (nearestEnemy.knockbackVy || 0) + Math.sin(angle) * knockbackSpeed;
         }
 
         // 받는 데미지 계산
@@ -2463,15 +2505,17 @@ export class DefenseGame {
             }
           }
 
-          // 버프 상태 관리
+          // 버프 상태 관리 (체력 비율 유지)
           if (nearTank && !v.tankProtectionBuff) {
             v.tankProtectionBuff = true;
+            const hpRatio = v.hp / v.maxHp; // 현재 체력 비율 저장
             v.maxHp = Math.floor(v.baseMaxHp * 1.5); // HP 최대치 +50%
-            v.hp = Math.min(v.hp, v.maxHp);
+            v.hp = Math.floor(v.maxHp * hpRatio); // 체력 비율 유지
           } else if (!nearTank && v.tankProtectionBuff) {
             v.tankProtectionBuff = false;
+            const hpRatio = v.hp / v.maxHp; // 현재 체력 비율 저장
             v.maxHp = v.baseMaxHp;
-            v.hp = Math.min(v.hp, v.maxHp);
+            v.hp = Math.floor(v.maxHp * hpRatio); // 체력 비율 유지
           }
         });
         break;
@@ -4194,9 +4238,9 @@ export class DefenseGame {
   }
 
   spawnEnemy() {
-    // Safe Zone에서는 적 소환 안함
-    if (this.isSafeZone) {
-      console.log("[DEBUG] spawnEnemy blocked - isSafeZone:", this.isSafeZone);
+    // Safe Zone 또는 점령 완료 상태에서는 적 소환 안함
+    if (this.isSafeZone || this.isConquered) {
+      console.log("[DEBUG] spawnEnemy blocked - isSafeZone:", this.isSafeZone, "isConquered:", this.isConquered);
       return;
     }
     console.log("[DEBUG] spawnEnemy called - isSafeZone:", this.isSafeZone);
@@ -5985,5 +6029,41 @@ export class DefenseGame {
       
       ctx.restore();
     });
+  }
+
+  // ============================================
+  // === BGM WRAPPER (BGMManager 사용) ===
+  // ============================================
+
+  /**
+   * BGM 트랙 재생
+   * @param {string} trackName - 트랙 이름 (SAFE_ZONE, DEFENSE, FINAL)
+   */
+  playBGMTrack(trackName) {
+    if (this.currentBGMTrack === trackName) return; // 이미 재생 중
+    
+    this.currentBGMTrack = trackName;
+    this.bgmManager.play(trackName);
+  }
+
+  /**
+   * BGM 뮤트 토글
+   * @returns {boolean} - 뮤트 해제 상태면 true (ON)
+   */
+  toggleBGM() {
+    const isOn = this.bgmManager.toggleMute();
+    
+    // 뮤트 해제 시 현재 상태에 맞는 트랙 재생
+    if (isOn && this.isRunning) {
+      if (this.isSafeZone) {
+        this.playBGMTrack('SAFE_ZONE');
+      } else if (this.currentPage >= 10 || this.isReinforcementMode) {
+        this.playBGMTrack('FINAL');
+      } else {
+        this.playBGMTrack('DEFENSE');
+      }
+    }
+    
+    return isOn;
   }
 }

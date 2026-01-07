@@ -1,5 +1,5 @@
-// v9.7.9 - Improved debug log format for ally movement
-const CACHE_NAME = "hacker-tetris-v23.3";
+// v9.20.0 - Fix: TANK knockback smooth animation + tankProtection HP ratio preservation
+const CACHE_NAME = "hacker-tetris-v23.17"; // velocity-based knockback, synergy HP ratio fix
 const ASSETS = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const ASSETS = [
   "./js/modules/TerminalUI.js",
   "./js/modules/TetrisGame.js",
   "./js/modules/DefenseGame.js",
+  "./js/modules/BGMManager.js",
   "./js/modules/PerkManager.js",
   "./js/modules/ConquestManager.js",
   "./js/modules/EquipmentManager.js",

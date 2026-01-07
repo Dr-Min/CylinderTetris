@@ -58,10 +58,30 @@ export class GameManager {
     this.stageManager = new StageManager();
     this.inventoryManager = new InventoryManager(); // 인벤토리 매니저 추가
     this.itemDatabase = new ItemDatabase(); // 아이템 데이터베이스
-    this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
+        this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
+    
+    // 해금 진행률 (Decryption Progress)
+    // 바이러스: TANK, HUNTER, BOMBER, HEALER (SWARM만 기본 해금)
+    // 무기: SHOTGUN, SNIPER, RAPID, LAUNCHER (NORMAL만 기본 해금)
+    this.decryptionProgress = {}; // { TANK: 45, SNIPER: 10 ... }
+    
+    // 해금 대상 분류 (기본 해금 제외)
+    this.virusUnlockTargets = ["TANK", "HUNTER", "BOMBER", "HEALER"]; // SWARM 제외
+    this.weaponUnlockTargets = ["SHOTGUN", "SNIPER", "RAPID", "LAUNCHER"]; // NORMAL 제외
+    
+    // 스테이지별 해금 타겟 (배열 지원 - 한 스테이지에서 여러 개 해금 가능)
+    this.stageUnlockTargets = {
+      1: ["TANK", "SNIPER"],           // Alpha - 탱커 + 스나이퍼
+      2: ["BOMBER"],                    // Beta - 봄버
+      4: ["HUNTER", "SHOTGUN"],         // Gamma - 헌터 + 샷건
+      5: ["RAPID"],                     // Delta - 래피드
+      6: ["HEALER", "LAUNCHER"]         // Boss - 힐러 + 런처
+    };
     
     // 디버그용 아이템 드롭률 (null이면 기본값 사용, 0~1 범위)
     this.debugItemDropRate = null;
+    this.debugBlueprintDropRate = null; // 블루프린트 드롭률 (null이면 기본값 사용)
+    this.debugBlueprintAmount = null;   // 블루프린트 해금량 (null이면 기본값 사용)
 
     // 디펜스 게임 이벤트 연결
     this.defenseGame.onResourceGained = (amount) => {
@@ -285,6 +305,11 @@ export class GameManager {
       },
     };
 
+    // === 저장된 데이터 로드 ===
+    this.loadUpgrades();   // 업그레이드 레벨 복원
+    this.loadAllyConfig(); // 아군 설정 복원
+    this.loadDecryptionProgress(); // 해금 진행률 복원
+
     // 점령 모드 상태
     this.isConquestMode = false;
     this.conquestTetrisComplete = false;
@@ -388,6 +413,9 @@ export class GameManager {
 
     // 디버그 모드 초기화
     this.initDebugSystem();
+    
+    // 설정 패널 초기화
+    this.initSettingPanel();
   }
 
   initDebugSystem() {
@@ -555,6 +583,148 @@ export class GameManager {
     dropRateContainer.appendChild(dropTestBtns);
     
     debugPanel.appendChild(dropRateContainer);
+
+    // 4. 블루프린트(해금) 드롭률 조절
+    const blueprintContainer = document.createElement("div");
+    blueprintContainer.style.cssText = `
+      margin: 15px 0;
+      padding: 10px;
+      border: 1px solid #00ffff;
+      background: rgba(0, 30, 50, 0.5);
+    `;
+    
+    const blueprintTitle = document.createElement("div");
+    blueprintTitle.style.cssText = "color: #00ffff; margin-bottom: 8px; font-weight: bold;";
+    blueprintTitle.innerText = "🔓 BLUEPRINT DROP";
+    blueprintContainer.appendChild(blueprintTitle);
+    
+    // 블루프린트 드롭률 슬라이더
+    const bpDropRow = document.createElement("div");
+    bpDropRow.style.cssText = "display: flex; align-items: center; gap: 10px; margin-bottom: 8px;";
+    
+    const bpDropLabel = document.createElement("span");
+    bpDropLabel.style.cssText = "color: #aaa; font-size: 11px; min-width: 60px;";
+    bpDropLabel.innerText = "드롭률:";
+    
+    const bpDropSlider = document.createElement("input");
+    bpDropSlider.type = "range";
+    bpDropSlider.min = "0";
+    bpDropSlider.max = "100";
+    bpDropSlider.value = "10";
+    bpDropSlider.style.cssText = "flex: 1; accent-color: #00ffff;";
+    
+    const bpDropValue = document.createElement("span");
+    bpDropValue.style.cssText = "color: #00ffff; min-width: 45px; text-align: right;";
+    bpDropValue.innerText = "10%";
+    
+    // 디버그용 블루프린트 드롭률 변수 초기화
+    this.debugBlueprintDropRate = null;
+    
+    bpDropSlider.oninput = (e) => {
+      const val = parseInt(e.target.value);
+      bpDropValue.innerText = `${val}%`;
+      this.debugBlueprintDropRate = val / 100;
+      this.terminal.printSystemMessage(`[DEBUG] Blueprint Drop Rate: ${val}%`);
+    };
+    
+    bpDropRow.appendChild(bpDropLabel);
+    bpDropRow.appendChild(bpDropSlider);
+    bpDropRow.appendChild(bpDropValue);
+    blueprintContainer.appendChild(bpDropRow);
+    
+    // 진행률 증가량 슬라이더
+    const bpAmountRow = document.createElement("div");
+    bpAmountRow.style.cssText = "display: flex; align-items: center; gap: 10px; margin-bottom: 8px;";
+    
+    const bpAmountLabel = document.createElement("span");
+    bpAmountLabel.style.cssText = "color: #aaa; font-size: 11px; min-width: 60px;";
+    bpAmountLabel.innerText = "증가량:";
+    
+    const bpAmountSlider = document.createElement("input");
+    bpAmountSlider.type = "range";
+    bpAmountSlider.min = "1";
+    bpAmountSlider.max = "50";
+    bpAmountSlider.value = "3";
+    bpAmountSlider.style.cssText = "flex: 1; accent-color: #00ffff;";
+    
+    const bpAmountValue = document.createElement("span");
+    bpAmountValue.style.cssText = "color: #00ffff; min-width: 45px; text-align: right;";
+    bpAmountValue.innerText = "+3%";
+    
+    this.debugBlueprintAmount = null;
+    
+    bpAmountSlider.oninput = (e) => {
+      const val = parseInt(e.target.value);
+      bpAmountValue.innerText = `+${val}%`;
+      this.debugBlueprintAmount = val;
+      this.terminal.printSystemMessage(`[DEBUG] Blueprint Amount: +${val}%`);
+    };
+    
+    bpAmountRow.appendChild(bpAmountLabel);
+    bpAmountRow.appendChild(bpAmountSlider);
+    bpAmountRow.appendChild(bpAmountValue);
+    blueprintContainer.appendChild(bpAmountRow);
+    
+    // 퀵 버튼들
+    const bpBtns = document.createElement("div");
+    bpBtns.style.cssText = "display: flex; gap: 5px;";
+    
+    const bpBtn100 = document.createElement("button");
+    bpBtn100.innerText = "100%/+50";
+    bpBtn100.style.cssText = "flex:1; background:#003344; color:#00ffff; border:1px solid #00ffff; cursor:pointer; padding:3px; font-size:10px;";
+    bpBtn100.onclick = () => {
+      bpDropSlider.value = "100";
+      bpDropValue.innerText = "100%";
+      bpAmountSlider.value = "50";
+      bpAmountValue.innerText = "+50%";
+      this.debugBlueprintDropRate = 1.0;
+      this.debugBlueprintAmount = 50;
+      this.terminal.printSystemMessage("[DEBUG] Blueprint: 100% drop, +50% per drop");
+    };
+    
+    const bpBtnReset = document.createElement("button");
+    bpBtnReset.innerText = "기본값";
+    bpBtnReset.style.cssText = "flex:1; background:#333; color:#0f0; border:1px solid #0f0; cursor:pointer; padding:3px; font-size:10px;";
+    bpBtnReset.onclick = () => {
+      bpDropSlider.value = "10";
+      bpDropValue.innerText = "10%";
+      bpAmountSlider.value = "3";
+      bpAmountValue.innerText = "+3%";
+      this.debugBlueprintDropRate = null;
+      this.debugBlueprintAmount = null;
+      this.terminal.printSystemMessage("[DEBUG] Blueprint: DEFAULT (10%, +1~10%)");
+    };
+    
+    bpBtns.appendChild(bpBtn100);
+    bpBtns.appendChild(bpBtnReset);
+    blueprintContainer.appendChild(bpBtns);
+    
+    // 현재 진행률 표시
+    const progressDisplay = document.createElement("div");
+    progressDisplay.id = "dbg-blueprint-progress";
+    progressDisplay.style.cssText = "margin-top: 10px; font-size: 10px; color: #888; max-height: 80px; overflow-y: auto;";
+    progressDisplay.innerHTML = "<div>진행률: (게임 시작 후 표시)</div>";
+    blueprintContainer.appendChild(progressDisplay);
+    
+    // 진행률 갱신 버튼
+    const refreshBtn = document.createElement("button");
+    refreshBtn.innerText = "🔄 진행률 확인";
+    refreshBtn.style.cssText = "width:100%; margin-top:5px; background:#002233; color:#00ffff; border:1px solid #00ffff; cursor:pointer; padding:3px; font-size:10px;";
+    refreshBtn.onclick = () => {
+      const allTargets = [...this.virusUnlockTargets, ...this.weaponUnlockTargets];
+      let html = "";
+      allTargets.forEach(t => {
+        const prog = this.decryptionProgress[t] || 0;
+        const unlocked = prog >= 100;
+        const color = unlocked ? "#00ff00" : "#00ffff";
+        const status = unlocked ? "✓" : `${prog}%`;
+        html += `<div style="color:${color}">${t}: ${status}</div>`;
+      });
+      progressDisplay.innerHTML = html || "<div>없음</div>";
+    };
+    blueprintContainer.appendChild(refreshBtn);
+    
+    debugPanel.appendChild(blueprintContainer);
 
     // ===== 콘솔 로그 시스템 =====
     const logSection = document.createElement("div");
@@ -831,9 +1001,186 @@ export class GameManager {
     console.log("Debug System Initialized. Press '`' to toggle.");
   }
 
+  /**
+   * 설정 패널 초기화 (/setting 명령어)
+   */
+  initSettingPanel() {
+    const settingPanel = document.createElement("div");
+    settingPanel.id = "setting-panel";
+    settingPanel.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 320px;
+      background: rgba(0, 10, 0, 0.98);
+      border: 2px solid #00ff00;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+      padding: 20px;
+      z-index: 10001;
+      display: none;
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+    `;
+
+    // 제목
+    const title = document.createElement("h3");
+    title.innerText = "=== SETTINGS ===";
+    title.style.cssText = `
+      margin: 0 0 20px 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #00ff00;
+      text-align: center;
+      letter-spacing: 3px;
+    `;
+    settingPanel.appendChild(title);
+
+    // === BGM 볼륨 섹션 ===
+    const bgmSection = document.createElement("div");
+    bgmSection.style.cssText = `
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #00aa00;
+      background: rgba(0, 30, 0, 0.5);
+    `;
+
+    const bgmLabel = document.createElement("div");
+    bgmLabel.style.cssText = "margin-bottom: 12px; font-weight: bold; font-size: 14px;";
+    bgmLabel.innerText = "🎵 BGM VOLUME";
+    bgmSection.appendChild(bgmLabel);
+
+    // 슬라이더 행
+    const sliderRow = document.createElement("div");
+    sliderRow.style.cssText = "display: flex; align-items: center; gap: 12px;";
+
+    const volumeSlider = document.createElement("input");
+    volumeSlider.type = "range";
+    volumeSlider.id = "setting-bgm-volume";
+    volumeSlider.min = "0";
+    volumeSlider.max = "100";
+    // 저장된 볼륨 불러오기
+    const savedVolume = localStorage.getItem('bgmVolume');
+    volumeSlider.value = savedVolume !== null ? Math.round(parseFloat(savedVolume) * 100) : 100;
+    volumeSlider.style.cssText = "flex: 1; accent-color: #00ff00; cursor: pointer;";
+
+    const volumeValue = document.createElement("span");
+    volumeValue.id = "setting-bgm-value";
+    volumeValue.style.cssText = "min-width: 50px; text-align: right; font-size: 16px;";
+    volumeValue.innerText = `${volumeSlider.value}%`;
+
+    volumeSlider.oninput = (e) => {
+      const val = parseInt(e.target.value);
+      volumeValue.innerText = `${val}%`;
+      // BGMManager에 볼륨 적용
+      if (this.defenseGame && this.defenseGame.bgmManager) {
+        this.defenseGame.bgmManager.setVolume(val / 100);
+      }
+    };
+
+    sliderRow.appendChild(volumeSlider);
+    sliderRow.appendChild(volumeValue);
+    bgmSection.appendChild(sliderRow);
+
+    // 프리셋 버튼
+    const presetRow = document.createElement("div");
+    presetRow.style.cssText = "display: flex; gap: 8px; margin-top: 12px;";
+
+    const presets = [
+      { label: "MUTE", value: 0 },
+      { label: "50%", value: 50 },
+      { label: "100%", value: 100 }
+    ];
+
+    presets.forEach(({ label, value }) => {
+      const btn = document.createElement("button");
+      btn.innerText = label;
+      btn.style.cssText = `
+        flex: 1;
+        padding: 8px;
+        background: ${value === 0 ? '#330000' : '#003300'};
+        color: ${value === 0 ? '#ff3333' : '#00ff00'};
+        border: 1px solid ${value === 0 ? '#ff3333' : '#00ff00'};
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 12px;
+      `;
+      btn.onclick = () => {
+        volumeSlider.value = value;
+        volumeValue.innerText = `${value}%`;
+        if (this.defenseGame && this.defenseGame.bgmManager) {
+          this.defenseGame.bgmManager.setVolume(value / 100);
+        }
+      };
+      presetRow.appendChild(btn);
+    });
+
+    bgmSection.appendChild(presetRow);
+    settingPanel.appendChild(bgmSection);
+
+    // === 닫기 버튼 ===
+    const closeBtn = document.createElement("button");
+    closeBtn.innerText = "[ CLOSE ]";
+    closeBtn.style.cssText = `
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background: transparent;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      letter-spacing: 2px;
+    `;
+    closeBtn.onclick = () => {
+      settingPanel.style.display = "none";
+    };
+    settingPanel.appendChild(closeBtn);
+
+    // ESC 키로 닫기
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && settingPanel.style.display !== "none") {
+        settingPanel.style.display = "none";
+      }
+    });
+
+    document.body.appendChild(settingPanel);
+    console.log("Setting Panel Initialized. Type '/setting' to open.");
+  }
+
+  /**
+   * BGM 토글 버튼 설정
+   */
+  setupBGMButton() {
+    const bgmBtn = document.getElementById("bgm-btn");
+    if (!bgmBtn) return;
+
+    // 초기 상태 (뮤트 아님)
+    bgmBtn.innerHTML = "BGM<br/>ON";
+    bgmBtn.style.color = "#33ff00";
+    bgmBtn.style.borderColor = "#33ff00";
+
+    bgmBtn.addEventListener("click", () => {
+      const isOn = this.defenseGame.toggleBGM();
+      
+      if (isOn) {
+        bgmBtn.innerHTML = "BGM<br/>ON";
+        bgmBtn.style.color = "#33ff00";
+        bgmBtn.style.borderColor = "#33ff00";
+      } else {
+        bgmBtn.innerHTML = "BGM<br/>OFF";
+        bgmBtn.style.color = "#ff3333";
+        bgmBtn.style.borderColor = "#ff3333";
+      }
+    });
+  }
+
   async init() {
     this.loadReputation();
     this.tetrisGame.init(); // 3D 씬 로드 (항상 로드해둠)
+
+    // BGM 버튼 핸들러 설정
+    this.setupBGMButton();
 
     // [DEV] 튜토리얼 스킵 (개발 중 비활성화)
     localStorage.setItem("tutorial_completed", "true");
@@ -1791,6 +2138,15 @@ export class GameManager {
     debugLog("GameManager", `테트리스 아이템 드롭! ${item.name}`);
     
     // 현재 스테이지 획득 목록에 추가
+    
+    // 해금 조각(fragment)은 별도 처리
+    if (item.type === "fragment") {
+      this.processDecryption(item);
+      this.showItemDropNotification(item);
+      return;
+    }
+
+    // 일반 아이템만 획득 목록에 추가
     this.collectedItemsThisStage.push(item);
     
     // 인벤토리에 바로 추가
@@ -1810,6 +2166,7 @@ export class GameManager {
    * @param {string} source - 'defense' 또는 'tetris'
    */
   tryItemDrop(x, y, source) {
+    // === 1. 일반 아이템 드롭 ===
     // 디버그 드롭률이 설정되어 있으면 사용, 아니면 기본값 5%
     let dropChance = this.debugItemDropRate !== null ? this.debugItemDropRate : 0.05;
     
@@ -1819,32 +2176,251 @@ export class GameManager {
       dropChance += effects.dropRate;
     }
     
-    // 확률 체크
-    if (Math.random() > dropChance) return;
-    
-    // 아이템 생성
-    const item = this.itemDatabase.generateRandomItem();
-    
-    debugLog("GameManager", `아이템 드롭! ${item.name} at (${x}, ${y})`);
-    
-    // DefenseGame에 드롭 아이템 생성
-    if (this.defenseGame && this.activeMode === "defense") {
-      this.defenseGame.spawnDroppedItem(x, y, item);
+    // 일반 아이템 드롭 확률 체크
+    if (Math.random() <= dropChance) {
+      const item = this.itemDatabase.generateRandomItem();
+      debugLog("GameManager", `아이템 드롭! ${item.name} at (${x}, ${y})`);
+      
+      if (this.defenseGame && this.activeMode === "defense") {
+        this.defenseGame.spawnDroppedItem(x, y, item);
+      }
     }
+    
+    // === 2. 블루프린트 드롭 (별도 확률) ===
+    const bpDropChance = this.debugBlueprintDropRate !== null ? this.debugBlueprintDropRate : 0.10;
+    
+    if (Math.random() <= bpDropChance) {
+      // 해금 대상이 남아있는지 확인
+      const allTargets = [...this.virusUnlockTargets, ...this.weaponUnlockTargets];
+      const lockedTargets = allTargets.filter(t => {
+        if (this.virusUnlockTargets.includes(t)) return !this.isVirusUnlocked(t);
+        if (this.weaponUnlockTargets.includes(t)) return !this.isWeaponUnlocked(t);
+        return false;
+      });
+      
+      if (lockedTargets.length === 0) return; // 모두 해금됨
+      
+      // 블루프린트 아이템 생성 (디버그 증가량 적용)
+      const blueprintItem = this.itemDatabase.generateBlueprintItem(this.debugBlueprintAmount);
+      
+      debugLog("GameManager", `블루프린트 드롭! ${blueprintItem.name} (+${blueprintItem.effect.value}%) at (${x}, ${y})`);
+      
+      // 일반 아이템과 동일하게 바닥에 드롭 (아군이 수집)
+      if (this.defenseGame && this.activeMode === "defense") {
+        this.defenseGame.spawnDroppedItem(x, y, blueprintItem);
+      }
+    }
+  }
+  
+  /**
+   * 블루프린트 드롭 이펙트 표시
+   */
+  showBlueprintDropEffect(x, y, amount) {
+    if (!this.defenseGame || !this.defenseGame.canvas) return;
+    
+    const canvas = this.defenseGame.canvas;
+    const rect = canvas.getBoundingClientRect();
+    
+    // 캔버스 좌표를 화면 좌표로 변환
+    const screenX = rect.left + (x / this.defenseGame.width) * rect.width;
+    const screenY = rect.top + (y / this.defenseGame.height) * rect.height;
+    
+    const effect = document.createElement("div");
+    effect.style.cssText = `
+      position: fixed;
+      left: ${screenX}px;
+      top: ${screenY}px;
+      color: #00ffff;
+      font-family: var(--term-font);
+      font-size: 14px;
+      font-weight: bold;
+      text-shadow: 0 0 10px #00ffff;
+      pointer-events: none;
+      z-index: 9999;
+      animation: blueprintFloat 1s ease-out forwards;
+    `;
+    effect.innerText = `🔓+${amount}%`;
+    
+    // 애니메이션 스타일 추가 (한 번만)
+    if (!document.getElementById("blueprint-effect-style")) {
+      const style = document.createElement("style");
+      style.id = "blueprint-effect-style";
+      style.textContent = `
+        @keyframes blueprintFloat {
+          0% { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-30px) scale(1.2); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(effect);
+    setTimeout(() => effect.remove(), 1000);
   }
   
   /**
    * 아이템 수집 완료 처리 (수집 바이러스가 코어에 도착했을 때)
    * 인벤토리에 바로 넣지 않고, 스테이지 끝날 때 선택하도록 저장만 함
    */
+  
+  /**
+   * 데이터 조각 처리 (해금 진행률 증가)
+   * - 모든 스테이지에서 모든 해금 대상 드랍 가능
+   * - 특정 스테이지에서는 특정 대상의 확률이 높음 (70% 스테이지 타겟, 30% 랜덤)
+   */
+  processDecryption(item) {
+    // 모든 해금 대상 (바이러스 + 무기)
+    const allTargets = [...this.virusUnlockTargets, ...this.weaponUnlockTargets];
+    
+    // 아직 해금되지 않은 타겟만 필터링
+    const lockedTargets = allTargets.filter(t => {
+      const isVirus = this.virusUnlockTargets.includes(t);
+      const isWeapon = this.weaponUnlockTargets.includes(t);
+      if (isVirus) return !this.isVirusUnlocked(t);
+      if (isWeapon) return !this.isWeaponUnlocked(t);
+      return false;
+    });
+    
+    if (lockedTargets.length === 0) {
+      // 모두 해금됨 - 자원으로 변환
+      const dataAmount = (item.effect.value || 1) * 10;
+      this.currentMoney += dataAmount;
+      this.saveMoney();
+      this.terminal.updateData(this.currentMoney);
+      console.log(`[Decryption] All targets unlocked, converted to ${dataAmount} DATA`);
+      return null; // 타겟 없음 (DATA로 변환됨)
+    }
+    
+    // 현재 스테이지의 보너스 타겟 확인
+    const stageId = this.defenseGame.currentStageId || 0;
+    const bonusTargets = this.stageUnlockTargets[stageId] || [];
+    const lockedBonusTargets = bonusTargets.filter(t => lockedTargets.includes(t));
+    
+    // 타겟 선택: 70% 스테이지 보너스 타겟, 30% 전체 랜덤
+    let target;
+    if (lockedBonusTargets.length > 0 && Math.random() < 0.7) {
+      // 스테이지 보너스 타겟 중 랜덤
+      target = lockedBonusTargets[Math.floor(Math.random() * lockedBonusTargets.length)];
+    } else {
+      // 전체 잠긴 타겟 중 랜덤
+      target = lockedTargets[Math.floor(Math.random() * lockedTargets.length)];
+    }
+    
+    // 진행률 증가
+    const amount = item.effect.value || 1;
+    if (!this.decryptionProgress[target]) this.decryptionProgress[target] = 0;
+    
+    const oldProgress = this.decryptionProgress[target];
+    this.decryptionProgress[target] = Math.min(100, oldProgress + amount);
+    
+    this.saveDecryptionProgress();
+    
+    console.log(`[Decryption] ${target}: ${oldProgress}% -> ${this.decryptionProgress[target]}% (Stage ${stageId} bonus: ${bonusTargets.join(', ')})`);
+    
+    // 해금 달성 체크
+    if (oldProgress < 100 && this.decryptionProgress[target] >= 100) {
+      this.terminal.printSystemMessage(`ACCESS GRANTED: ${target} BLUEPRINT DECRYPTED!`);
+      this.showNotification(`🔓 ${target} UNLOCKED!`, "#00ff00");
+    }
+    
+    // 적용된 타겟 반환
+    return target;
+  }
+
   handleItemCollected(item) {
     debugLog("GameManager", `아이템 수집됨: ${item.name}`);
     
-    // 현재 스테이지 획득 목록에만 추가 (인벤토리에 바로 안 넣음)
+    // 블루프린트 아이템인 경우 별도 처리 (즉시 해금 진행률 반영)
+    if (item.effect && item.effect.type === "blueprint") {
+      const target = this.processDecryption(item);
+      this.showBlueprintCollectedNotification(item, target);
+      return; // 인벤토리에 추가하지 않음
+    }
+    
+    // 일반 아이템: 현재 스테이지 획득 목록에 추가 (인벤토리에 바로 안 넣음)
     this.collectedItemsThisStage.push(item);
     
     // 획득 알림 표시 (수집됨 표시)
     this.showItemDropNotification(item);
+  }
+  
+  /**
+   * 블루프린트 수집 알림 표시 (상단에 표시)
+   * @param {object} item - 블루프린트 아이템
+   * @param {string} target - 적용된 해금 타겟 (예: "SNIPER", "TANK")
+   */
+  showBlueprintCollectedNotification(item, target) {
+    const existing = document.getElementById("blueprint-notification");
+    if (existing) existing.remove();
+    
+    const notification = document.createElement("div");
+    notification.id = "blueprint-notification";
+    notification.style.cssText = `
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 50, 80, 0.95);
+      border: 2px solid #00ffff;
+      color: #00ffff;
+      padding: 10px 20px;
+      font-family: var(--term-font);
+      font-size: 14px;
+      z-index: 9999;
+      border-radius: 5px;
+      text-shadow: 0 0 10px #00ffff;
+      animation: blueprintNotifAnim 2.5s ease-out forwards;
+    `;
+    
+    // 모든 해금 완료 시 (target이 null)
+    if (!target) {
+      const dataAmount = (item.effect.value || 1) * 10;
+      notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 18px;">${item.icon}</span>
+          <span style="color: #aaaaaa;">ALL UNLOCKED</span>
+          <span style="color: #ffcc00;">→ +${dataAmount} DATA</span>
+        </div>
+        <div style="margin-top: 6px; font-size: 12px; color: #888;">
+          Blueprint converted to resources
+        </div>
+      `;
+    } else {
+      // 타겟 타입 확인 (바이러스 vs 무기)
+      const isVirus = this.virusUnlockTargets.includes(target);
+      const typeLabel = isVirus ? "🦠" : "🔫";
+      const currentProgress = this.decryptionProgress[target] || 0;
+      
+      notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 18px;">${item.icon}</span>
+          <span style="color: #ffcc00; font-weight: bold;">${typeLabel} ${target}</span>
+          <span style="color: #00ff00;">+${item.effect.value}%</span>
+        </div>
+        <div style="margin-top: 6px; font-size: 12px; color: #aaa;">
+          Progress: <span style="color: ${currentProgress >= 100 ? '#00ff00' : '#00ffff'};">${Math.min(100, currentProgress)}%</span>
+          ${currentProgress >= 100 ? ' <span style="color: #00ff00;">✓ UNLOCKED</span>' : ''}
+        </div>
+      `;
+    }
+    
+    // 애니메이션 스타일 추가 (한 번만)
+    if (!document.getElementById("blueprint-notif-style")) {
+      const style = document.createElement("style");
+      style.id = "blueprint-notif-style";
+      style.textContent = `
+        @keyframes blueprintNotifAnim {
+          0% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+          15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 2500);
   }
   
   /**
@@ -3125,51 +3701,90 @@ export class GameManager {
     Object.keys(weaponModes).forEach((modeName) => {
       const mode = weaponModes[modeName];
       const isActive = modeName === currentMode;
+      const isLocked = !this.isWeaponUnlocked(modeName);
+      const unlockProgress = this.decryptionProgress[modeName] || 0;
+      const unlockStage = this.getUnlockStageName(modeName);
 
       const tab = document.createElement("button");
-      tab.style.cssText = `
-        padding: 8px 12px;
-        font-family: var(--term-font);
-        font-size: 12px;
-        cursor: pointer;
-        border: 2px solid ${isActive ? mode.color : "#555"};
-        background: ${
-          isActive
-            ? `rgba(${this.hexToRgb(mode.color)}, 0.3)`
-            : "rgba(0, 0, 0, 0.5)"
+      
+      if (isLocked) {
+        // 잠긴 무기 스타일 (진행률에 따라 아이콘이 왼→오로 채워짐)
+        const progress = Math.min(100, unlockProgress);
+        const clipRight = 100 - progress;
+        
+        tab.style.cssText = `
+          padding: 8px 12px;
+          font-family: var(--term-font);
+          font-size: 12px;
+          cursor: not-allowed;
+          border: 2px solid #333;
+          background: rgba(20, 20, 20, 0.9);
+          transition: all 0.2s;
+          min-width: 60px;
+          position: relative;
+          overflow: hidden;
+        `;
+
+        tab.innerHTML = `
+          <div style="position: relative; width: 100%; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <!-- 어두운 아이콘 (배경) -->
+            <div style="position: absolute; top: 2px; font-size: 18px; filter: grayscale(100%) brightness(0.3);">${mode.icon}</div>
+            <!-- 밝은 아이콘 (진행률만큼 clip) -->
+            <div style="position: absolute; top: 2px; font-size: 18px; clip-path: inset(0 ${clipRight}% 0 0); filter: drop-shadow(0 0 4px ${mode.color});">${mode.icon}</div>
+            <!-- 진행률 텍스트 -->
+            <div style="position: absolute; bottom: 0; font-size: 9px; color: ${progress >= 100 ? '#00ff00' : '#00aaff'}; text-shadow: 0 0 3px #000;">
+              ${progress >= 100 ? '✓ READY' : progress + '%'}
+            </div>
+            <!-- 잠금 표시 (진행률 낮을 때만) -->
+            ${progress < 30 ? '<div style="position: absolute; top: 0; right: 0; font-size: 10px;">🔒</div>' : ''}
+          </div>
+        `;
+      } else {
+        // 해금된 무기 스타일
+        tab.style.cssText = `
+          padding: 8px 12px;
+          font-family: var(--term-font);
+          font-size: 12px;
+          cursor: pointer;
+          border: 2px solid ${isActive ? mode.color : "#555"};
+          background: ${
+            isActive
+              ? `rgba(${this.hexToRgb(mode.color)}, 0.3)`
+              : "rgba(0, 0, 0, 0.5)"
+          };
+          color: ${isActive ? mode.color : "#888"};
+          transition: all 0.2s;
+          min-width: 60px;
+        `;
+
+        tab.innerHTML = `
+          <div style="font-size: 16px;">${mode.icon}</div>
+          <div style="font-size: 10px;">${mode.name}</div>
+        `;
+
+        tab.onmouseenter = () => {
+          if (!isActive) {
+            tab.style.borderColor = mode.color;
+            tab.style.color = mode.color;
+          }
         };
-        color: ${isActive ? mode.color : "#888"};
-        transition: all 0.2s;
-        min-width: 60px;
-      `;
+        tab.onmouseleave = () => {
+          if (!isActive) {
+            tab.style.borderColor = "#555";
+            tab.style.color = "#888";
+          }
+        };
 
-      tab.innerHTML = `
-        <div style="font-size: 16px;">${mode.icon}</div>
-        <div style="font-size: 10px;">${mode.name}</div>
-      `;
-
-      tab.onmouseenter = () => {
-        if (!isActive) {
-          tab.style.borderColor = mode.color;
-          tab.style.color = mode.color;
-        }
-      };
-      tab.onmouseleave = () => {
-        if (!isActive) {
-          tab.style.borderColor = "#555";
-          tab.style.color = "#888";
-        }
-      };
-
-      tab.onclick = () => {
-        // 무기 모드 변경
-        this.defenseGame.setWeaponMode(modeName);
-        // 업그레이드 보너스 재적용
-        this.applyHelperUpgradeBonuses();
-        // 화면 새로고침
-        this.showHelperUpgrades(overlay);
-        this.terminal.printSystemMessage(`WEAPON MODE: ${modeName}`);
-      };
+        tab.onclick = () => {
+          // 무기 모드 변경
+          this.defenseGame.setWeaponMode(modeName);
+          // 업그레이드 보너스 재적용
+          this.applyHelperUpgradeBonuses();
+          // 화면 새로고침
+          this.showHelperUpgrades(overlay);
+          this.terminal.printSystemMessage(`WEAPON MODE: ${modeName}`);
+        };
+      }
 
       weaponTabContainer.appendChild(tab);
     });
@@ -3384,6 +3999,7 @@ export class GameManager {
           this.currentMoney -= upgrade.cost;
           this.saveMoney(); // 자동 저장
           upgrade.effect();
+          this.saveUpgrades(); // 업그레이드 레벨 저장
           upgrade.level = this.upgradeLevels.helper[upgrade.id];
 
           this.terminal.updateData(this.currentMoney);
@@ -3851,6 +4467,7 @@ export class GameManager {
             this.currentMoney -= upgrade.cost;
             this.saveMoney(); // 자동 저장
             upgrade.effect();
+            this.saveUpgrades(); // 업그레이드 레벨 저장
 
             // 클릭 애니메이션
             btn.style.transform = "scale(0.95)";
@@ -4054,43 +4671,69 @@ export class GameManager {
     this.updateAllySlotInfo(slotInfo);
     overlay.appendChild(slotInfo);
 
-    // 메인 컨테이너 (스크롤 가능)
+    // 메인 컨테이너 (스크롤 가능 + 터미널 스타일 스크롤바)
     const mainContainer = document.createElement("div");
+    mainContainer.className = "terminal-scrollbar";
     mainContainer.style.cssText = `
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 12px;
       width: 100%;
       max-width: 350px;
       max-height: 50vh;
       overflow-y: auto;
+      padding-right: 5px;
     `;
+    
+    // 터미널 스타일 스크롤바 CSS 추가 (한 번만)
+    if (!document.getElementById("terminal-scrollbar-style")) {
+      const scrollStyle = document.createElement("style");
+      scrollStyle.id = "terminal-scrollbar-style";
+      scrollStyle.textContent = `
+        .terminal-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .terminal-scrollbar::-webkit-scrollbar-track {
+          background: #111;
+          border: 1px solid #333;
+        }
+        .terminal-scrollbar::-webkit-scrollbar-thumb {
+          background: #00ff00;
+          border: 1px solid #00aa00;
+        }
+        .terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #00ff88;
+        }
+      `;
+      document.head.appendChild(scrollStyle);
+    }
 
     // === 메인 타입 선택 ===
     const mainSection = document.createElement("div");
     mainSection.style.cssText = `
       background: rgba(0, 100, 50, 0.2);
       border: 2px solid #00ff88;
-      padding: 10px;
+      padding: 8px;
     `;
 
     const mainTitle = document.createElement("div");
     mainTitle.style.cssText = `
       color: #00ff88;
       font-family: var(--term-font);
-      font-size: 14px;
+      font-size: 12px;
       font-weight: bold;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
     `;
-    mainTitle.innerText = "★ MAIN TYPE (70%)";
+    mainTitle.innerText = "★ MAIN (70%)";
     mainSection.appendChild(mainTitle);
 
     const mainTypeGrid = document.createElement("div");
     mainTypeGrid.id = "main-type-grid";
     mainTypeGrid.style.cssText = `
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 4px;
+      justify-content: center;
     `;
     this.renderVirusTypeButtons(mainTypeGrid, "main", slotInfo);
     mainSection.appendChild(mainTypeGrid);
@@ -4101,26 +4744,27 @@ export class GameManager {
     subSection.style.cssText = `
       background: rgba(100, 50, 0, 0.2);
       border: 2px solid #ffaa00;
-      padding: 10px;
+      padding: 8px;
     `;
 
     const subTitle = document.createElement("div");
     subTitle.style.cssText = `
       color: #ffaa00;
       font-family: var(--term-font);
-      font-size: 14px;
+      font-size: 12px;
       font-weight: bold;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
     `;
-    subTitle.innerText = "☆ SUB TYPE (30%) - Optional";
+    subTitle.innerText = "☆ SUB TYPE (30%)";
     subSection.appendChild(subTitle);
 
     const subTypeGrid = document.createElement("div");
     subTypeGrid.id = "sub-type-grid";
     subTypeGrid.style.cssText = `
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 4px;
+      justify-content: center;
     `;
     this.renderVirusTypeButtons(subTypeGrid, "sub", slotInfo);
     subSection.appendChild(subTypeGrid);
@@ -4229,8 +4873,12 @@ export class GameManager {
 
   /**
    * 아군 분배 계산 (슬롯 기반)
-   * - 메인 > 서브 마리수 보장
-   * - 슬롯 효율 최대화 (총 마리수 최대)
+   * 
+   * 핵심 원칙:
+   * 1. 슬롯 100% 활용 (낭비 최소화)
+   * 2. 메인 우세 = 슬롯 점유율 기준 (mainSlots >= subSlots)
+   * 3. 총 마리수 최대화
+   * 4. 같은 조건이면 메인 마리수 우선
    */
   calculateAllyDistribution() {
     const baseSlots = 12;
@@ -4250,43 +4898,45 @@ export class GameManager {
       // 서브 없음: 전부 메인
       mainCount = Math.floor(totalSlots / mainCost);
     } else {
-      // 전략: 메인 > 서브 조건을 만족하면서 총 마리수 최대화
+      // 모든 가능한 조합을 탐색하여 최적의 배치 찾기
       let bestMain = 0;
       let bestSub = 0;
-      let bestTotal = 0;
+      let bestScore = -1;
 
-      // 가능한 모든 메인 수에 대해 탐색
       const maxMain = Math.floor(totalSlots / mainCost);
+      const maxSub = Math.floor(totalSlots / subCost);
 
-      for (let m = 1; m <= maxMain; m++) {
-        const usedByMain = m * mainCost;
-        const remainingForSub = totalSlots - usedByMain;
-        const s = Math.floor(remainingForSub / subCost);
+      // 메인 수를 높은 쪽부터 탐색 (같은 점수면 메인 많은 쪽 우선)
+      for (let m = maxMain; m >= 1; m--) {
+        const mainSlots = m * mainCost;
+        const remainingSlots = totalSlots - mainSlots;
 
-        const total = m + s;
+        for (let s = Math.floor(remainingSlots / subCost); s >= 1; s--) {
+          const subSlots = s * subCost;
+          const usedSlots = mainSlots + subSlots;
 
-        // 메인 > 서브 조건 만족하고, 서브 최소 1마리, 총 마리수 최대
-        if (m > s && s >= 1 && total > bestTotal) {
-          bestMain = m;
-          bestSub = s;
-          bestTotal = total;
+          // 조건 검사
+          if (usedSlots > totalSlots) continue;  // 슬롯 초과
+          if (mainSlots <= subSlots) continue;    // 메인이 슬롯 점유율로 엄격히 우세해야 함 (70%/30% 의도)
+
+          // 점수 계산: 슬롯 활용도(최우선) > 총 마리수 > 메인 마리수
+          const totalUnits = m + s;
+          const score = usedSlots * 10000 + totalUnits * 100 + m;
+
+          if (score > bestScore) {
+            bestMain = m;
+            bestSub = s;
+            bestScore = score;
+          }
         }
       }
 
-      // 조합을 못 찾은 경우 (서브 슬롯 코스트가 매우 작아서 항상 서브가 많아짐)
+      // 조합을 못 찾은 경우 (극단적 케이스: 서브 1마리도 못 넣는 경우)
       if (bestMain === 0) {
-        // 메인 우선 배치: 슬롯이 허용하는 만큼 메인을 채우고, 서브는 최소화
-        // 메인 최소 2마리, 서브 1마리로 시작
-        bestMain = Math.min(2, Math.floor(totalSlots / mainCost));
-        const usedByMain = bestMain * mainCost;
-        bestSub = Math.min(1, Math.floor((totalSlots - usedByMain) / subCost));
-        
-        // 남은 슬롯을 메인으로 채우기
-        let remaining = totalSlots - bestMain * mainCost - bestSub * subCost;
-        while (remaining >= mainCost) {
-          bestMain++;
-          remaining -= mainCost;
-        }
+        // 메인만 최대한 채우고, 남은 슬롯으로 서브 채우기
+        bestMain = Math.floor(totalSlots / mainCost);
+        const remaining = totalSlots - bestMain * mainCost;
+        bestSub = Math.floor(remaining / subCost);
       }
 
       mainCount = bestMain;
@@ -4303,6 +4953,60 @@ export class GameManager {
   }
 
   /**
+   * 바이러스 타입 해금 여부 확인
+   * @param {string} virusType - 바이러스 타입 키 (TANK, HUNTER 등)
+   * @returns {boolean} 해금되었으면 true
+   */
+  isVirusUnlocked(virusType) {
+    // SWARM만 기본 해금
+    if (virusType === "SWARM") return true;
+    
+    // virusUnlockTargets에 있는 타입은 해금 필요
+    if (!this.virusUnlockTargets.includes(virusType)) return true;
+    
+    // 해금 진행률 100% 이상이면 해금
+    return (this.decryptionProgress[virusType] || 0) >= 100;
+  }
+
+  /**
+   * 무기 모드 해금 여부 확인
+   * @param {string} weaponMode - 무기 모드 키 (SHOTGUN, SNIPER 등)
+   * @returns {boolean} 해금되었으면 true
+   */
+  isWeaponUnlocked(weaponMode) {
+    // NORMAL만 기본 해금
+    if (weaponMode === "NORMAL") return true;
+    
+    // weaponUnlockTargets에 있는 타입은 해금 필요
+    if (!this.weaponUnlockTargets.includes(weaponMode)) return true;
+    
+    // 해금 진행률 100% 이상이면 해금
+    return (this.decryptionProgress[weaponMode] || 0) >= 100;
+  }
+
+  /**
+   * 특정 대상을 해금하는 스테이지 이름 반환
+   * @param {string} target - 해금 대상 (바이러스 또는 무기)
+   * @returns {string|null} 스테이지 이름 또는 null
+   */
+  getUnlockStageName(target) {
+    const stageNames = {
+      1: "ALPHA",
+      2: "BETA",
+      4: "GAMMA",
+      5: "DELTA",
+      6: "BOSS"
+    };
+    
+    for (const [stageId, targets] of Object.entries(this.stageUnlockTargets)) {
+      if (Array.isArray(targets) && targets.includes(target)) {
+        return stageNames[stageId] || `STAGE ${stageId}`;
+      }
+    }
+    return null;
+  }
+
+  /**
    * 바이러스 타입 버튼 렌더링
    */
   renderVirusTypeButtons(container, slot, slotInfoElement) {
@@ -4311,25 +5015,36 @@ export class GameManager {
     const currentType =
       slot === "main" ? this.allyConfig.mainType : this.allyConfig.subType;
 
+    // 컴팩트 버튼 스타일 (정사각형, 한 줄에 모두 표시)
+    const btnBaseStyle = `
+      width: 52px;
+      height: 52px;
+      padding: 4px;
+      font-family: var(--term-font);
+      font-size: 8px;
+      text-align: center;
+      border-radius: 3px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    `;
+
     // 서브 슬롯에는 "없음" 옵션 추가
     if (slot === "sub") {
       const noneBtn = document.createElement("button");
       const isSelected = currentType === null;
       noneBtn.style.cssText = `
-        background: ${
-          isSelected ? "rgba(100, 100, 100, 0.5)" : "rgba(30, 30, 30, 0.5)"
-        };
-        border: 2px solid ${isSelected ? "#ffffff" : "#555"};
+        ${btnBaseStyle}
+        background: ${isSelected ? "rgba(100, 100, 100, 0.5)" : "rgba(30, 30, 30, 0.5)"};
+        border: 1px solid ${isSelected ? "#ffffff" : "#555"};
         color: ${isSelected ? "#fff" : "#888"};
-        padding: 8px 4px;
-        font-family: var(--term-font);
-        font-size: 10px;
         cursor: pointer;
-        text-align: center;
       `;
-      noneBtn.innerHTML = `<div style="font-size: 16px;">✗</div><div>없음</div>`;
+      noneBtn.innerHTML = `<div style="font-size: 12px;">✗</div><div style="font-size: 7px;">없음</div>`;
       noneBtn.onclick = () => {
         this.allyConfig.subType = null;
+        this.saveAllyConfig();
         this.renderVirusTypeButtons(container, slot, slotInfoElement);
         this.updateAllySlotInfo(slotInfoElement);
         this.updateSynergyDisplay(document.getElementById("synergy-box"));
@@ -4341,49 +5056,70 @@ export class GameManager {
       const btn = document.createElement("button");
       const isSelected = currentType === typeKey;
       const isDisabled = slot === "sub" && typeKey === this.allyConfig.mainType;
+      const isLocked = !this.isVirusUnlocked(typeKey);
+      const unlockProgress = this.decryptionProgress[typeKey] || 0;
+      const unlockStage = this.getUnlockStageName(typeKey);
 
-      btn.style.cssText = `
-        background: ${
-          isSelected ? `${typeData.color}33` : "rgba(30, 30, 30, 0.5)"
-        };
-        border: 2px solid ${
-          isSelected ? typeData.color : isDisabled ? "#333" : "#555"
-        };
-        color: ${isDisabled ? "#444" : typeData.color};
-        padding: 8px 4px;
-        font-family: var(--term-font);
-        font-size: 10px;
-        cursor: ${isDisabled ? "not-allowed" : "pointer"};
-        text-align: center;
-        opacity: ${isDisabled ? "0.4" : "1"};
-      `;
+      // 잠긴 상태 스타일 (진행률에 따라 아이콘이 왼→오로 채워짐)
+      if (isLocked) {
+        const progress = Math.min(100, unlockProgress);
+        const clipRight = 100 - progress; // 오른쪽에서 얼마나 자를지
+        
+        btn.style.cssText = `
+          ${btnBaseStyle}
+          background: rgba(20, 20, 20, 0.9);
+          border: 1px solid #333;
+          cursor: not-allowed;
+          position: relative;
+          overflow: hidden;
+        `;
+        btn.innerHTML = `
+          <div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <!-- 어두운 아이콘 (배경) -->
+            <div style="position: absolute; font-size: 18px; filter: grayscale(100%) brightness(0.3);">${typeData.icon}</div>
+            <!-- 밝은 아이콘 (진행률만큼 clip) -->
+            <div style="position: absolute; font-size: 18px; clip-path: inset(0 ${clipRight}% 0 0); filter: drop-shadow(0 0 3px ${typeData.color});">${typeData.icon}</div>
+            <!-- 진행률 텍스트 -->
+            <div style="position: absolute; bottom: 2px; font-size: 8px; color: ${progress >= 100 ? '#00ff00' : '#00aaff'}; text-shadow: 0 0 3px #000;">
+              ${progress >= 100 ? '✓' : progress + '%'}
+            </div>
+            <!-- 잠금 표시 (진행률 낮을 때만) -->
+            ${progress < 30 ? '<div style="position: absolute; top: 2px; right: 2px; font-size: 8px;">🔒</div>' : ''}
+          </div>
+        `;
+      } else {
+        btn.style.cssText = `
+          ${btnBaseStyle}
+          background: ${isSelected ? `${typeData.color}33` : "rgba(30, 30, 30, 0.5)"};
+          border: 1px solid ${isSelected ? typeData.color : isDisabled ? "#333" : "#555"};
+          color: ${isDisabled ? "#444" : typeData.color};
+          cursor: ${isDisabled ? "not-allowed" : "pointer"};
+          opacity: ${isDisabled ? "0.4" : "1"};
+        `;
+        btn.innerHTML = `
+          <div style="font-size: 12px;">${typeData.icon}</div>
+          <div style="font-size: 7px;">${typeData.name}</div>
+        `;
 
-      btn.innerHTML = `
-        <div style="font-size: 16px;">${typeData.icon}</div>
-        <div>${typeData.name}</div>
-        <div style="color: #888; font-size: 9px;">${typeData.slotCost}슬롯</div>
-      `;
-
-      if (!isDisabled) {
-        btn.onclick = () => {
-          if (slot === "main") {
-            this.allyConfig.mainType = typeKey;
-            // 메인과 같으면 서브 해제
-            if (this.allyConfig.subType === typeKey) {
-              this.allyConfig.subType = null;
+        if (!isDisabled) {
+          btn.onclick = () => {
+            if (slot === "main") {
+              this.allyConfig.mainType = typeKey;
+              if (this.allyConfig.subType === typeKey) {
+                this.allyConfig.subType = null;
+              }
+              this.renderVirusTypeButtons(container, slot, slotInfoElement);
+              const subGrid = document.getElementById("sub-type-grid");
+              if (subGrid) this.renderVirusTypeButtons(subGrid, "sub", slotInfoElement);
+            } else {
+              this.allyConfig.subType = typeKey;
+              this.renderVirusTypeButtons(container, slot, slotInfoElement);
             }
-            // 메인 그리드 + 서브 그리드 둘 다 업데이트
-            this.renderVirusTypeButtons(container, slot, slotInfoElement);
-            const subGrid = document.getElementById("sub-type-grid");
-            if (subGrid)
-              this.renderVirusTypeButtons(subGrid, "sub", slotInfoElement);
-          } else {
-            this.allyConfig.subType = typeKey;
-            this.renderVirusTypeButtons(container, slot, slotInfoElement);
-          }
-          this.updateAllySlotInfo(slotInfoElement);
-          this.updateSynergyDisplay(document.getElementById("synergy-box"));
-        };
+            this.saveAllyConfig();
+            this.updateAllySlotInfo(slotInfoElement);
+            this.updateSynergyDisplay(document.getElementById("synergy-box"));
+          };
+        }
       }
 
       container.appendChild(btn);
@@ -4564,6 +5300,7 @@ export class GameManager {
         this.currentMoney -= upgrade.cost;
         this.saveMoney(); // 자동 저장
         upgrade.effect();
+        this.saveUpgrades(); // 업그레이드 레벨 저장
 
         // UI 업데이트
         this.terminal.updateData(this.currentMoney);
@@ -4744,6 +5481,7 @@ export class GameManager {
           this.currentMoney -= upgrade.cost;
           this.saveMoney(); // 자동 저장
           upgrade.effect();
+          this.saveUpgrades(); // 업그레이드 레벨 저장
           this.terminal.updateData(this.currentMoney);
           dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
 
@@ -5717,8 +6455,129 @@ export class GameManager {
   // === 자원 영구 저장 (localStorage) ===
 
   /**
+   * 업그레이드 기본값 반환 (sanitize용)
+   */
+  getDefaultUpgrades() {
+    return {
+      helper: { damage: 0, fireRate: 0, range: 0, projectileSpeed: 0, magazineSize: 0 },
+      core: { hp: 0, turretDamage: 0, turretRange: 0, turretSpeed: 0, staticDamage: 0, staticChain: 0 },
+      shield: { hp: 0 },
+      ally: { slots: 0, hp: 0, damage: 0, speed: 0, respawn: 0 },
+    };
+  }
+
+  /**
+   * 업그레이드 데이터 검증 및 정리 (whitelist 방식)
+   */
+  sanitizeUpgrades(raw) {
+    const defaults = this.getDefaultUpgrades();
+    const cleaned = this.getDefaultUpgrades();
+
+    if (!raw || typeof raw !== "object") return cleaned;
+
+    for (const group of Object.keys(defaults)) {
+      const rawGroup = raw[group];
+      if (!rawGroup || typeof rawGroup !== "object") continue;
+
+      for (const stat of Object.keys(defaults[group])) {
+        const v = rawGroup[stat];
+        const n = Number(v);
+        // 유효한 숫자만 허용, 음수 방지, 정수로 변환
+        cleaned[group][stat] = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+      }
+    }
+
+    return cleaned;
+  }
+
+  /**
+   * 업그레이드 레벨을 localStorage에 저장
+   */
+  saveUpgrades() {
+    try {
+      const payload = JSON.stringify(this.upgradeLevels);
+      localStorage.setItem("cylinderTetris_upgrades", payload);
+      console.log("[GameManager] ✓ Upgrades saved");
+    } catch (e) {
+      console.warn("[GameManager] Failed to save upgrades:", e);
+    }
+  }
+
+  /**
+   * localStorage에서 업그레이드 레벨 로드
+   */
+  loadUpgrades() {
+    try {
+      const saved = localStorage.getItem("cylinderTetris_upgrades");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        this.upgradeLevels = this.sanitizeUpgrades(parsed);
+        console.log("[GameManager] ✓ Upgrades loaded:", this.upgradeLevels);
+        return;
+      }
+    } catch (e) {
+      console.warn("[GameManager] Failed to load upgrades:", e);
+    }
+    // 실패 시 기본값 사용
+    this.upgradeLevels = this.getDefaultUpgrades();
+  }
+
+  /**
+   * 아군 설정을 localStorage에 저장
+   */
+  saveAllyConfig() {
+    try {
+      const payload = JSON.stringify(this.allyConfig);
+      localStorage.setItem("cylinderTetris_allyConfig", payload);
+      console.log("[GameManager] ✓ Ally config saved:", this.allyConfig);
+    } catch (e) {
+      console.warn("[GameManager] Failed to save ally config:", e);
+    }
+  }
+
+  /**
+   * localStorage에서 아군 설정 로드
+   */
+  loadAllyConfig() {
+    try {
+      const saved = localStorage.getItem("cylinderTetris_allyConfig");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 유효성 검증
+        if (parsed && typeof parsed === "object") {
+          if (parsed.mainType && this.virusTypes[parsed.mainType]) {
+            this.allyConfig.mainType = parsed.mainType;
+          }
+          if (parsed.subType === null || this.virusTypes[parsed.subType]) {
+            this.allyConfig.subType = parsed.subType;
+          }
+          console.log("[GameManager] ✓ Ally config loaded:", this.allyConfig);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("[GameManager] Failed to load ally config:", e);
+    }
+    // 실패 시 기본값 유지
+  }
+
+  /**
    * 자원을 localStorage에 저장
    */
+  
+  saveDecryptionProgress() {
+    try {
+      localStorage.setItem("cylinderTetris_decryption", JSON.stringify(this.decryptionProgress));
+    } catch(e) {}
+  }
+
+  loadDecryptionProgress() {
+    try {
+      const saved = localStorage.getItem("cylinderTetris_decryption");
+      if (saved) this.decryptionProgress = JSON.parse(saved);
+    } catch(e) {}
+  }
+
   saveMoney() {
     try {
       // 0으로 저장되는 경우 스택 트레이스 출력 (문제 추적용)

@@ -136,6 +136,32 @@ export class ItemDatabase {
                 rarity: "legendary",
                 icon: "🍀",
                 effect: { type: "dropRate", value: 0.10 }
+            },
+
+            // === 블루프린트 조각 (해금용) ===
+            "blueprint_common": {
+                id: "blueprint_common",
+                name: "설계도 조각",
+                description: "해금 진행률 +1~3%",
+                rarity: "blueprint",
+                icon: "📋",
+                effect: { type: "blueprint", minValue: 1, maxValue: 3 }
+            },
+            "blueprint_rare": {
+                id: "blueprint_rare",
+                name: "암호화된 설계도",
+                description: "해금 진행률 +5~10%",
+                rarity: "blueprint",
+                icon: "📜",
+                effect: { type: "blueprint", minValue: 5, maxValue: 10 }
+            },
+            "blueprint_legendary": {
+                id: "blueprint_legendary",
+                name: "코어 설계도",
+                description: "해금 진행률 +15~25%",
+                rarity: "blueprint",
+                icon: "🔐",
+                effect: { type: "blueprint", minValue: 15, maxValue: 25 }
             }
         };
 
@@ -143,7 +169,8 @@ export class ItemDatabase {
         this.rarityColors = {
             common: "#ffffff",
             rare: "#00aaff",
-            legendary: "#ffaa00"
+            legendary: "#ffaa00",
+            blueprint: "#00ffff"  // 청록색 (해금용)
         };
 
         // 등급별 드롭 확률 (기본)
@@ -200,6 +227,41 @@ export class ItemDatabase {
         return {
             ...selected,
             instanceId: `${selected.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+        };
+    }
+
+    /**
+     * 블루프린트 아이템 생성 (해금용)
+     * @param {number|null} debugAmount - 디버그용 고정 진행률 증가량 (null이면 랜덤)
+     */
+    generateBlueprintItem(debugAmount = null) {
+        // 등급 결정 (common 70%, rare 25%, legendary 5%)
+        const roll = Math.random();
+        let blueprintId;
+        if (roll < 0.05) {
+            blueprintId = "blueprint_legendary";
+        } else if (roll < 0.30) {
+            blueprintId = "blueprint_rare";
+        } else {
+            blueprintId = "blueprint_common";
+        }
+        
+        const template = this.items[blueprintId];
+        
+        // 진행률 증가량 결정
+        let value;
+        if (debugAmount !== null) {
+            value = debugAmount;
+        } else {
+            const min = template.effect.minValue;
+            const max = template.effect.maxValue;
+            value = Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+        
+        return {
+            ...template,
+            instanceId: `${blueprintId}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            effect: { ...template.effect, value }
         };
     }
 

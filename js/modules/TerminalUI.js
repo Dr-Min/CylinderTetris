@@ -100,9 +100,15 @@ export class TerminalUI {
       return true;
     }
     
+    if (cmd === "/setting" || cmd === "/settings") {
+      this.toggleSettingPanel();
+      return true;
+    }
+    
     if (cmd === "/help") {
       this.printSystemMessage("=== 글로벌 명령어 ===");
       this.printSystemMessage("/debug - 디버그 패널 열기/닫기");
+      this.printSystemMessage("/setting - 설정 패널 열기/닫기");
       this.printSystemMessage("/help - 도움말 표시");
       return true;
     }
@@ -119,6 +125,18 @@ export class TerminalUI {
       this.printSystemMessage(`[DEBUG] Panel ${isHidden ? "OPENED" : "CLOSED"}`);
     } else {
       this.printSystemMessage("[ERROR] Debug panel not initialized");
+    }
+  }
+  
+  // 설정 패널 토글
+  toggleSettingPanel() {
+    const settingPanel = document.getElementById("setting-panel");
+    if (settingPanel) {
+      const isHidden = settingPanel.style.display === "none";
+      settingPanel.style.display = isHidden ? "block" : "none";
+      this.printSystemMessage(`[SETTING] Panel ${isHidden ? "OPENED" : "CLOSED"}`);
+    } else {
+      this.printSystemMessage("[ERROR] Setting panel not initialized");
     }
   }
 
