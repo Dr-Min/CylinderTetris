@@ -335,6 +335,7 @@ export class DefenseGame {
     this.stageDifficultyScale = 1.0; // 스테이지별 난이도 스케일
     this.stageMaxPages = 12; // 스테이지 최대 페이지 수
     this.isSafeZone = true; // 안전영역 여부
+    this.isFarmingZone = false; // 파밍존 여부 (점령 불가, 무한 파밍)
     this.safeZoneSpawnRate = 2; // 안전영역 적 생성 (6 → 2초, 스폰 수 3배)
 
     // 강화 페이지 모드 (점령 시)
@@ -876,6 +877,10 @@ export class DefenseGame {
     this.canvas.style.display = "block";
     this.uiLayer.style.display = "block"; // UI 표시
 
+    // 스테이지 타입 자동 감지 (Safe Zone: 0, Data Mine: 3)
+    this.isSafeZone = (this.currentStageId === 0);
+    this.isFarmingZone = (this.currentStageId === 3); // Data Mine = 무한 파밍
+
     // 웨이브 초기화
     this.currentPage = 1;
     this.pageTimer = 0;
@@ -1062,20 +1067,31 @@ export class DefenseGame {
       const maxPages = this.maxPages || 12;
       const diffScale = this.stageDifficultyScale || 1.0;
 
+      const prevSecond = Math.floor(this.pageTimer);
       this.pageTimer += dt;
+      const currSecond = Math.floor(this.pageTimer);
+      
+      // 매초마다 타이머 UI 업데이트
+      if (currSecond !== prevSecond) {
+        this.updateWaveDisplay();
+      }
+      
       if (this.pageTimer >= this.pageDuration) {
-        if (this.currentPage < maxPages) {
+        if (this.currentPage < maxPages || this.isFarmingZone) {
+          // 파밍존: 페이지 무한 증가
           this.currentPage++;
           this.pageTimer = 0;
           // 난이도 스케일 적용 (스폰 수 3배: 1/3로 감소)
           // 최소값도 1/3로 조정: 0.4 → 0.13, 기본값도 1/3: 1.2 → 0.4
-          this.spawnRate = Math.max(
-            0.13,
-            0.4 - this.currentPage * 0.04 * diffScale
-          );
+          if (!this.isFarmingZone) {
+            this.spawnRate = Math.max(
+              0.13,
+              0.4 - this.currentPage * 0.04 * diffScale
+            );
+          }
           this.updateWaveDisplay();
-        } else if (!this.conquerReady) {
-          // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘)
+        } else if (!this.conquerReady && !this.isFarmingZone) {
+          // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘) - 파밍존 제외
           this.conquerReady = true;
 
           // 콜백으로 터미널에 업데이트
@@ -1088,6 +1104,23 @@ export class DefenseGame {
             this.onConquerReady();
           }
         }
+      }
+    }
+    // 파밍존 전용 페이지 모드 (점령 불가, 무한 파밍)
+    else if (this.isFarmingZone && !this.isConquered) {
+      const prevSecond = Math.floor(this.pageTimer);
+      this.pageTimer += dt;
+      const currSecond = Math.floor(this.pageTimer);
+      
+      // 매초마다 타이머 UI 업데이트
+      if (currSecond !== prevSecond) {
+        this.updateWaveDisplay();
+      }
+      
+      if (this.pageTimer >= this.pageDuration) {
+        this.currentPage++;
+        this.pageTimer = 0;
+        this.updateWaveDisplay();
       }
     }
 
@@ -1682,8 +1715,17 @@ export class DefenseGame {
       color = "#ff3333";
       this.playBGMTrack('FINAL');
       this.bgmManager.updateTempo(maxPages, maxPages);
+    } else if (this.isFarmingZone) {
+      // 파밍존: 페이지 무한, 남은 시간 표시
+      const remainingTime = Math.ceil(this.pageDuration - this.pageTimer);
+      text = `PAGE: ${this.currentPage} (${remainingTime}s)`;
+      color = "#ffaa00";
+      this.playBGMTrack('DEFENSE');
+      this.bgmManager.updateTempo(this.currentPage, 99); // 파밍존은 느린 템포 유지
     } else {
-      text = `PAGE: ${this.currentPage} / ${maxPages}`;
+      // 일반 스테이지: 페이지 진행 + 남은 시간 표시
+      const remainingTime = Math.ceil(this.pageDuration - this.pageTimer);
+      text = `PAGE: ${this.currentPage}/${maxPages} (${remainingTime}s)`;
       color = "#00f0ff";
       
       // 페이지 10 이상이면 FINAL 트랙으로 전환

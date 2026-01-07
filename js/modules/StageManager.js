@@ -123,6 +123,7 @@ export class StageManager {
      * 이동 가능한 스테이지 목록 (새 규칙)
      * - 안전 영역에서 직접 연결된 스테이지: 항상 접근 가능
      * - 점령한 스테이지에서 연결된 스테이지: 접근 가능
+     * - farming 타입 스테이지: 점령 불가, 진입만으로 연결 스테이지 해금 (경유지)
      * - 점령하지 않은 스테이지를 통한 이동: 불가
      */
     getAccessibleStages() {
@@ -137,6 +138,12 @@ export class StageManager {
         
         // 3. 점령한 스테이지와 그 연결 스테이지
         this.stages.filter(s => s.conquered).forEach(stage => {
+            accessible.add(stage.id);
+            stage.connections.forEach(id => accessible.add(id));
+        });
+        
+        // 4. farming 타입 스테이지: 방문한 적 있으면 연결 스테이지 해금 (경유지 역할)
+        this.stages.filter(s => s.type === "farming" && s.visited).forEach(stage => {
             accessible.add(stage.id);
             stage.connections.forEach(id => accessible.add(id));
         });
@@ -179,6 +186,12 @@ export class StageManager {
         }
 
         this.currentStageId = stageId;
+        
+        // farming 스테이지 진입 시 visited 플래그 설정 (경유지 해금용)
+        if (stage.type === "farming") {
+            stage.visited = true;
+        }
+        
         this.saveState();
         return { success: true, stage: stage };
     }
@@ -235,6 +248,9 @@ export class StageManager {
             currentStageId: this.currentStageId,
             conqueredStages: this.stages
                 .filter(s => s.conquered)
+                .map(s => s.id),
+            visitedStages: this.stages
+                .filter(s => s.visited)
                 .map(s => s.id)
         };
         localStorage.setItem("stage_state", JSON.stringify(state));
@@ -255,6 +271,12 @@ export class StageManager {
                     const stage = this.getStage(id);
                     if (stage) stage.conquered = true;
                 });
+                
+                // 방문 상태 복원 (farming 경유지용)
+                state.visitedStages?.forEach(id => {
+                    const stage = this.getStage(id);
+                    if (stage) stage.visited = true;
+                });
             }
         } catch (e) {
             console.error("Failed to load stage state:", e);
@@ -267,6 +289,7 @@ export class StageManager {
     reset() {
         this.stages.forEach(s => {
             s.conquered = (s.id === 0); // Safe Zone만 유지
+            s.visited = false; // 방문 상태 초기화
         });
         this.currentStageId = 0;
         this.saveState();

@@ -1,5 +1,5 @@
-// v9.20.0 - Fix: TANK knockback smooth animation + tankProtection HP ratio preservation
-const CACHE_NAME = "hacker-tetris-v23.17"; // velocity-based knockback, synergy HP ratio fix
+// v9.21.0 - Feature: Data Mine farming zone (no conquest) + page timer display
+const CACHE_NAME = "hacker-tetris-v23.18"; // isFarmingZone, visited waypoint unlock, realtime page countdown
 const ASSETS = [
   "./",
   "./index.html",
