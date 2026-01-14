@@ -6961,8 +6961,8 @@ export class GameManager {
     panel.id = "mini-defense-panel";
 
     if (isMobile) {
-      // 모바일: 작고, 우측 상단 구석
-      panel.style.cssText = "position: fixed; top: 10px; right: 10px; width: 130px; padding: 5px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 10px; z-index: 1000;";
+      // 모바일: 작고, 중앙 상단
+      panel.style.cssText = "position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: 130px; padding: 5px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 10px; z-index: 1000;";
 
       panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 10px;">
         <span id="conquest-core-hp">♥ ${Math.ceil(this.bossManager ? this.bossManager.bossHP : 100)}%</span>
@@ -6970,14 +6970,14 @@ export class GameManager {
         <span id="conquest-page">1/3</span>
       </div><canvas id="mini-defense-canvas" width="120" height="120" style="width: 120px; height: 120px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
     } else {
-      // PC: 크고, 중앙 상단
-      panel.style.cssText = "position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: 270px; padding: 8px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000;";
+      // PC: 크게, 중앙 상단
+      panel.style.cssText = "position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: 320px; padding: 8px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000;";
 
       panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 14px;">
         <span id="conquest-core-hp">♥ ${Math.ceil(this.bossManager ? this.bossManager.bossHP : 100)}%</span>
         <span style="color: #00ff00;">BREACH PROTOCOL</span>
         <span id="conquest-page">TARGET: CORE</span>
-      </div><canvas id="mini-defense-canvas" width="250" height="250" style="width: 250px; height: 250px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
+      </div><canvas id="mini-defense-canvas" width="300" height="300" style="width: 300px; height: 300px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
     }
 
     debugLog("Conquest", "패널 생성 완료, body에 추가");

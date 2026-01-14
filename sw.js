@@ -1,5 +1,5 @@
-// v9.22.17 - Fix: Responsive mini panel with fixed canvas size
-const CACHE_NAME = "hacker-tetris-v23.36"; // Mobile: 120x120 right corner, PC: 250x250 centered
+// v9.22.18 - Fix: Center mobile mini panel and increase PC size
+const CACHE_NAME = "hacker-tetris-v23.37"; // Mobile: 120x120 centered, PC: 300x300 centered
 const ASSETS = [
   "./",
   "./index.html",
