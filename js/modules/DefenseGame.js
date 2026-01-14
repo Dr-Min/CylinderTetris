@@ -4285,22 +4285,33 @@ export class DefenseGame {
         debugLog("Canvas", "3. isMobile =", this.isMobile);
       }
 
-      // 원본 캔버스 중앙 영역 계산 (미니 캔버스 비율에 맞게)
-      const ratio = miniW / miniH; // 400/150 = 2.67
-      // 가로를 기준으로 계산 (캔버스 너비 초과 방지)
-      // 모바일: 90% / PC: 80%
-      const sourceW = this.canvas.width * (this.isMobile ? 0.9 : 0.8);
-      const sourceH = sourceW / ratio; // 비율 유지
-      const sourceX = this.canvas.width / 2 - sourceW / 2;
-      const sourceY = this.canvas.height / 2 - sourceH / 2;
+      // 원본 캔버스 비율 유지 (세로 기준 계산)
+      // 원본: 1163x1270 (비율 0.916, 세로가 긴 직사각형)
+      // 미니: 정사각형 (1:1)
+      const originalRatio = this.canvas.width / this.canvas.height;
+      const miniRatio = miniW / miniH;
+
+      let sourceW, sourceH, sourceX, sourceY;
+
+      if (originalRatio < miniRatio) {
+        // 원본이 더 세로로 김 → 가로를 기준으로 맞춤
+        sourceW = this.canvas.width * 0.8; // 가로 80%
+        sourceH = sourceW / miniRatio; // 미니 비율에 맞춤
+      } else {
+        // 원본이 더 가로로 김 → 세로를 기준으로 맞춤
+        sourceH = this.canvas.height * 0.7; // 세로 70%
+        sourceW = sourceH * miniRatio; // 미니 비율에 맞춤
+      }
+
+      sourceX = this.canvas.width / 2 - sourceW / 2;
+      sourceY = this.canvas.height / 2 - sourceH / 2;
 
       // 디버그: 계산 결과
       if (this.renderDebugFrameCount < 3) {
-        debugLog("Canvas", "4. ratio =", ratio.toFixed(2));
-        debugLog("Canvas", "5. 복사 영역 가로: sourceW =", sourceW.toFixed(0), "(canvas.width *", this.isMobile ? "0.9)" : "0.8)");
-        debugLog("Canvas", "6. 복사 영역 세로: sourceH =", sourceH.toFixed(0), "(sourceW / ratio)");
-        debugLog("Canvas", "7. 복사 시작 위치: sourceX =", sourceX.toFixed(0), "sourceY =", sourceY.toFixed(0));
-        debugLog("Canvas", "8. drawImage 파라미터:");
+        debugLog("Canvas", "4. 원본 비율 =", originalRatio.toFixed(3), "미니 비율 =", miniRatio.toFixed(3));
+        debugLog("Canvas", "5. 복사 영역: sourceW =", sourceW.toFixed(0), "sourceH =", sourceH.toFixed(0));
+        debugLog("Canvas", "6. 복사 시작 위치: sourceX =", sourceX.toFixed(0), "sourceY =", sourceY.toFixed(0));
+        debugLog("Canvas", "7. drawImage 파라미터:");
         debugLog("Canvas", "   소스:", sourceX.toFixed(0), sourceY.toFixed(0), sourceW.toFixed(0), sourceH.toFixed(0));
         debugLog("Canvas", "   목적지:", "0 0", miniW, miniH);
         debugLog("Canvas", "=================================");

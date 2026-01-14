@@ -1,5 +1,5 @@
-// v9.22.18 - Fix: Center mobile mini panel and increase PC size
-const CACHE_NAME = "hacker-tetris-v23.37"; // Mobile: 120x120 centered, PC: 300x300 centered
+// v9.22.19 - Fix: Dynamic mini panel sizing based on screen space and fix aspect ratio
+const CACHE_NAME = "hacker-tetris-v23.38"; // Calculate max square size from available screen space, fix black border with ratio-aware copy
 const ASSETS = [
   "./",
   "./index.html",

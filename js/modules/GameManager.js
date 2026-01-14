@@ -6957,27 +6957,49 @@ export class GameManager {
     this.removeMiniDefensePanel();
 
     const isMobile = window.innerWidth <= 768;
+    const screenHeight = window.innerHeight;
+    const screenWidth = window.innerWidth;
+
+    // 사용 가능한 공간 계산 (화면 상단의 일정 비율)
+    // 모바일: 15%, PC: 28%
+    const availableHeightRatio = isMobile ? 0.15 : 0.28;
+    const availableHeight = screenHeight * availableHeightRatio;
+
+    // 헤더 높이 고려 (약 30px)
+    const headerHeight = 30;
+    const maxCanvasHeight = availableHeight - headerHeight - 20; // 20px 여백
+
+    // 화면 너비도 고려 (너무 넓지 않게)
+    const maxCanvasWidth = isMobile ? screenWidth * 0.35 : screenWidth * 0.2;
+
+    // 정사각형 크기 결정 (둘 중 작은 값)
+    const canvasSize = Math.floor(Math.min(maxCanvasHeight, maxCanvasWidth));
+
+    debugLog("Conquest", "화면 크기:", screenWidth, "x", screenHeight);
+    debugLog("Conquest", "사용 가능 높이:", availableHeight.toFixed(0));
+    debugLog("Conquest", "최종 캔버스 크기:", canvasSize);
+
     const panel = document.createElement("div");
     panel.id = "mini-defense-panel";
 
+    const panelWidth = canvasSize + 16; // padding 고려
+
     if (isMobile) {
-      // 모바일: 작고, 중앙 상단
-      panel.style.cssText = "position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: 130px; padding: 5px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 10px; z-index: 1000;";
+      panel.style.cssText = `position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: ${panelWidth}px; padding: 5px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 10px; z-index: 1000;`;
 
       panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 10px;">
         <span id="conquest-core-hp">♥ ${Math.ceil(this.bossManager ? this.bossManager.bossHP : 100)}%</span>
         <span style="color: #00ff00;">BREACH</span>
         <span id="conquest-page">1/3</span>
-      </div><canvas id="mini-defense-canvas" width="120" height="120" style="width: 120px; height: 120px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
+      </div><canvas id="mini-defense-canvas" width="${canvasSize}" height="${canvasSize}" style="width: ${canvasSize}px; height: ${canvasSize}px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
     } else {
-      // PC: 크게, 중앙 상단
-      panel.style.cssText = "position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: 320px; padding: 8px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000;";
+      panel.style.cssText = `position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: ${panelWidth}px; padding: 8px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000;`;
 
       panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 14px;">
         <span id="conquest-core-hp">♥ ${Math.ceil(this.bossManager ? this.bossManager.bossHP : 100)}%</span>
         <span style="color: #00ff00;">BREACH PROTOCOL</span>
         <span id="conquest-page">TARGET: CORE</span>
-      </div><canvas id="mini-defense-canvas" width="300" height="300" style="width: 300px; height: 300px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
+      </div><canvas id="mini-defense-canvas" width="${canvasSize}" height="${canvasSize}" style="width: ${canvasSize}px; height: ${canvasSize}px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
     }
 
     debugLog("Conquest", "패널 생성 완료, body에 추가");
