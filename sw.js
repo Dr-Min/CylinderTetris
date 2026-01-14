@@ -1,5 +1,5 @@
-// v9.22.16 - Fix: Change mini defense panel to square shape (200x200) to match original aspect ratio
-const CACHE_NAME = "hacker-tetris-v23.35"; // Changed from 400x150 to 200x200 square canvas, centered panel
+// v9.22.17 - Fix: Responsive mini panel with fixed canvas size
+const CACHE_NAME = "hacker-tetris-v23.36"; // Mobile: 120x120 right corner, PC: 250x250 centered
 const ASSETS = [
   "./",
   "./index.html",
