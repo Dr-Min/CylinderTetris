@@ -996,6 +996,7 @@ export class DefenseGame {
     debugLog("Canvas", "resume() called, isRunning before:", this.isRunning);
     debugLog("Canvas", "canvas before resume:", this.canvas.style.display);
     debugLog("Canvas", "canvas element:", this.canvas);
+    debugLog("Canvas", "isMiniDisplay:", this.isMiniDisplay);
 
     if (!this.isRunning) {
       this.isRunning = true;
@@ -1011,10 +1012,14 @@ export class DefenseGame {
       debugLog("Canvas", "Already running, skipping resume");
     }
 
-    // isRunning 상태와 관계없이 display 설정 (미니 디스플레이 모드 지원)
-    this.canvas.style.display = "block";
-    this.uiLayer.style.display = "block";
-    debugLog("Canvas", "Set canvas and uiLayer to block");
+    // 미니 디스플레이 모드가 아닐 때만 canvas 보이게 (점령 모드에서 원본 캔버스 숨김 유지)
+    if (!this.isMiniDisplay) {
+      this.canvas.style.display = "block";
+      this.uiLayer.style.display = "block";
+      debugLog("Canvas", "Set canvas and uiLayer to block (일반 모드)");
+    } else {
+      debugLog("Canvas", "Skipped canvas display (미니 모드 - 원본 캔버스 숨김 유지)");
+    }
     debugLog("Canvas", "canvas after set:", this.canvas.style.display);
   }
 
@@ -4274,8 +4279,10 @@ export class DefenseGame {
 
       // 원본 캔버스 중앙 영역 계산 (미니 캔버스 비율에 맞게)
       const ratio = miniW / miniH; // 400/150 = 2.67
-      const sourceH = 500; // 복사할 높이 (픽셀)
-      const sourceW = sourceH * ratio; // 비율 유지
+      // 가로를 기준으로 계산 (캔버스 너비 초과 방지)
+      // 모바일: 90% / PC: 80%
+      const sourceW = this.canvas.width * (this.isMobile ? 0.9 : 0.8);
+      const sourceH = sourceW / ratio; // 비율 유지
       const sourceX = this.canvas.width / 2 - sourceW / 2;
       const sourceY = this.canvas.height / 2 - sourceH / 2;
 

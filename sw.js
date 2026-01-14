@@ -1,5 +1,5 @@
-// v9.22.11 - Debug: Add mini mode render logs
-const CACHE_NAME = "hacker-tetris-v23.30"; // Added detailed logging for mini display rendering
+// v9.22.14 - Fix: Prevent originalCanvas from showing during conquest tetris
+const CACHE_NAME = "hacker-tetris-v23.33"; // Fixed resume() to skip canvas.display when isMiniDisplay=true
 const ASSETS = [
   "./",
   "./index.html",
