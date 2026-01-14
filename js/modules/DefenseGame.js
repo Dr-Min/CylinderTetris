@@ -10,6 +10,8 @@ export class DefenseGame {
     // 캔버스 생성 (body에 직접 부착하여 game-container와 분리)
     this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d");
+    this.originalCanvas = this.canvas; // 미니 디스플레이 모드에서 복귀할 때 사용
+    this.isMiniDisplay = false; // 미니 디스플레이 모드 여부
     // CSS 크기는 설정하지 않음 - resize()에서 내부 해상도만 설정
     this.canvas.style.display = "none";
     this.canvas.style.position = "fixed"; // absolute -> fixed
@@ -348,6 +350,11 @@ export class DefenseGame {
     // 점령 상태 (영구)
     this.isConquered = false; // 이 스테이지가 점령되었는지
 
+    // 보스전 상태
+    this.isBossFight = false; // 보스전 진행 중
+    this.bossManager = null; // BossManager 인스턴스 (GameManager에서 주입)
+    this.breachReadyShown = false; // BREACH READY 표시 여부
+    
     // 이벤트 콜백
     this.onResourceGained = null;
     this.onGameOver = null;
@@ -355,6 +362,11 @@ export class DefenseGame {
     this.onConquerReady = null; // 점령 가능 상태 콜백 (선택지 갱신용)
     this.onEnemyKilled = null; // 적 처치 콜백 (아이템 드롭용)
     this.onItemCollected = null; // 아이템 수집 완료 콜백
+    this.onBreachReady = null; // 보스전 침투 준비 완료 콜백
+    
+    // 보스전 프레임당 카운터
+    this.frameEnemiesKilled = 0;
+    this.frameCoreDamaged = 0;
     
     // 아이템 효과 getter (GameManager에서 설정)
     this.getItemEffects = () => ({
@@ -514,8 +526,10 @@ export class DefenseGame {
   }
 
   resize() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    // 항상 원본 캔버스 크기 사용 (미니 모드에서도 게임 로직은 동일)
+    const targetCanvas = this.originalCanvas || this.canvas;
+    targetCanvas.width = window.innerWidth;
+    targetCanvas.height = window.innerHeight;
 
     // 모바일 감지 및 성능 설정 업데이트
     this.isMobile = window.innerWidth <= 768;
@@ -531,8 +545,68 @@ export class DefenseGame {
       this.gameScale = 1.0; // PC: 100%
     }
 
-    this.core.x = this.canvas.width / 2;
-    this.core.y = this.canvas.height / 2;
+    this.core.x = targetCanvas.width / 2;
+    this.core.y = targetCanvas.height / 2;
+
+    debugLog("Canvas", "resize() complete - size:", targetCanvas.width, "x", targetCanvas.height, "scale:", this.gameScale);
+  }
+
+  /**
+   * 미니맵 모드 설정 (보스 침투 중 디펜스 화면을 작게 표시)
+   * @param {string|null} canvasId - 미니 캔버스 ID (null이면 일반 모드로 복귀)
+   */
+  setMiniDisplay(canvasId) {
+    debugLog("Canvas", "setMiniDisplay called with:", canvasId);
+    if (canvasId) {
+      // 미니 디스플레이 모드
+      const miniCanvas = document.getElementById(canvasId);
+      debugLog("Canvas", "miniCanvas found:", !!miniCanvas);
+      if (miniCanvas) {
+        debugLog("Canvas", "미니 모드 전환 전 - canvas.id:", this.canvas.id, "isMiniDisplay:", this.isMiniDisplay);
+
+        // 미니 캔버스 참조 저장 (복사용)
+        this.miniCanvas = miniCanvas;
+        this.isMiniDisplay = true;
+
+        // 렌더링은 계속 originalCanvas에 함 (ctx는 변경하지 않음)
+        // this.ctx는 originalCanvas의 컨텍스트 유지
+
+        // render() 디버그 로그를 위해 카운터 리셋
+        this.renderDebugFrameCount = 0;
+
+        // 미니 캔버스를 명시적으로 보이게 설정
+        miniCanvas.style.display = "block";
+
+        debugLog("Canvas", "Switched to mini display mode");
+        debugLog("Canvas", "게임은 originalCanvas에 렌더링, 미니 캔버스에 복사만 함");
+        debugLog("Canvas", "미니 모드 전환 후 - 코어 위치:", this.core.x, this.core.y);
+        debugLog("Canvas", "미니 모드 전환 후 - gameScale:", this.gameScale);
+        debugLog("Canvas", "미니 모드 전환 후 - 아군:", this.alliedViruses.length, "적:", this.enemies.length);
+      }
+    } else {
+      // 일반 모드로 복귀
+      debugLog("Canvas", "=== 원본 캔버스로 복귀 시작 ===");
+      debugLog("Canvas", "복귀 전 - isMiniDisplay:", this.isMiniDisplay);
+
+      if (this.originalCanvas) {
+        debugLog("Canvas", "originalCanvas size:", this.originalCanvas.width, "x", this.originalCanvas.height);
+        debugLog("Canvas", "originalCanvas.style.display:", this.originalCanvas.style.display);
+
+        // 미니 캔버스 참조 제거
+        this.miniCanvas = null;
+        this.isMiniDisplay = false;
+
+        // render() 디버그 로그를 위해 카운터 리셋
+        this.renderDebugFrameCount = 0;
+
+        // 원본 캔버스를 명시적으로 보이게 설정
+        this.originalCanvas.style.display = "block";
+
+        debugLog("Canvas", "Canvas restored - size:", this.originalCanvas.width, "x", this.originalCanvas.height);
+        debugLog("Canvas", "Canvas display:", this.originalCanvas.style.display);
+        debugLog("Canvas", "=== 원본 캔버스로 복귀 완료 ===");
+      }
+    }
   }
 
   // 자원 업데이트 (GameManager에서 호출) - DATA는 터미널에 표시됨
@@ -919,18 +993,29 @@ export class DefenseGame {
   }
 
   resume() {
+    debugLog("Canvas", "resume() called, isRunning before:", this.isRunning);
+    debugLog("Canvas", "canvas before resume:", this.canvas.style.display);
+    debugLog("Canvas", "canvas element:", this.canvas);
+
     if (!this.isRunning) {
       this.isRunning = true;
-      this.canvas.style.display = "block";
-      this.uiLayer.style.display = "block";
       this.lastTime = performance.now();
       requestAnimationFrame((t) => this.animate(t));
-      
+      debugLog("Canvas", "Animation frame requested");
+
       // BGM 재개 (이전 트랙으로)
       if (this.currentBGMTrack) {
         this.bgmManager.play(this.currentBGMTrack);
       }
+    } else {
+      debugLog("Canvas", "Already running, skipping resume");
     }
+
+    // isRunning 상태와 관계없이 display 설정 (미니 디스플레이 모드 지원)
+    this.canvas.style.display = "block";
+    this.uiLayer.style.display = "block";
+    debugLog("Canvas", "Set canvas and uiLayer to block");
+    debugLog("Canvas", "canvas after set:", this.canvas.style.display);
   }
 
   update(deltaTime) {
@@ -1017,6 +1102,24 @@ export class DefenseGame {
 
     // 실드 시각 효과 목표값 설정 (상태별)
     this.updateShieldVisualTargets();
+    
+    // 보스전: 침투 게이지 업데이트
+    if (this.isBossFight && this.bossManager && !this.bossManager.isBreachReady) {
+      const shieldOff = !this.core.shieldActive;
+      this.bossManager.updateBreachGauge(dt, shieldOff, this.frameEnemiesKilled || 0, this.frameCoreDamaged || 0);
+      
+      // 프레임당 카운터 리셋
+      this.frameEnemiesKilled = 0;
+      this.frameCoreDamaged = 0;
+      
+      // BREACH READY 콜백
+      if (this.bossManager.isBreachReady && !this.breachReadyShown) {
+        this.breachReadyShown = true;
+        if (this.onBreachReady) {
+          this.onBreachReady();
+        }
+      }
+    }
 
     // 실드 시각 효과 보간 (부드러운 전환)
     const lerpSpeed = 3.0; // 보간 속도 (높을수록 빠름)
@@ -1280,6 +1383,11 @@ export class DefenseGame {
         if (!this.isGodMode) {
           this.core.hp -= enemy.damage;
           this.chargeStaticOnHit(); // 피격 시 스태틱 충전
+          
+          // 보스전: 코어 피격 카운터
+          if (this.isBossFight) {
+            this.frameCoreDamaged++;
+          }
         }
         this.createExplosion(enemy.x, enemy.y, "#ff0000", 20);
         this.enemies.splice(i, 1);
@@ -1811,7 +1919,7 @@ export class DefenseGame {
       // 아군 바이러스 10마리 소환
       this.spawnConqueredAllies(10);
     } else {
-      debugLog("DefenseGame", "점령 상태 비활성화");
+      debugLog("Conquest", "점령 상태 비활성화");
       this.conqueredStartTime = null; // 리셋
       this.conqueredDebugFrame = 0; // 디버그 프레임 카운터 리셋
       this.lastRotationStep = -1;
@@ -1940,12 +2048,12 @@ export class DefenseGame {
     );
 
     if (targetCount <= 0) {
-      debugLog("DefenseGame", "targetCount가 0이라서 리스폰 취소");
+      debugLog("AllyMovement", "targetCount가 0이라서 리스폰 취소");
       return;
     }
 
     if (this.alliedViruses.length >= targetCount) {
-      debugLog("DefenseGame", "이미 목표 수 달성, 리스폰 취소");
+      debugLog("AllyMovement", "이미 목표 수 달성, 리스폰 취소");
       return;
     }
 
@@ -2021,7 +2129,7 @@ export class DefenseGame {
 
   // === 아군 사망 처리 ===
   handleAllyDeath(v, idx) {
-    debugLog("DefenseGame", `아군 바이러스 사망: ${v.virusType}`);
+    debugLog("AllyMovement", `아군 바이러스 사망: ${v.virusType}`);
 
     // 특수 효과: 폭발 사망 (SWARM)
     if (v.special === "explodeOnDeath" && v.explosionDamage > 0) {
@@ -2636,7 +2744,7 @@ export class DefenseGame {
     // Safe Zone에서는 자유롭게 돌아다님
     if (this.isSafeZone) {
       if (!this._safeZoneLogOnce) {
-        console.log("[DEBUG] fluidPatrol -> safeZoneWander (isSafeZone:", this.isSafeZone, ")");
+        debugLog("Enemy", "fluidPatrol -> safeZoneWander (isSafeZone:", this.isSafeZone, ")");
         this._safeZoneLogOnce = true;
       }
       this.safeZoneWander(v, dt);
@@ -3053,6 +3161,11 @@ export class DefenseGame {
       // 아이템 드롭 콜백 호출 (적 위치 전달)
       if (this.onEnemyKilled) {
         this.onEnemyKilled(enemy.x, enemy.y);
+      }
+      
+      // 보스전: 적 처치 카운터
+      if (this.isBossFight) {
+        this.frameEnemiesKilled++;
       }
       
       // 아이템 효과: 쉴드 회복 (lifesteal)
@@ -3552,6 +3665,25 @@ export class DefenseGame {
   }
 
   render() {
+    // 디버그: 모드 전환 후 처음 3프레임만 로그 출력
+    if (!this.renderDebugFrameCount) this.renderDebugFrameCount = 0;
+
+    // 일반 모드 또는 미니 모드 둘 다 로그
+    const shouldLog = this.renderDebugFrameCount < 3;
+    if (shouldLog) {
+      this.renderDebugFrameCount++;
+      const mode = this.isMiniDisplay ? "미니" : "일반";
+      debugLog("Canvas", `=== render() 호출 [${mode} 모드] (프레임 ${this.renderDebugFrameCount}) ===`);
+      debugLog("Canvas", "canvas.id:", this.canvas.id);
+      debugLog("Canvas", "canvas size:", this.canvas.width, "x", this.canvas.height);
+      debugLog("Canvas", "canvas.style.display:", this.canvas.style.display);
+      debugLog("Canvas", "isMiniDisplay:", this.isMiniDisplay);
+      debugLog("Canvas", "gameScale:", this.gameScale);
+      debugLog("Canvas", "아군:", this.alliedViruses.length, "적:", this.enemies.length);
+      debugLog("Canvas", "코어 위치:", this.core.x, this.core.y);
+      debugLog("Canvas", "코어 반지름:", this.core.radius);
+    }
+
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // 줌 아웃 효과 적용 (중심 기준 스케일링)
@@ -4125,9 +4257,157 @@ export class DefenseGame {
     
     // 말풍선 렌더링
     this.renderSpeechBubbles();
+    
+    // 8. 보스전 UI (보스 HP바 + 침투 게이지)
+    if (this.isBossFight && this.bossManager) {
+      this.renderBossUI();
+    }
 
     // 줌 아웃 스케일 복원
     this.ctx.restore();
+
+    // === 미니 디스플레이 복사 (중앙 영역만) ===
+    if (this.isMiniDisplay && this.miniCanvas) {
+      const miniCtx = this.miniCanvas.getContext("2d");
+      const miniW = this.miniCanvas.width || 400;
+      const miniH = this.miniCanvas.height || 150;
+
+      // 원본 캔버스 중앙 영역 계산 (미니 캔버스 비율에 맞게)
+      const ratio = miniW / miniH; // 400/150 = 2.67
+      const sourceH = 500; // 복사할 높이 (픽셀)
+      const sourceW = sourceH * ratio; // 비율 유지
+      const sourceX = this.canvas.width / 2 - sourceW / 2;
+      const sourceY = this.canvas.height / 2 - sourceH / 2;
+
+      miniCtx.clearRect(0, 0, miniW, miniH);
+      // 원본의 중앙 영역을 미니 캔버스 전체에 복사
+      miniCtx.drawImage(
+        this.canvas,
+        sourceX, sourceY, sourceW, sourceH, // 소스 영역 (중앙)
+        0, 0, miniW, miniH                   // 목적지 (미니 전체)
+      );
+
+      // 보스 HP 업데이트
+      if (this.isBossFight && this.bossManager) {
+        const hpSpan = document.getElementById("conquest-core-hp");
+        if (hpSpan) hpSpan.innerText = "♥ " + Math.ceil(this.bossManager.bossHP) + "%";
+      }
+    }
+  }
+  
+  /**
+   * 보스전 UI 렌더링 (좌측: 보스 HP바 / 우측: 침투 게이지)
+   * 모바일 대응: 세로 바 형태로 화면 양쪽에 배치
+   */
+  renderBossUI() {
+    const status = this.bossManager.getStatus();
+    const ctx = this.ctx;
+    const canvasWidth = this.canvas.width;
+    const canvasHeight = this.canvas.height;
+    
+    // 반응형: 모바일 여부 판단
+    const isMobile = canvasWidth < 500;
+    const barWidth = isMobile ? 16 : 24;
+    const barHeight = Math.min(canvasHeight * 0.5, 300);
+    const margin = isMobile ? 10 : 20;
+    const barY = (canvasHeight - barHeight) / 2;
+    
+    // === 왼쪽: 보스 HP 바 (세로) ===
+    const hpBarX = margin;
+    
+    // 배경 패널
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(hpBarX - 4, barY - 30, barWidth + 8, barHeight + 60);
+    
+    // HP 바 테두리
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(hpBarX, barY, barWidth, barHeight);
+    
+    // HP 바 채우기 (아래에서 위로, 빨간색→주황색 그라데이션)
+    const hpRatio = status.bossHP / status.maxBossHP;
+    const hpFillHeight = barHeight * hpRatio;
+    const hpGradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY + barHeight - hpFillHeight);
+    hpGradient.addColorStop(0, '#ff0000');
+    hpGradient.addColorStop(1, '#ff6600');
+    ctx.fillStyle = hpGradient;
+    ctx.fillRect(hpBarX, barY + barHeight - hpFillHeight, barWidth, hpFillHeight);
+    
+    // 최소 HP 표시선 (페이즈 전환 지점)
+    if (status.minBossHP > 0) {
+      const minHPY = barY + barHeight - (status.minBossHP / status.maxBossHP) * barHeight;
+      ctx.strokeStyle = '#ffff00';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(hpBarX - 3, minHPY);
+      ctx.lineTo(hpBarX + barWidth + 3, minHPY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    // HP 텍스트 (상단)
+    ctx.save();
+    ctx.fillStyle = '#ff6600';
+    ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('BOSS', hpBarX + barWidth / 2, barY - 15);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${Math.ceil(status.bossHP)}%`, hpBarX + barWidth / 2, barY - 3);
+    
+    // 페이즈 표시 (하단)
+    ctx.fillStyle = '#ffff00';
+    ctx.font = `${isMobile ? 8 : 10}px monospace`;
+    ctx.fillText(`P${status.currentPhase}`, hpBarX + barWidth / 2, barY + barHeight + 15);
+    ctx.restore();
+    
+    // === 오른쪽: 침투 게이지 (세로) ===
+    const breachBarX = canvasWidth - margin - barWidth;
+    
+    // 배경 패널
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(breachBarX - 4, barY - 30, barWidth + 8, barHeight + 60);
+    
+    // 침투 게이지 테두리
+    const breachColor = status.isBreachReady ? '#00ff00' : '#00aaff';
+    ctx.strokeStyle = breachColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(breachBarX, barY, barWidth, barHeight);
+    
+    // 침투 게이지 채우기 (아래에서 위로)
+    const breachRatio = status.breachGauge / status.maxBreachGauge;
+    const breachFillHeight = barHeight * breachRatio;
+    const breachGradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY + barHeight - breachFillHeight);
+    breachGradient.addColorStop(0, '#004488');
+    breachGradient.addColorStop(1, status.isBreachReady ? '#00ff00' : '#00aaff');
+    ctx.fillStyle = breachGradient;
+    ctx.fillRect(breachBarX, barY + barHeight - breachFillHeight, barWidth, breachFillHeight);
+    
+    // 침투 상태 텍스트 (상단)
+    ctx.save();
+    ctx.textAlign = 'center';
+    if (status.isBreachReady) {
+      // 깜빡임 효과
+      const blink = Math.floor(Date.now() / 300) % 2 === 0;
+      ctx.fillStyle = blink ? '#00ff00' : '#ffffff';
+      ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
+      ctx.fillText('READY', breachBarX + barWidth / 2, barY - 15);
+      ctx.fillText('!!!', breachBarX + barWidth / 2, barY - 3);
+    } else {
+      ctx.fillStyle = '#00aaff';
+      ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
+      ctx.fillText('BREACH', breachBarX + barWidth / 2, barY - 15);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(`${Math.ceil(status.breachPercent)}%`, breachBarX + barWidth / 2, barY - 3);
+    }
+    
+    // 남은 시간 (하단)
+    if (!status.isBreachReady) {
+      ctx.fillStyle = '#00aaff';
+      ctx.font = `${isMobile ? 8 : 10}px monospace`;
+      ctx.fillText(`${status.breachTimeRemaining}s`, breachBarX + barWidth / 2, barY + barHeight + 15);
+    }
+    ctx.restore();
   }
 
   /**
@@ -4222,7 +4502,7 @@ export class DefenseGame {
    * @param {string} effectType - "knockback_slow", "knockback_damage", "knockback_damage_x3"
    */
   applyWaveEffect(effectType) {
-    console.log("[Defense] 파동 효과:", effectType);
+    debugLog("Defense", "파동 효과:", effectType);
 
     const knockbackDist = 50; // 넉백 거리
     const slowDuration = 2000; // 슬로우 2초
@@ -4282,10 +4562,10 @@ export class DefenseGame {
   spawnEnemy() {
     // Safe Zone 또는 점령 완료 상태에서는 적 소환 안함
     if (this.isSafeZone || this.isConquered) {
-      console.log("[DEBUG] spawnEnemy blocked - isSafeZone:", this.isSafeZone, "isConquered:", this.isConquered);
+      debugLog("Enemy", "spawnEnemy blocked - isSafeZone:", this.isSafeZone, "isConquered:", this.isConquered);
       return;
     }
-    console.log("[DEBUG] spawnEnemy called - isSafeZone:", this.isSafeZone);
+    debugLog("Enemy", "spawnEnemy called - isSafeZone:", this.isSafeZone);
     
     const angle = Math.random() * Math.PI * 2;
     const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 50;
@@ -4329,9 +4609,9 @@ export class DefenseGame {
 
   // Safe Zone 전용: 아군 바이러스 미리 배치
   spawnSafeZoneAllies() {
-    console.log("[DEBUG] spawnSafeZoneAllies called - isSafeZone:", this.isSafeZone);
+    debugLog("Enemy", "spawnSafeZoneAllies called - isSafeZone:", this.isSafeZone);
     if (!this.isSafeZone) {
-      console.log("[DEBUG] spawnSafeZoneAllies aborted - not Safe Zone");
+      debugLog("Enemy", "spawnSafeZoneAllies aborted - not Safe Zone");
       return;
     }
     
@@ -4449,7 +4729,7 @@ export class DefenseGame {
       this.alliedViruses.push(ally);
     }
     
-    console.log(`[SafeZone] Spawned ${this.alliedViruses.length} allied viruses`);
+    debugLog("SafeZone", `Spawned ${this.alliedViruses.length} allied viruses`);
   }
 
   // 스테이지 기본 난이도 계산 (스테이지 ID + difficultyScale 기반)
@@ -4744,7 +5024,7 @@ export class DefenseGame {
     // 발사 각도 저장 (얼굴 움직임용) - faceLook 전용 속성
     this.helper.faceLookAngle = baseAngle;
     this.helper.faceLookTime = performance.now();
-    console.log("[HELPER FIRE] angle:", baseAngle.toFixed(2), "time:", this.helper.faceLookTime);
+    debugLog("Helper", "angle:", baseAngle.toFixed(2), "time:", this.helper.faceLookTime);
 
     const speed = this.helper.projectileSpeed || 400;
     const projectileCount = mode.projectileCount || 1;
@@ -5170,17 +5450,17 @@ export class DefenseGame {
       this.projectiles = [];
       this.particles = [];
       
-      console.log("[DEBUG] playIntroAnimation - isSafeZone:", this.isSafeZone, "alliedViruses before:", this.alliedViruses.length);
-      
+      debugLog("Defense", "playIntroAnimation - isSafeZone:", this.isSafeZone, "alliedViruses before:", this.alliedViruses.length);
+
       // Safe Zone에서는 아군 유지 (이미 놀고 있어야 함)
       if (!this.isSafeZone) {
-        console.log("[DEBUG] playIntroAnimation - CLEARING alliedViruses (not Safe Zone)");
+        debugLog("Defense", "playIntroAnimation - CLEARING alliedViruses (not Safe Zone)");
         this.alliedViruses = [];
       } else {
-        console.log("[DEBUG] playIntroAnimation - KEEPING alliedViruses (Safe Zone)");
+        debugLog("Defense", "playIntroAnimation - KEEPING alliedViruses (Safe Zone)");
       }
-      
-      console.log("[DEBUG] playIntroAnimation - alliedViruses after:", this.alliedViruses.length);
+
+      debugLog("Defense", "playIntroAnimation - alliedViruses after:", this.alliedViruses.length);
       
       this.droppedItems = [];
       this.collectorViruses = [];
@@ -5230,7 +5510,7 @@ export class DefenseGame {
               .then(() => {
                 // Safe Zone에서는 이미 아군이 놀고 있으므로 스폰 스킵
                 if (this.isSafeZone) {
-                  console.log("[DEBUG] playIntroAnimation - SKIPPING spawnAlliesSequentially (Safe Zone)");
+                  debugLog("Defense", "playIntroAnimation - SKIPPING spawnAlliesSequentially (Safe Zone)");
                   return Promise.resolve();
                 }
                 return this.spawnAlliesSequentially();
@@ -5259,7 +5539,7 @@ export class DefenseGame {
    */
   playOutroAnimation() {
     return new Promise((resolve) => {
-      console.log("[OUTRO] 애니메이션 시작");
+      debugLog("Defense", "애니메이션 시작");
       
       const isMobile = window.innerWidth <= 768;
       const duration = isMobile ? 400 : 500;
@@ -5303,7 +5583,7 @@ export class DefenseGame {
           overlay.style.opacity = fadeProgress.toString();
         }
         
-        console.log("[OUTRO] progress:", progress.toFixed(2), "scale:", this.core.scale.toFixed(1));
+        debugLog("Defense", "progress:", progress.toFixed(2), "scale:", this.core.scale.toFixed(1));
         
         // 강제 렌더링 (메인 루프가 안 돌아도 보이게)
         this.render();
@@ -5311,14 +5591,14 @@ export class DefenseGame {
         if (progress < 1) {
           requestAnimationFrame(animateAscend);
         } else {
-          console.log("[OUTRO] 애니메이션 완료 - 화면 검정");
+          debugLog("Defense", "애니메이션 완료 - 화면 검정");
           // 완료 - 화면은 검정 상태로 유지
           overlay.style.opacity = "1";
-          
+
           // 0.5초 후 오버레이 제거 (moveToStage가 처리)
           setTimeout(() => {
             overlay.remove();
-            console.log("[OUTRO] 오버레이 제거");
+            debugLog("Defense", "오버레이 제거");
           }, 500);
           
           // 스케일 리셋 (화면이 검정이라 안 보임)
@@ -5422,7 +5702,7 @@ export class DefenseGame {
       noiseGain.gain.setValueAtTime(0.5, now);
       noise.start(now);
     } catch (e) {
-      console.log("Audio not supported:", e);
+      debugLog("Defense", "Audio not supported:", e);
     }
   }
   
@@ -5958,7 +6238,7 @@ export class DefenseGame {
     try {
       const response = await fetch('./js/data/virusDialogues.json');
       this.virusDialogues = await response.json();
-      console.log('[DefenseGame] Virus dialogues loaded:', Object.keys(this.virusDialogues));
+      debugLog("Defense", "Virus dialogues loaded:", Object.keys(this.virusDialogues));
     } catch (e) {
       console.warn('[DefenseGame] Failed to load virus dialogues:', e);
       this.virusDialogues = { battle: [], idle: [], hurt: [], kill: [] };

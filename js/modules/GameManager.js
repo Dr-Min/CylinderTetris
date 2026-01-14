@@ -7,27 +7,35 @@ import { EquipmentManager } from "./EquipmentManager.js";
 import { StageManager } from "./StageManager.js";
 import { InventoryManager } from "./InventoryManager.js";
 import { ItemDatabase } from "./ItemDatabase.js";
+import { BossManager } from "./BossManager.js";
 
 // ===== 전역 디버그 로깅 시스템 =====
 window.DEBUG_LOG_ENABLED = false; // 전체 디버그 ON/OFF
 
 // 카테고리별 디버그 플래그
 window.DEBUG_CATEGORIES = {
-  Defense: true,       // 디펜스 게임 일반
-  AllyMovement: true,  // 아군 바이러스 이동
-  Synergy: true,       // 시너지 효과
+  Defense: false,      // 디펜스 게임 일반
+  AllyMovement: false, // 아군 바이러스 이동
+  Synergy: false,      // 시너지 효과
   Enemy: false,        // 적 스폰/AI
-  GameManager: true,   // 게임 매니저
+  GameManager: false,  // 게임 매니저
   TerminalUI: false,   // 터미널 UI
   Item: false,         // 아이템 드롭/수집
   Combat: false,       // 전투 데미지 계산
+  Conquest: false,     // 점령 모드 디버그
+  Canvas: false,       // 캔버스 디스플레이 디버그
+  Tetris: false,       // 테트리스 게임 로직
+  Helper: false,       // 헬퍼 발사/동작
+  SafeZone: false,     // SafeZone 관련
+  Recall: false,       // 리콜 기능
+  Boss: false,         // 보스 전투
 };
 
 window.debugLog = function (tag, ...args) {
   if (!window.DEBUG_LOG_ENABLED) return;
-  
-  // 카테고리 확인 (없는 태그는 기본 true)
-  const categoryEnabled = window.DEBUG_CATEGORIES[tag] ?? true;
+
+  // 카테고리 확인 (정의되지 않은 카테고리는 기본 false)
+  const categoryEnabled = window.DEBUG_CATEGORIES[tag] ?? false;
   if (categoryEnabled) {
     console.log(`[${tag}]`, ...args);
   }
@@ -35,8 +43,8 @@ window.debugLog = function (tag, ...args) {
 
 window.debugWarn = function (tag, ...args) {
   if (!window.DEBUG_LOG_ENABLED) return;
-  
-  const categoryEnabled = window.DEBUG_CATEGORIES[tag] ?? true;
+
+  const categoryEnabled = window.DEBUG_CATEGORIES[tag] ?? false;
   if (categoryEnabled) {
     console.warn(`[${tag}]`, ...args);
   }
@@ -45,6 +53,42 @@ window.debugWarn = function (tag, ...args) {
 // 에러는 항상 출력 (디버그 모드 상관없이)
 window.debugError = function (tag, ...args) {
   console.error(`[${tag}]`, ...args);
+};
+
+// 디버그 토글 헬퍼 함수들 (콘솔에서 사용)
+window.enableDebug = function() {
+  window.DEBUG_LOG_ENABLED = true;
+  console.log("✅ 디버그 로그 활성화됨");
+  console.log("현재 활성화된 카테고리:", Object.keys(window.DEBUG_CATEGORIES).filter(k => window.DEBUG_CATEGORIES[k]));
+};
+
+window.disableDebug = function() {
+  window.DEBUG_LOG_ENABLED = false;
+  console.log("❌ 디버그 로그 비활성화됨");
+};
+
+window.toggleDebugCategory = function(category, enabled) {
+  if (window.DEBUG_CATEGORIES.hasOwnProperty(category)) {
+    window.DEBUG_CATEGORIES[category] = enabled;
+    console.log(`${enabled ? '✅' : '❌'} [${category}] 디버그 로그 ${enabled ? '활성화' : '비활성화'}`);
+  } else {
+    console.log(`❌ 카테고리 '${category}'를 찾을 수 없습니다. 사용 가능한 카테고리:`, Object.keys(window.DEBUG_CATEGORIES));
+  }
+};
+
+window.showDebugCategories = function() {
+  console.log("=== 디버그 카테고리 목록 ===");
+  console.log("전체 디버그:", window.DEBUG_LOG_ENABLED ? "✅ ON" : "❌ OFF");
+  console.log("\n카테고리별 상태:");
+  Object.keys(window.DEBUG_CATEGORIES).forEach(cat => {
+    const status = window.DEBUG_CATEGORIES[cat] ? "✅ ON" : "❌ OFF";
+    console.log(`  ${cat}: ${status}`);
+  });
+  console.log("\n사용 방법:");
+  console.log("  enableDebug() - 전체 디버그 켜기");
+  console.log("  disableDebug() - 전체 디버그 끄기");
+  console.log("  toggleDebugCategory('Conquest', true) - 특정 카테고리 켜기");
+  console.log("  toggleDebugCategory('Canvas', false) - 특정 카테고리 끄기");
 };
 
 export class GameManager {
@@ -58,7 +102,8 @@ export class GameManager {
     this.stageManager = new StageManager();
     this.inventoryManager = new InventoryManager(); // 인벤토리 매니저 추가
     this.itemDatabase = new ItemDatabase(); // 아이템 데이터베이스
-        this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
+    this.bossManager = new BossManager(); // 보스 매니저 추가
+    this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
     
     // 해금 진행률 (Decryption Progress)
     // 바이러스: TANK, HUNTER, BOMBER, HEALER (SWARM만 기본 해금)
@@ -439,10 +484,54 @@ export class GameManager {
 
     const title = document.createElement("h3");
     title.innerText = "=== DEBUG_MODE ===";
-    title.style.margin = "0 0 15px 0";
+    title.style.margin = "0 0 5px 0";
     title.style.borderBottom = "1px solid #0f0";
     title.style.textAlign = "center";
     debugPanel.appendChild(title);
+
+    // 버전 정보
+    const versionInfo = document.createElement("div");
+    versionInfo.innerText = "v9.22.3";
+    versionInfo.style.cssText = `
+      text-align: center;
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 15px;
+    `;
+    debugPanel.appendChild(versionInfo);
+
+    // 🛡️ GOD MODE 토글 (무적)
+    const godModeContainer = document.createElement("div");
+    godModeContainer.style.cssText = `
+      margin: 10px 0 15px 0;
+      padding: 10px;
+      border: 2px solid #ff0000;
+      background: rgba(50, 0, 0, 0.5);
+      text-align: center;
+    `;
+    
+    const godModeLabel = document.createElement("label");
+    godModeLabel.style.cssText = "color: #ff0000; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;";
+    
+    const godModeCheckbox = document.createElement("input");
+    godModeCheckbox.type = "checkbox";
+    godModeCheckbox.id = "dbg-god-mode";
+    godModeCheckbox.checked = false;
+    godModeCheckbox.style.cssText = "width: 20px; height: 20px; accent-color: #ff0000; cursor: pointer;";
+    godModeCheckbox.onchange = (e) => {
+      const enabled = e.target.checked;
+      if (this.defenseGame) {
+        this.defenseGame.isGodMode = enabled;
+      }
+      godModeLabel.style.color = enabled ? "#00ff00" : "#ff0000";
+      godModeContainer.style.borderColor = enabled ? "#00ff00" : "#ff0000";
+      this.terminal.printSystemMessage(`[DEBUG] GOD MODE: ${enabled ? "ON - 무적 활성화!" : "OFF"}`);
+    };
+    
+    godModeLabel.appendChild(godModeCheckbox);
+    godModeLabel.appendChild(document.createTextNode("🛡️ GOD MODE (무적)"));
+    godModeContainer.appendChild(godModeLabel);
+    debugPanel.appendChild(godModeContainer);
 
     const createInput = (label, id, value, type = "number", step = 0.01) => {
       const container = document.createElement("div");
@@ -779,10 +868,17 @@ export class GameManager {
       { key: "AllyMovement", label: "🦠 아군 이동" },
       { key: "Synergy", label: "⚡ 시너지 효과" },
       { key: "Enemy", label: "👾 적 스폰/AI" },
+      { key: "Helper", label: "🤖 헬퍼" },
+      { key: "SafeZone", label: "🏠 SafeZone" },
       { key: "GameManager", label: "🎮 게임 매니저" },
       { key: "TerminalUI", label: "💻 터미널 UI" },
       { key: "Item", label: "📦 아이템" },
       { key: "Combat", label: "⚔️ 전투 계산" },
+      { key: "Tetris", label: "🧩 테트리스" },
+      { key: "Conquest", label: "🚩 점령 모드" },
+      { key: "Canvas", label: "🖼️ 캔버스" },
+      { key: "Recall", label: "🔙 리콜" },
+      { key: "Boss", label: "👹 보스" },
     ];
 
     categories.forEach(({ key, label }) => {
@@ -1202,7 +1298,7 @@ export class GameManager {
   }
 
   async switchMode(mode) {
-    console.log(`Switching mode: ${this.activeMode} -> ${mode}`);
+    debugLog("GameManager", `Switching mode: ${this.activeMode} -> ${mode}`);
     this.activeMode = mode;
 
     if (mode === "defense") {
@@ -1225,9 +1321,9 @@ export class GameManager {
       this.defenseGame.alliedViruses = [];
       
     // Safe Zone이면 아군 바이러스 미리 배치
-    console.log("[DEBUG] switchMode defense - isSafeZone:", this.defenseGame.isSafeZone);
+    debugLog("GameManager", "switchMode defense - isSafeZone:", this.defenseGame.isSafeZone);
     if (this.defenseGame.isSafeZone) {
-      console.log("[DEBUG] Calling spawnSafeZoneAllies from switchMode");
+      debugLog("GameManager", "Calling spawnSafeZoneAllies from switchMode");
       this.defenseGame.spawnSafeZoneAllies();
     }
     
@@ -1344,30 +1440,30 @@ export class GameManager {
     const recallSuccess = await this.startRecallCasting(5000);
     
     if (recallSuccess) {
-      console.log("[RECALL] 1. 탈출 애니메이션 시작");
-      
+      debugLog("Recall", "1. 탈출 애니메이션 시작");
+
       // 귀환 성공 - 위로 올라가는 연출
       await this.defenseGame.playOutroAnimation();
-      
-      console.log("[RECALL] 2. 애니메이션 완료 - 게임 중지");
-      
+
+      debugLog("Recall", "2. 애니메이션 완료 - 게임 중지");
+
       // 게임 중지 (렌더링 멈춤)
       this.defenseGame.stop();
-      
+
       await this.terminal.printSystemMessage("✅ RECALL COMPLETE!");
       await this.terminal.printSystemMessage("Returning to Safe Zone...");
-      
-      console.log("[RECALL] 3. 아이템 선택 화면");
-      
+
+      debugLog("Recall", "3. 아이템 선택 화면");
+
       // 획득 아이템 선택 화면 표시
       await this.showLootSummary();
-      
-      console.log("[RECALL] 4. Safe Zone으로 이동");
-      
+
+      debugLog("Recall", "4. Safe Zone으로 이동");
+
       // Safe Zone (스테이지 0)으로 이동 (드랍 연출 포함)
       await this.moveToStage(0);
-      
-      console.log("[RECALL] 5. 완료");
+
+      debugLog("Recall", "5. 완료");
     } else {
       // 귀환 실패 (피격으로 취소됨)
       await this.terminal.printSystemMessage("❌ RECALL INTERRUPTED!");
@@ -1571,6 +1667,13 @@ export class GameManager {
     this.defenseGame.isSafeZone = stage.type === "safe";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate || 2;
     
+    // 보스전 모드 설정
+    if (stage.type === "boss") {
+      this.startBossFight();
+    } else {
+      this.endBossFight();
+    }
+    
     // 아군 정보 업데이트 (playIntroAnimation 전에!)
     const alliedInfo = this.conquestManager.getAlliedInfo();
     this.defenseGame.updateAlliedInfo(alliedInfo);
@@ -1580,9 +1683,9 @@ export class GameManager {
     this.defenseGame.alliedViruses = [];
     
     // Safe Zone이면 아군 바이러스 미리 배치
-    console.log("[DEBUG] moveToStage - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
+    debugLog("GameManager", "moveToStage - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
     if (stage.type === "safe") {
-      console.log("[DEBUG] Calling spawnSafeZoneAllies from moveToStage");
+      debugLog("GameManager", "Calling spawnSafeZoneAllies from moveToStage");
       this.defenseGame.spawnSafeZoneAllies();
     }
     
@@ -1688,18 +1791,35 @@ export class GameManager {
 
   // 점령용 테트리스 시작 (디펜스는 미니 화면에서 계속)
   startConquestTetris() {
+    debugLog("Conquest", "=== startConquestTetris 시작 ===");
     const targetLines = 3;
     const speed = 500;
 
     // 테트리스 상단 UI 숨기기 (Mining Rate, DATA MINED 등)
     this.hideConquestTetrisUI();
 
-    // 미니 디펜스 패널 생성 (캔버스 포함)
-    this.createMiniDefensePanel();
+    // NEXT 블록 위치 변경 (왼쪽 하단으로)
+    const nextBox = document.querySelector(".next-box");
+    if (nextBox) {
+      nextBox.style.cssText = `
+        position: fixed !important;
+        bottom: 100px;
+        left: 10px;
+        top: auto !important;
+        right: auto !important;
+        z-index: 1001;
+      `;
+    }
 
-    // 디펜스 메인 캔버스는 숨기고, resume() 호출
-    this.defenseGame.canvas.style.display = "none";
+    // 미니 디펜스 패널 생성 (캔버스 포함, setMiniDisplay 포함)
+    debugLog("Conquest", "createMiniDefensePanel 호출 전");
+    this.createMiniDefensePanel();
+    debugLog("Conquest", "createMiniDefensePanel 호출 후");
+
+    // 디펜스 원본 캔버스는 숨기고, resume() 호출
+    this.defenseGame.originalCanvas.style.display = "none";
     this.defenseGame.uiLayer.style.display = "none";
+    debugLog("Conquest", "디펜스 원본 캔버스 숨김, resume 호출");
     this.defenseGame.resume();
 
     // 퍼즐 모드로 테트리스 시작
@@ -1742,155 +1862,6 @@ export class GameManager {
 
     if (levelBox) levelBox.style.display = "";
     if (scoreBoard) scoreBoard.style.display = "";
-  }
-
-  // 미니 디펜스 패널 생성 (상단 전체에 크게 배치)
-  createMiniDefensePanel() {
-    // 기존 패널 제거
-    const existing = document.getElementById("mini-defense-panel");
-    if (existing) existing.remove();
-
-    // NEXT 블록 위치 변경 (왼쪽 하단으로)
-    const nextBox = document.querySelector(".next-box");
-    if (nextBox) {
-      nextBox.style.cssText = `
-        position: fixed !important;
-        bottom: 100px;
-        left: 10px;
-        top: auto !important;
-        right: auto !important;
-        z-index: 1001;
-      `;
-    }
-
-    const panel = document.createElement("div");
-    panel.id = "mini-defense-panel";
-    panel.style.cssText = `
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      padding: 8px;
-      background: rgba(0, 10, 0, 0.95);
-      border: 2px solid #ff3333;
-      border-radius: 5px;
-      color: #ff3333;
-      font-family: var(--term-font);
-      font-size: 12px;
-      z-index: 1000;
-      height: 180px;
-    `;
-
-    // 정보 영역 (상단)
-    const infoDiv = document.createElement("div");
-    infoDiv.style.cssText = `
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 5px;
-      padding-bottom: 5px;
-      border-bottom: 1px solid #ff3333;
-      font-size: 14px;
-    `;
-    infoDiv.innerHTML = `
-      <span id="conquest-core-hp">♥ 100%</span>
-      <span style="color: #00ff00;">DEFENSE MODE</span>
-      <span id="conquest-page">⚔️ 2/3</span>
-    `;
-    panel.appendChild(infoDiv);
-
-    // 미니 캔버스 (디펜스 렌더링용) - 크게!
-    const miniCanvas = document.createElement("canvas");
-    miniCanvas.id = "mini-defense-canvas";
-    miniCanvas.width = 400;
-    miniCanvas.height = 150;
-    miniCanvas.style.cssText = `
-      width: 100%;
-      height: 140px;
-      background: #001100;
-      border-radius: 3px;
-    `;
-    panel.appendChild(miniCanvas);
-
-    document.body.appendChild(panel);
-
-    // BGM/VIEW 버튼을 패널 외부 오른쪽에 배치 (패널 아래)
-    const settingsBtnContainer = document.createElement("div");
-    settingsBtnContainer.id = "conquest-settings-btns";
-    settingsBtnContainer.style.cssText = `
-      position: fixed;
-      top: 215px;
-      right: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      pointer-events: auto;
-      z-index: 1001;
-    `;
-
-    const btnStyle = `
-      padding: 8px 10px;
-      font-size: 12px;
-      background: rgba(0, 20, 0, 0.8);
-      border: 1px solid var(--term-color);
-      color: var(--term-color);
-      font-family: var(--term-font);
-      cursor: pointer;
-      line-height: 1.2;
-      text-align: center;
-    `;
-
-    // 원본 버튼 참조
-    const origBgmBtn = document.getElementById("bgm-btn");
-    const origViewBtn = document.getElementById("toggle-btn");
-
-    // BGM 버튼 생성
-    const bgmClone = document.createElement("button");
-    bgmClone.id = "conquest-bgm-btn";
-    bgmClone.innerHTML = origBgmBtn ? origBgmBtn.innerHTML : "BGM<br>ON";
-    bgmClone.style.cssText = btnStyle;
-    bgmClone.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // 원본 버튼의 pointerdown 이벤트 트리거
-      if (origBgmBtn) {
-        const event = new PointerEvent("pointerdown", { bubbles: true });
-        origBgmBtn.dispatchEvent(event);
-        // 복제 버튼 텍스트 동기화
-        setTimeout(() => {
-          bgmClone.innerHTML = origBgmBtn.innerHTML;
-        }, 10);
-      }
-    });
-
-    // VIEW 버튼 생성
-    const viewClone = document.createElement("button");
-    viewClone.id = "conquest-view-btn";
-    viewClone.innerHTML = origViewBtn ? origViewBtn.innerHTML : "VIEW<br>OFF";
-    viewClone.style.cssText = btnStyle;
-    viewClone.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // 원본 버튼의 pointerdown 이벤트 트리거
-      if (origViewBtn) {
-        const event = new PointerEvent("pointerdown", { bubbles: true });
-        origViewBtn.dispatchEvent(event);
-        // 복제 버튼 텍스트 동기화
-        setTimeout(() => {
-          viewClone.innerHTML = origViewBtn.innerHTML;
-        }, 10);
-      }
-    });
-
-    settingsBtnContainer.appendChild(bgmClone);
-    settingsBtnContainer.appendChild(viewClone);
-    document.body.appendChild(settingsBtnContainer);
-
-    // 원래 settings-area 숨기기
-    const settingsArea = document.querySelector(".settings-area");
-    if (settingsArea) {
-      settingsArea.style.display = "none";
-    }
   }
 
   // NEXT 블록 위치 복구 및 설정 버튼 복구
@@ -2015,16 +1986,35 @@ export class GameManager {
     this.restoreNextBoxPosition();
     debugLog("GameManager", "테트리스 UI 정리 완료");
 
-    // 미니 패널 제거
-    const panel = document.getElementById("mini-defense-panel");
-    if (panel) panel.remove();
-    debugLog("GameManager", "미니 패널 제거됨");
+    // 미니 패널 제거 및 원본 캔버스로 복원
+    debugLog("Conquest", "=== 복귀 시작: removeMiniDefensePanel 호출 ===");
+    this.removeMiniDefensePanel();
+    debugLog("Conquest", "removeMiniDefensePanel 완료");
+
+    // 캔버스 상태 확인
+    debugLog("Canvas", "복귀 후 canvas 정보:");
+    debugLog("Canvas", "  - originalCanvas.width x height:", this.defenseGame.originalCanvas.width, "x", this.defenseGame.originalCanvas.height);
+    debugLog("Canvas", "  - originalCanvas.style.display:", this.defenseGame.originalCanvas.style.display);
+    debugLog("Canvas", "  - isMiniDisplay:", this.defenseGame.isMiniDisplay);
+    debugLog("Canvas", "  - miniCanvas:", !!this.defenseGame.miniCanvas);
+
+    // 게임 상태 확인
+    debugLog("Defense", "게임 상태 확인:");
+    debugLog("Defense", "  - 아군 수:", this.defenseGame.alliedViruses.length);
+    debugLog("Defense", "  - 적 수:", this.defenseGame.enemies.length);
+    debugLog("Defense", "  - 코어 HP:", this.defenseGame.core.hp);
+    debugLog("Defense", "  - 코어 위치:", this.defenseGame.core.x, this.defenseGame.core.y);
+    debugLog("Defense", "  - isRunning:", this.defenseGame.isRunning);
+    debugLog("Defense", "  - isConquered:", this.defenseGame.isConquered);
 
     // 디펜스 화면 복구 및 재개
-    this.defenseGame.canvas.style.display = "block";
+    debugLog("Canvas", "originalCanvas.style.display를 block으로 설정");
+    this.defenseGame.originalCanvas.style.display = "block";
     this.defenseGame.uiLayer.style.display = "block";
+    debugLog("Canvas", "설정 후 originalCanvas.style.display:", this.defenseGame.originalCanvas.style.display);
+
     this.defenseGame.resume(); // 디펜스 재개! (강화 페이지 진행을 위해)
-    debugLog("GameManager", "디펜스 재개됨");
+    debugLog("Conquest", "=== 복귀 완료 ===");
 
     // 터미널 복구
     debugLog("GameManager", "터미널 복구 시작");
@@ -2287,7 +2277,7 @@ export class GameManager {
       this.currentMoney += dataAmount;
       this.saveMoney();
       this.terminal.updateData(this.currentMoney);
-      console.log(`[Decryption] All targets unlocked, converted to ${dataAmount} DATA`);
+      debugLog("Item", `All targets unlocked, converted to ${dataAmount} DATA`);
       return null; // 타겟 없음 (DATA로 변환됨)
     }
     
@@ -2314,9 +2304,9 @@ export class GameManager {
     this.decryptionProgress[target] = Math.min(100, oldProgress + amount);
     
     this.saveDecryptionProgress();
-    
-    console.log(`[Decryption] ${target}: ${oldProgress}% -> ${this.decryptionProgress[target]}% (Stage ${stageId} bonus: ${bonusTargets.join(', ')})`);
-    
+
+    debugLog("Item", `${target}: ${oldProgress}% -> ${this.decryptionProgress[target]}% (Stage ${stageId} bonus: ${bonusTargets.join(', ')})`);
+
     // 해금 달성 체크
     if (oldProgress < 100 && this.decryptionProgress[target] >= 100) {
       this.terminal.printSystemMessage(`ACCESS GRANTED: ${target} BLUEPRINT DECRYPTED!`);
@@ -2820,6 +2810,7 @@ export class GameManager {
 
   // 점령 완료
   async handleConquestComplete() {
+    debugLog("Conquest", "========== handleConquestComplete START ==========");
     this.isConquestMode = false;
 
     // 테트리스 정리 (혹시 아직 플레이 중이면)
@@ -2827,9 +2818,10 @@ export class GameManager {
       this.tetrisGame.state.isPlaying = false;
     }
 
-    // 미니 패널 제거
-    const panel = document.getElementById("mini-defense-panel");
-    if (panel) panel.remove();
+    // 미니 패널 제거 (setMiniDisplay(null) 호출하여 캔버스 복원)
+    debugLog("Conquest", "About to call removeMiniDefensePanel");
+    this.removeMiniDefensePanel();
+    debugLog("Conquest", "removeMiniDefensePanel returned");
 
     // 테트리스 UI 완전 정리
     const gameContainer = document.getElementById("game-container");
@@ -2839,8 +2831,13 @@ export class GameManager {
     this.restoreNextBoxPosition();
 
     // 디펜스 화면 복구
+    debugLog("Canvas", "Setting defense canvas display to block");
+    debugLog("Canvas", "Canvas before:", this.defenseGame.canvas.style.display);
     this.defenseGame.canvas.style.display = "block";
+    debugLog("Canvas", "Canvas after:", this.defenseGame.canvas.style.display);
+    debugLog("Canvas", "Setting uiLayer display to block");
     this.defenseGame.uiLayer.style.display = "block";
+    debugLog("Conquest", "Defense game isRunning:", this.defenseGame.isRunning);
 
     // 점령 처리
     this.conquestManager.conquerStage();
@@ -2852,8 +2849,12 @@ export class GameManager {
     }
 
     // 디펜스 게임에 점령 상태 설정 (시각화 + 아군 10마리)
+    debugLog("Conquest", "Setting conquered state");
     this.defenseGame.setConqueredState(true);
+    debugLog("Conquest", "Calling defenseGame.resume()");
     this.defenseGame.resume(); // 디펜스 재개
+    debugLog("Conquest", "After resume, isRunning:", this.defenseGame.isRunning);
+    debugLog("Canvas", "After resume, canvas display:", this.defenseGame.canvas.style.display);
 
     // 터미널 표시 및 메시지
     this.terminal.setTransparentMode(false);
@@ -2867,6 +2868,7 @@ export class GameManager {
 
     // 선택지 표시
     await this.showCommandMenu();
+    debugLog("Conquest", "========== handleConquestComplete END ==========");
   }
 
   // 점령 실패 (코어 파괴)
@@ -2882,9 +2884,8 @@ export class GameManager {
     this.showConquestTetrisUI(); // 상단 UI 복구
     this.restoreNextBoxPosition(); // NEXT 블록 위치 복구
 
-    // 미니 패널 제거
-    const panel = document.getElementById("mini-defense-panel");
-    if (panel) panel.remove();
+    // 미니 패널 제거 (setMiniDisplay(null) 호출하여 캔버스 복원)
+    this.removeMiniDefensePanel();
 
     // 디펜스 정리
     this.defenseGame.canvas.style.display = "block";
@@ -2911,9 +2912,8 @@ export class GameManager {
     this.showConquestTetrisUI();
     this.restoreNextBoxPosition();
 
-    // 미니 패널 제거
-    const panel = document.getElementById("mini-defense-panel");
-    if (panel) panel.remove();
+    // 미니 패널 제거 (setMiniDisplay(null) 호출하여 캔버스 복원)
+    this.removeMiniDefensePanel();
 
     // 디펜스 정리 및 복구
     this.defenseGame.canvas.style.display = "block";
@@ -3185,6 +3185,13 @@ export class GameManager {
 
       // 2. 스테이지 설정 적용
       this.applyStageSettings(result.stage);
+      
+      // 2.5. 보스전 모드 설정
+      if (result.stage.type === "boss") {
+        this.startBossFight();
+      } else {
+        this.endBossFight();
+      }
 
       // 3. 아군 바이러스 정보 업데이트 (playIntroAnimation 전에!)
       const alliedInfo = this.conquestManager.getAlliedInfo();
@@ -3196,7 +3203,7 @@ export class GameManager {
       
       // Safe Zone이면 아군 바이러스 미리 배치 (제거 후에 해야 함!)
       if (result.stage.type === "safe") {
-        console.log("[DEBUG] Calling spawnSafeZoneAllies from handleMapStageClick");
+        debugLog("GameManager", "Calling spawnSafeZoneAllies from handleMapStageClick");
         this.defenseGame.spawnSafeZoneAllies();
       }
       
@@ -3323,7 +3330,7 @@ export class GameManager {
     
     // Safe Zone 아군 배치는 alliedViruses = [] 이후에 해야 하므로
     // 여기서는 설정만 하고, 실제 spawn은 호출하는 쪽에서 처리
-    console.log("[DEBUG] applyStageSettings - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
+    debugLog("GameManager", "applyStageSettings - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
 
     // 실드 상태 복구 (스테이지 이동 시 항상 리셋)
     this.defenseGame.core.shieldActive = true;
@@ -6497,7 +6504,7 @@ export class GameManager {
     try {
       const payload = JSON.stringify(this.upgradeLevels);
       localStorage.setItem("cylinderTetris_upgrades", payload);
-      console.log("[GameManager] ✓ Upgrades saved");
+      debugLog("GameManager", "✓ Upgrades saved");
     } catch (e) {
       console.warn("[GameManager] Failed to save upgrades:", e);
     }
@@ -6512,7 +6519,7 @@ export class GameManager {
       if (saved) {
         const parsed = JSON.parse(saved);
         this.upgradeLevels = this.sanitizeUpgrades(parsed);
-        console.log("[GameManager] ✓ Upgrades loaded:", this.upgradeLevels);
+        debugLog("GameManager", "✓ Upgrades loaded:", this.upgradeLevels);
         return;
       }
     } catch (e) {
@@ -6529,7 +6536,7 @@ export class GameManager {
     try {
       const payload = JSON.stringify(this.allyConfig);
       localStorage.setItem("cylinderTetris_allyConfig", payload);
-      console.log("[GameManager] ✓ Ally config saved:", this.allyConfig);
+      debugLog("GameManager", "✓ Ally config saved:", this.allyConfig);
     } catch (e) {
       console.warn("[GameManager] Failed to save ally config:", e);
     }
@@ -6551,7 +6558,7 @@ export class GameManager {
           if (parsed.subType === null || this.virusTypes[parsed.subType]) {
             this.allyConfig.subType = parsed.subType;
           }
-          console.log("[GameManager] ✓ Ally config loaded:", this.allyConfig);
+          debugLog("GameManager", "✓ Ally config loaded:", this.allyConfig);
           return;
         }
       }
@@ -6585,7 +6592,7 @@ export class GameManager {
         console.warn(`[GameManager] ⚠️ Saving 0! Stack trace:`);
         console.trace();
       } else {
-        console.log(`[GameManager] Saving money: ${this.currentMoney}`);
+        debugLog("GameManager", `Saving money: ${this.currentMoney}`);
       }
       localStorage.setItem(
         "cylinderTetris_money",
@@ -6593,7 +6600,7 @@ export class GameManager {
       );
       // 저장 확인
       const verify = localStorage.getItem("cylinderTetris_money");
-      console.log(`[GameManager] ✓ Verified saved: ${verify}`);
+      debugLog("GameManager", `✓ Verified saved: ${verify}`);
     } catch (e) {
       console.warn("Failed to save money to localStorage:", e);
     }
@@ -6605,17 +6612,17 @@ export class GameManager {
   loadSavedMoney() {
     try {
       const saved = localStorage.getItem("cylinderTetris_money");
-      console.log(`[GameManager] Raw localStorage value: "${saved}"`);
+      debugLog("GameManager", `Raw localStorage value: "${saved}"`);
       if (saved !== null) {
         const amount = parseInt(saved, 10);
         if (!isNaN(amount) && amount >= 0) {
-          console.log(`[GameManager] ✓ Loaded saved money: ${amount}`);
+          debugLog("GameManager", `✓ Loaded saved money: ${amount}`);
           return amount;
         } else {
           console.warn(`[GameManager] Invalid saved value: ${saved} -> parsed: ${amount}`);
         }
       } else {
-        console.log(`[GameManager] No saved money found (key: cylinderTetris_money)`);
+        debugLog("GameManager", `No saved money found (key: cylinderTetris_money)`);
       }
     } catch (e) {
       console.warn("Failed to load money from localStorage:", e);
@@ -6653,9 +6660,340 @@ export class GameManager {
     const oldMoney = this.currentMoney;
     this.currentMoney = Math.floor(this.currentMoney * remainingPercent);
     this.saveMoney();
-    console.log(
-      `[GameManager] Game Over Penalty: ${oldMoney} → ${this.currentMoney} (30% kept)`
+    debugLog("Boss",
+      `Game Over Penalty: ${oldMoney} → ${this.currentMoney} (30% kept)`
     );
     return this.currentMoney;
+  }
+  
+  // ============ 보스전 시스템 ============
+  
+  /**
+   * 보스전 시작
+   */
+  startBossFight() {
+    debugLog("Boss", "Starting boss fight!");
+
+    // BossManager 시작
+    this.bossManager.start();
+    
+    // DefenseGame에 보스전 모드 설정
+    this.defenseGame.isBossFight = true;
+    this.defenseGame.bossManager = this.bossManager;
+    this.defenseGame.breachReadyShown = false;
+    
+    // 콜백 설정: BREACH READY
+    this.defenseGame.onBreachReady = () => this.handleBreachReady();
+    
+    // 콜백 설정: 보스 처치
+    this.bossManager.onBossDefeated = () => this.handleBossDefeated();
+    
+    // 콜백 설정: 페이즈 전환
+    this.bossManager.onPhaseChange = (phase, config) => {
+      this.terminal.printSystemMessage(`>>> ${config.description} <<<`);
+    };
+  }
+  
+  /**
+   * 보스전 종료
+   */
+  endBossFight() {
+    if (!this.defenseGame.isBossFight) return;
+
+    debugLog("Boss", "Ending boss fight");
+
+    this.bossManager.stop();
+    this.defenseGame.isBossFight = false;
+    this.defenseGame.bossManager = null;
+    this.defenseGame.onBreachReady = null;
+    this.tetrisGame.endBossFight();
+  }
+  
+  /**
+   * BREACH READY 처리 (침투 게이지 100%)
+   */
+  async handleBreachReady() {
+    debugLog("Boss", "Breach ready!");
+
+    // 선택지 표시
+    await this.terminal.printSystemMessage('>>> BREACH READY <<<');
+    await this.terminal.printSystemMessage('Core firewall vulnerable. Initiate breach?');
+    
+    const choice = await this.terminal.showChoices([
+      { text: '>>> BREACH NOW <<<', value: 'breach', style: 'danger' },
+      { text: 'Continue defense', value: 'continue' },
+    ]);
+    
+    if (choice === 'breach') {
+      await this.startBossBreach();
+    }
+  }
+  
+  /**
+   * 보스 침투 시작 (테트리스 모드 진입)
+   */
+  async startBossBreach() {
+    debugLog("Boss", "Starting boss breach (Tetris)");
+
+    // 테트리스 모드로 전환
+    this.defenseGame.pause();
+    
+    // 테트리스에 보스전 모드 설정
+    this.tetrisGame.startBossFight(this.bossManager);
+    
+    // 방해 콜백 설정
+    this.bossManager.onInterference = (type) => {
+      this.tetrisGame.applyBossInterference(type);
+    };
+    
+    // 방해 타이머 리셋
+    this.bossManager.resetInterferenceTimers();
+    
+    // 테트리스 시작
+    await this.terminal.printSystemMessage('BREACH INITIATED - Clear 3 lines to damage core!');
+    
+    // 테트리스 콜백 설정
+    this.tetrisGame.onStageClear = () => this.handleBossBreachSuccess();
+    this.tetrisGame.onGameOver = () => this.handleBossBreachFail();
+    
+    this.switchToTetrisMode();
+    // 테트리스 게임 시작 (3줄 목표, 기본 속도)
+    this.tetrisGame.startGame(3, 800);
+    
+    // 방해 업데이트 루프 시작
+    this.startBossInterferenceLoop();
+  }
+  
+  /**
+   * 보스 방해 업데이트 루프
+   */
+  startBossInterferenceLoop() {
+    if (this.bossInterferenceInterval) {
+      clearInterval(this.bossInterferenceInterval);
+    }
+    
+    this.bossInterferenceInterval = setInterval(() => {
+      if (!this.tetrisGame.state.isPlaying || !this.tetrisGame.state.isBossFight) {
+        clearInterval(this.bossInterferenceInterval);
+        return;
+      }
+      
+      const now = performance.now();
+      this.bossManager.updateInterference(now);
+    }, 1000); // 1초마다 체크
+  }
+  
+  /**
+   * 보스 침투 성공 (테트리스 3줄 클리어)
+   */
+  async handleBossBreachSuccess() {
+    debugLog("Boss", "Boss breach success!");
+
+    // 방해 루프 중지
+    if (this.bossInterferenceInterval) {
+      clearInterval(this.bossInterferenceInterval);
+    }
+    
+    // 보스에게 데미지
+    const defeated = this.bossManager.dealDamage(20);
+    
+    if (defeated) {
+      // 보스 처치 - handleBossDefeated에서 처리
+      return;
+    }
+    
+    // 테트리스 종료, 디펜스로 복귀
+    this.tetrisGame.state.isPlaying = false;
+    this.tetrisGame.endBossFight();
+    
+    await this.terminal.printSystemMessage(`BREACH SUCCESS! Core damaged: ${this.bossManager.bossHP}% remaining`);
+    
+    // 침투 게이지 리셋
+    this.defenseGame.breachReadyShown = false;
+    this.bossManager.breachGauge = 0;
+    this.bossManager.isBreachReady = false;
+    
+    // 디펜스 모드로 복귀
+    this.switchToDefenseMode();
+    this.defenseGame.resume();
+    
+    await this.showCommandMenu();
+  }
+  
+  /**
+   * 보스 침투 실패 (테트리스 게임오버)
+   */
+  async handleBossBreachFail() {
+    debugLog("Boss", "Boss breach failed!");
+
+    // 방해 루프 중지
+    if (this.bossInterferenceInterval) {
+      clearInterval(this.bossInterferenceInterval);
+    }
+    
+    // BossManager에 실패 알림
+    this.bossManager.onBreachFailed();
+    
+    // 테트리스 종료
+    this.tetrisGame.state.isPlaying = false;
+    this.tetrisGame.endBossFight();
+    
+    await this.terminal.printSystemMessage('BREACH FAILED! Core firewall restored.');
+    await this.terminal.printSystemMessage('Breach gauge reset. Continue defense.');
+    
+    // 침투 게이지 리셋
+    this.defenseGame.breachReadyShown = false;
+    
+    // 디펜스 모드로 복귀
+    this.switchToDefenseMode();
+    this.defenseGame.resume();
+    
+    await this.showCommandMenu();
+  }
+  
+  /**
+   * 보스 처치 처리
+   */
+  async handleBossDefeated() {
+    debugLog("Boss", "BOSS DEFEATED!");
+
+    // 방해 루프 중지
+    if (this.bossInterferenceInterval) {
+      clearInterval(this.bossInterferenceInterval);
+    }
+    
+    // 테트리스 종료
+    this.tetrisGame.state.isPlaying = false;
+    this.tetrisGame.endBossFight();
+    
+    // 보스전 종료
+    this.endBossFight();
+    
+    // 스테이지 점령
+    const currentStage = this.stageManager.getCurrentStage();
+    if (currentStage) {
+      this.stageManager.conquerStage(currentStage.id);
+    }
+    
+    // 승리 연출
+    await this.terminal.printSystemMessage('');
+    await this.terminal.printSystemMessage('████████████████████████████████');
+    await this.terminal.printSystemMessage('█                              █');
+    await this.terminal.printSystemMessage('█    ★★★ CORE NEXUS BREACHED ★★★    █');
+    await this.terminal.printSystemMessage('█                              █');
+    await this.terminal.printSystemMessage('█        SYSTEM CONQUERED!        █');
+    await this.terminal.printSystemMessage('█                              █');
+    await this.terminal.printSystemMessage('████████████████████████████████');
+    await this.terminal.printSystemMessage('');
+    
+    // 보상 지급
+    const reward = 10000;
+    this.currentMoney += reward;
+    this.saveMoney();
+    await this.terminal.printSystemMessage(`REWARD: +${reward} DATA`);
+    
+    // 디펜스 모드로 복귀
+    this.switchToDefenseMode();
+    this.defenseGame.setConquered(true);
+    this.defenseGame.resume();
+    
+    await this.showCommandMenu();
+  }
+  
+  /**
+   * 테트리스 모드로 전환 (보스 침투용)
+   */
+  switchToTetrisMode() {
+    debugLog("Boss", "Switching to Tetris mode");
+
+    // 1. 터미널 투명 모드 (테트리스 배경으로)
+    this.terminal.setTransparentMode(true);
+    
+    // 2. Three.js 캔버스 표시
+    document.getElementById('game-container').style.display = 'block';
+    document.getElementById('game-container').style.opacity = '1';
+    
+    // 3. 게임 UI 표시 (NEXT 블록, 점수 등)
+    document.getElementById('game-ui').style.display = 'block';
+    
+    // 4. 디펜스 게임을 미니맵 모드로 전환 (상단에 작게 표시)
+    if (this.defenseGame) {
+      this.defenseGame.originalCanvas.style.display = "none";
+      this.createMiniDefensePanel();
+    }
+    
+    // 5. 모드 상태 업데이트
+    this.activeMode = 'tetris';
+  }
+  
+  /**
+   * 디펜스 모드로 전환 (보스 침투 후 복귀)
+   */
+  switchToDefenseMode() {
+    debugLog("Boss", "Switching to Defense mode");
+
+    // 1. 테트리스 정지 및 Three.js 캔버스 숨김
+    this.tetrisGame.state.isPlaying = false;
+    document.getElementById('game-ui').style.display = 'none';
+    document.getElementById('game-container').style.display = 'none';
+    
+    // 2. 디펜스 게임을 전체 화면 모드로 복원
+    if (this.defenseGame) {
+      this.removeMiniDefensePanel();
+      this.defenseGame.originalCanvas.style.display = "block";
+    }
+    
+    // 3. 터미널 디펜스 모드로 복원
+    this.terminal.setDefenseMode(true);
+    this.terminal.show();
+    
+    // 4. 모드 상태 업데이트
+    this.activeMode = 'defense';
+  }
+  createMiniDefensePanel() {
+    debugLog("Conquest", "createMiniDefensePanel 시작");
+
+    // 기존 패널 제거
+    this.removeMiniDefensePanel();
+
+    const panel = document.createElement("div");
+    panel.id = "mini-defense-panel";
+    panel.style.cssText = "position: fixed; top: 10px; left: 10px; right: 10px; padding: 8px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000; height: 180px;";
+
+    panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 14px;">
+      <span id="conquest-core-hp">♥ ${Math.ceil(this.bossManager ? this.bossManager.bossHP : 100)}%</span>
+      <span style="color: #00ff00;">BREACH PROTOCOL</span>
+      <span id="conquest-page">TARGET: CORE</span>
+    </div><canvas id="mini-defense-canvas" width="400" height="150" style="width: 100%; height: 140px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
+
+    debugLog("Conquest", "패널 생성 완료, body에 추가");
+    document.body.appendChild(panel);
+
+    debugLog("Conquest", "패널이 DOM에 추가됨, 패널 display:", panel.style.display);
+    const miniCanvas = document.getElementById("mini-defense-canvas");
+    debugLog("Conquest", "미니 캔버스 찾음:", !!miniCanvas, "display:", miniCanvas?.style?.display);
+
+    if (this.defenseGame) {
+      debugLog("Conquest", "setMiniDisplay 호출");
+      this.defenseGame.setMiniDisplay("mini-defense-canvas");
+      debugLog("Conquest", "setMiniDisplay 완료");
+    }
+  }
+
+  removeMiniDefensePanel() {
+    debugLog("Conquest", "removeMiniDefensePanel called");
+    const panel = document.getElementById("mini-defense-panel");
+    if (panel) {
+      debugLog("Conquest", "Removing mini defense panel");
+      panel.remove();
+    } else {
+      debugLog("Conquest", "No mini defense panel found");
+    }
+    if (this.defenseGame) {
+      debugLog("Conquest", "Calling setMiniDisplay(null)");
+      this.defenseGame.setMiniDisplay(null);
+    } else {
+      debugLog("Conquest", "defenseGame not found");
+    }
   }
 }

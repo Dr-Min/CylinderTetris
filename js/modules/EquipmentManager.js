@@ -49,7 +49,7 @@ export class EquipmentManager {
 
     addItem(item) {
         this.inventory.push(item);
-        console.log("Item added:", item);
+        debugLog("Item", "Item added:", item);
         
         // 자동 장착 (더 좋은 거면)
         this.autoEquip(item);
@@ -59,7 +59,7 @@ export class EquipmentManager {
         const current = this.equipped[item.type];
         if (!current || item.stats.power > current.stats.power) {
             this.equipped[item.type] = item;
-            console.log("Auto Equipped:", item);
+            debugLog("Item", "Auto Equipped:", item);
             return true;
         }
         return false;

@@ -1,5 +1,5 @@
-// v9.21.0 - Feature: Data Mine farming zone (no conquest) + page timer display
-const CACHE_NAME = "hacker-tetris-v23.18"; // isFarmingZone, visited waypoint unlock, realtime page countdown
+// v9.22.11 - Debug: Add mini mode render logs
+const CACHE_NAME = "hacker-tetris-v23.30"; // Added detailed logging for mini display rendering
 const ASSETS = [
   "./",
   "./index.html",
@@ -12,6 +12,7 @@ const ASSETS = [
   "./js/modules/TetrisGame.js",
   "./js/modules/DefenseGame.js",
   "./js/modules/BGMManager.js",
+  "./js/modules/BossManager.js",
   "./js/modules/PerkManager.js",
   "./js/modules/ConquestManager.js",
   "./js/modules/EquipmentManager.js",

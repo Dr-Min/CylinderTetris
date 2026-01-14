@@ -11,7 +11,7 @@ export class ConquestManager {
     // 스테이지 점령 성공 시 호출
     conquerStage() {
         this.conqueredStages++;
-        console.log(`[Conquest] Stage Conquered. Total: ${this.conqueredStages}`);
+        debugLog("Conquest", `Stage Conquered. Total: ${this.conqueredStages}`);
         
         // 점령지가 2개 이상이면 병합 시도
         if (this.conqueredStages >= 2) {
@@ -42,7 +42,7 @@ export class ConquestManager {
             // 아군 강화: 병합 1회당 레벨 +1
             this.alliedVirusLevel += newMerges;
             
-            console.log(`[Conquest] Merged! New Level: ${this.alliedVirusLevel}, Remaining Stages: ${this.conqueredStages}`);
+            debugLog("Conquest", `Merged! New Level: ${this.alliedVirusLevel}, Remaining Stages: ${this.conqueredStages}`);
         }
         
         this.updateMiningRate();

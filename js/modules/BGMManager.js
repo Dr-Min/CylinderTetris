@@ -171,9 +171,9 @@ export class BGMManager {
       this.compressor.release.value = 0.2;
       this.compressor.connect(this.masterGain);
       
-      console.log("[BGM] Manager Initialized");
+      debugLog("GameManager", "Manager Initialized");
     } catch (e) {
-      console.error("[BGM] Audio not supported:", e);
+      debugLog("GameManager", `Audio not supported: ${e}`);
     }
   }
 
@@ -186,7 +186,7 @@ export class BGMManager {
     
     const track = this.tracks[trackName];
     if (!track) {
-      console.error("[BGM] Unknown track:", trackName);
+      debugLog("GameManager", `Unknown track: ${trackName}`);
       return;
     }
     
@@ -221,7 +221,7 @@ export class BGMManager {
     // 스케줄러 시작
     this.schedulerTimer = setInterval(() => this.scheduler(), this.lookahead);
     
-    console.log("[BGM] Playing:", track.name, "at", this.bpm, "BPM");
+    debugLog("GameManager", `Playing: ${track.name} at ${this.bpm} BPM`);
   }
 
   /**
@@ -238,7 +238,7 @@ export class BGMManager {
       this.schedulerTimer = null;
     }
     
-    console.log("[BGM] Stopped");
+    debugLog("GameManager", "Stopped");
   }
 
   /**
@@ -313,7 +313,7 @@ export class BGMManager {
         this.audioCtx.currentTime + fadeDuration
       );
       
-      console.log("[BGM] Switched to:", track.name);
+      debugLog("GameManager", `Switched to: ${track.name}`);
     }, fadeDuration * 1000);
   }
 

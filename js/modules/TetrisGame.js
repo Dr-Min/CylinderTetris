@@ -14,15 +14,16 @@ export class TetrisGame {
       SHOW_GHOST: true,
       TRANSPARENT_MODE: false,
       COLORS: {
-        I: 0x00f0ff,
-        O: 0xfff000,
-        T: 0xb026ff,
-        S: 0x39ff14,
-        Z: 0xff073a,
-        J: 0x0044ff,
-        L: 0xffa500,
-        GHOST: 0x222222,
-        GRID: 0x111111,
+        // 터미널 테마: 녹색/시안 계열 모노톤
+        I: 0x00ff88,  // 밝은 녹색
+        O: 0x00ffcc,  // 시안
+        T: 0x00dd66,  // 중간 녹색
+        S: 0x00ff44,  // 네온 녹색
+        Z: 0x00aa44,  // 어두운 녹색
+        J: 0x00ccaa,  // 청록
+        L: 0x00ffaa,  // 민트
+        GHOST: 0x113322,
+        GRID: 0x0a1a0a,
       },
     };
 
@@ -90,6 +91,7 @@ export class TetrisGame {
       linesClearedTotal: 0,
       linesClearedStage: 0, // 스테이지별 클리어 라인 카운트
       isPlaying: false,
+      isLogicActive: false, // 게임 로직(이동/낙하) 활성화 플래그
       dropTimer: 0,
       lastTime: 0,
       cameraAngle: 0,
@@ -102,7 +104,18 @@ export class TetrisGame {
       puzzleBlocks: [], // 플레이어에게 주어진 블록들
       currentPuzzleBlockIndex: 0, // 현재 선택된 블록 인덱스
       puzzleLinesTarget: 3, // 목표 라인 수
+      // 보스전 방해 효과
+      isBossFight: false,
+      bossInterference: {
+        blackout: false,      // 다음 블록 미리보기 숨김
+        speedup: false,       // 낙하 속도 2배
+        reverse: false,       // 좌우 반전
+        glitchIntensity: 0,   // 글리치 효과 강도 (0-1)
+      },
     };
+    
+    // 보스 매니저 참조 (GameManager에서 주입)
+    this.bossManager = null;
 
     this.onStageClear = null; // 콜백 함수
     this.onGameOver = null; // 콜백 함수
@@ -749,7 +762,7 @@ export class TetrisGame {
     this.updateScore(0);
     this.updateLevel(1);
 
-    console.log(`Mission Start: Clear ${targetLines} lines.`);
+    debugLog("Tetris", `Mission Start: Clear ${targetLines} lines.`);
 
     this.piecesGroup.clear();
     this.generateNextPiece();
@@ -812,14 +825,25 @@ export class TetrisGame {
     if (!this.nextCtx || !this.state.nextPiece) return;
 
     const ctx = this.nextCtx;
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    
+    // 보스전 블랙아웃 효과: 다음 블록 숨김
+    if (this.state.isBossFight && this.state.bossInterference.blackout) {
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = '#ff0000';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('???', ctx.canvas.width / 2, ctx.canvas.height / 2 + 4);
+      return;
+    }
+    
     const shape = this.state.nextPiece.shape;
     const color = this.state.nextPiece.color;
     const specialType = this.state.nextPiece.specialType;
     const specialIndex = this.state.nextPiece.specialIndex;
 
     const blockSize = 12;
-
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     const offsetX = (ctx.canvas.width - shape[0].length * blockSize) / 2;
     const offsetY = (ctx.canvas.height - shape.length * blockSize) / 2;
@@ -1148,7 +1172,7 @@ export class TetrisGame {
     
     if (nextIndex !== -1 && nextIndex !== this.state.currentPuzzleBlockIndex) {
       this.selectPuzzleBlock(nextIndex);
-      console.log("[Puzzle] 블록 변경:", this.state.puzzleBlocks[nextIndex].type);
+      debugLog("Tetris", "블록 변경:", this.state.puzzleBlocks[nextIndex].type);
     }
   }
   
@@ -1183,7 +1207,7 @@ export class TetrisGame {
       rotationRequired = 2;
     }
     
-    console.log(`[Puzzle] 난이도 ${difficulty}: 블록 ${blockCount}개, 회전 ${rotationRequired}개, 목표 ${linesTarget}줄`);
+    debugLog("Tetris", `난이도 ${difficulty}: 블록 ${blockCount}개, 회전 ${rotationRequired}개, 목표 ${linesTarget}줄`);
     
     return {
       blockCount,
@@ -1218,7 +1242,7 @@ export class TetrisGame {
       }
     }
     
-    console.log("[Puzzle] 바닥", TARGET_LINES, "줄 꽉 채움");
+    debugLog("Tetris", "바닥", TARGET_LINES, "줄 꽉 채움");
     
     // 2. 블록 모양으로 구멍 뚫기 (각 줄에 최소 1개씩 분산)
     const blocks = [];
@@ -1270,15 +1294,15 @@ export class TetrisGame {
           used: false,
         });
         
-        console.log("[Puzzle] 블록 추가:", type, "위치:", position, "회전:", rotations);
+        debugLog("Tetris", "블록 추가:", type, "위치:", position, "회전:", rotations);
       } else {
-        console.log("[Puzzle] 블록 배치 불가:", type);
+        debugLog("Tetris", "블록 배치 불가:", type);
       }
     }
     
     // 3. 아직 구멍 없는 줄이 있으면 추가 처리
     if (rowsNeedingHoles.size > 0) {
-      console.log("[Puzzle] 구멍 없는 줄 있음:", [...rowsNeedingHoles]);
+      debugLog("Tetris", "구멍 없는 줄 있음:", [...rowsNeedingHoles]);
       
       // 각 줄에 강제로 구멍 뚫기
       for (const y of rowsNeedingHoles) {
@@ -1286,7 +1310,7 @@ export class TetrisGame {
         const x = Math.floor(Math.random() * this.CONFIG.GRID_WIDTH);
         if (grid[y][x] !== null) {
           grid[y][x] = null;
-          console.log("[Puzzle] 줄", y, "에 강제 구멍 추가 at x:", x);
+          debugLog("Tetris", "줄", y, "에 강제 구멍 추가 at x:", x);
         }
       }
     }
@@ -1300,12 +1324,12 @@ export class TetrisGame {
       const filledCount = grid[y].filter(cell => cell !== null).length;
       const holesCount = this.CONFIG.GRID_WIDTH - filledCount;
       totalHoles += holesCount;
-      console.log(`[Puzzle] 줄 ${y}: ${filledCount}/${this.CONFIG.GRID_WIDTH} 채움, 구멍 ${holesCount}개`);
+      debugLog("Tetris", `줄 ${y}: ${filledCount}/${this.CONFIG.GRID_WIDTH} 채움, 구멍 ${holesCount}개`);
     }
     
     const totalBlockCells = blocks.length * 4; // 테트로미노는 각 4칸
-    console.log(`[Puzzle] 총 구멍: ${totalHoles}개, 블록 칸: ${totalBlockCells}칸`);
-    console.log("[Puzzle] 생성 완료, 블록 수:", blocks.length);
+    debugLog("Tetris", `총 구멍: ${totalHoles}개, 블록 칸: ${totalBlockCells}칸`);
+    debugLog("Tetris", "생성 완료, 블록 수:", blocks.length);
     
     return { grid, blocks };
   }
@@ -1428,14 +1452,14 @@ export class TetrisGame {
    * 퍼즐 블록 선택
    */
   selectPuzzleBlock(index) {
-    console.log("[Puzzle] selectPuzzleBlock 호출, index:", index, "총 블록수:", this.state.puzzleBlocks.length);
+    debugLog("Tetris", "selectPuzzleBlock 호출, index:", index, "총 블록수:", this.state.puzzleBlocks.length);
     
     if (index < 0 || index >= this.state.puzzleBlocks.length) {
-      console.log("[Puzzle] 인덱스 범위 초과");
+      debugLog("Tetris", "인덱스 범위 초과");
       return;
     }
     if (this.state.puzzleBlocks[index].used) {
-      console.log("[Puzzle] 이미 사용된 블록");
+      debugLog("Tetris", "이미 사용된 블록");
       return;
     }
     
@@ -1452,7 +1476,7 @@ export class TetrisGame {
       specialType: this.SPECIAL_TYPES.NONE,
     };
     
-    console.log("[Puzzle] 블록 선택됨:", block.type, "currentPiece:", this.state.currentPiece);
+    debugLog("Tetris", "블록 선택됨:", block.type, "currentPiece:", this.state.currentPiece);
     
     // render()에서 자동으로 시각화됨
     this.updatePuzzleUI();
@@ -1490,7 +1514,7 @@ export class TetrisGame {
     // 데드라인 체크 (상단 3줄 이상이면 실패)
     const DEADLINE_Y = this.CONFIG.GRID_HEIGHT - 3; // y=17 이상이면 데드라인
     if (ghostY >= DEADLINE_Y) {
-      console.log("[Puzzle] 데드라인 초과! ghostY:", ghostY, "DEADLINE:", DEADLINE_Y);
+      debugLog("Tetris", "데드라인 초과! ghostY:", ghostY, "DEADLINE:", DEADLINE_Y);
       this.puzzleFail();
       return;
     }
@@ -1531,7 +1555,7 @@ export class TetrisGame {
   selectNextAvailablePuzzleBlock() {
     // 이미 목표 달성했으면 스킵
     if (this.state.linesClearedStage >= this.state.puzzleLinesTarget) {
-      console.log("[Puzzle] 이미 목표 달성됨, 다음 블록 선택 스킵");
+      debugLog("Tetris", "이미 목표 달성됨, 다음 블록 선택 스킵");
       return;
     }
     
@@ -1539,20 +1563,20 @@ export class TetrisGame {
       i > this.state.currentPuzzleBlockIndex && !b.used
     );
     
-    console.log("[Puzzle] 다음 블록 검색, nextIndex:", nextIndex, "currentIndex:", this.state.currentPuzzleBlockIndex);
+    debugLog("Tetris", "다음 블록 검색, nextIndex:", nextIndex, "currentIndex:", this.state.currentPuzzleBlockIndex);
     
     if (nextIndex !== -1) {
       this.selectPuzzleBlock(nextIndex);
     } else {
       // 앞에서부터 다시 검색
       const firstAvailable = this.state.puzzleBlocks.findIndex(b => !b.used);
-      console.log("[Puzzle] 앞에서 검색, firstAvailable:", firstAvailable);
+      debugLog("Tetris", "앞에서 검색, firstAvailable:", firstAvailable);
       
       if (firstAvailable !== -1) {
         this.selectPuzzleBlock(firstAvailable);
       } else {
         // 모든 블록 사용됨 - 블록 리셋하고 계속!
-        console.log("[Puzzle] 모든 블록 사용됨, 블록 리셋하고 계속 진행");
+        debugLog("Tetris", "모든 블록 사용됨, 블록 리셋하고 계속 진행");
         this.resetPuzzleBlocks();
         this.selectPuzzleBlock(0);
       }
@@ -1585,7 +1609,7 @@ export class TetrisGame {
     this.shuffleArray(this.state.puzzleBlocks);
     
     this.state.currentPuzzleBlockIndex = 0;
-    console.log("[Puzzle] 새 블록 생성:", this.state.puzzleBlocks.map(b => b.type).join(", "));
+    debugLog("Tetris", "새 블록 생성:", this.state.puzzleBlocks.map(b => b.type).join(", "));
   }
   
   /**
@@ -1600,7 +1624,7 @@ export class TetrisGame {
       }
     }
     
-    console.log("[Puzzle] 라인 체크 - 클리어된 줄:", linesCleared.length, "현재 총:", this.state.linesClearedStage, "목표:", this.state.puzzleLinesTarget);
+    debugLog("Tetris", "라인 체크 - 클리어된 줄:", linesCleared.length, "현재 총:", this.state.linesClearedStage, "목표:", this.state.puzzleLinesTarget);
     
     if (linesCleared.length > 0) {
       // 라인 제거 연출
@@ -1624,11 +1648,11 @@ export class TetrisGame {
       
       this.refreshGridVisuals();
       
-      console.log("[Puzzle] 클리어 후 총 라인:", this.state.linesClearedStage);
+      debugLog("Tetris", "클리어 후 총 라인:", this.state.linesClearedStage);
       
       // 목표 달성 체크 - 달성 시 클리어 메시지만, 미달성 시 라인 클리어 메시지
       if (this.state.linesClearedStage >= this.state.puzzleLinesTarget) {
-        console.log("[Puzzle] 목표 달성! 퍼즐 클리어");
+        debugLog("Tetris", "목표 달성! 퍼즐 클리어");
         // 마지막 클리어 시 라인 메시지 생략 (FIREWALL BREACHED만 표시)
         this.puzzleClear();
       } else {
@@ -1644,13 +1668,13 @@ export class TetrisGame {
    * 퍼즐 완료 체크 (모든 블록 사용 후)
    */
   checkPuzzleComplete() {
-    console.log("[Puzzle] checkPuzzleComplete - 현재:", this.state.linesClearedStage, "목표:", this.state.puzzleLinesTarget);
+    debugLog("Tetris", "checkPuzzleComplete - 현재:", this.state.linesClearedStage, "목표:", this.state.puzzleLinesTarget);
     
     if (this.state.linesClearedStage >= this.state.puzzleLinesTarget) {
-      console.log("[Puzzle] 성공! 퍼즐 클리어");
+      debugLog("Tetris", "성공! 퍼즐 클리어");
       this.puzzleClear();
     } else {
-      console.log("[Puzzle] 실패! 목표 미달성");
+      debugLog("Tetris", "실패! 목표 미달성");
       this.puzzleFail();
     }
   }
@@ -1802,7 +1826,7 @@ export class TetrisGame {
   updatePuzzleUI() {
     // 기존 next-box의 캔버스 사용 (drawNextPiece와 동일한 방식)
     if (!this.nextCtx) {
-      console.log("[Puzzle] nextCtx 없음");
+      debugLog("Tetris", "nextCtx 없음");
       return;
     }
     
@@ -1943,6 +1967,11 @@ export class TetrisGame {
   }
 
   moveHorizontal(dir) {
+    // 보스전 역조작 효과
+    if (this.state.isBossFight && this.state.bossInterference.reverse) {
+      dir = -dir;
+    }
+    
     if (
       !this.checkCollision(
         this.state.currentPiece.x + dir,
@@ -2014,7 +2043,7 @@ export class TetrisGame {
   gameOver() {
     // 퍽 효과: 부활 (Revive)
     if (this.consumeRevive && this.consumeRevive()) {
-      console.log("Backup Protocol Activated! Reviving...");
+      debugLog("Tetris", "Backup Protocol Activated! Reviving...");
       this.SoundManager.playTone(
         { start: 200, end: 600 },
         "sawtooth",
@@ -2065,7 +2094,7 @@ export class TetrisGame {
       if (finalScore) finalScore.innerText = this.state.score;
     }
 
-    console.log("GAME OVER");
+    debugLog("Tetris", "GAME OVER");
   }
 
   animate() {
@@ -2119,7 +2148,13 @@ export class TetrisGame {
 
     // 자동 드롭 (퍼즐 모드에서도 활성화)
     this.state.dropTimer += deltaTime;
-    const dropSpeed = this.state.isPuzzleMode ? 1500 : this.CONFIG.DROP_SPEED; // 퍼즐 모드는 느리게
+    let dropSpeed = this.state.isPuzzleMode ? 1500 : this.CONFIG.DROP_SPEED; // 퍼즐 모드는 느리게
+    
+    // 보스전 가속 효과
+    if (this.state.isBossFight && this.state.bossInterference.speedup) {
+      dropSpeed = dropSpeed / 2; // 2배 빠르게
+    }
+    
     if (this.state.dropTimer > dropSpeed) {
       this.state.dropTimer = 0;
       if (
@@ -2149,7 +2184,7 @@ export class TetrisGame {
 
   // 게임 클리어 연출 (아스키 매트릭스 - 그리드 기반 Fill Up)
   playClearEffect() {
-    console.log("Playing Clear Effect...");
+    debugLog("Tetris", "Playing Clear Effect...");
 
     // 1. 기존 블록 숨기기
     this.piecesGroup.visible = false;
@@ -2480,5 +2515,122 @@ export class TetrisGame {
   updateLevel(lv) {
     const el = document.getElementById("level-display");
     if (el) el.innerText = lv;
+  }
+  
+  // ============ 보스전 방해 시스템 ============
+  
+  /**
+   * 보스전 모드 시작
+   */
+  startBossFight(bossManager) {
+    this.bossManager = bossManager;
+    this.state.isBossFight = true;
+    this.state.bossInterference = {
+      blackout: false,
+      speedup: false,
+      reverse: false,
+      glitchIntensity: 0,
+    };
+    debugLog("Boss", "Boss fight mode started");
+  }
+  
+  /**
+   * 보스전 모드 종료
+   */
+  endBossFight() {
+    this.bossManager = null;
+    this.state.isBossFight = false;
+    this.state.bossInterference = {
+      blackout: false,
+      speedup: false,
+      reverse: false,
+      glitchIntensity: 0,
+    };
+    debugLog("Boss", "Boss fight mode ended");
+  }
+  
+  /**
+   * 보스 방해 효과 적용
+   * @param {string} type - 방해 타입 (garbage, blackout, speedup, reverse)
+   */
+  applyBossInterference(type) {
+    if (!this.state.isBossFight) return;
+    
+    debugLog("Boss", `Boss interference: ${type}`);
+    
+    switch (type) {
+      case 'garbage':
+        this.addGarbageLines(1);
+        break;
+        
+      case 'blackout':
+        this.state.bossInterference.blackout = true;
+        setTimeout(() => {
+          this.state.bossInterference.blackout = false;
+        }, 3000); // 3초 동안
+        break;
+        
+      case 'speedup':
+        this.state.bossInterference.speedup = true;
+        setTimeout(() => {
+          this.state.bossInterference.speedup = false;
+        }, 3000); // 3초 동안
+        break;
+        
+      case 'reverse':
+        this.state.bossInterference.reverse = true;
+        setTimeout(() => {
+          this.state.bossInterference.reverse = false;
+        }, 3000); // 3초 동안
+        break;
+    }
+  }
+  
+  /**
+   * 쓰레기 블록 줄 추가 (맨 아래에 구멍 뚫린 줄)
+   * @param {number} count - 추가할 줄 수
+   */
+  addGarbageLines(count = 1) {
+    for (let i = 0; i < count; i++) {
+      // 맨 위 줄 제거
+      this.state.grid.pop();
+      
+      // 구멍 위치 랜덤 결정
+      const holePosition = Math.floor(Math.random() * this.CONFIG.GRID_WIDTH);
+      
+      // 쓰레기 줄 생성 (하나의 구멍만 있음)
+      const garbageLine = [];
+      for (let x = 0; x < this.CONFIG.GRID_WIDTH; x++) {
+        if (x === holePosition) {
+          garbageLine.push(null); // 구멍
+        } else {
+          garbageLine.push({
+            color: 0x444444, // 회색 쓰레기 블록
+            isGarbage: true,
+          });
+        }
+      }
+      
+      // 맨 아래에 쓰레기 줄 추가
+      this.state.grid.unshift(garbageLine);
+    }
+    
+    // 현재 블록 위치 조정 (위로 밀어냄)
+    if (this.state.currentPiece) {
+      this.state.currentPiece.y += count;
+    }
+    
+    // 시각적 업데이트
+    this.refreshGridVisuals();
+    
+    // 경고 사운드
+    this.SoundManager.playTone(
+      { start: 100, end: 80 },
+      'square',
+      0.3,
+      0.2
+    );
+    
+    debugLog("Boss", `Added ${count} garbage line(s)`);
   }
 }
