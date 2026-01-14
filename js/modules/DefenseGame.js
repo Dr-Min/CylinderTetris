@@ -4277,6 +4277,14 @@ export class DefenseGame {
       const miniW = this.miniCanvas.width || 400;
       const miniH = this.miniCanvas.height || 150;
 
+      // 디버그: 캔버스 정보
+      if (this.renderDebugFrameCount < 3) {
+        debugLog("Canvas", "=== 미니 디스플레이 복사 디버그 ===");
+        debugLog("Canvas", "1. 미니 캔버스 크기: miniW =", miniW, "miniH =", miniH);
+        debugLog("Canvas", "2. 원본 캔버스 크기: canvas.width =", this.canvas.width, "canvas.height =", this.canvas.height);
+        debugLog("Canvas", "3. isMobile =", this.isMobile);
+      }
+
       // 원본 캔버스 중앙 영역 계산 (미니 캔버스 비율에 맞게)
       const ratio = miniW / miniH; // 400/150 = 2.67
       // 가로를 기준으로 계산 (캔버스 너비 초과 방지)
@@ -4285,6 +4293,18 @@ export class DefenseGame {
       const sourceH = sourceW / ratio; // 비율 유지
       const sourceX = this.canvas.width / 2 - sourceW / 2;
       const sourceY = this.canvas.height / 2 - sourceH / 2;
+
+      // 디버그: 계산 결과
+      if (this.renderDebugFrameCount < 3) {
+        debugLog("Canvas", "4. ratio =", ratio.toFixed(2));
+        debugLog("Canvas", "5. 복사 영역 가로: sourceW =", sourceW.toFixed(0), "(canvas.width *", this.isMobile ? "0.9)" : "0.8)");
+        debugLog("Canvas", "6. 복사 영역 세로: sourceH =", sourceH.toFixed(0), "(sourceW / ratio)");
+        debugLog("Canvas", "7. 복사 시작 위치: sourceX =", sourceX.toFixed(0), "sourceY =", sourceY.toFixed(0));
+        debugLog("Canvas", "8. drawImage 파라미터:");
+        debugLog("Canvas", "   소스:", sourceX.toFixed(0), sourceY.toFixed(0), sourceW.toFixed(0), sourceH.toFixed(0));
+        debugLog("Canvas", "   목적지:", "0 0", miniW, miniH);
+        debugLog("Canvas", "=================================");
+      }
 
       miniCtx.clearRect(0, 0, miniW, miniH);
       // 원본의 중앙 영역을 미니 캔버스 전체에 복사

@@ -6958,13 +6958,13 @@ export class GameManager {
 
     const panel = document.createElement("div");
     panel.id = "mini-defense-panel";
-    panel.style.cssText = "position: fixed; top: 10px; left: 10px; right: 10px; padding: 8px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000; height: 180px;";
+    panel.style.cssText = "position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: 220px; padding: 8px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000;";
 
     panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 14px;">
       <span id="conquest-core-hp">♥ ${Math.ceil(this.bossManager ? this.bossManager.bossHP : 100)}%</span>
       <span style="color: #00ff00;">BREACH PROTOCOL</span>
       <span id="conquest-page">TARGET: CORE</span>
-    </div><canvas id="mini-defense-canvas" width="400" height="150" style="width: 100%; height: 140px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
+    </div><canvas id="mini-defense-canvas" width="200" height="200" style="width: 200px; height: 200px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
 
     debugLog("Conquest", "패널 생성 완료, body에 추가");
     document.body.appendChild(panel);

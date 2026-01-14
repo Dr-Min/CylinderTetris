@@ -1,5 +1,5 @@
-// v9.22.14 - Fix: Prevent originalCanvas from showing during conquest tetris
-const CACHE_NAME = "hacker-tetris-v23.33"; // Fixed resume() to skip canvas.display when isMiniDisplay=true
+// v9.22.16 - Fix: Change mini defense panel to square shape (200x200) to match original aspect ratio
+const CACHE_NAME = "hacker-tetris-v23.35"; // Changed from 400x150 to 200x200 square canvas, centered panel
 const ASSETS = [
   "./",
   "./index.html",
