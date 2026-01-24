@@ -1,4 +1,4 @@
-// v9.22.20 - Fix: Mini defense panel centered at top, tetris viewport adjusted to prevent overlap
+// v9.22.21 - Fix: Use camera viewOffset instead of viewport resize to keep tetris full size
 const CACHE_NAME = "hacker-tetris-v23.38"; // Calculate max square size from available screen space, fix black border with ratio-aware copy
 const ASSETS = [
   "./",

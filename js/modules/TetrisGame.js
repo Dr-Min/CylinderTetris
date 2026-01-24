@@ -736,21 +736,26 @@ export class TetrisGame {
   }
 
   onWindowResize() {
-    const offsetTop = this.viewOffsetTop || 0;
-    const availableHeight = window.innerHeight - offsetTop;
-
-    this.camera.aspect = window.innerWidth / availableHeight;
+    this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // 미니 패널 공간 확보: 상단 오프셋만큼 뷰포트 이동
+    // 미니 패널 공간 확보: 카메라 뷰 오프셋으로 화면 아래로 이동
+    const offsetTop = this.viewOffsetTop || 0;
     if (offsetTop > 0) {
-      this.renderer.setViewport(0, 0, window.innerWidth, availableHeight);
-      this.renderer.setScissor(0, 0, window.innerWidth, availableHeight);
-      this.renderer.setScissorTest(true);
+      // setViewOffset: 카메라가 보는 영역을 위로 이동 → 실린더가 화면 아래로
+      this.camera.setViewOffset(
+        window.innerWidth,
+        window.innerHeight,
+        0,
+        -offsetTop / 2, // 위로 오프셋 → 실린더 아래로
+        window.innerWidth,
+        window.innerHeight
+      );
     } else {
-      this.renderer.setScissorTest(false);
+      this.camera.clearViewOffset();
     }
+    this.camera.updateProjectionMatrix();
   }
 
   // 미니 패널용 상단 오프셋 설정
@@ -762,7 +767,7 @@ export class TetrisGame {
   // 오프셋 해제
   clearTopOffset() {
     this.viewOffsetTop = 0;
-    this.renderer.setScissorTest(false);
+    this.camera.clearViewOffset();
     this.onWindowResize();
   }
 
