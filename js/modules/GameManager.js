@@ -6960,42 +6960,47 @@ export class GameManager {
     const screenHeight = window.innerHeight;
     const screenWidth = window.innerWidth;
 
-    // 사용 가능한 공간 계산 (화면 상단의 일정 비율)
-    // 모바일: 15%, PC: 28%
-    const availableHeightRatio = isMobile ? 0.15 : 0.28;
-    const availableHeight = screenHeight * availableHeightRatio;
+    // 미니 패널 최대 크기 계산 (테트리스 가리지 않는 선에서 최대)
+    // 모바일: 화면 높이의 25%, PC: 화면 높이의 30%
+    const heightRatio = isMobile ? 0.25 : 0.30;
+    const headerHeight = isMobile ? 28 : 35; // 헤더 + 패딩
+    const maxCanvasHeight = Math.floor(screenHeight * heightRatio - headerHeight);
 
-    // 헤더 높이 고려 (약 30px)
-    const headerHeight = 30;
-    const maxCanvasHeight = availableHeight - headerHeight - 20; // 20px 여백
+    // 너비 제한: 모바일 50%, PC 25%
+    const maxCanvasWidth = isMobile ? Math.floor(screenWidth * 0.5) : Math.floor(screenWidth * 0.25);
 
-    // 화면 너비도 고려 (너무 넓지 않게)
-    const maxCanvasWidth = isMobile ? screenWidth * 0.35 : screenWidth * 0.2;
+    // 정사각형 캔버스 크기 (둘 중 작은 값, 최소 80px)
+    const canvasSize = Math.max(80, Math.floor(Math.min(maxCanvasHeight, maxCanvasWidth)));
 
-    // 정사각형 크기 결정 (둘 중 작은 값)
-    const canvasSize = Math.floor(Math.min(maxCanvasHeight, maxCanvasWidth));
+    // 전체 패널 높이 계산 (테트리스 오프셋용)
+    const panelPadding = isMobile ? 5 : 8;
+    const panelBorder = 2;
+    const headerPadding = isMobile ? 3 : 5;
+    const totalPanelHeight = canvasSize + headerHeight + (panelPadding * 2) + (panelBorder * 2) + 10; // 10px 여백
 
     debugLog("Conquest", "화면 크기:", screenWidth, "x", screenHeight);
-    debugLog("Conquest", "사용 가능 높이:", availableHeight.toFixed(0));
-    debugLog("Conquest", "최종 캔버스 크기:", canvasSize);
+    debugLog("Conquest", "캔버스 크기:", canvasSize);
+    debugLog("Conquest", "전체 패널 높이:", totalPanelHeight);
 
     const panel = document.createElement("div");
     panel.id = "mini-defense-panel";
 
-    const panelWidth = canvasSize + 16; // padding 고려
+    const panelWidth = canvasSize + (panelPadding * 2);
 
     if (isMobile) {
-      panel.style.cssText = `position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: ${panelWidth}px; padding: 5px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 10px; z-index: 1000;`;
+      // 모바일: 상단 중앙, 최대 크기
+      panel.style.cssText = `position: fixed; top: 5px; left: 50%; transform: translateX(-50%); width: ${panelWidth}px; padding: ${panelPadding}px; background: rgba(0, 10, 0, 0.95); border: ${panelBorder}px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 10px; z-index: 1000;`;
 
-      panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 10px;">
+      panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${headerPadding}px; padding-bottom: ${headerPadding}px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 10px;">
         <span id="conquest-core-hp">♥ ${Math.ceil(this.bossManager ? this.bossManager.bossHP : 100)}%</span>
         <span style="color: #00ff00;">BREACH</span>
         <span id="conquest-page">1/3</span>
       </div><canvas id="mini-defense-canvas" width="${canvasSize}" height="${canvasSize}" style="width: ${canvasSize}px; height: ${canvasSize}px; background: rgb(0, 17, 0); border-radius: 3px;"></canvas>`;
     } else {
-      panel.style.cssText = `position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: ${panelWidth}px; padding: 8px; background: rgba(0, 10, 0, 0.95); border: 2px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000;`;
+      // PC: 상단 중앙, 최대 크기
+      panel.style.cssText = `position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: ${panelWidth}px; padding: ${panelPadding}px; background: rgba(0, 10, 0, 0.95); border: ${panelBorder}px solid rgb(255, 51, 51); border-radius: 5px; color: rgb(255, 51, 51); font-family: var(--term-font); font-size: 12px; z-index: 1000;`;
 
-      panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 14px;">
+      panel.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${headerPadding}px; padding-bottom: ${headerPadding}px; border-bottom: 1px solid rgb(255, 51, 51); font-size: 14px;">
         <span id="conquest-core-hp">♥ ${Math.ceil(this.bossManager ? this.bossManager.bossHP : 100)}%</span>
         <span style="color: #00ff00;">BREACH PROTOCOL</span>
         <span id="conquest-page">TARGET: CORE</span>
@@ -7004,6 +7009,11 @@ export class GameManager {
 
     debugLog("Conquest", "패널 생성 완료, body에 추가");
     document.body.appendChild(panel);
+
+    // 테트리스 뷰포트 조정 (미니 패널 아래에서 렌더링)
+    if (this.tetrisGame) {
+      this.tetrisGame.setTopOffset(totalPanelHeight);
+    }
 
     debugLog("Conquest", "패널이 DOM에 추가됨, 패널 display:", panel.style.display);
     const miniCanvas = document.getElementById("mini-defense-canvas");
@@ -7025,6 +7035,12 @@ export class GameManager {
     } else {
       debugLog("Conquest", "No mini defense panel found");
     }
+
+    // 테트리스 뷰포트 복원
+    if (this.tetrisGame) {
+      this.tetrisGame.clearTopOffset();
+    }
+
     if (this.defenseGame) {
       debugLog("Conquest", "Calling setMiniDisplay(null)");
       this.defenseGame.setMiniDisplay(null);

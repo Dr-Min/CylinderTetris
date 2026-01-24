@@ -1,4 +1,4 @@
-// v9.22.19 - Fix: Dynamic mini panel sizing based on screen space and fix aspect ratio
+// v9.22.20 - Fix: Mini defense panel centered at top, tetris viewport adjusted to prevent overlap
 const CACHE_NAME = "hacker-tetris-v23.38"; // Calculate max square size from available screen space, fix black border with ratio-aware copy
 const ASSETS = [
   "./",

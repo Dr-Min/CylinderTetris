@@ -736,9 +736,34 @@ export class TetrisGame {
   }
 
   onWindowResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const offsetTop = this.viewOffsetTop || 0;
+    const availableHeight = window.innerHeight - offsetTop;
+
+    this.camera.aspect = window.innerWidth / availableHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // 미니 패널 공간 확보: 상단 오프셋만큼 뷰포트 이동
+    if (offsetTop > 0) {
+      this.renderer.setViewport(0, 0, window.innerWidth, availableHeight);
+      this.renderer.setScissor(0, 0, window.innerWidth, availableHeight);
+      this.renderer.setScissorTest(true);
+    } else {
+      this.renderer.setScissorTest(false);
+    }
+  }
+
+  // 미니 패널용 상단 오프셋 설정
+  setTopOffset(offset) {
+    this.viewOffsetTop = offset;
+    this.onWindowResize();
+  }
+
+  // 오프셋 해제
+  clearTopOffset() {
+    this.viewOffsetTop = 0;
+    this.renderer.setScissorTest(false);
+    this.onWindowResize();
   }
 
   startGame(targetLines = Infinity, initialSpeed = 800) {
