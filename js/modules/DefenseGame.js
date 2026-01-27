@@ -4285,44 +4285,40 @@ export class DefenseGame {
         debugLog("Canvas", "3. isMobile =", this.isMobile);
       }
 
-      // 원본 캔버스 비율 유지 (세로 기준 계산)
-      // 원본: 1163x1270 (비율 0.916, 세로가 긴 직사각형)
-      // 미니: 정사각형 (1:1)
+      // 원본 비율 유지하며 미니 캔버스 중앙에 복사 (레터박스 방식)
       const originalRatio = this.canvas.width / this.canvas.height;
-      const miniRatio = miniW / miniH;
 
-      let sourceW, sourceH, sourceX, sourceY;
+      let destX, destY, destW, destH;
 
-      if (originalRatio < miniRatio) {
-        // 원본이 더 세로로 김 → 세로를 기준으로 맞춤
-        sourceH = this.canvas.height * 0.8; // 세로 80% 복사
-        sourceW = sourceH; // 미니가 정사각형이므로 동일하게
+      if (originalRatio < 1) {
+        // 원본이 더 세로로 김 → 세로를 꽉 채우고 좌우 여백
+        destH = miniH;
+        destW = destH * originalRatio;
+        destX = (miniW - destW) / 2; // 중앙 정렬
+        destY = 0;
       } else {
-        // 원본이 더 가로로 김 → 가로를 기준으로 맞춤
-        sourceW = this.canvas.width * 0.8; // 가로 80% 복사
-        sourceH = sourceW; // 미니가 정사각형이므로 동일하게
+        // 원본이 더 가로로 김 → 가로를 꽉 채우고 상하 여백
+        destW = miniW;
+        destH = destW / originalRatio;
+        destX = 0;
+        destY = (miniH - destH) / 2; // 중앙 정렬
       }
-
-      sourceX = this.canvas.width / 2 - sourceW / 2;
-      sourceY = this.canvas.height / 2 - sourceH / 2;
 
       // 디버그: 계산 결과
       if (this.renderDebugFrameCount < 3) {
-        debugLog("Canvas", "4. 원본 비율 =", originalRatio.toFixed(3), "미니 비율 =", miniRatio.toFixed(3));
-        debugLog("Canvas", "5. 복사 영역: sourceW =", sourceW.toFixed(0), "sourceH =", sourceH.toFixed(0));
-        debugLog("Canvas", "6. 복사 시작 위치: sourceX =", sourceX.toFixed(0), "sourceY =", sourceY.toFixed(0));
-        debugLog("Canvas", "7. drawImage 파라미터:");
-        debugLog("Canvas", "   소스:", sourceX.toFixed(0), sourceY.toFixed(0), sourceW.toFixed(0), sourceH.toFixed(0));
-        debugLog("Canvas", "   목적지:", "0 0", miniW, miniH);
+        debugLog("Canvas", "4. 원본 비율 =", originalRatio.toFixed(3));
+        debugLog("Canvas", "5. 목적지 중앙 정렬: destX =", destX.toFixed(1), "destY =", destY.toFixed(1));
+        debugLog("Canvas", "6. 목적지 크기: destW =", destW.toFixed(1), "destH =", destH.toFixed(1));
+        debugLog("Canvas", "7. 좌우 여백:", ((miniW - destW) / 2).toFixed(1), "px");
         debugLog("Canvas", "=================================");
       }
 
       miniCtx.clearRect(0, 0, miniW, miniH);
-      // 원본의 중앙 영역을 미니 캔버스 전체에 복사
+      // 원본 전체를 비율 유지하며 미니 캔버스 중앙에 복사
       miniCtx.drawImage(
         this.canvas,
-        sourceX, sourceY, sourceW, sourceH, // 소스 영역 (중앙)
-        0, 0, miniW, miniH                   // 목적지 (미니 전체)
+        0, 0, this.canvas.width, this.canvas.height, // 소스 전체
+        destX, destY, destW, destH                    // 목적지 (중앙 정렬, 비율 유지)
       );
 
       // 보스 HP 업데이트

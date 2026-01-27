@@ -1,4 +1,4 @@
-// v9.22.22 - Fix: 미니 패널 크기 축소 및 검은 여백 수정
+// v9.22.23 - Fix: 미니맵 중앙 정렬 및 좌우 여백 균등화
 const CACHE_NAME = "hacker-tetris-v23.38"; // Calculate max square size from available screen space, fix black border with ratio-aware copy
 const ASSETS = [
   "./",
