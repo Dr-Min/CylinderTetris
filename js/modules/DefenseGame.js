@@ -4294,15 +4294,15 @@ export class DefenseGame {
         // 원본이 더 세로로 김 → 세로를 꽉 채우고 좌우 여백
         destH = miniH;
         destW = destH * originalRatio;
-        destX = (miniW - destW) / 2; // 중앙 정렬
-        destY = 0;
       } else {
-        // 원본이 더 가로로 김 → 가로를 꽉 채우고 상하 여백
+        // 원본이 더 가로로 김 또는 정사각형 → 가로를 꽉 채우고 상하 여백
         destW = miniW;
         destH = destW / originalRatio;
-        destX = 0;
-        destY = (miniH - destH) / 2; // 중앙 정렬
       }
+
+      // 항상 중앙 정렬 (좌우, 상하 모두)
+      destX = (miniW - destW) / 2;
+      destY = (miniH - destH) / 2;
 
       // 디버그: 계산 결과
       if (this.renderDebugFrameCount < 3) {

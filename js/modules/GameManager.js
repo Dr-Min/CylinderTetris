@@ -6960,17 +6960,17 @@ export class GameManager {
     const screenHeight = window.innerHeight;
     const screenWidth = window.innerWidth;
 
-    // 미니 패널 크기 계산 (테트리스 공간 확보 위해 축소)
-    // 모바일: 화면 높이의 18%, PC: 화면 높이의 20%
-    const heightRatio = isMobile ? 0.18 : 0.20;
+    // 미니 패널 크기 계산 (적절한 크기로)
+    // 모바일: 화면 높이의 22%, PC: 화면 높이의 25%
+    const heightRatio = isMobile ? 0.22 : 0.25;
     const headerHeight = isMobile ? 25 : 30; // 헤더 + 패딩
     const maxCanvasHeight = Math.floor(screenHeight * heightRatio - headerHeight);
 
-    // 너비 제한: 모바일 40%, PC 18%
-    const maxCanvasWidth = isMobile ? Math.floor(screenWidth * 0.40) : Math.floor(screenWidth * 0.18);
+    // 너비 제한: 모바일 45%, PC 22%
+    const maxCanvasWidth = isMobile ? Math.floor(screenWidth * 0.45) : Math.floor(screenWidth * 0.22);
 
-    // 정사각형 캔버스 크기 (둘 중 작은 값, 최소 80px)
-    const canvasSize = Math.max(80, Math.floor(Math.min(maxCanvasHeight, maxCanvasWidth)));
+    // 정사각형 캔버스 크기 (둘 중 작은 값, 최소 100px)
+    const canvasSize = Math.max(100, Math.floor(Math.min(maxCanvasHeight, maxCanvasWidth)));
 
     // 전체 패널 높이 계산 (테트리스 오프셋용)
     const panelPadding = isMobile ? 5 : 8;
