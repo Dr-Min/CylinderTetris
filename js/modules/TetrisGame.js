@@ -744,11 +744,12 @@ export class TetrisGame {
     const offsetTop = this.viewOffsetTop || 0;
     if (offsetTop > 0) {
       // setViewOffset: 카메라가 보는 영역을 위로 이동 → 실린더가 화면 아래로
+      // offsetTop / 3으로 줄여서 테트리스가 덜 내려가게
       this.camera.setViewOffset(
         window.innerWidth,
         window.innerHeight,
         0,
-        -offsetTop / 2, // 위로 오프셋 → 실린더 아래로
+        -offsetTop / 3,
         window.innerWidth,
         window.innerHeight
       );

@@ -4294,13 +4294,13 @@ export class DefenseGame {
       let sourceW, sourceH, sourceX, sourceY;
 
       if (originalRatio < miniRatio) {
-        // 원본이 더 세로로 김 → 가로를 기준으로 맞춤
-        sourceW = this.canvas.width * 0.8; // 가로 80%
-        sourceH = sourceW / miniRatio; // 미니 비율에 맞춤
+        // 원본이 더 세로로 김 → 세로를 기준으로 맞춤
+        sourceH = this.canvas.height * 0.8; // 세로 80% 복사
+        sourceW = sourceH; // 미니가 정사각형이므로 동일하게
       } else {
-        // 원본이 더 가로로 김 → 세로를 기준으로 맞춤
-        sourceH = this.canvas.height * 0.7; // 세로 70%
-        sourceW = sourceH * miniRatio; // 미니 비율에 맞춤
+        // 원본이 더 가로로 김 → 가로를 기준으로 맞춤
+        sourceW = this.canvas.width * 0.8; // 가로 80% 복사
+        sourceH = sourceW; // 미니가 정사각형이므로 동일하게
       }
 
       sourceX = this.canvas.width / 2 - sourceW / 2;

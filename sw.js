@@ -1,4 +1,4 @@
-// v9.22.21 - Fix: Use camera viewOffset instead of viewport resize to keep tetris full size
+// v9.22.22 - Fix: 미니 패널 크기 축소 및 검은 여백 수정
 const CACHE_NAME = "hacker-tetris-v23.38"; // Calculate max square size from available screen space, fix black border with ratio-aware copy
 const ASSETS = [
   "./",
