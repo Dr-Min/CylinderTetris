@@ -4285,43 +4285,38 @@ export class DefenseGame {
         debugLog("Canvas", "3. isMobile =", this.isMobile);
       }
 
-      // 원본 비율 유지하며 미니 캔버스 중앙에 복사 (레터박스 방식)
-      const originalRatio = this.canvas.width / this.canvas.height;
+      // gameScale로 축소된 실제 콘텐츠 영역만 복사 (빈 여백 제거)
+      const scale = this.gameScale || 1.0;
+      const scaledW = this.canvas.width * scale;
+      const scaledH = this.canvas.height * scale;
+      const sourceX = (this.canvas.width - scaledW) / 2;
+      const sourceY = (this.canvas.height - scaledH) / 2;
+
+      // 실제 콘텐츠 비율로 미니 캔버스 중앙 배치
+      const contentRatio = scaledW / scaledH;
       const miniRatio = miniW / miniH;
 
       let destX, destY, destW, destH;
 
-      if (originalRatio > miniRatio) {
-        // 원본이 미니보다 더 가로로 김 → 가로 기준 (상하 여백)
+      if (contentRatio > miniRatio) {
         destW = miniW;
-        destH = miniW / originalRatio;
+        destH = miniW / contentRatio;
       } else {
-        // 원본이 미니보다 더 세로로 김 → 세로 기준 (좌우 여백)
         destH = miniH;
-        destW = miniH * originalRatio;
+        destW = miniH * contentRatio;
       }
 
-      // 항상 중앙 정렬 (좌우, 상하 모두) - 정수로 반올림하여 서브픽셀 방지
       destW = Math.round(destW);
       destH = Math.round(destH);
       destX = Math.round((miniW - destW) / 2);
       destY = Math.round((miniH - destH) / 2);
 
-      // 디버그: 계산 결과
-      if (this.renderDebugFrameCount < 3) {
-        debugLog("Canvas", "4. 원본 비율 =", originalRatio.toFixed(3));
-        debugLog("Canvas", "5. 목적지 중앙 정렬: destX =", destX.toFixed(1), "destY =", destY.toFixed(1));
-        debugLog("Canvas", "6. 목적지 크기: destW =", destW.toFixed(1), "destH =", destH.toFixed(1));
-        debugLog("Canvas", "7. 좌우 여백:", ((miniW - destW) / 2).toFixed(1), "px");
-        debugLog("Canvas", "=================================");
-      }
-
       miniCtx.clearRect(0, 0, miniW, miniH);
-      // 원본 전체를 비율 유지하며 미니 캔버스 중앙에 복사
+      // 실제 게임 콘텐츠 영역만 복사 (gameScale 빈 여백 제외)
       miniCtx.drawImage(
         this.canvas,
-        0, 0, this.canvas.width, this.canvas.height, // 소스 전체
-        destX, destY, destW, destH                    // 목적지 (중앙 정렬, 비율 유지)
+        sourceX, sourceY, scaledW, scaledH,  // 소스: 콘텐츠 영역만
+        destX, destY, destW, destH            // 목적지: 중앙 정렬
       );
 
       // 보스 HP 업데이트
