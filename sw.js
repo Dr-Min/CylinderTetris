@@ -1,4 +1,4 @@
-// v9.22.24 - Fix: 미니맵 크기 증가 및 중앙 정렬 수정
+// v9.22.25 - Fix: 블록 음수좌표 버그 수정 및 미니맵 서브픽셀 여백 해결
 const CACHE_NAME = "hacker-tetris-v23.38"; // Calculate max square size from available screen space, fix black border with ratio-aware copy
 const ASSETS = [
   "./",

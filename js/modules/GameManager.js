@@ -6969,8 +6969,9 @@ export class GameManager {
     // 너비 제한: 모바일 45%, PC 22%
     const maxCanvasWidth = isMobile ? Math.floor(screenWidth * 0.45) : Math.floor(screenWidth * 0.22);
 
-    // 정사각형 캔버스 크기 (둘 중 작은 값, 최소 100px)
-    const canvasSize = Math.max(100, Math.floor(Math.min(maxCanvasHeight, maxCanvasWidth)));
+    // 정사각형 캔버스 크기 (둘 중 작은 값, 최소 100px, 짝수 강제)
+    const rawSize = Math.max(100, Math.floor(Math.min(maxCanvasHeight, maxCanvasWidth)));
+    const canvasSize = rawSize % 2 === 0 ? rawSize : rawSize - 1;
 
     // 전체 패널 높이 계산 (테트리스 오프셋용)
     const panelPadding = isMobile ? 5 : 8;

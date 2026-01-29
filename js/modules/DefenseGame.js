@@ -4287,22 +4287,25 @@ export class DefenseGame {
 
       // 원본 비율 유지하며 미니 캔버스 중앙에 복사 (레터박스 방식)
       const originalRatio = this.canvas.width / this.canvas.height;
+      const miniRatio = miniW / miniH;
 
       let destX, destY, destW, destH;
 
-      if (originalRatio < 1) {
-        // 원본이 더 세로로 김 → 세로를 꽉 채우고 좌우 여백
-        destH = miniH;
-        destW = destH * originalRatio;
-      } else {
-        // 원본이 더 가로로 김 또는 정사각형 → 가로를 꽉 채우고 상하 여백
+      if (originalRatio > miniRatio) {
+        // 원본이 미니보다 더 가로로 김 → 가로 기준 (상하 여백)
         destW = miniW;
-        destH = destW / originalRatio;
+        destH = miniW / originalRatio;
+      } else {
+        // 원본이 미니보다 더 세로로 김 → 세로 기준 (좌우 여백)
+        destH = miniH;
+        destW = miniH * originalRatio;
       }
 
-      // 항상 중앙 정렬 (좌우, 상하 모두)
-      destX = (miniW - destW) / 2;
-      destY = (miniH - destH) / 2;
+      // 항상 중앙 정렬 (좌우, 상하 모두) - 정수로 반올림하여 서브픽셀 방지
+      destW = Math.round(destW);
+      destH = Math.round(destH);
+      destX = Math.round((miniW - destW) / 2);
+      destY = Math.round((miniH - destH) / 2);
 
       // 디버그: 계산 결과
       if (this.renderDebugFrameCount < 3) {

@@ -1554,7 +1554,7 @@ export class TetrisGame {
     for (let y = 0; y < piece.shape.length; y++) {
       for (let x = 0; x < piece.shape[y].length; x++) {
         if (piece.shape[y][x]) {
-          const gridX = (piece.x + x) % this.CONFIG.GRID_WIDTH;
+          const gridX = (piece.x + x + this.CONFIG.GRID_WIDTH * 10) % this.CONFIG.GRID_WIDTH;
           const gridY = ghostY - y;
           
           if (gridY >= 0 && gridY < this.CONFIG.GRID_HEIGHT) {
