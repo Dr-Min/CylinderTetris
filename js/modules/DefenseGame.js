@@ -4263,13 +4263,13 @@ export class DefenseGame {
     // 말풍선 렌더링
     this.renderSpeechBubbles();
     
-    // 8. 보스전 UI (보스 HP바 + 침투 게이지)
+    // 줌 아웃 스케일 복원
+    this.ctx.restore();
+
+    // 8. 보스전 UI (보스 HP바 + 침투 게이지) - 스케일 밖에서 절대좌표로 그리기
     if (this.isBossFight && this.bossManager) {
       this.renderBossUI();
     }
-
-    // 줌 아웃 스케일 복원
-    this.ctx.restore();
 
     // === 미니 디스플레이 복사 (중앙 영역만) ===
     if (this.isMiniDisplay && this.miniCanvas) {
@@ -4285,15 +4285,10 @@ export class DefenseGame {
         debugLog("Canvas", "3. isMobile =", this.isMobile);
       }
 
-      // gameScale로 축소된 실제 콘텐츠 영역만 복사 (빈 여백 제거)
-      const scale = this.gameScale || 1.0;
-      const scaledW = this.canvas.width * scale;
-      const scaledH = this.canvas.height * scale;
-      const sourceX = (this.canvas.width - scaledW) / 2;
-      const sourceY = (this.canvas.height - scaledH) / 2;
-
-      // 실제 콘텐츠 비율로 미니 캔버스 중앙 배치
-      const contentRatio = scaledW / scaledH;
+      // 전체 캔버스를 미니 캔버스에 비율 유지하여 중앙 복사
+      const srcW = this.canvas.width;
+      const srcH = this.canvas.height;
+      const contentRatio = srcW / srcH;
       const miniRatio = miniW / miniH;
 
       let destX, destY, destW, destH;
@@ -4312,11 +4307,10 @@ export class DefenseGame {
       destY = Math.round((miniH - destH) / 2);
 
       miniCtx.clearRect(0, 0, miniW, miniH);
-      // 실제 게임 콘텐츠 영역만 복사 (gameScale 빈 여백 제외)
       miniCtx.drawImage(
         this.canvas,
-        sourceX, sourceY, scaledW, scaledH,  // 소스: 콘텐츠 영역만
-        destX, destY, destW, destH            // 목적지: 중앙 정렬
+        0, 0, srcW, srcH,
+        destX, destY, destW, destH
       );
 
       // 보스 HP 업데이트

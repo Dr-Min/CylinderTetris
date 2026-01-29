@@ -1,4 +1,4 @@
-// v9.22.26 - Fix: 미니맵 gameScale 빈여백 제거 및 모바일 크기 축소
+// v9.22.27 - Fix: 미니맵 우측 여백 수정 (renderBossUI 스케일 밖 이동) 및 크기 증가
 const CACHE_NAME = "hacker-tetris-v23.38"; // Calculate max square size from available screen space, fix black border with ratio-aware copy
 const ASSETS = [
   "./",
