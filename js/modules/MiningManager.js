@@ -344,6 +344,16 @@ export class MiningManager {
           if (createExplosion) {
             createExplosion(this.cabinet.x + this.cabinet.width / 2, this.cabinet.y, "#00ffaa", 3);
           }
+          if (window.debugLog) {
+            window.debugLog(
+              "Mining",
+              "deposit done",
+              "cabinet",
+              this.cabinet.storedData,
+              "pending",
+              this.pendingData
+            );
+          }
           const edge = this._getSafeEntry(canvas);
           miner.targetX = edge.x;
           miner.targetY = edge.y;
@@ -354,6 +364,16 @@ export class MiningManager {
       case "EXIT_SAFE":
         this._moveToward(miner, miner.targetX, miner.targetY, dt);
         if (this._isOffScreenSafe(miner, canvas)) {
+          if (window.debugLog) {
+            window.debugLog(
+              "Mining",
+              "exit safe offscreen",
+              "x",
+              Math.round(miner.x || 0),
+              "y",
+              Math.round(miner.y || 0)
+            );
+          }
           const enterEdge = this._getSafeEntry(canvas);
           miner.x = enterEdge.x;
           miner.y = enterEdge.y;
@@ -565,7 +585,28 @@ export class MiningManager {
     }
   }
 
-  _changeState(m, s) { m.minerState = s; m.stateTimer = 0; }
+  _changeState(m, s) {
+    const prev = m.minerState;
+    m.minerState = s;
+    m.stateTimer = 0;
+    if (window.debugLog) {
+      window.debugLog(
+        "Mining",
+        "state",
+        prev,
+        "->",
+        s,
+        "x",
+        Math.round(m.x || 0),
+        "y",
+        Math.round(m.y || 0),
+        "tx",
+        Math.round(m.targetX || 0),
+        "ty",
+        Math.round(m.targetY || 0)
+      );
+    }
+  }
 
   _moveToward(m, tx, ty, dt) {
     const dx = tx - m.x, dy = ty - m.y;

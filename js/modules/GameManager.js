@@ -30,6 +30,7 @@ window.DEBUG_CATEGORIES = {
   SafeZone: false,     // SafeZone 관련
   Recall: false,       // 리콜 기능
   Boss: false,         // 보스 전투
+  Mining: false,       // Mining system
 };
 
 window.debugLog = function (tag, ...args) {
