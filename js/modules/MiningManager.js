@@ -1,9 +1,9 @@
-﻿const debugLog = window.debugLog || function () {};
+const debugLog = window.debugLog || function () {};
 
 export class MiningManager {
   constructor() {
     this.territories = {};
-    this.miners = []; // ?먯껜 諛곗뿴 (alliedViruses? ?꾩쟾 遺꾨━)
+    this.miners = [];
 
     this.cabinet = {
       storedData: 0,
@@ -28,23 +28,23 @@ export class MiningManager {
     this._currentSceneIsConquered = false;
     this.pendingData = 0;
     this._territoryExit = null;
+    this._lastCanvas = null;
+    this._lastCore = null;
   }
 
-  // === ?먮졊吏 ?깅줉 ===
   registerTerritory(stageId) {
-    const id = String(stageId); // Normalize to string
+    const id = String(stageId);
     if (this.territories[id]) {
-      console.log(`[Mining] ?좑툘 Territory ${id} already registered. Skipping.`);
+      console.log(`[Mining] ? Territory ${id} already registered. Skipping.`);
       return;
     }
     this.territories[id] = {
       minerCount: this.minerCount,
       tripTimer: 0,
     };
-    console.log(`[Mining] ??Territory ${id} registered successfully.`);
+    console.log(`[Mining] Territory ${id} registered successfully.`);
   }
 
-  // === ???꾪솚 ???몄텧 ===
   onSceneChange(stageId, isSafeZone, canvas, core, isConquered = false) {
     const id = String(stageId);
     const isPrimarySafe = isSafeZone && id === "0";
@@ -54,28 +54,28 @@ export class MiningManager {
     this.miners = [];
 
     console.log(`[Mining] onSceneChange: stageId=${stageId} (type:${typeof stageId}), isSafeZone=${isSafeZone}`);
+    this._lastCanvas = canvas || null;
+    this._lastCore = core || null;
 
     if (isPrimarySafe) {
       this.initCabinet(canvas, core);
       this._spawnSafeZoneMiners(canvas);
       console.log(`[Mining] Safe zone entered - spawned ${this.miners.length} deposit miners`);
     } else {
-      // Check if this territory is registered
       if (this._currentSceneIsConquered && this.territories[id]) {
         if (!core || typeof core.x !== 'number') {
-           console.error("[Mining] ??Core is invalid or missing coordinates! Cannot spawn miners.");
+           console.error("[Mining] Core is invalid or missing coordinates! Cannot spawn miners.");
            return;
         }
         this._territoryExit = this._getTerritoryExit(canvas);
         this._spawnTerritoryMiners(core, canvas);
         console.log(`[Mining] Territory ${id} entered - spawned ${this.miners.length} miners`);
       } else {
-        console.warn(`[Mining] ?좑툘 Stage ${id} is NOT registered as a territory. No miners spawned. Known territories:`, Object.keys(this.territories));
+        console.warn(`[Mining] ? Stage ${id} is NOT registered as a territory. No miners spawned. Known territories:`, Object.keys(this.territories));
       }
     }
   }
 
-  // === 留??꾨젅???낅뜲?댄듃 (DefenseGame.update?먯꽌 ?몄텧) ===
   update(dt, core, canvas, isSafeZone, createExplosion, isConquered = false) {
     const safeNow = !!isSafeZone;
     const conqueredNow = !!isConquered;
@@ -115,24 +115,22 @@ export class MiningManager {
     }
   }
 
-  // === ?뚮뜑留?(DefenseGame.render?먯꽌 ?몄텧) ===
   render(ctx, time, isMobile) {
-    // 留덉씠??紐몄껜 洹몃━湲?
+    if (this._currentSceneIsSafe && this._lastCanvas && this._lastCore) {
+      this.initCabinet(this._lastCanvas, this._lastCore);
+    }
     for (const miner of this.miners) {
       if (this._isOffScreen(miner, ctx.canvas)) continue;
       this._renderMiner(ctx, miner, time, isMobile);
     }
 
-    // ?섎궔??(?몄씠?꾩〈留?
     if (this._currentSceneIsSafe) {
       this._renderCabinet(ctx, time);
     }
 
-    // ?뚮줈???띿뒪??
     this._renderFloatingTexts(ctx);
   }
 
-  // === ?섎궔???곗튂 ===
   handleCabinetTap(x, y) {
     const cab = this.cabinet;
     const margin = 20;
@@ -160,7 +158,6 @@ export class MiningManager {
     return { collected: false, amount: 0 };
   }
 
-  // === Save / Load ===
   saveData() {
     return {
       territories: { ...this.territories },
@@ -180,7 +177,6 @@ export class MiningManager {
     }
   }
 
-  // ============ PRIVATE ============
 
   _spawnTerritoryMiners(core, canvas) {
     const entry = this._getTerritoryEntry(canvas);
@@ -252,7 +248,7 @@ export class MiningManager {
         t.tripTimer -= tripCycle;
         const mined = this.dataPerTrip * t.minerCount;
         this.pendingData += mined;
-        console.log(`[Mining] ??bg mined ${mined} MB from territory ${id}, pending: ${this.pendingData}`);
+        console.log(`[Mining] bg mined ${mined} MB from territory ${id}, pending: ${this.pendingData}`);
       }
     }
   }
@@ -317,7 +313,6 @@ export class MiningManager {
         if (miner.stateTimer >= this.offScreenDelay) {
           this.pendingData += miner.dataCarrying;
           miner.dataCarrying = 0;
-          // ?먮졊吏 ?붾㈃?대㈃ ?ㅼ떆 肄붿뼱濡??뚯븘??
           const enterEdge = this._getTerritoryEntry(canvas);
           miner.x = enterEdge.x;
           miner.y = enterEdge.y;
@@ -361,7 +356,7 @@ export class MiningManager {
           miner.targetX = this.cabinet.x + this.cabinet.width / 2;
           miner.targetY = this.cabinet.y + this.cabinet.height / 2;
           this._changeState(miner, "ENTER_SAFE");
-          miner.initialDelay = 2.0; // ?좎떃 ?湲????ъ엥??
+          miner.initialDelay = 2.0;
         }
         break;
 
@@ -381,14 +376,12 @@ export class MiningManager {
     }
   }
 
-  // === ?뚮뜑留?===
   _renderMiner(ctx, miner, time, isMobile) {
     const state = miner.minerState;
     if (state === "EXIT_SCREEN") return;
 
     ctx.save();
 
-    // ?꾩튂
     if (!isMobile) {
       const wobble = Math.sin(time * 5 + miner.wobblePhase) * 1.5;
       ctx.translate(miner.x + wobble * 0.3, miner.y + wobble * 0.2);
@@ -396,7 +389,6 @@ export class MiningManager {
       ctx.translate(miner.x, miner.y);
     }
 
-    // 紐몄껜 (湲덉깋 ??
     ctx.fillStyle = miner.color;
     ctx.beginPath();
     ctx.arc(0, 0, miner.radius, 0, Math.PI * 2);
@@ -407,7 +399,6 @@ export class MiningManager {
       ctx.shadowBlur = 6;
     }
 
-    // ??
     const eyeSize = miner.radius * 0.2;
     ctx.fillStyle = "#000";
     ctx.beginPath();
@@ -416,7 +407,6 @@ export class MiningManager {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // ?덉쟾紐?
     ctx.fillStyle = "#ffdd44";
     ctx.beginPath();
     ctx.moveTo(0, -miner.radius - 5);
@@ -427,7 +417,6 @@ export class MiningManager {
 
     ctx.restore();
 
-    // ?곗씠??釉붾줉 (?대컲 以? - translate 諛뽰뿉???덈?醫뚰몴濡?
     if (miner.dataCarrying > 0) {
       const bobY = Math.sin(time * 4 + miner.wobblePhase) * 1.5;
       const bx = miner.x - 3;
@@ -440,7 +429,6 @@ export class MiningManager {
       ctx.strokeRect(bx, by, 6, 6);
     }
 
-    // 梨꾧뎬 吏꾪뻾 諛?
     if (state === "MINING") {
       const bw = 16, bh = 2;
       const bx = miner.x - bw / 2;
@@ -521,8 +509,8 @@ export class MiningManager {
   initCabinet(canvas, core) {
     const offsetX = Math.min(160, canvas.width * 0.18);
     const offsetY = -Math.min(180, canvas.height * 0.22);
-    const cx = core?.x ?? canvas.width - 90;
-    const cy = core?.y ?? canvas.height - 120;
+    const cx = core?.shieldAnchor?.x ?? core?.x ?? canvas.width - 90;
+    const cy = core?.shieldAnchor?.y ?? core?.y ?? canvas.height - 120;
     const rawX = cx + offsetX;
     const rawY = cy + offsetY;
     const maxX = canvas.width - this.cabinet.width - 10;
@@ -568,7 +556,6 @@ export class MiningManager {
     }
   }
 
-  // === ?좏떥由ы떚 ===
   _changeState(m, s) { m.minerState = s; m.stateTimer = 0; }
 
   _moveToward(m, tx, ty, dt) {
@@ -637,6 +624,8 @@ export class MiningManager {
     return m.x < -15 || m.x > canvas.width + 15 || m.y < -15 || m.y > canvas.height + 15;
   }
 }
+
+
 
 
 

@@ -4,25 +4,20 @@ export class DefenseGame {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
 
-    // TODO
     this.bgmManager = new BGMManager();
 
-    // TODO
     this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d");
-    this.originalCanvas = this.canvas; // TODO
-    this.isMiniDisplay = false; // TODO
-    // TODO
+    this.originalCanvas = this.canvas;
+    this.isMiniDisplay = false;
     this.canvas.style.display = "none";
-    this.canvas.style.position = "fixed"; // TODO
+    this.canvas.style.position = "fixed";
     this.canvas.style.top = "0";
     this.canvas.style.left = "0";
-    this.canvas.style.zIndex = "50"; // TODO
-    document.body.appendChild(this.canvas); // TODO
-    // TODO
+    this.canvas.style.zIndex = "50";
+    document.body.appendChild(this.canvas);
     this.isGodMode = false;
 
-    // TODO
     this.baseCoreRadius = 15;
     this.baseShieldRadius = 70;
     this.core = {
@@ -45,8 +40,6 @@ export class DefenseGame {
       targetOffsetY: 0,
     };
 
-    // TODO
-    // TODO
     this.shieldVisual = {
       alpha: 0.7,
       targetAlpha: 0.7,
@@ -60,28 +53,29 @@ export class DefenseGame {
       fillAlpha: 0.1,
       targetFillAlpha: 0.1,
     };
+    this.shieldAnchor = { x: 0, y: 0 };
+    this.shieldReady = false;
+    this.shieldReadyTimer = 0;
+    this.shieldReadyDuration = 3.0;
+    this.shieldReadyRadius = 12;
+    this.core.shieldAnchor = this.shieldAnchor;
 
-    // TODO
     this.showCoreHP = true;
     this.glitchText = false;
     this.glitchOffset = { x: 0, y: 0 };
 
-    // TODO
     this.gameScale = 1.0;
 
-    // TODO
     this.isMobile = window.innerWidth <= 768;
     this.maxParticles = this.isMobile ? 30 : 100;
     this.particleMultiplier = this.isMobile ? 0.3 : 1.0;
 
 
-    // TODO
     this.worldScale = 2.0;
     this.worldWidth = 0;
     this.worldHeight = 0;
     this.camera = { x: 0, y: 0 };
 
-    // TODO
     this.coreHome = { x: 0, y: 0 };
     this.coreMoveSpeed = 220;
     this.coreReturnSpeed = 280;
@@ -91,20 +85,18 @@ export class DefenseGame {
     this.keyState = { up: false, down: false, left: false, right: false };
     this.joystick = { active: false, pointerId: null, inputX: 0, inputY: 0 };
     this.hasInitializedCore = false;
-    // TODO
     this.uiLayer = document.createElement("div");
     this.uiLayer.id = "defense-ui";
-    this.uiLayer.style.position = "fixed"; // TODO
+    this.uiLayer.style.position = "fixed";
     this.uiLayer.style.top = "0";
     this.uiLayer.style.left = "0";
     this.uiLayer.style.width = "100%";
     this.uiLayer.style.height = "100%";
-    this.uiLayer.style.pointerEvents = "none"; // TODO
-    this.uiLayer.style.zIndex = "90"; // TODO
+    this.uiLayer.style.pointerEvents = "none";
+    this.uiLayer.style.zIndex = "90";
     this.uiLayer.style.display = "none";
-    document.body.appendChild(this.uiLayer); // TODO
+    document.body.appendChild(this.uiLayer);
 
-    // TODO
     this.joystickContainer = document.createElement("div");
     this.joystickContainer.id = "move-joystick";
     this.joystickContainer.style.cssText = `
@@ -150,10 +142,8 @@ export class DefenseGame {
     window.addEventListener("pointermove", (e) => this.moveJoystick(e));
     window.addEventListener("pointerup", (e) => this.endJoystick(e));
     window.addEventListener("pointercancel", (e) => this.endJoystick(e));
-    // TODO
-    this.onPageUpdate = null; // TODO
+    this.onPageUpdate = null;
 
-    // TODO
     this.shieldBtn = document.createElement("button");
     this.shieldBtn.id = "shield-btn";
     this.shieldBtn.style.position = "absolute";
@@ -170,16 +160,14 @@ export class DefenseGame {
     this.shieldBtn.style.cursor = "pointer";
     this.shieldBtn.style.pointerEvents = "auto";
     this.shieldBtn.style.zIndex = "30";
-    this.shieldBtn.style.touchAction = "manipulation"; // TODO
-    this.shieldBtn.style.userSelect = "none"; // TODO
-    this.shieldBtn.style.webkitTapHighlightColor = "transparent"; // TODO
+    this.shieldBtn.style.touchAction = "manipulation";
+    this.shieldBtn.style.userSelect = "none";
+    this.shieldBtn.style.webkitTapHighlightColor = "transparent";
 
-    // TODO
     this.shieldBtn.onclick = () => this.toggleShield();
     this.uiLayer.appendChild(this.shieldBtn);
-    this.updateShieldBtnUI("ACTIVE", "#00f0ff"); // TODO
+    this.updateShieldBtnUI("ACTIVE", "#00f0ff");
 
-    // TODO
     this.conquerBtn = document.createElement("button");
     this.conquerBtn.id = "conquer-btn";
     this.conquerBtn.style.position = "absolute";
@@ -205,45 +193,36 @@ export class DefenseGame {
     this.conquerBtn.onclick = () => this.handleConquerClick();
     this.uiLayer.appendChild(this.conquerBtn);
 
-    // TODO
 
-    // TODO
     this.isRunning = false;
     this.lastTime = 0;
 
-    // TODO
     this.currentBGMTrack = null;
 
-    // TODO
     this.turret = {
       angle: 0,
-      range: 200, // TODO
-      fireRate: 4.0, // TODO
+      range: 200,
+      fireRate: 4.0,
       lastFireTime: 0,
       damage: 10,
-      projectileSpeed: 300, // TODO
+      projectileSpeed: 300,
     };
 
-    // TODO
     this.staticSystem = {
-      currentCharge: 0, // TODO
-      maxCharge: 100, // TODO
-      hitChargeAmount: 15, // TODO
-      killChargeAmount: 25, // TODO
-      chainCount: 3, // TODO
-      chainRange: 250, // TODO
-      lastDischargeTime: 0, // TODO
+      currentCharge: 0,
+      maxCharge: 100,
+      hitChargeAmount: 15,
+      killChargeAmount: 25,
+      chainCount: 3,
+      chainRange: 250,
+      lastDischargeTime: 0,
     };
 
-    // TODO
     this.staticEffects = {
-      sparks: [], // TODO
-      chains: [], // TODO
+      sparks: [],
+      chains: [],
     };
 
-    // TODO
-    // TODO
-    // TODO
     this.weaponModes = {
       NORMAL: {
         name: "NORMAL",
@@ -338,92 +317,79 @@ export class DefenseGame {
       },
     };
 
-    // TODO
     this.helper = {
       x: 0,
       y: 0,
       radius: 8,
-      color: "#ffff00", // TODO
-      speed: 40, // TODO
-      fireRate: 4.0, // TODO
+      color: "#ffff00",
+      speed: 40,
+      fireRate: 4.0,
       lastFireTime: 0,
-      range: 300, // TODO
+      range: 300,
       damage: 10,
-      projectileSpeed: 400, // TODO
-      angle: 0, // TODO
-      evadeDistance: 50, // TODO
-      targetX: 0, // TODO
+      projectileSpeed: 400,
+      angle: 0,
+      evadeDistance: 50,
+      targetX: 0,
       targetY: 0,
-      // TODO
       weaponMode: "NORMAL",
-      // TODO
-      currentAmmo: 0, // TODO
+      currentAmmo: 0,
       isReloading: false,
-      reloadProgress: 0, // TODO
+      reloadProgress: 0,
       reloadStartTime: 0,
     };
 
     this.enemies = [];
     this.projectiles = [];
     this.particles = [];
-    this.alliedViruses = []; // TODO
-    this.miningManager = null; // TODO
-    this.shockwaves = []; // TODO
+    this.alliedViruses = [];
+    this.miningManager = null;
+    this.shockwaves = [];
 
-    // TODO
-    this.droppedItems = []; // TODO
-    this.collectorViruses = []; // TODO
-    // TODO
-    this.virusDialogues = null; // TODO
-    this.activeSpeechBubbles = []; // TODO
-    this.loadVirusDialogues(); // TODO
+    this.droppedItems = [];
+    this.collectorViruses = [];
+    this.virusDialogues = null;
+    this.activeSpeechBubbles = [];
+    this.loadVirusDialogues();
 
-    // TODO
     this.waveTimer = 0;
     this.pageDurationBase = 12.5;
-    this.pageDuration = 10; // TODO
+    this.pageDuration = 10;
     this.pageSpawnScale = this.pageDuration / this.pageDurationBase;
-    this.spawnRate = 0.4 * this.pageSpawnScale; // TODO
-    this.currentPage = 1; // TODO
+    this.spawnRate = 0.4 * this.pageSpawnScale;
+    this.currentPage = 1;
     this.pageTimer = 0;
-    this.pageDuration = 10; // TODO
-    // TODO
-    this.currentStage = 0; // TODO
-    this.currentStageId = 0; // TODO
-    this.stageDifficultyScale = 1.0; // TODO
-    this.stageMaxPages = 12; // TODO
-    this.isFarmingZone = false; // TODO
-    this.safeZoneSpawnRate = 2; // TODO
+    this.pageDuration = 10;
+    this.currentStage = 0;
+    this.currentStageId = 0;
+    this.stageDifficultyScale = 1.0;
+    this.stageMaxPages = 12;
+    this.isFarmingZone = false;
+    this.safeZoneSpawnRate = 2;
 
-    // TODO
     this.isReinforcementMode = false;
     this.reinforcementPage = 0;
     this.reinforcementMaxPages = 3;
     this.reinforcementComplete = false;
-    this.reinforcementSpawnRate = 0.27; // TODO
+    this.reinforcementSpawnRate = 0.27;
 
-    // TODO
-    this.isConquered = false; // TODO
+    this.isConquered = false;
 
-    // TODO
-    this.isBossFight = false; // TODO
-    this.bossManager = null; // TODO
-    this.breachReadyShown = false; // TODO
+    this.isBossFight = false;
+    this.bossManager = null;
+    this.breachReadyShown = false;
 
-    // TODO
     this.onResourceGained = null;
     this.onGameOver = null;
-    this.onConquer = null; // TODO
-    this.onConquerReady = null; // TODO
-    this.onEnemyKilled = null; // TODO
-    this.onItemCollected = null; // TODO
-    this.onBreachReady = null; // TODO
+    this.onConquer = null;
+    this.onConquerReady = null;
+    this.onEnemyKilled = null;
+    this.onItemCollected = null;
+    this.onBreachReady = null;
 
-    // TODO
     this.frameEnemiesKilled = 0;
     this.frameCoreDamaged = 0;
 
-    // TODO
     this.getItemEffects = () => ({
       convert: 0,
       chain: 0,
@@ -433,34 +399,27 @@ export class DefenseGame {
       dropRate: 0
     });
 
-    // TODO
     this.conquerReady = false;
 
-    // TODO
-    this.alliedConfig = null; // TODO
-    this.alliedInfo = { count: 0, level: 1, color: "#00aaff" }; // TODO
-    // TODO
+    this.alliedConfig = null;
+    this.alliedInfo = { count: 0, level: 1, color: "#00aaff" };
     this.currentData = 0;
 
     window.addEventListener("resize", () => this.resize());
 
-    // TODO
     document.addEventListener("visibilitychange", () =>
       this.handleVisibilityChange()
     );
 
-    // TODO
     if (window.innerWidth <= 768) {
       this.shieldBtn.style.bottom = "80px";
       this.shieldBtn.style.width = "160px";
       this.shieldBtn.style.height = "50px";
     }
 
-    // TODO
     this.idleTurretAngle = 0;
-    this.idleTurretSpeed = 1.5; // TODO
+    this.idleTurretSpeed = 1.5;
 
-    // TODO
     this.canvas.addEventListener("click", (e) => this.handleCanvasClick(e));
     this.canvas.addEventListener(
       "touchstart",
@@ -468,32 +427,26 @@ export class DefenseGame {
       { passive: false }
     );
 
-    // TODO
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     window.addEventListener("keyup", (e) => this.handleKeyUp(e));
 
     this.resize();
   }
 
-  // TODO
   handleVisibilityChange() {
     if (document.visibilityState === "visible") {
       debugLog("Defense", "Tab restored - validating game state");
-      // TODO
       this.validateGameState();
-      this.resize(); // TODO
-      // TODO
+      this.resize();
       this.lastTime = performance.now();
     } else {
       debugLog("Defense", "Tab hidden - pausing updates");
     }
   }
 
-  // TODO
   validateGameState() {
     const worldW = this.worldWidth || this.canvas.width;
     const worldH = this.worldHeight || this.canvas.height;
-    // TODO
     if (
       !this.core.x ||
       !this.core.y ||
@@ -509,19 +462,16 @@ export class DefenseGame {
       this.core.y = this.coreHome.y || worldH / 2;
     }
 
-    // TODO
     if (isNaN(this.core.hp) || this.core.hp < 0) {
       debugWarn("Defense", "Core HP invalid, resetting");
       this.core.hp = this.core.maxHp;
     }
 
-    // TODO
     if (isNaN(this.core.shieldHp)) {
       debugWarn("Defense", "Shield HP invalid, resetting");
       this.core.shieldHp = this.core.shieldMaxHp;
     }
 
-    // TODO
     this.enemies = this.enemies.filter((e) => {
       const margin = 200;
       return (
@@ -534,11 +484,8 @@ export class DefenseGame {
       );
     });
 
-    // TODO
     this.alliedViruses.forEach((v) => {
-      // TODO
       if (isNaN(v.x) || isNaN(v.y)) {
-        // TODO
         const angle = Math.random() * Math.PI * 2;
         const dist = 80 + Math.random() * 40;
         v.x = this.core.x + Math.cos(angle) * dist;
@@ -549,8 +496,7 @@ export class DefenseGame {
       }
     });
 
-    // TODO
-    const scaledMargin = 100 / this.gameScale; // TODO
+    const scaledMargin = 100 / this.gameScale;
     this.projectiles = this.projectiles.filter((p) => {
       return (
         p.x > -scaledMargin &&
@@ -562,7 +508,6 @@ export class DefenseGame {
       );
     });
 
-    // TODO
     if (!this.shieldVisual || isNaN(this.shieldVisual.alpha)) {
       debugWarn("Defense", "Shield visual state invalid, resetting");
       this.shieldVisual = {
@@ -582,22 +527,19 @@ export class DefenseGame {
   }
 
   resize() {
-    // TODO
     const targetCanvas = this.originalCanvas || this.canvas;
     targetCanvas.width = window.innerWidth;
     targetCanvas.height = window.innerHeight;
 
-    // TODO
     this.isMobile = window.innerWidth <= 768;
     this.maxParticles = this.isMobile ? 30 : 100;
     this.particleMultiplier = this.isMobile ? 0.3 : 1.0;
 
-    // TODO
     if (window.innerWidth <= 768) {
-      this.gameScale = 1.0; // TODO
-      this.gameScale = 0.8; // TODO
+      this.gameScale = 1.0;
+      this.gameScale = 0.8;
     } else {
-      this.gameScale = 1.0; // TODO
+      this.gameScale = 1.0;
     }
 
     const isMobile = window.innerWidth <= 768;
@@ -613,6 +555,8 @@ export class DefenseGame {
     if (!this.hasInitializedCore) {
       this.core.x = this.coreHome.x;
       this.core.y = this.coreHome.y;
+      this.shieldAnchor.x = this.core.x;
+      this.shieldAnchor.y = this.core.y;
       this.hasInitializedCore = true;
     } else {
       this.core.x = Math.min(Math.max(this.core.x, 0), this.worldWidth);
@@ -624,55 +568,42 @@ export class DefenseGame {
     debugLog("Canvas", "resize() complete - size:", targetCanvas.width, "x", targetCanvas.height, "scale:", this.gameScale);
   }
 
-  /**
-   * ? ? ( ???????? ?)
-   * @param {string|null} canvasId -  ??ID (null? ? ??)
-   */
+  
   setMiniDisplay(canvasId) {
     debugLog("Canvas", "setMiniDisplay called with:", canvasId);
     if (canvasId) {
-      // TODO
       const miniCanvas = document.getElementById(canvasId);
       debugLog("Canvas", "miniCanvas found:", !!miniCanvas);
       if (miniCanvas) {
-        debugLog("Canvas", "  ? ??- canvas.id:", this.canvas.id, "isMiniDisplay:", this.isMiniDisplay);
+        debugLog("Canvas", "TODO", this.canvas.id, "isMiniDisplay:", this.isMiniDisplay);
 
-        // TODO
         this.miniCanvas = miniCanvas;
         this.isMiniDisplay = true;
 
-        // TODO
-        // TODO
 
-        // TODO
         this.renderDebugFrameCount = 0;
 
-        // TODO
         miniCanvas.style.display = "block";
 
         debugLog("Canvas", "Switched to mini display mode");
-        debugLog("Canvas", "? originalCanvas????  ? ???");
-        debugLog("Canvas", "  ? ??-  ?:", this.core.x, this.core.y);
-        debugLog("Canvas", "  ? ??- gameScale:", this.gameScale);
-        debugLog("Canvas", "  ? ??- ?:", this.alliedViruses.length, "??", this.enemies.length);
+        debugLog("Canvas", "TODO");
+        debugLog("Canvas", "TODO", this.core.x, this.core.y);
+        debugLog("Canvas", "TODO", this.gameScale);
+        debugLog("Canvas", "TODO", this.alliedViruses.length, "TODO", this.enemies.length);
       }
     } else {
-      // TODO
       debugLog("Canvas", "=== ? ? ? ? ===");
-      debugLog("Canvas", "? ??- isMiniDisplay:", this.isMiniDisplay);
+      debugLog("Canvas", "TODO", this.isMiniDisplay);
 
       if (this.originalCanvas) {
         debugLog("Canvas", "originalCanvas size:", this.originalCanvas.width, "x", this.originalCanvas.height);
         debugLog("Canvas", "originalCanvas.style.display:", this.originalCanvas.style.display);
 
-        // TODO
         this.miniCanvas = null;
         this.isMiniDisplay = false;
 
-        // TODO
         this.renderDebugFrameCount = 0;
 
-        // TODO
         this.originalCanvas.style.display = "block";
 
         debugLog("Canvas", "Canvas restored - size:", this.originalCanvas.width, "x", this.originalCanvas.height);
@@ -682,72 +613,57 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   updateResourceDisplay(amount) {
     this.currentData = amount;
-    // TODO
     if (this.onDataUpdate) {
       this.onDataUpdate(this.currentData);
     }
   }
 
-  // TODO
   updateAlliedInfo(info) {
     this.alliedInfo = info;
     debugLog("Defense", "updateAlliedInfo - Info saved:", info);
-    // TODO
   }
 
-  // TODO
   updateAlliedConfig(config) {
     this.alliedConfig = config;
     debugLog("Defense", "updateAlliedConfig - Config saved:", config);
   }
 
   handleConquerClick() {
-    // TODO
     this.conquerBtn.style.display = "none";
 
-    // TODO
     this.playConquestShieldBreak(() => {
-      // TODO
       this.core.shieldActive = false;
       this.core.shieldState = "DISABLED";
       this.core.shieldHp = 0;
       this.updateShieldBtnUI("DISABLED", "#555");
       this.shieldBtn.style.pointerEvents = "none";
 
-      // TODO
       if (this.onConquer) this.onConquer();
 
-      // TODO
       this.currentPage = 1;
       this.updateWaveDisplay();
     });
   }
 
-  // TODO
   playConquestShieldBreak(onComplete) {
     const originalRadius = this.core.shieldRadius;
     const startTime = performance.now();
-    const totalDuration = 2000; // TODO
-    const phase1Duration = 800; // TODO
-    // TODO
+    const totalDuration = 2000;
+    const phase1Duration = 800;
     this.isConquestBreaking = true;
 
     const animate = (now) => {
       const elapsed = now - startTime;
 
-      // TODO
       if (elapsed < phase1Duration) {
         const progress = elapsed / phase1Duration;
 
-        // TODO
         if (Math.random() < 0.3) {
           this.shakeScreen(5 + progress * 10);
         }
 
-        // TODO
         if (Math.random() < 0.15) {
           const angle = Math.random() * Math.PI * 2;
           const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
@@ -763,17 +679,15 @@ export class DefenseGame {
             alpha: 1,
             color: "#00f0ff",
             size: 2 + Math.random() * 2,
-            char: "???"[Math.floor(Math.random() * 3)],
+            char: "*",
           });
         }
 
-        // TODO
         if (elapsed > phase1Duration - 100 && !this._phase1Flash) {
           this._phase1Flash = true;
           this.flashScreen("#00ffff", 0.4);
           this.shakeScreen(15);
 
-          // TODO
           for (let i = 0; i < 20; i++) {
             const angle = Math.random() * Math.PI * 2;
             const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
@@ -789,7 +703,7 @@ export class DefenseGame {
               alpha: 1,
               color: "#00f0ff",
               size: 3 + Math.random() * 3,
-              char: "???"[Math.floor(Math.random() * 4)],
+              char: "*",
             });
           }
         }
@@ -798,22 +712,18 @@ export class DefenseGame {
         return;
       }
 
-      // TODO
       if (!this._phase2Started) {
         this._phase2Started = true;
 
-        // TODO
         this.flashScreen("#ffffff", 0.6);
         this.shakeScreen(30);
 
-        // TODO
         const segments = 24;
         for (let i = 0; i < segments; i++) {
           const angle = ((Math.PI * 2) / segments) * i;
           const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
           const y = this.core.y + Math.sin(angle) * this.core.shieldRadius;
 
-          // TODO
           for (let j = 0; j < 4; j++) {
             const spreadAngle = angle + (Math.random() - 0.5) * 0.5;
             this.particles.push({
@@ -826,28 +736,26 @@ export class DefenseGame {
               alpha: 1,
               color: Math.random() > 0.5 ? "#00f0ff" : "#ffffff",
               size: 4 + Math.random() * 6,
-              char: "????"[Math.floor(Math.random() * 8)],
+              char: "*",
             });
           }
         }
 
-        // TODO
         this.shockwaves.push({
           x: this.core.x,
           y: this.core.y,
           radius: this.core.shieldRadius,
           maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.5,
-          speed: 400, // TODO
+          speed: 400,
           alpha: 0.8,
           color: "#00f0ff",
           lineWidth: 6,
           damageDealt: false,
-        }); // TODO
+        });
 
         this.applyShockwaveEffects();
       }
 
-      // TODO
       const phase2Progress =
         (elapsed - phase1Duration) / (totalDuration - phase1Duration);
       this.core.shieldRadius = originalRadius * (1 - phase2Progress);
@@ -855,7 +763,6 @@ export class DefenseGame {
       if (elapsed < totalDuration) {
         requestAnimationFrame(animate);
       } else {
-        // TODO
         this.core.shieldRadius = 0;
         this.isConquestBreaking = false;
         this._phase1Flash = false;
@@ -868,19 +775,15 @@ export class DefenseGame {
     requestAnimationFrame(animate);
   }
 
-  // TODO
   applyShockwaveEffects() {
-    const damage = 25; // TODO
+    const damage = 25;
 
     this.enemies.forEach((enemy) => {
-      // TODO
       this.applyKnockback(enemy, 200, 0.3, 2);
 
-      // TODO
       enemy.hp -= damage;
       this.createExplosion(enemy.x, enemy.y, "#00f0ff", 5);
 
-      // TODO
       if (enemy.hp <= 0) {
         this.createExplosion(enemy.x, enemy.y, "#00ff00", 10);
         const gain = 10;
@@ -889,16 +792,13 @@ export class DefenseGame {
       }
     });
 
-    // TODO
     this.enemies = this.enemies.filter((e) => e.hp > 0);
   }
 
   toggleShield() {
-    // TODO
     if (
       this.core.shieldState === "CHARGING" ||
       this.core.shieldState === "DISCHARGING" ||
-      this.core.shieldState === "RETURNING" ||
       this.core.shieldState === "BROKEN" ||
       this.core.shieldState === "RECHARGING" ||
       this.core.shieldState === "DISABLED"
@@ -907,66 +807,61 @@ export class DefenseGame {
     }
 
     if (this.core.shieldActive) {
-      // TODO
-      this.core.shieldState = "DISCHARGING";
-      this.core.shieldTimer = 1.0;
-      this.updateShieldBtnUI("DISENGAGING...", "#ffff00");
+      this.core.shieldActive = false;
+      this.core.shieldState = "OFF";
+      this.shieldReady = false;
+      this.shieldReadyTimer = 0;
+      this.updateShieldBtnUI("OFFLINE", "#f00");
     } else {
-      // TODO
-      this.core.shieldState = "RETURNING";
-      this.coreReturnTimer = 3.0;
-      this.coreReturnAtHome = false;
-      this.updateShieldBtnUI("RETURNING...", "#ffff00");
+      if (!this.shieldReady) return;
+      this.core.shieldActive = true;
+      this.core.shieldState = "ACTIVE";
+      this.shieldReady = false;
+      this.shieldReadyTimer = 0;
+      this.shieldAnchor.x = this.core.x;
+      this.shieldAnchor.y = this.core.y;
+      this.updateShieldBtnUI("ACTIVE", "#00f0ff");
     }
   }
 
-  // TODO
   updateShieldVisualTargets() {
     const sv = this.shieldVisual;
     const state = this.core.shieldState;
 
     if (state === "ACTIVE") {
-      // TODO
       sv.targetAlpha = 0.8;
-      sv.targetDashGap = 0; // TODO
+      sv.targetDashGap = 0;
       sv.targetLineWidth = 2.5;
       sv.targetFillAlpha = 0.15;
-      sv.targetRotationSpeed = 0; // TODO
+      sv.targetRotationSpeed = 0;
     } else if (state === "OFF" || state === "RETURNING") {
-      // TODO
       sv.targetAlpha = 0.5;
-      sv.targetDashGap = 10; // TODO
+      sv.targetDashGap = 10;
       sv.targetLineWidth = 1.5;
       sv.targetFillAlpha = 0;
       sv.targetRotationSpeed = 0;
     } else if (state === "DISCHARGING") {
-      // TODO
       sv.targetAlpha = 0.6;
       sv.targetDashGap = 10;
       sv.targetLineWidth = 1.5;
       sv.targetFillAlpha = 0.05;
-      sv.targetRotationSpeed = 30; // TODO
+      sv.targetRotationSpeed = 30;
     } else if (state === "CHARGING") {
-      // TODO
       const elapsed = 2.0 - this.core.shieldTimer;
       const progress = Math.min(1, elapsed / 2.0);
 
-      // TODO
       sv.targetAlpha = 0.5 + progress * 0.3;
-      sv.targetDashGap = 12 * (1 - progress); // TODO
+      sv.targetDashGap = 12 * (1 - progress);
       sv.targetLineWidth = 1.5 + progress * 1;
       sv.targetFillAlpha = progress * 0.15;
-      sv.targetRotationSpeed = 50 + progress * 500; // TODO
+      sv.targetRotationSpeed = 50 + progress * 500;
     } else if (state === "BROKEN" || state === "RECHARGING") {
-      // TODO
       sv.targetAlpha = 0.5;
       sv.targetDashGap = 12;
       sv.targetLineWidth = 1.5;
       sv.targetFillAlpha = 0;
-      // TODO
       sv.targetRotationSpeed = 0;
     } else if (state === "DISABLED") {
-      // TODO
       sv.targetAlpha = 0.3;
       sv.targetDashGap = 15;
       sv.targetLineWidth = 1;
@@ -980,10 +875,8 @@ export class DefenseGame {
       (this.core.shieldHp / this.core.shieldMaxHp) * 100
     );
 
-    // TODO
     let topDisplay = `(${hpPct}%)`;
     if (loadingProgress !== null) {
-      // TODO
       const circumference = 2 * Math.PI * 12;
       const dashOffset = circumference * (1 - loadingProgress);
       topDisplay = `
@@ -997,7 +890,6 @@ export class DefenseGame {
           `;
     }
 
-    // TODO
     this.shieldBtn.innerHTML = `
           SHIELD: ${text}
           <div style='
@@ -1021,21 +913,18 @@ export class DefenseGame {
     this.resize();
     this.isRunning = true;
     this.canvas.style.display = "block";
-    this.uiLayer.style.display = "block"; // TODO
+    this.uiLayer.style.display = "block";
 
-    // TODO
     this.isSafeZone = (this.currentStageId === 0);
-    this.isFarmingZone = (this.currentStageId === 3); // TODO
+    this.isFarmingZone = (this.currentStageId === 3);
 
-    // TODO
     this.currentPage = 1;
     this.pageTimer = 0;
-    this.conquerReady = false; // TODO
+    this.conquerReady = false;
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
     this.updateShieldBtnUI("ACTIVE", "#fff");
 
-    // TODO
     if (this.isSafeZone) {
       this.playBGMTrack('SAFE_ZONE');
     } else {
@@ -1050,17 +939,14 @@ export class DefenseGame {
   stop() {
     this.isRunning = false;
     this.canvas.style.display = "none";
-    this.uiLayer.style.display = "none"; // TODO
+    this.uiLayer.style.display = "none";
 
-    // TODO
     this.bgmManager.stop();
   }
 
   pause() {
     this.isRunning = false;
-    // TODO
 
-    // TODO
     this.bgmManager.stop();
   }
 
@@ -1076,7 +962,6 @@ export class DefenseGame {
       requestAnimationFrame((t) => this.animate(t));
       debugLog("Canvas", "Animation frame requested");
 
-      // TODO
       if (this.currentBGMTrack) {
         this.bgmManager.play(this.currentBGMTrack);
       }
@@ -1084,13 +969,12 @@ export class DefenseGame {
       debugLog("Canvas", "Already running, skipping resume");
     }
 
-    // TODO
     if (!this.isMiniDisplay) {
       this.canvas.style.display = "block";
       this.uiLayer.style.display = "block";
       debugLog("Canvas", "Set canvas and uiLayer to block (? )");
     } else {
-      debugLog("Canvas", "Skipped canvas display (  - ? ???? ??)");
+      debugLog("Canvas", "TODO");
     }
     debugLog("Canvas", "canvas after set:", this.canvas.style.display);
   }
@@ -1098,26 +982,19 @@ export class DefenseGame {
   update(deltaTime) {
     const now = performance.now() / 1000;
 
-    // TODO
     const clampedDeltaTime = Math.min(deltaTime, 100);
     const dt = clampedDeltaTime / 1000;
 
-    // TODO
     this.validateGameState();
 
-    // TODO
     const core = this.core;
-    // TODO
     core.visualOffsetX += (core.targetOffsetX - core.visualOffsetX) * dt * 15;
     core.visualOffsetY += (core.targetOffsetY - core.visualOffsetY) * dt * 15;
-    // TODO
     core.targetOffsetX *= Math.pow(0.05, dt);
     core.targetOffsetY *= Math.pow(0.05, dt);
-    // TODO
     if (Math.abs(core.targetOffsetX) < 0.1) core.targetOffsetX = 0;
     if (Math.abs(core.targetOffsetY) < 0.1) core.targetOffsetY = 0;
 
-    // TODO
     this.updateMoveInput();
     if (this.core.shieldState === "RETURNING") {
       this.updateCoreReturn(dt);
@@ -1125,12 +1002,10 @@ export class DefenseGame {
       this.updateCoreMovement(dt);
     }
     this.updateCamera();
-    const canMove = !this.core.shieldActive && this.core.shieldState === "OFF";
+    const canMove = this.core.shieldState !== "DISABLED";
     this.joystickContainer.style.display = (this.isMobile && canMove) ? "block" : "none";
 
-    // TODO
     if (this.core.shieldState === "RETURNING") {
-      // TODO
     } else if (this.core.shieldState === "CHARGING") {
       this.core.shieldTimer -= dt;
       if (this.core.shieldTimer <= 0) {
@@ -1167,36 +1042,54 @@ export class DefenseGame {
         this.updateShieldBtnUI(`CHARGING ${pct}%`, "#ffff00");
       }
     }
-    // TODO
+
+    if (!this.core.shieldActive && this.core.shieldState === "OFF") {
+      const dx = this.core.x - this.shieldAnchor.x;
+      const dy = this.core.y - this.shieldAnchor.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= this.shieldReadyRadius) {
+        this.shieldReadyTimer += dt;
+        const progress = Math.min(1, this.shieldReadyTimer / this.shieldReadyDuration);
+        if (progress >= 1) {
+          this.shieldReady = true;
+          this.updateShieldBtnUI("SHIELD READY", "#00ff88", 1);
+        } else {
+          this.shieldReady = false;
+          this.updateShieldBtnUI("REARMING", "#00ff88", progress);
+        }
+      } else {
+        this.shieldReady = false;
+        this.shieldReadyTimer = 0;
+        this.updateShieldBtnUI("OFFLINE", "#f00");
+      }
+    } else if (this.core.shieldActive) {
+      this.shieldReady = false;
+      this.shieldReadyTimer = 0;
+    }
+
     if (this.core.shieldActive) {
-      // TODO
-      // TODO
     } else {
-      // TODO
       if (
         this.core.shieldState === "OFF" &&
         this.core.shieldHp < this.core.shieldMaxHp
       ) {
-        this.core.shieldHp += 10 * dt; // TODO
+        this.core.shieldHp += 10 * dt;
         if (this.core.shieldHp > this.core.shieldMaxHp)
           this.core.shieldHp = this.core.shieldMaxHp;
-        this.updateShieldBtnUI("OFFLINE", "#f00");
+        if (!this.shieldReady && this.shieldReadyTimer === 0)
+          this.updateShieldBtnUI("OFFLINE", "#f00");
       }
     }
 
-    // TODO
     this.updateShieldVisualTargets();
 
-    // TODO
     if (this.isBossFight && this.bossManager && !this.bossManager.isBreachReady) {
       const shieldOff = !this.core.shieldActive;
       this.bossManager.updateBreachGauge(dt, shieldOff, this.frameEnemiesKilled || 0, this.frameCoreDamaged || 0);
 
-      // TODO
       this.frameEnemiesKilled = 0;
       this.frameCoreDamaged = 0;
 
-      // TODO
       if (this.bossManager.isBreachReady && !this.breachReadyShown) {
         this.breachReadyShown = true;
         if (this.onBreachReady) {
@@ -1205,8 +1098,7 @@ export class DefenseGame {
       }
     }
 
-    // TODO
-    const lerpSpeed = 3.0; // TODO
+    const lerpSpeed = 3.0;
     const sv = this.shieldVisual;
     sv.alpha += (sv.targetAlpha - sv.alpha) * lerpSpeed * dt;
     sv.dashGap += (sv.targetDashGap - sv.dashGap) * lerpSpeed * dt;
@@ -1215,12 +1107,9 @@ export class DefenseGame {
     sv.rotationSpeed +=
       (sv.targetRotationSpeed - sv.rotationSpeed) * lerpSpeed * dt;
 
-    // TODO
     sv.rotation += sv.rotationSpeed * dt;
 
-    // TODO
 
-    // TODO
     if (this.isReinforcementMode && !this.reinforcementComplete) {
       this.pageTimer += dt;
       if (this.pageTimer >= this.pageDuration) {
@@ -1228,8 +1117,6 @@ export class DefenseGame {
           this.reinforcementPage++;
           this.pageTimer = 0;
 
-          // TODO
-          // TODO
           const reinforcementSpawnRates = [0.17, 0.12, 0.08];
           this.spawnRate =
             reinforcementSpawnRates[Math.min(this.reinforcementPage - 1, 2)] * this.pageSpawnScale;
@@ -1243,13 +1130,11 @@ export class DefenseGame {
             this.spawnRate
           );
         } else {
-          // TODO
           this.reinforcementComplete = true;
           debugLog("Defense", "Reinforcement Complete!");
         }
       }
     }
-    // TODO
     else if (!this.isSafeZone && !this.isConquered && this.currentPage <= (this.maxPages || 12)) {
       const maxPages = this.maxPages || 12;
       const diffScale = this.stageDifficultyScale || 1.0;
@@ -1258,18 +1143,14 @@ export class DefenseGame {
       this.pageTimer += dt;
       const currSecond = Math.floor(this.pageTimer);
 
-      // TODO
       if (currSecond !== prevSecond) {
         this.updateWaveDisplay();
       }
 
       if (this.pageTimer >= this.pageDuration) {
         if (this.currentPage < maxPages || this.isFarmingZone) {
-          // TODO
           this.currentPage++;
           this.pageTimer = 0;
-          // TODO
-          // TODO
           if (!this.isFarmingZone) {
             this.spawnRate = Math.max(
               0.13 * this.pageSpawnScale,
@@ -1278,28 +1159,23 @@ export class DefenseGame {
           }
           this.updateWaveDisplay();
         } else if (!this.conquerReady && !this.isFarmingZone) {
-          // TODO
           this.conquerReady = true;
 
-          // TODO
           if (this.onPageUpdate) {
-            this.onPageUpdate("??READY", "#ff3333");
+            this.onPageUpdate("TODO", "#ff3333");
           }
 
-          // TODO
           if (this.onConquerReady) {
             this.onConquerReady();
           }
         }
       }
     }
-    // TODO
     else if (this.isFarmingZone && !this.isConquered) {
       const prevSecond = Math.floor(this.pageTimer);
       this.pageTimer += dt;
       const currSecond = Math.floor(this.pageTimer);
 
-      // TODO
       if (currSecond !== prevSecond) {
         this.updateWaveDisplay();
       }
@@ -1311,29 +1187,22 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     this.applySynergyEffects(dt);
 
-    // TODO
     this.updateCollectorViruses(dt);
 
-    // TODO
     this.updateSpeechBubbles();
 
-    // TODO
     if (this.isSafeZone) {
-      // TODO
       if (Math.random() < 0.008) {
         const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
         if (randomAlly) {
-          // TODO
           const category = Math.random() < 0.7 ? 'safeChat' : 'safeSolo';
           this.tryVirusSpeech(randomAlly, category, 1.0);
         }
       }
     } else {
-      // TODO
-      if (Math.random() < 0.00005) { // TODO
+      if (Math.random() < 0.00005) {
         const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
         if (randomAlly) {
           this.tryVirusSpeech(randomAlly, 'idle', 1.0);
@@ -1341,7 +1210,6 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     if (this.miningManager) {
       this.miningManager.update(
         dt, this.core, this.canvas, this.isSafeZone,
@@ -1351,17 +1219,14 @@ export class DefenseGame {
       this.miningManager.resolveCabinetCollisions(this.alliedViruses, 3);
     }
 
-    // TODO
     for (let idx = this.alliedViruses.length - 1; idx >= 0; idx--) {
       const v = this.alliedViruses[idx];
 
-      // TODO
       if (v.hp <= 0) {
         this.handleAllyDeath(v, idx);
         continue;
       }
 
-      // TODO
       switch (v.attackType) {
         case "melee":
           this.updateMeleeAlly(v, dt);
@@ -1376,11 +1241,10 @@ export class DefenseGame {
           this.updateSupportAlly(v, dt);
           break;
         default:
-          this.updateMeleeAlly(v, dt); // TODO
+          this.updateMeleeAlly(v, dt);
       }
     }
 
-    // TODO
     if (!this.isConquered) {
       const currentSpawnRate = this.isSafeZone
         ? this.safeZoneSpawnRate
@@ -1392,15 +1256,12 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
 
-      // TODO
       let targetX = this.core.x;
       let targetY = this.core.y;
 
-      // TODO
       if (enemy.tauntedBy) {
         const taunter = this.alliedViruses.find(
           (v) => v === enemy.tauntedBy && v.hp > 0
@@ -1409,10 +1270,9 @@ export class DefenseGame {
           targetX = taunter.x;
           targetY = taunter.y;
         } else {
-          enemy.tauntedBy = null; // TODO
+          enemy.tauntedBy = null;
         }
       } else {
-        // TODO
         let nearestTank = null;
         let nearestTankDist = Infinity;
 
@@ -1435,49 +1295,41 @@ export class DefenseGame {
         }
       }
 
-      // TODO
       const dx = targetX - enemy.x;
       const dy = targetY - enemy.y;
       const distToTarget = Math.hypot(dx, dy);
 
-      // TODO
       const distToCore = Math.hypot(
         this.core.x - enemy.x,
         this.core.y - enemy.y
       );
 
-      // TODO
       if (
         this.core.shieldActive &&
         distToCore < this.core.shieldRadius + enemy.radius
       ) {
-        // TODO
-        this.core.shieldHp -= 10; // TODO
-        this.chargeStaticOnHit(); // TODO
+        this.core.shieldHp -= 10;
+        this.chargeStaticOnHit();
         this.createExplosion(enemy.x, enemy.y, "#00f0ff", 5);
         this.enemies.splice(i, 1);
 
-        // TODO
         if (this.core.shieldHp <= 0) {
           this.core.shieldHp = 0;
           this.core.shieldActive = false;
           this.core.shieldState = "BROKEN";
-          this.core.shieldTimer = 5.0; // TODO
+          this.core.shieldTimer = 5.0;
           this.updateShieldBtnUI("BROKEN", "#555");
-          this.createExplosion(this.core.x, this.core.y, "#00f0ff", 30); // TODO
+          this.createExplosion(this.core.x, this.core.y, "#00f0ff", 30);
           this.updateShieldBtnUI("ACTIVE", "#fff");
         }
         continue;
       }
 
-      // TODO
       if (distToCore < this.core.radius + enemy.radius) {
-        // TODO
         if (!this.isGodMode) {
           this.core.hp -= enemy.damage;
-          this.chargeStaticOnHit(); // TODO
+          this.chargeStaticOnHit();
 
-          // TODO
           if (this.isBossFight) {
             this.frameCoreDamaged++;
           }
@@ -1494,17 +1346,14 @@ export class DefenseGame {
         continue;
       }
 
-      // TODO
       if (enemy.knockbackVx || enemy.knockbackVy) {
         enemy.x += (enemy.knockbackVx || 0) * dt;
         enemy.y += (enemy.knockbackVy || 0) * dt;
 
-        // TODO
-        const friction = Math.pow(0.05, dt); // TODO
+        const friction = Math.pow(0.05, dt);
         enemy.knockbackVx = (enemy.knockbackVx || 0) * friction;
         enemy.knockbackVy = (enemy.knockbackVy || 0) * friction;
 
-        // TODO
         if (
           Math.abs(enemy.knockbackVx) < 1 &&
           Math.abs(enemy.knockbackVy) < 1
@@ -1514,7 +1363,6 @@ export class DefenseGame {
         }
       }
 
-      // TODO
       if (distToTarget > 0) {
         const slowMult = enemy.slowMultiplier || 1;
         enemy.x += (dx / distToTarget) * enemy.speed * slowMult * dt;
@@ -1522,10 +1370,8 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     this.separateAllViruses();
 
-    // TODO
     let nearestEnemy = null;
     let minDist = Infinity;
 
@@ -1538,24 +1384,18 @@ export class DefenseGame {
     });
 
     if (nearestEnemy) {
-      // TODO
       const dx = nearestEnemy.x - this.core.x;
       const dy = nearestEnemy.y - this.core.y;
       this.turret.angle = Math.atan2(dy, dx);
-      // TODO
     } else {
-      // TODO
       this.turret.angle += dt * this.idleTurretSpeed;
-      this.idleTurretAngle = this.turret.angle; // TODO
+      this.idleTurretAngle = this.turret.angle;
     }
 
-    // TODO
     this.updateHelper(dt, now);
 
-    // TODO
     this.updateReload(dt);
 
-    // TODO
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
       p.life -= dt;
@@ -1577,14 +1417,12 @@ export class DefenseGame {
           this.createExplosion(p.x, p.y, "#ffff00", 3);
           this.projectiles.splice(i, 1);
 
-          // TODO
           if (p.target.hp <= 0) {
             const idx = this.enemies.indexOf(p.target);
             if (idx > -1) {
               this.enemies.splice(idx, 1);
               this.createExplosion(p.target.x, p.target.y, "#00ff00", 15);
 
-              // TODO
               const gain = 10;
               this.currentData += gain;
               this.updateResourceDisplay(this.currentData);
@@ -1593,8 +1431,6 @@ export class DefenseGame {
           }
         }
       } else {
-        // TODO
-        // TODO
         if (p.vx !== undefined && p.vy !== undefined) {
           p.x += p.vx * dt;
           p.y += p.vy * dt;
@@ -1603,7 +1439,6 @@ export class DefenseGame {
           p.y += Math.sin(p.angle) * p.speed * dt;
         }
 
-        // TODO
         let hitEnemy = false;
         for (let j = this.enemies.length - 1; j >= 0; j--) {
           const enemy = this.enemies[j];
@@ -1612,11 +1447,9 @@ export class DefenseGame {
           const dist = Math.hypot(dx, dy);
 
           if (dist < p.radius + enemy.radius) {
-            // TODO
             enemy.hp -= p.damage;
             this.createExplosion(p.x, p.y, p.color || "#00ff00", 5);
 
-            // TODO
             if (p.explosive && p.explosionRadius > 0) {
               this.handleExplosion(
                 p.x,
@@ -1627,7 +1460,6 @@ export class DefenseGame {
               );
             }
 
-            // TODO
             if (enemy.hp <= 0) {
               this.enemies.splice(j, 1);
               this.createExplosion(enemy.x, enemy.y, p.color || "#00ff00", 15);
@@ -1636,21 +1468,18 @@ export class DefenseGame {
               this.currentData += gain;
               this.updateResourceDisplay(this.currentData);
               if (this.onResourceGained) this.onResourceGained(gain);
-              this.chargeStaticOnKill(); // TODO
+              this.chargeStaticOnKill();
 
-              // TODO
               const shooter = this.alliedViruses.find(v => v.virusType === 'HUNTER');
               if (shooter) this.tryVirusSpeech(shooter, 'kill', 0.15);
             }
 
             hitEnemy = true;
 
-            // TODO
             if (!p.piercing) {
               this.projectiles.splice(i, 1);
               break;
             }
-            // TODO
             if (!p.piercedEnemies) p.piercedEnemies = [];
             if (!p.piercedEnemies.includes(enemy)) {
               p.piercedEnemies.push(enemy);
@@ -1660,7 +1489,6 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= dt;
@@ -1671,7 +1499,6 @@ export class DefenseGame {
       if (p.life <= 0) this.particles.splice(i, 1);
     }
 
-    // TODO
     for (let i = this.shockwaves.length - 1; i >= 0; i--) {
       const wave = this.shockwaves[i];
       wave.radius += wave.speed * dt;
@@ -1683,7 +1510,6 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     const nowMs = performance.now();
     this.enemies.forEach((enemy) => {
       if (enemy.slowEndTime && nowMs >= enemy.slowEndTime) {
@@ -1692,30 +1518,23 @@ export class DefenseGame {
       }
     });
 
-    // TODO
     this.updateStaticSystem(dt);
   }
 
-  /**
-   * ????????
-   */
+  
   updateStaticSystem(dt) {
     const ss = this.staticSystem;
 
-    // TODO
     ss.currentCharge += ss.chargeRate * dt;
 
-    // TODO
     if (ss.currentCharge > ss.maxCharge) {
       ss.currentCharge = ss.maxCharge;
     }
 
-    // TODO
     if (ss.currentCharge >= ss.maxCharge && this.enemies.length > 0) {
       this.dischargeStatic();
     }
 
-    // TODO
     for (let i = this.staticEffects.sparks.length - 1; i >= 0; i--) {
       const spark = this.staticEffects.sparks[i];
       spark.life -= dt;
@@ -1725,7 +1544,6 @@ export class DefenseGame {
       if (spark.life <= 0) this.staticEffects.sparks.splice(i, 1);
     }
 
-    // TODO
     for (let i = this.staticEffects.chains.length - 1; i >= 0; i--) {
       const chain = this.staticEffects.chains[i];
       chain.life -= dt;
@@ -1733,15 +1551,12 @@ export class DefenseGame {
       if (chain.life <= 0) this.staticEffects.chains.splice(i, 1);
     }
 
-    // TODO
     if (ss.currentCharge > ss.maxCharge * 0.5 && Math.random() < 0.1) {
       this.createStaticSpark();
     }
   }
 
-  /**
-   * ??? ( ??)
-   */
+  
   dischargeStatic() {
     const ss = this.staticSystem;
     ss.currentCharge = 0;
@@ -1749,7 +1564,6 @@ export class DefenseGame {
 
     if (this.enemies.length === 0) return;
 
-    // TODO
     let nearestEnemy = null;
     let minDist = Infinity;
 
@@ -1763,18 +1577,15 @@ export class DefenseGame {
 
     if (!nearestEnemy) return;
 
-    // TODO
     const hitEnemies = [nearestEnemy];
     let currentTarget = nearestEnemy;
     let prevX = this.core.x;
     let prevY = this.core.y;
 
-    // TODO
     this.addChainLine(prevX, prevY, currentTarget.x, currentTarget.y);
     currentTarget.hp -= ss.damage;
     this.createExplosion(currentTarget.x, currentTarget.y, "#ffff00", 8);
 
-    // TODO
     if (currentTarget.hp <= 0) {
       const idx = this.enemies.indexOf(currentTarget);
       if (idx !== -1) {
@@ -1787,12 +1598,10 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     for (let i = 1; i < ss.chainCount; i++) {
       let nextTarget = null;
       let nextMinDist = Infinity;
 
-      // TODO
       this.enemies.forEach((enemy) => {
         if (hitEnemies.includes(enemy)) return;
         const dist = Math.hypot(
@@ -1805,9 +1614,8 @@ export class DefenseGame {
         }
       });
 
-      if (!nextTarget) break; // TODO
+      if (!nextTarget) break;
 
-      // TODO
       this.addChainLine(
         currentTarget.x,
         currentTarget.y,
@@ -1815,11 +1623,9 @@ export class DefenseGame {
         nextTarget.y
       );
 
-      // TODO
       nextTarget.hp -= ss.damage;
       this.createExplosion(nextTarget.x, nextTarget.y, "#ffff00", 6);
 
-      // TODO
       if (nextTarget.hp <= 0) {
         const idx = this.enemies.indexOf(nextTarget);
         if (idx !== -1) {
@@ -1839,9 +1645,7 @@ export class DefenseGame {
     debugLog("Defense", "Static discharged! Hit", hitEnemies.length, "enemies");
   }
 
-  /**
-   * ? ?
-   */
+  
   addChainLine(x1, y1, x2, y2) {
     this.staticEffects.chains.push({
       x1,
@@ -1855,9 +1659,7 @@ export class DefenseGame {
     });
   }
 
-  /**
-   * ???????
-   */
+  
   createStaticSpark() {
     const angle = Math.random() * Math.PI * 2;
     const dist = 20 + Math.random() * 15;
@@ -1876,16 +1678,12 @@ export class DefenseGame {
     });
   }
 
-  /**
-   * ? ????? (/? ? ???)
-   */
+  
   chargeStaticOnHit() {
     this.staticSystem.currentCharge += this.staticSystem.hitChargeAmount;
   }
 
-  /**
-   * ?????
-   */
+  
   chargeStaticOnKill() {
     this.staticSystem.currentCharge += this.staticSystem.killChargeAmount;
   }
@@ -1896,12 +1694,10 @@ export class DefenseGame {
     let color = "#00ff00";
 
     if (this.isConquered) {
-      // TODO
       text = "? ?";
       color = "#00ff00";
-      this.playBGMTrack('SAFE_ZONE'); // TODO
+      this.playBGMTrack('SAFE_ZONE');
     } else if (this.isReinforcementMode) {
-      // TODO
       text = `? ${this.reinforcementPage}/${this.reinforcementMaxPages}`;
       color = "#ff3333";
       this.playBGMTrack('FINAL');
@@ -1911,25 +1707,21 @@ export class DefenseGame {
       color = "#00ff00";
       this.playBGMTrack('SAFE_ZONE');
     } else if (this.currentPage > maxPages) {
-      // TODO
-      text = "??READY";
+      text = "TODO";
       color = "#ff3333";
       this.playBGMTrack('FINAL');
       this.bgmManager.updateTempo(maxPages, maxPages);
     } else if (this.isFarmingZone) {
-      // TODO
       const remainingTime = Math.ceil(this.pageDuration - this.pageTimer);
       text = `PAGE: ${this.currentPage} (${remainingTime}s)`;
       color = "#ffaa00";
       this.playBGMTrack('DEFENSE');
-      this.bgmManager.updateTempo(this.currentPage, 99); // TODO
+      this.bgmManager.updateTempo(this.currentPage, 99);
     } else {
-      // TODO
       const remainingTime = Math.ceil(this.pageDuration - this.pageTimer);
       text = `PAGE: ${this.currentPage}/${maxPages} (${remainingTime}s)`;
       color = "#00f0ff";
 
-      // TODO
       if (this.currentPage >= 10) {
         this.playBGMTrack('FINAL');
       } else {
@@ -1938,7 +1730,6 @@ export class DefenseGame {
       this.bgmManager.updateTempo(this.currentPage, maxPages);
     }
 
-    // TODO
     if (this.onPageUpdate) {
       this.onPageUpdate(text, color);
     }
@@ -1967,7 +1758,7 @@ export class DefenseGame {
     } else if (!this.conquerReady && !this.isFarmingZone) {
       this.conquerReady = true;
       if (this.onPageUpdate) {
-        this.onPageUpdate("??READY", "#ff3333");
+        this.onPageUpdate("TODO", "#ff3333");
       }
       if (this.onConquerReady) {
         this.onConquerReady();
@@ -1975,14 +1766,13 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   startReinforcementMode(maxPages = 3) {
     this.isReinforcementMode = true;
     this.reinforcementPage = 1;
     this.reinforcementMaxPages = maxPages;
     this.reinforcementComplete = false;
     this.pageTimer = 0;
-    this.spawnRate = 0.17 * this.pageSpawnScale; // TODO
+    this.spawnRate = 0.17 * this.pageSpawnScale;
     this.updateWaveDisplay();
     debugLog(
       "Defense",
@@ -1993,16 +1783,14 @@ export class DefenseGame {
     );
   }
 
-  // TODO
   resetToNormalMode() {
     this.isReinforcementMode = false;
     this.reinforcementPage = 0;
     this.reinforcementComplete = false;
     this.currentPage = 1;
     this.pageTimer = 0;
-    this.spawnRate = 0.4 * this.pageSpawnScale; // TODO
+    this.spawnRate = 0.4 * this.pageSpawnScale;
 
-    // TODO
     this.core.shieldRadius = 70;
     this.core.shieldState = "OFF";
     this.core.shieldHp = this.core.shieldMaxHp;
@@ -2012,99 +1800,86 @@ export class DefenseGame {
     debugLog("Defense", "Reset to Normal Mode");
   }
 
-  // TODO
   setConqueredState(conquered) {
     debugLog(
       "DefenseGame",
-      "setConqueredState ??? conquered:",
+      "TODO",
       conquered,
       "? isConquered:",
       this.isConquered
     );
     this.isConquered = conquered;
     if (conquered) {
-      // TODO
       this.conqueredStartTime = Date.now() / 1000;
-      this.lastRotationStep = -1; // TODO
+      this.lastRotationStep = -1;
       debugLog(
         "DefenseGame",
-        "? ? ??? conqueredStartTime:",
+        "TODO",
         this.conqueredStartTime
       );
 
-      // TODO
       this.emitConquestWave();
 
-      // TODO
-      this.spawnRate = 9999; // TODO
+      this.spawnRate = 9999;
       this.core.shieldActive = false;
-      this.shieldBtn.style.display = "none"; // TODO
+      this.shieldBtn.style.display = "none";
 
-      // TODO
       this.spawnConqueredAllies(10);
     } else {
       debugLog("Conquest", "? ? ?");
-      this.conqueredStartTime = null; // TODO
-      this.conqueredDebugFrame = 0; // TODO
+      this.conqueredStartTime = null;
+      this.conqueredDebugFrame = 0;
       this.lastRotationStep = -1;
     }
     this.updateWaveDisplay();
   }
 
-  // TODO
   emitConquestWave() {
     this.shockwaves.push({
       x: this.core.x,
       y: this.core.y,
       radius: 0,
       maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.5,
-      speed: 600, // TODO
+      speed: 600,
       alpha: 1.0,
-      color: "#00ff00", // TODO
+      color: "#00ff00",
       lineWidth: 10,
       damageDealt: false,
     });
 
-    // TODO
     this.enemies.forEach((enemy) => {
-      this.applyKnockback(enemy, 400, 0.3, 3); // TODO
+      this.applyKnockback(enemy, 400, 0.3, 3);
     });
   }
 
-  // TODO
   applyKnockback(enemy, speed, slowMult = 1, slowDuration = 0) {
     const dx = enemy.x - this.core.x;
     const dy = enemy.y - this.core.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-    // TODO
     enemy.knockbackVx = (enemy.knockbackVx || 0) + (dx / dist) * speed;
     enemy.knockbackVy = (enemy.knockbackVy || 0) + (dy / dist) * speed;
 
-    // TODO
     if (slowMult < 1 && slowDuration > 0) {
       enemy.slowMultiplier = slowMult;
       enemy.slowTimer = slowDuration;
     }
   }
 
-  // TODO
   emitRotationWave(type) {
     let color, lineWidth;
 
     if (type === "green") {
-      color = "rgba(0, 255, 100, 0.8)"; // TODO
+      color = "rgba(0, 255, 100, 0.8)";
       lineWidth = 4;
     } else if (type === "blue") {
-      color = "rgba(0, 200, 255, 0.8)"; // TODO
+      color = "rgba(0, 200, 255, 0.8)";
       lineWidth = 4;
     } else {
-      // TODO
       color = "rgba(0, 255, 200, 0.9)";
       lineWidth = 6;
     }
 
-    // TODO
     this.shockwaves.push({
       x: this.core.x,
       y: this.core.y,
@@ -2117,25 +1892,21 @@ export class DefenseGame {
       damageDealt: false,
     });
 
-    // TODO
     this.enemies.forEach((enemy) => {
       if (type === "mixed") {
-        // TODO
         this.applyKnockback(enemy, 200);
-        enemy.hp -= 15; // TODO
+        enemy.hp -= 15;
       } else {
-        // TODO
         this.applyKnockback(enemy, 250, 0.5, 2);
       }
     });
   }
 
-  // TODO
   spawnConqueredAllies(count) {
     this.alliedViruses = [];
     for (let i = 0; i < count; i++) {
       const angle = ((Math.PI * 2) / count) * i;
-      const distance = 90 + Math.random() * 30; // TODO
+      const distance = 90 + Math.random() * 30;
       this.alliedViruses.push({
         x: this.core.x + Math.cos(angle) * distance,
         y: this.core.y + Math.sin(angle) * distance,
@@ -2150,34 +1921,31 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   respawnOneAlly(deadAlly = null) {
-    // TODO
     if (this.alliedConfig) {
       this.respawnAllyWithConfig(deadAlly);
       return;
     }
 
-    // TODO
     const targetCount = this.isConquered ? 10 : this.alliedInfo.count || 0;
 
     debugLog(
       "DefenseGame",
-      "respawnOneAlly ??? isConquered:",
+      "TODO",
       this.isConquered,
       "targetCount:",
       targetCount,
-      "? ? ??",
+      "TODO",
       this.alliedViruses.length
     );
 
     if (targetCount <= 0) {
-      debugLog("AllyMovement", "targetCount 0?????");
+      debugLog("AllyMovement", "TODO");
       return;
     }
 
     if (this.alliedViruses.length >= targetCount) {
-      debugLog("AllyMovement", "??  ???, ??");
+      debugLog("AllyMovement", "TODO");
       return;
     }
 
@@ -2203,14 +1971,13 @@ export class DefenseGame {
     this.alliedViruses.push(newAlly);
     debugLog(
       "DefenseGame",
-      "? ? ???, ? ? ??",
+      "TODO",
       this.alliedViruses.length
     );
 
     this.createExplosion(newAlly.x, newAlly.y, "#00aaff", 5);
   }
 
-  // TODO
   respawnAllyWithConfig(deadAlly) {
     const config = this.alliedConfig;
     if (!config) return;
@@ -2218,7 +1985,6 @@ export class DefenseGame {
     const targetCount = config.mainCount + config.subCount;
     if (this.alliedViruses.length >= targetCount) return;
 
-    // TODO
     const typeName = deadAlly?.virusType || config.mainType;
     const typeData =
       typeName === config.mainType ? config.mainTypeData : config.subTypeData;
@@ -2242,20 +2008,17 @@ export class DefenseGame {
     this.alliedViruses.push(newAlly);
     this.createExplosion(newAlly.x, newAlly.y, newAlly.color, 5);
 
-    // TODO
     this.tryVirusSpeech(newAlly, 'spawn', 0.5);
 
     debugLog(
       "DefenseGame",
-      `?? ${typeName}, ? ? ?? ${this.alliedViruses.length}`
+      `TODO`
     );
   }
 
-  // TODO
   handleAllyDeath(v, idx) {
     debugLog("AllyMovement", `? ? ?: ${v.virusType}`);
 
-    // TODO
     if (v.special === "explodeOnDeath" && v.explosionDamage > 0) {
       this.handleExplosion(
         v.x,
@@ -2266,7 +2029,6 @@ export class DefenseGame {
       );
     }
 
-    // TODO
     if (v.attackType === "suicide" && !v.exploded) {
       this.handleExplosion(
         v.x,
@@ -2279,35 +2041,29 @@ export class DefenseGame {
 
     this.createExplosion(v.x, v.y, v.color, 8);
 
-    // TODO
     if (this.alliedConfig?.synergy?.effect === "hunterSwarmSpawn" && v.virusType === "HUNTER") {
       this.spawnSynergySwarm(v.x, v.y, 2);
     }
 
-    const deadAlly = { ...v }; // TODO
+    const deadAlly = { ...v };
     this.alliedViruses.splice(idx, 1);
 
-    // TODO
     const respawnTime = (v.respawnTime || 2) * 1000;
     setTimeout(() => this.respawnOneAlly(deadAlly), respawnTime);
   }
 
-  // TODO
   updateMeleeAlly(v, dt) {
-    const searchRange = 350; // TODO
+    const searchRange = 350;
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
-    // TODO
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
 
-    // TODO
     const hasTankProtectionSynergy = this.alliedConfig?.synergy?.effect === "tankProtection";
     let anchorTank = null;
 
     if (hasTankProtectionSynergy && v.virusType === "SWARM") {
-      // TODO
       let minTankDist = Infinity;
       for (const ally of this.alliedViruses) {
         if (ally.virusType === "TANK" && ally.hp > 0) {
@@ -2320,7 +2076,6 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     if (v.virusType === "TANK" && v.special === "taunt") {
       v.tauntTimer = (v.tauntTimer || 0) + dt;
       const cooldown = v.tauntCooldown || 5;
@@ -2329,26 +2084,22 @@ export class DefenseGame {
         v.tauntTimer = 0;
         const tauntRadius = v.tauntRadius || 100;
 
-        // TODO
         let tauntedCount = 0;
         for (const enemy of this.enemies) {
           const dist = Math.hypot(enemy.x - v.x, enemy.y - v.y);
           if (dist < tauntRadius) {
-            enemy.tauntedBy = v; // TODO
+            enemy.tauntedBy = v;
             tauntedCount++;
 
-            // TODO
-            const pullSpeed = 150; // TODO
+            const pullSpeed = 150;
             const angle = Math.atan2(v.y - enemy.y, v.x - enemy.x);
             enemy.knockbackVx = (enemy.knockbackVx || 0) + Math.cos(angle) * pullSpeed;
             enemy.knockbackVy = (enemy.knockbackVy || 0) + Math.sin(angle) * pullSpeed;
           }
         }
 
-        // TODO
         if (tauntedCount > 0) {
           this.createTauntEffect(v.x, v.y, tauntRadius, v.color);
-          // TODO
           this.tryVirusSpeech(v, 'taunt', 0.8);
         }
       }
@@ -2359,37 +2110,30 @@ export class DefenseGame {
       const collisionDist = v.radius + nearestEnemy.radius + 5;
 
       if (dist < collisionDist) {
-        // TODO
         const damage = v.damage || 10;
         nearestEnemy.hp -= damage;
 
-        // TODO
         this.tryVirusSpeech(v, 'battle', 0.05);
 
-        // TODO
         if (v.virusType === "TANK" && v.knockbackForce > 0) {
           const angle = Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x);
-          const knockbackSpeed = v.knockbackForce * 4; // TODO
+          const knockbackSpeed = v.knockbackForce * 4;
           nearestEnemy.knockbackVx = (nearestEnemy.knockbackVx || 0) + Math.cos(angle) * knockbackSpeed;
           nearestEnemy.knockbackVy = (nearestEnemy.knockbackVy || 0) + Math.sin(angle) * knockbackSpeed;
         }
 
-        // TODO
         let receivedDamage = damage;
 
-        // TODO
         if (v.virusType === "TANK") {
           receivedDamage = Math.floor(damage * 0.3);
         }
 
-        // TODO
         if (v.hasCover) {
           receivedDamage = Math.floor(receivedDamage * 0.5);
         }
 
         v.hp -= receivedDamage;
 
-        // TODO
         if (receivedDamage > 0) {
           this.tryVirusSpeech(v, 'hurt', 0.1);
         }
@@ -2401,72 +2145,56 @@ export class DefenseGame {
           5
         );
 
-        // TODO
         if (nearestEnemy.hp <= 0) {
           this.killEnemy(nearestEnemy);
-          // TODO
           this.tryVirusSpeech(v, 'kill', 0.2);
         }
       } else {
-        // TODO
         if (hasTankProtectionSynergy && anchorTank && v.virusType === "SWARM") {
           const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
-          const protectionRange = 100; // TODO
+          const protectionRange = 100;
 
-          // TODO
           if (tankDist > protectionRange) {
-            // TODO
             const midX = (anchorTank.x + nearestEnemy.x) / 2;
             const midY = (anchorTank.y + nearestEnemy.y) / 2;
             this.smoothMoveToward(v, midX, midY, dt, 1.0);
           } else {
-            // TODO
             this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.2);
           }
         } else {
-          // TODO
           this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.2);
         }
       }
     } else {
-      // TODO
       if (hasTankProtectionSynergy && anchorTank && v.virusType === "SWARM") {
-        // TODO
         const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
         if (tankDist > 80) {
           this.smoothMoveToward(v, anchorTank.x, anchorTank.y, dt, 0.6);
         } else {
-          this.fluidPatrol(v, dt, 60); // TODO
+          this.fluidPatrol(v, dt, 60);
         }
       } else {
-        // TODO
         this.fluidPatrol(v, dt);
       }
     }
 
-    // TODO
     this.keepOutsideBarrier(v);
   }
 
-  // TODO
   updateRangedAlly(v, dt) {
-    const searchRange = (v.range || 150) + 100; // TODO
+    const searchRange = (v.range || 150) + 100;
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
-    // TODO
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
 
-    // TODO
     v.attackTimer = (v.attackTimer || 0) + dt;
 
-    // TODO
     const hasHunterCoverSynergy = this.alliedConfig?.synergy?.effect === "hunterCover";
     let anchorTank = null;
 
     if (hasHunterCoverSynergy) {
-      // TODO
       let minTankDist = Infinity;
       for (const ally of this.alliedViruses) {
         if (ally.virusType === "TANK" && ally.hp > 0) {
@@ -2483,49 +2211,40 @@ export class DefenseGame {
       const dist = Math.hypot(nearestEnemy.x - v.x, nearestEnemy.y - v.y);
 
       if (dist < searchRange) {
-        // TODO
         const fireInterval = 1 / (v.fireRate || 1);
         if (v.attackTimer >= fireInterval) {
           this.fireAllyProjectile(v, nearestEnemy);
           v.attackTimer = 0;
         }
 
-        // TODO
         if (hasHunterCoverSynergy && anchorTank) {
           const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
-          const coverRange = 80; // TODO
+          const coverRange = 80;
 
           if (tankDist > coverRange) {
-            // TODO
             const enemyToTankAngle = Math.atan2(
               anchorTank.y - nearestEnemy.y,
               anchorTank.x - nearestEnemy.x
             );
-            // TODO
             const behindX = anchorTank.x + Math.cos(enemyToTankAngle) * 40;
             const behindY = anchorTank.y + Math.sin(enemyToTankAngle) * 40;
             this.smoothMoveToward(v, behindX, behindY, dt, 1.0);
           } else {
-            // TODO
             const strafeAngle = Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x) + Math.PI / 2;
             const strafeX = v.x + Math.cos(strafeAngle) * 20;
             const strafeY = v.y + Math.sin(strafeAngle) * 20;
             this.smoothMoveToward(v, strafeX, strafeY, dt, 0.3);
           }
         } else {
-          // TODO
           const optimalDist = 100;
 
           if (dist < optimalDist * 0.6) {
-            // TODO
             const awayX = v.x + (v.x - nearestEnemy.x);
             const awayY = v.y + (v.y - nearestEnemy.y);
             this.smoothMoveToward(v, awayX, awayY, dt, 0.8);
           } else if (dist > optimalDist * 1.5) {
-            // TODO
             this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 0.6);
           } else {
-            // TODO
             const strafeAngle =
               Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x) +
               Math.PI / 2;
@@ -2535,35 +2254,28 @@ export class DefenseGame {
           }
         }
       } else {
-        // TODO
         this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 0.8);
       }
     } else {
-      // TODO
       if (hasHunterCoverSynergy && anchorTank) {
-        // TODO
         const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
         if (tankDist > 60) {
           this.smoothMoveToward(v, anchorTank.x, anchorTank.y, dt, 0.5);
         } else {
-          this.fluidPatrol(v, dt, 40); // TODO
+          this.fluidPatrol(v, dt, 40);
         }
       } else {
-        // TODO
         this.fluidPatrol(v, dt);
       }
     }
 
-    // TODO
     this.keepOutsideBarrier(v);
   }
 
-  // TODO
   updateSuicideAlly(v, dt) {
-    const searchRange = 400; // TODO
+    const searchRange = 400;
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
-    // TODO
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
@@ -2573,13 +2285,10 @@ export class DefenseGame {
       const explosionRange = v.radius + nearestEnemy.radius + 10;
 
       if (dist < explosionRange) {
-        // TODO
         v.exploded = true;
 
-        // TODO
         this.tryVirusSpeech(v, 'explode', 1.0);
 
-        // TODO
         let explosionRadius = v.explosionRadius;
         if (this.alliedConfig?.synergy?.effect === "bomberRangeBoost") {
           explosionRadius = Math.floor(explosionRadius * 1.3);
@@ -2593,17 +2302,14 @@ export class DefenseGame {
           v.color
         );
 
-        // TODO
         if (this.alliedConfig?.synergy?.effect === "chainExplosion") {
           this.triggerChainExplosion(v.x, v.y, explosionRadius);
         }
 
-        v.hp = 0; // TODO
+        v.hp = 0;
       } else {
-        // TODO
         this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.8);
 
-        // TODO
         v.wobblePhase += dt * 8;
         const wobble = Math.sin(v.wobblePhase) * 15;
         const perpAngle =
@@ -2612,31 +2318,24 @@ export class DefenseGame {
         v.y += Math.sin(perpAngle) * wobble * dt;
       }
     } else {
-      // TODO
       this.fluidPatrol(v, dt);
     }
 
-    // TODO
     this.keepOutsideBarrier(v);
   }
 
-  // TODO
   updateSupportAlly(v, dt) {
-    // TODO
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
 
-    // TODO
     const healRadius = v.healRadius || 80;
     const healAmount = (v.healAmount || 5) * dt;
 
-    // TODO
     const hasTankHealBoostSynergy = this.alliedConfig?.synergy?.effect === "tankHealBoost";
     let priorityTank = null;
 
     if (hasTankHealBoostSynergy) {
-      // TODO
       let lowestTankHpPercent = 1;
       for (const ally of this.alliedViruses) {
         if (ally.virusType === "TANK" && ally.hp > 0) {
@@ -2655,7 +2354,6 @@ export class DefenseGame {
       if (dist < healRadius && ally.hp < ally.maxHp) {
         ally.hp = Math.min(ally.maxHp, ally.hp + healAmount);
 
-        // TODO
         if (Math.random() < 0.05) {
           this.particles.push({
             x: ally.x,
@@ -2669,39 +2367,32 @@ export class DefenseGame {
             size: 3,
           });
 
-          // TODO
           this.tryVirusSpeech(v, 'heal', 0.1);
         }
       }
     });
 
-    // TODO
     if (hasTankHealBoostSynergy) {
       this.alliedViruses.forEach((ally) => {
         if (ally.virusType === "TANK") {
           const dist = Math.hypot(ally.x - v.x, ally.y - v.y);
           if (dist < healRadius && ally.hp < ally.maxHp) {
-            ally.hp = Math.min(ally.maxHp, ally.hp + healAmount); // TODO
+            ally.hp = Math.min(ally.maxHp, ally.hp + healAmount);
           }
         }
       });
     }
 
-    // TODO
     if (hasTankHealBoostSynergy && priorityTank) {
-      // TODO
       const tankDist = Math.hypot(priorityTank.x - v.x, priorityTank.y - v.y);
       const tankHpPercent = priorityTank.hp / priorityTank.maxHp;
 
       if (tankHpPercent < 0.8 || tankDist > healRadius) {
-        // TODO
         this.smoothMoveToward(v, priorityTank.x, priorityTank.y, dt, 0.7);
       } else {
-        // TODO
         this.fluidPatrol(v, dt, 50);
       }
     } else {
-      // TODO
       let woundedAlly = null;
       let lowestHpPercent = 1;
       this.alliedViruses.forEach((ally) => {
@@ -2714,21 +2405,17 @@ export class DefenseGame {
       });
 
       if (woundedAlly) {
-        // TODO
         this.smoothMoveToward(v, woundedAlly.x, woundedAlly.y, dt, 0.5);
       } else {
-        // TODO
         this.fluidPatrol(v, dt, 75);
       }
     }
 
-    // TODO
     this.keepOutsideBarrier(v);
   }
 
-  // TODO
   triggerChainExplosion(x, y, triggerRadius) {
-    const chainRange = triggerRadius + 30; // TODO
+    const chainRange = triggerRadius + 30;
     const swarms = this.alliedViruses.filter(
       (v) => v.virusType === "SWARM" && v.hp > 0 && !v.chainExploded
     );
@@ -2736,37 +2423,32 @@ export class DefenseGame {
     for (const swarm of swarms) {
       const dist = Math.hypot(swarm.x - x, swarm.y - y);
       if (dist < chainRange) {
-        // TODO
         swarm.chainExploded = true;
-        swarm.hp = 0; // TODO
+        swarm.hp = 0;
 
-        // TODO
         this.handleExplosion(
           swarm.x,
           swarm.y,
           swarm.explosionRadius || 25,
-          (swarm.explosionDamage || 5) * 2, // TODO
+          (swarm.explosionDamage || 5) * 2,
           swarm.color
         );
       }
     }
   }
 
-  // TODO
   applySynergyEffects(dt) {
     if (!this.alliedConfig?.synergy) return;
 
     const synergy = this.alliedConfig.synergy;
     const effect = synergy.effect;
 
-    // TODO
     const tanks = this.alliedViruses.filter(
       (v) => v.virusType === "TANK" && v.hp > 0
     );
 
     switch (effect) {
       case "tankProtection":
-        // TODO
         this.alliedViruses.forEach((v) => {
           if (v.virusType !== "SWARM") return;
 
@@ -2779,23 +2461,21 @@ export class DefenseGame {
             }
           }
 
-          // TODO
           if (nearTank && !v.tankProtectionBuff) {
             v.tankProtectionBuff = true;
-            const hpRatio = v.hp / v.maxHp; // TODO
-            v.maxHp = Math.floor(v.baseMaxHp * 1.5); // TODO
-            v.hp = Math.floor(v.maxHp * hpRatio); // TODO
+            const hpRatio = v.hp / v.maxHp;
+            v.maxHp = Math.floor(v.baseMaxHp * 1.5);
+            v.hp = Math.floor(v.maxHp * hpRatio);
           } else if (!nearTank && v.tankProtectionBuff) {
             v.tankProtectionBuff = false;
-            const hpRatio = v.hp / v.maxHp; // TODO
+            const hpRatio = v.hp / v.maxHp;
             v.maxHp = v.baseMaxHp;
-            v.hp = Math.floor(v.maxHp * hpRatio); // TODO
+            v.hp = Math.floor(v.maxHp * hpRatio);
           }
         });
         break;
 
       case "hunterCover":
-        // TODO
         this.alliedViruses.forEach((v) => {
           if (v.virusType !== "HUNTER") return;
 
@@ -2807,15 +2487,13 @@ export class DefenseGame {
               break;
             }
           }
-          v.hasCover = nearTank; // TODO
+          v.hasCover = nearTank;
         });
         break;
 
-      // TODO
     }
   }
 
-  // TODO
   findNearestEnemy(v, range) {
     let nearestEnemy = null;
     let minDist = Infinity;
@@ -2831,7 +2509,6 @@ export class DefenseGame {
     return nearestEnemy;
   }
 
-  // TODO
   smoothMoveToward(v, targetX, targetY, dt, speedMultiplier = 1.0) {
     const dx = targetX - v.x;
     const dy = targetY - v.y;
@@ -2840,17 +2517,15 @@ export class DefenseGame {
     if (dist < 1) return;
 
     const baseSpeed = (v.speed || 80) * speedMultiplier;
-    const acceleration = baseSpeed * 3; // TODO
-    const friction = 0.92; // TODO
+    const acceleration = baseSpeed * 3;
+    const friction = 0.92;
 
-    // TODO
     const ax = (dx / dist) * acceleration * dt;
     const ay = (dy / dist) * acceleration * dt;
 
     v.vx = (v.vx + ax) * friction;
     v.vy = (v.vy + ay) * friction;
 
-    // TODO
     const currentSpeed = Math.hypot(v.vx, v.vy);
     const maxSpeed = baseSpeed * 1.5;
     if (currentSpeed > maxSpeed) {
@@ -2858,14 +2533,11 @@ export class DefenseGame {
       v.vy = (v.vy / currentSpeed) * maxSpeed;
     }
 
-    // TODO
     v.x += v.vx * dt;
     v.y += v.vy * dt;
   }
 
-  // TODO
   fluidPatrol(v, dt, baseRadius = 95) {
-    // TODO
     if (this.isSafeZone) {
       if (!this._safeZoneLogOnce) {
         debugLog("Enemy", "fluidPatrol -> safeZoneWander (isSafeZone:", this.isSafeZone, ")");
@@ -2875,69 +2547,56 @@ export class DefenseGame {
       return;
     }
 
-    // TODO
     if (!v.patrolAngle) v.patrolAngle = v.angle || Math.random() * Math.PI * 2;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
     if (!v.radiusOffset) v.radiusOffset = (Math.random() - 0.5) * 20;
 
-    // TODO
     const baseAngularSpeed = 0.3 + Math.sin(v.wobblePhase * 0.5) * 0.15;
     v.patrolAngle += dt * baseAngularSpeed;
     v.wobblePhase += dt * 2;
 
-    // TODO
     const wobbleRadius = Math.sin(v.wobblePhase) * 15;
     const patrolRadius = baseRadius + v.radiusOffset + wobbleRadius;
 
-    // TODO
     const targetX = this.core.x + Math.cos(v.patrolAngle) * patrolRadius;
     const targetY = this.core.y + Math.sin(v.patrolAngle) * patrolRadius;
 
-    // TODO
     this.smoothMoveToward(v, targetX, targetY, dt, 0.4);
 
-    // TODO
     v.x += (Math.random() - 0.5) * 0.5;
     v.y += (Math.random() - 0.5) * 0.5;
   }
 
-  // TODO
   safeZoneWander(v, dt) {
     const screenW = this.canvas.width;
     const screenH = this.canvas.height;
     const margin = 40;
 
-    // TODO
     const barrierRadius = (this.core.shieldRadius || 70) + 20;
 
-    // TODO
     if (!v.homeX) {
-      // TODO
       let homeX, homeY, distFromCore;
       do {
         homeX = margin + Math.random() * (screenW - margin * 2);
         homeY = margin + Math.random() * (screenH - margin * 2);
         distFromCore = Math.hypot(homeX - this.core.x, homeY - this.core.y);
-      } while (distFromCore < barrierRadius); // TODO
+      } while (distFromCore < barrierRadius);
 
       v.homeX = homeX;
       v.homeY = homeY;
-      v.homeRadius = 60 + Math.random() * 80; // TODO
+      v.homeRadius = 60 + Math.random() * 80;
     }
 
-    // TODO
     const getNearHomePos = () => {
       const angle = Math.random() * Math.PI * 2;
       const dist = Math.random() * v.homeRadius;
       let x = v.homeX + Math.cos(angle) * dist;
       let y = v.homeY + Math.sin(angle) * dist;
-      // TODO
       x = Math.max(margin, Math.min(screenW - margin, x));
       y = Math.max(margin, Math.min(screenH - margin, y));
       return { x, y };
     };
 
-    // TODO
     if (v.safeState === undefined) {
       v.safeState = 'wander';
       v.stateTimer = 0;
@@ -2945,7 +2604,6 @@ export class DefenseGame {
       v.chatPartner = null;
       v.chatOffsetAngle = Math.random() * Math.PI * 2;
 
-      // TODO
       const pos = getNearHomePos();
       v.wanderTargetX = pos.x;
       v.wanderTargetY = pos.y;
@@ -2953,17 +2611,14 @@ export class DefenseGame {
 
     v.stateTimer += dt;
 
-    // TODO
     switch (v.safeState) {
       case 'wander':
-        // TODO
         if (v.stateTimer >= v.stateDuration) {
           v.stateTimer = 0;
 
           const roll = Math.random();
 
           if (roll < 0.5 && this.alliedViruses.length > 1) {
-            // TODO
             const nearbyFriends = this.alliedViruses.filter(a =>
               a !== v &&
               a.safeState !== 'approaching' &&
@@ -2975,14 +2630,12 @@ export class DefenseGame {
               v.safeState = 'approaching';
               v.stateDuration = 4 + Math.random() * 3;
             } else {
-              // TODO
               const pos = getNearHomePos();
               v.wanderTargetX = pos.x;
               v.wanderTargetY = pos.y;
               v.stateDuration = 3 + Math.random() * 3;
             }
           } else if (roll < 0.65) {
-            // TODO
             const farFriends = this.alliedViruses.filter(a =>
               a !== v &&
               Math.hypot(a.homeX - v.homeX, a.homeY - v.homeY) > 150
@@ -2991,10 +2644,9 @@ export class DefenseGame {
             if (farFriends.length > 0) {
               v.chatPartner = farFriends[Math.floor(Math.random() * farFriends.length)];
               v.safeState = 'approaching';
-              v.stateDuration = 6 + Math.random() * 4; // TODO
+              v.stateDuration = 6 + Math.random() * 4;
             }
           } else {
-            // TODO
             const pos = getNearHomePos();
             v.wanderTargetX = pos.x;
             v.wanderTargetY = pos.y;
@@ -3002,12 +2654,10 @@ export class DefenseGame {
           }
         }
 
-        // TODO
         this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
         break;
 
       case 'approaching':
-        // TODO
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
@@ -3017,23 +2667,19 @@ export class DefenseGame {
         const distToPartner = Math.hypot(v.chatPartner.x - v.x, v.chatPartner.y - v.y);
 
         if (distToPartner < 25) {
-          // TODO
           v.safeState = 'chatting';
           v.stateTimer = 0;
-          v.stateDuration = 4 + Math.random() * 6; // TODO
+          v.stateDuration = 4 + Math.random() * 6;
           v.chatOffsetAngle = Math.atan2(v.y - v.chatPartner.y, v.x - v.chatPartner.x);
         } else if (v.stateTimer >= v.stateDuration) {
-          // TODO
           v.safeState = 'wander';
           v.chatPartner = null;
         } else {
-          // TODO
           this.smoothMoveToward(v, v.chatPartner.x, v.chatPartner.y, dt, 0.5);
         }
         break;
 
       case 'chatting':
-        // TODO
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
@@ -3041,13 +2687,11 @@ export class DefenseGame {
         }
 
         if (v.stateTimer >= v.stateDuration) {
-          // TODO
           if (Math.random() < 0.6) {
             v.safeState = 'walkingTogether';
             v.stateTimer = 0;
-            v.stateDuration = 4 + Math.random() * 4; // TODO
+            v.stateDuration = 4 + Math.random() * 4;
 
-            // TODO
             const targetHome = Math.random() < 0.5 ? v : v.chatPartner;
             if (targetHome && targetHome.homeX) {
               const angle = Math.random() * Math.PI * 2;
@@ -3063,7 +2707,6 @@ export class DefenseGame {
             v.chatPartner = null;
           }
         } else {
-          // TODO
           const stickDist = 18;
           const targetX = v.chatPartner.x + Math.cos(v.chatOffsetAngle) * stickDist;
           const targetY = v.chatPartner.y + Math.sin(v.chatOffsetAngle) * stickDist;
@@ -3071,14 +2714,12 @@ export class DefenseGame {
           v.x += (targetX - v.x) * 0.1;
           v.y += (targetY - v.y) * 0.1;
 
-          // TODO
           v.x += (Math.random() - 0.5) * 0.3;
           v.y += (Math.random() - 0.5) * 0.3;
         }
         break;
 
       case 'walkingTogether':
-        // TODO
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
@@ -3089,19 +2730,15 @@ export class DefenseGame {
           v.safeState = 'wander';
           v.chatPartner = null;
         } else {
-          // TODO
           this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
 
-          // TODO
           if (v.chatPartner.safeState === 'chatting' || v.chatPartner.safeState === 'walkingTogether') {
             v.chatPartner.wanderTargetX = v.wanderTargetX + (Math.random() - 0.5) * 30;
             v.chatPartner.wanderTargetY = v.wanderTargetY + (Math.random() - 0.5) * 30;
           }
 
-          // TODO
           const distToPartner2 = Math.hypot(v.chatPartner.x - v.x, v.chatPartner.y - v.y);
           if (distToPartner2 > 40) {
-            // TODO
             const pullX = (v.chatPartner.x - v.x) * 0.02;
             const pullY = (v.chatPartner.y - v.y) * 0.02;
             v.x += pullX;
@@ -3111,49 +2748,37 @@ export class DefenseGame {
         break;
     }
 
-    // TODO
     const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
-    const pushStartDist = 100; // TODO
+    const pushStartDist = 100;
 
     if (distFromCore < pushStartDist && distFromCore > 0) {
-      const pushStrength = (1 - distFromCore / pushStartDist) * 2.0; // TODO
+      const pushStrength = (1 - distFromCore / pushStartDist) * 2.0;
       const pushAngle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
 
-      // TODO
       v.x += Math.cos(pushAngle) * pushStrength;
       v.y += Math.sin(pushAngle) * pushStrength;
     }
 
-    // TODO
     v.x = Math.max(margin, Math.min(screenW - margin, v.x));
     v.y = Math.max(margin, Math.min(screenH - margin, v.y));
     v.wanderTargetX = Math.max(margin, Math.min(screenW - margin, v.wanderTargetX || v.x));
     v.wanderTargetY = Math.max(margin, Math.min(screenH - margin, v.wanderTargetY || v.y));
   }
 
-  // TODO
   keepOutsideBarrier(v) {
-    // TODO
     if (!this._debugLogTimer) this._debugLogTimer = 0;
-    this._debugLogTimer += 0.016; // TODO
-    const shouldLog = this._debugLogTimer > 1 && v === this.alliedViruses[0]; // TODO
+    this._debugLogTimer += 0.016;
+    const shouldLog = this._debugLogTimer > 1 && v === this.alliedViruses[0];
     if (shouldLog) this._debugLogTimer = 0;
 
-    // TODO
     if (this.isSafeZone) {
-      // TODO
       const barrierRadius = this.core.shieldRadius || 70;
       const minDistance = barrierRadius + v.radius + 5;
       const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
 
       if (shouldLog) {
         const margin = 30;
-        debugLog("AllyMovement", `[Safe Zone]
-  ? ?: ${this.canvas.width} x ${this.canvas.height}
-  ? : (${Math.round(this.core.x)}, ${Math.round(this.core.y)})
-  ? ????: X(${margin} ~ ${this.canvas.width - margin}), Y(${margin} ~ ${this.canvas.height - margin})
-  ?    ?: ${Math.round(minDistance)}px ?
-  ? ? ?: (${Math.round(v.x)}, ${Math.round(v.y)}) / : ${Math.round(distFromCore)}px`);
+        debugLog("AllyMovement", `TODO`);
       }
 
       if (distFromCore < minDistance) {
@@ -3161,14 +2786,13 @@ export class DefenseGame {
         v.x = this.core.x + Math.cos(angle) * minDistance;
         v.y = this.core.y + Math.sin(angle) * minDistance;
       }
-      return; // TODO
+      return;
     }
 
     const barrierRadius = this.core.shieldRadius || 70;
     const minDistance = barrierRadius + v.radius + 5;
-    const margin = 30; // TODO
+    const margin = 30;
 
-    // TODO
     const minX = margin;
     const maxX = this.canvas.width - margin;
     const minY = margin;
@@ -3178,20 +2802,13 @@ export class DefenseGame {
     const angle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
 
     if (shouldLog) {
-      debugLog("AllyMovement", `[Battle]
-  ? ?: ${this.canvas.width} x ${this.canvas.height}
-  ? : (${Math.round(this.core.x)}, ${Math.round(this.core.y)})
-  ? ????: X(${minX} ~ ${maxX}), Y(${minY} ~ ${maxY})
-  ?    ?: ${Math.round(minDistance)}px ?
-  ? ? ?: (${Math.round(v.x)}, ${Math.round(v.y)}) / : ${Math.round(distFromCore)}px`);
+      debugLog("AllyMovement", `TODO`);
     }
 
-    // TODO
     if (distFromCore < minDistance) {
       v.x = this.core.x + Math.cos(angle) * minDistance;
       v.y = this.core.y + Math.sin(angle) * minDistance;
 
-      // TODO
       if (v.vx !== undefined) {
         const dot = v.vx * Math.cos(angle) + v.vy * Math.sin(angle);
         if (dot < 0) {
@@ -3201,50 +2818,41 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     let wasOutside = false;
     if (v.x < minX) { v.x = minX; wasOutside = true; }
     if (v.x > maxX) { v.x = maxX; wasOutside = true; }
     if (v.y < minY) { v.y = minY; wasOutside = true; }
     if (v.y > maxY) { v.y = maxY; wasOutside = true; }
 
-    // TODO
     if (wasOutside && v.vx !== undefined) {
       v.vx *= 0.5;
       v.vy *= 0.5;
     }
   }
 
-  // TODO
   moveTowardTarget(v, target, dt) {
     this.smoothMoveToward(v, target.x, target.y, dt, 1.0);
   }
 
-  // TODO
   patrolAlly(v, dt) {
     this.fluidPatrol(v, dt);
   }
 
-  // TODO
   separateAllViruses() {
     const allEntities = [];
 
-    // TODO
     this.alliedViruses.forEach(v => {
       allEntities.push({ entity: v, type: 'ally' });
     });
 
-    // TODO
     this.enemies.forEach(e => {
       allEntities.push({ entity: e, type: 'enemy' });
     });
 
-    // TODO
     this.collectorViruses.forEach(c => {
       allEntities.push({ entity: c, type: 'collector' });
     });
 
-    // TODO
     for (let i = 0; i < allEntities.length; i++) {
       for (let j = i + 1; j < allEntities.length; j++) {
         const a = allEntities[i].entity;
@@ -3253,15 +2861,13 @@ export class DefenseGame {
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const dist = Math.hypot(dx, dy);
-        const minDist = (a.radius || 8) + (b.radius || 8) + 2; // TODO
+        const minDist = (a.radius || 8) + (b.radius || 8) + 2;
 
         if (dist < minDist && dist > 0) {
-          // TODO
           const overlap = minDist - dist;
           const pushX = (dx / dist) * overlap * 0.5;
           const pushY = (dy / dist) * overlap * 0.5;
 
-          // TODO
           a.x -= pushX;
           a.y -= pushY;
           b.x += pushX;
@@ -3282,17 +2888,14 @@ export class DefenseGame {
       this.updateResourceDisplay(this.currentData);
       if (this.onResourceGained) this.onResourceGained(gain);
 
-      // TODO
       if (this.onEnemyKilled) {
         this.onEnemyKilled(enemy.x, enemy.y);
       }
 
-      // TODO
       if (this.isBossFight) {
         this.frameEnemiesKilled++;
       }
 
-      // TODO
       const effects = this.getItemEffects();
       if (effects.lifesteal > 0 && this.core.shieldHp < this.core.shieldMaxHp) {
         this.core.shieldHp = Math.min(this.core.shieldMaxHp, this.core.shieldHp + effects.lifesteal);
@@ -3300,7 +2903,6 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   fireAllyProjectile(v, target) {
     const angle = Math.atan2(target.y - v.y, target.x - v.x);
 
@@ -3312,16 +2914,14 @@ export class DefenseGame {
       damage: v.damage,
       radius: 3,
       color: v.color,
-      fromAlly: true, // TODO
+      fromAlly: true,
       lifetime: 2,
       age: 0,
     });
 
-    // TODO
     this.createExplosion(v.x, v.y, v.color, 3);
   }
 
-  // TODO
   spawnSynergySwarm(x, y, count) {
     if (!this.alliedConfig) return;
 
@@ -3353,94 +2953,76 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   renderConqueredVisuals() {
     const ctx = this.ctx;
     const x = this.core.x;
     const y = this.core.y;
-    const size = 80; // TODO
+    const size = 80;
 
-    // TODO
     if (!this.conqueredStartTime) {
       this.conqueredStartTime = Date.now() / 1000;
       debugLog(
         "ConqueredVisuals",
-        "conqueredStartTime ??",
+        "TODO",
         this.conqueredStartTime
       );
     }
     const elapsed = Date.now() / 1000 - this.conqueredStartTime;
 
-    // TODO
-    const ROTATION_TIME = 0.8; // TODO
-    const PAUSE_TIME = 0.5; // TODO
-    const CYCLE_DURATION = ROTATION_TIME * 3 + PAUSE_TIME * 3; // TODO
+    const ROTATION_TIME = 0.8;
+    const PAUSE_TIME = 0.5;
+    const CYCLE_DURATION = ROTATION_TIME * 3 + PAUSE_TIME * 3;
 
     const cycleTime = elapsed % CYCLE_DURATION;
-    const fullCycles = Math.floor(elapsed / CYCLE_DURATION); // TODO
-    // TODO
-    // TODO
+    const fullCycles = Math.floor(elapsed / CYCLE_DURATION);
     const easeInOut = (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
 
     let targetAngle;
-    let currentStep = 0; // TODO
+    let currentStep = 0;
 
     if (cycleTime < ROTATION_TIME) {
-      // TODO
       const progress = easeInOut(cycleTime / ROTATION_TIME);
       targetAngle = progress * (Math.PI / 2);
       currentStep = 0;
     } else if (cycleTime < ROTATION_TIME + PAUSE_TIME) {
-      // TODO
       targetAngle = Math.PI / 2;
       currentStep = 1;
     } else if (cycleTime < ROTATION_TIME * 2 + PAUSE_TIME) {
-      // TODO
       const localTime = cycleTime - (ROTATION_TIME + PAUSE_TIME);
       const progress = easeInOut(localTime / ROTATION_TIME);
       targetAngle = Math.PI / 2 + progress * (Math.PI / 2);
       currentStep = 2;
     } else if (cycleTime < ROTATION_TIME * 2 + PAUSE_TIME * 2) {
-      // TODO
       targetAngle = Math.PI;
       currentStep = 3;
     } else if (cycleTime < ROTATION_TIME * 3 + PAUSE_TIME * 2) {
-      // TODO
       const localTime = cycleTime - (ROTATION_TIME * 2 + PAUSE_TIME * 2);
       const progress = easeInOut(localTime / ROTATION_TIME);
       targetAngle = Math.PI + progress * Math.PI;
       currentStep = 4;
     } else {
-      // TODO
       targetAngle = Math.PI * 2;
       currentStep = 5;
     }
 
-    // TODO
     const globalStep = fullCycles * 6 + currentStep;
     if (
       this.lastRotationStep !== undefined &&
       this.lastRotationStep !== globalStep
     ) {
-      // TODO
       if (currentStep === 1) {
-        // TODO
         this.emitRotationWave("green");
       } else if (currentStep === 3) {
-        // TODO
         this.emitRotationWave("blue");
       } else if (currentStep === 5) {
-        // TODO
         this.emitRotationWave("mixed");
       }
     }
     this.lastRotationStep = globalStep;
 
-    // TODO
     const baseAngle = fullCycles * Math.PI * 2;
     const rotationAngle = baseAngle + targetAngle;
 
-    // TODO
     if (!this.conqueredDebugFrame) this.conqueredDebugFrame = 0;
     this.conqueredDebugFrame++;
     if (this.conqueredDebugFrame % 60 === 0) {
@@ -3455,11 +3037,9 @@ export class DefenseGame {
       );
     }
 
-    // TODO
     ctx.save();
     ctx.translate(x, y);
 
-    // TODO
     ctx.save();
     ctx.rotate(rotationAngle);
     ctx.strokeStyle = `rgba(0, 255, 100, 0.6)`;
@@ -3467,31 +3047,27 @@ export class DefenseGame {
     ctx.strokeRect(-size / 2, -size / 2, size, size);
     ctx.restore();
 
-    // TODO
     ctx.save();
-    const reverseAngle = Math.PI / 4 - rotationAngle; // TODO
+    const reverseAngle = Math.PI / 4 - rotationAngle;
     ctx.rotate(reverseAngle);
     ctx.strokeStyle = `rgba(0, 200, 255, 0.6)`;
     ctx.lineWidth = 2;
     ctx.strokeRect(-size / 2, -size / 2, size, size);
     ctx.restore();
 
-    // TODO
     if (this.conqueredDebugFrame % 60 === 0) {
       debugLog(
         "ConqueredVisuals",
-        `??? ?: ${((rotationAngle * 180) / Math.PI).toFixed(1)}, ` +
-        `??? ?: ${((reverseAngle * 180) / Math.PI).toFixed(1)}`
+        `TODO` +
+        `TODO`
       );
     }
 
     ctx.restore();
 
-    // TODO
     ctx.save();
     ctx.translate(x, y - 25);
 
-    // TODO
     ctx.strokeStyle = "#888";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -3499,7 +3075,6 @@ export class DefenseGame {
     ctx.lineTo(0, -40);
     ctx.stroke();
 
-    // TODO
     ctx.fillStyle = "#00ff00";
     ctx.beginPath();
     ctx.moveTo(0, -40);
@@ -3509,7 +3084,6 @@ export class DefenseGame {
     ctx.closePath();
     ctx.fill();
 
-    // TODO
     ctx.strokeStyle = "#00aa00";
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -3517,11 +3091,8 @@ export class DefenseGame {
     ctx.restore();
   }
 
-  // TODO
 
-  /**
-   * ?????? (GameManager? ?)
-   */
+  
   spawnDroppedItem(x, y, item) {
     this.droppedItems.push({
       x,
@@ -3532,13 +3103,10 @@ export class DefenseGame {
       pulsePhase: Math.random() * Math.PI * 2
     });
 
-    // TODO
     this.spawnCollectorVirus(x, y);
   }
 
-  /**
-   * ? ? ? ?
-   */
+  
   spawnCollectorVirus(targetX, targetY) {
     const angle = Math.random() * Math.PI * 2;
     const spawnDist = 30;
@@ -3546,28 +3114,25 @@ export class DefenseGame {
     this.collectorViruses.push({
       x: this.core.x + Math.cos(angle) * spawnDist,
       y: this.core.y + Math.sin(angle) * spawnDist,
-      vx: 0, // TODO
+      vx: 0,
       vy: 0,
       targetX,
       targetY,
-      speed: 120, // TODO
-      state: "toItem", // TODO
+      speed: 120,
+      state: "toItem",
       carriedItem: null,
       spawnTime: performance.now(),
-      wobblePhase: Math.random() * Math.PI * 2, // TODO
-      wobbleSpeed: 5 + Math.random() * 3, // TODO
-      pathOffset: (Math.random() - 0.5) * 40 // TODO
+      wobblePhase: Math.random() * Math.PI * 2,
+      wobbleSpeed: 5 + Math.random() * 3,
+      pathOffset: (Math.random() - 0.5) * 40
     });
   }
 
-  /**
-   * ? ? ?? (?????)
-   */
+  
   updateCollectorViruses(dt) {
     for (let i = this.collectorViruses.length - 1; i >= 0; i--) {
       const v = this.collectorViruses[i];
 
-      // TODO
       v.wobblePhase += dt * v.wobbleSpeed;
 
       let targetX, targetY;
@@ -3579,7 +3144,6 @@ export class DefenseGame {
         const dist = Math.hypot(targetX - v.x, targetY - v.y);
 
         if (dist < 15) {
-          // TODO
           const droppedItem = this.droppedItems.find(
             d => !d.collected && Math.hypot(d.x - v.x, d.y - v.y) < 25
           );
@@ -3588,7 +3152,6 @@ export class DefenseGame {
             droppedItem.collected = true;
             v.carriedItem = droppedItem.item;
             v.state = "returning";
-            // TODO
             v.speed = 180;
           } else {
             v.state = "returning";
@@ -3602,11 +3165,9 @@ export class DefenseGame {
         const dist = Math.hypot(targetX - v.x, targetY - v.y);
 
         if (dist < 25) {
-          // TODO
           if (v.carriedItem && this.onItemCollected) {
             this.onItemCollected(v.carriedItem);
           }
-          // TODO
           this.createExplosion(v.x, v.y, "#00ff88", 5);
           this.collectorViruses.splice(i, 1);
           continue;
@@ -3615,39 +3176,32 @@ export class DefenseGame {
         continue;
       }
 
-      // TODO
       const dx = targetX - v.x;
       const dy = targetY - v.y;
       const dist = Math.hypot(dx, dy);
 
       if (dist > 1) {
-        // TODO
         const targetVx = (dx / dist) * v.speed;
         const targetVy = (dy / dist) * v.speed;
 
-        // TODO
         const accel = 8;
         v.vx += (targetVx - v.vx) * accel * dt;
         v.vy += (targetVy - v.vy) * accel * dt;
 
-        // TODO
         const wobbleAmount = Math.sin(v.wobblePhase) * 25;
         const perpAngle = Math.atan2(dy, dx) + Math.PI / 2;
         const wobbleX = Math.cos(perpAngle) * wobbleAmount * dt;
         const wobbleY = Math.sin(perpAngle) * wobbleAmount * dt;
 
-        // TODO
         v.x += v.vx * dt + wobbleX;
         v.y += v.vy * dt + wobbleY;
       }
     }
 
-    // TODO
     this.droppedItems = this.droppedItems.filter(d => !d.collected);
   }
 
-  /**
-   * ?????    */
+  
   renderDroppedItems() {
     const ctx = this.ctx;
     const now = performance.now();
@@ -3659,7 +3213,6 @@ export class DefenseGame {
       const pulse = 1 + Math.sin(d.pulsePhase + age * 4) * 0.15;
       const size = 12 * pulse;
 
-      // TODO
       const colors = {
         common: "#ffffff",
         rare: "#00aaff",
@@ -3667,23 +3220,19 @@ export class DefenseGame {
       };
       const color = colors[d.item.rarity] || "#ffffff";
 
-      // TODO
       ctx.save();
       ctx.shadowColor = color;
       ctx.shadowBlur = 15;
 
-      // TODO
       ctx.fillStyle = `rgba(0, 0, 0, 0.7)`;
       ctx.beginPath();
       ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
       ctx.fill();
 
-      // TODO
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // TODO
       ctx.fillStyle = "#ffffff";
       ctx.font = `${size}px Arial`;
       ctx.textAlign = "center";
@@ -3694,9 +3243,7 @@ export class DefenseGame {
     });
   }
 
-  /**
-   * ? ? ??(????? ?)
-   */
+  
   renderCollectorViruses() {
     const ctx = this.ctx;
     const time = performance.now() / 1000;
@@ -3706,19 +3253,16 @@ export class DefenseGame {
 
       ctx.save();
 
-      // TODO
       const wobble = Math.sin(time * 5 + v.wobblePhase) * 1.5;
       const breathe = 1 + Math.sin(time * 3 + v.wobblePhase * 2) * 0.1;
       const size = baseSize * breathe;
 
-      // TODO
       const offsetX = wobble * 0.4;
       const offsetY = Math.cos(time * 4 + v.wobblePhase) * 0.8;
 
       const drawX = v.x + offsetX;
       const drawY = v.y + offsetY;
 
-      // TODO
       const moveAngle = Math.atan2(v.vy || 0, v.vx || 0);
       const speed = Math.hypot(v.vx || 0, v.vy || 0);
       const tilt = (speed / v.speed) * 0.2;
@@ -3726,25 +3270,21 @@ export class DefenseGame {
       ctx.translate(drawX, drawY);
       ctx.rotate(tilt * Math.sin(moveAngle));
 
-      // TODO
       ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
       ctx.beginPath();
       ctx.ellipse(2, 3, size * 0.8, size * 0.4, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // TODO
       const bodyColor = v.carriedItem ? "#00ff88" : "#88ffcc";
       ctx.fillStyle = bodyColor;
       ctx.beginPath();
       ctx.arc(0, 0, size, 0, Math.PI * 2);
       ctx.fill();
 
-      // TODO
       ctx.strokeStyle = v.carriedItem ? "#00aa55" : "#55aa88";
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // TODO
       ctx.fillStyle = "#000";
       ctx.beginPath();
       ctx.arc(-2, -1, 1.5, 0, Math.PI * 2);
@@ -3753,12 +3293,10 @@ export class DefenseGame {
 
       ctx.restore();
 
-      // TODO
       if (v.carriedItem) {
         ctx.save();
         const floatY = Math.sin(time * 6) * 2;
 
-        // TODO
         const itemColor = this.getItemRarityColor(v.carriedItem.rarity);
         ctx.shadowColor = itemColor;
         ctx.shadowBlur = 8;
@@ -3773,9 +3311,7 @@ export class DefenseGame {
     });
   }
 
-  /**
-   * ?????? 
-   */
+  
   getItemRarityColor(rarity) {
     const colors = {
       common: "#ffffff",
@@ -3786,28 +3322,25 @@ export class DefenseGame {
   }
 
   render() {
-    // TODO
     if (!this.renderDebugFrameCount) this.renderDebugFrameCount = 0;
 
-    // TODO
     const shouldLog = this.renderDebugFrameCount < 3;
     if (shouldLog) {
       this.renderDebugFrameCount++;
       const mode = this.isMiniDisplay ? "" : "?";
-      debugLog("Canvas", `=== render() ? [${mode} ] (???${this.renderDebugFrameCount}) ===`);
+      debugLog("Canvas", `TODO`);
       debugLog("Canvas", "canvas.id:", this.canvas.id);
       debugLog("Canvas", "canvas size:", this.canvas.width, "x", this.canvas.height);
       debugLog("Canvas", "canvas.style.display:", this.canvas.style.display);
       debugLog("Canvas", "isMiniDisplay:", this.isMiniDisplay);
       debugLog("Canvas", "gameScale:", this.gameScale);
-      debugLog("Canvas", "?:", this.alliedViruses.length, "??", this.enemies.length);
+      debugLog("Canvas", "?:", this.alliedViruses.length, "TODO", this.enemies.length);
       debugLog("Canvas", " ?:", this.core.x, this.core.y);
-      debugLog("Canvas", " ??", this.core.radius);
+      debugLog("Canvas", "TODO", this.core.radius);
     }
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // TODO
     this.ctx.save();
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2;
@@ -3819,18 +3352,18 @@ export class DefenseGame {
     const time = Date.now() / 1000;
     const isMobile = this.isMobile;
 
-    // TODO
     if (this.miningManager) {
       this.miningManager.render(this.ctx, time, isMobile);
     }
+    if (this.isSafeZone) {
+      this.renderMiningEffect(this.ctx, time);
+    }
 
-    // TODO
     if (this.isConquered) {
-      // TODO
       if (!this.conqueredRenderLogged) {
         debugLog(
           "DefenseGame",
-          "? ? ???, isConquered:",
+          "TODO",
           this.isConquered,
           "conqueredStartTime:",
           this.conqueredStartTime
@@ -3839,35 +3372,29 @@ export class DefenseGame {
       }
       this.renderConqueredVisuals();
     } else {
-      // TODO
       this.conqueredRenderLogged = false;
     }
 
-    // TODO
     if (!this.isConquered) {
       const shieldRadius = Math.max(0, this.core.shieldRadius);
-      const cx = this.core.x;
-      const cy = this.core.y;
+      const cx = this.shieldAnchor.x;
+      const cy = this.shieldAnchor.y;
       const sv = this.shieldVisual;
       const state = this.core.shieldState;
 
-      // TODO
       const hpRatio = this.core.shieldHp / this.core.shieldMaxHp;
-      // TODO
       const r = Math.floor(255 * (1 - hpRatio));
       const g = Math.floor(200 * hpRatio + 50 * (1 - hpRatio));
       const b = Math.floor(255 * hpRatio + 50 * (1 - hpRatio));
 
-      // TODO
       let dashOffset = sv.rotation;
       if (state === "BROKEN" || state === "RECHARGING") {
-        const stepDuration = 500; // TODO
+        const stepDuration = 500;
         const stepSize = 20;
         const currentStep = Math.floor(Date.now() / stepDuration);
         dashOffset = currentStep * stepSize;
       }
 
-      // TODO
       if (sv.fillAlpha > 0.01 && shieldRadius > 0) {
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
@@ -3875,33 +3402,27 @@ export class DefenseGame {
         this.ctx.fill();
       }
 
-      // TODO
       if (shieldRadius <= 0) {
-        // TODO
         this.ctx.setLineDash([]);
       } else {
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
 
         if (sv.dashGap > 0.5) {
-          // TODO
           const dashLength = Math.max(3, 10 - sv.dashGap * 0.3);
           this.ctx.setLineDash([dashLength, sv.dashGap]);
           this.ctx.lineDashOffset = -dashOffset;
         } else {
-          // TODO
           this.ctx.setLineDash([]);
         }
 
         this.ctx.lineWidth = sv.lineWidth;
 
-        // TODO
         let alpha = sv.alpha;
         if (state === "ACTIVE") {
           alpha = sv.alpha + Math.sin(Date.now() / 200) * 0.15;
         }
 
-        // TODO
         if (state === "BROKEN" || state === "RECHARGING") {
           this.ctx.strokeStyle = `rgba(100, 100, 100, ${alpha})`;
         } else {
@@ -3910,19 +3431,15 @@ export class DefenseGame {
 
         this.ctx.stroke();
         this.ctx.setLineDash([]);
-      } // TODO
+      }
     }
 
-    // TODO
     this.alliedViruses.forEach((v) => {
       this.ctx.save();
 
-      // TODO
       if (isMobile) {
-        // TODO
         this.ctx.translate(v.x, v.y);
       } else {
-        // TODO
         const wobble = Math.sin(time * 5 + (v.wobblePhase || 0)) * 1.5;
         const breathe =
           1 + Math.sin(time * 3 + (v.wobblePhase || 0) * 2) * 0.08;
@@ -3930,15 +3447,12 @@ export class DefenseGame {
         this.ctx.translate(v.x + wobble * 0.3, v.y + wobble * 0.2);
         this.ctx.scale(breathe, breathe);
 
-        // TODO
         this.ctx.shadowColor = v.color;
         this.ctx.shadowBlur = 8;
       }
 
-      // TODO
       switch (v.virusType) {
         case "TANK":
-          // TODO
           this.ctx.fillStyle = v.color;
           this.ctx.beginPath();
           for (let i = 0; i < 6; i++) {
@@ -3950,14 +3464,12 @@ export class DefenseGame {
           }
           this.ctx.closePath();
           this.ctx.fill();
-          // TODO
           this.ctx.strokeStyle = "#ffffff44";
           this.ctx.lineWidth = 2;
           this.ctx.stroke();
           break;
 
         case "HUNTER":
-          // TODO
           const moveAngle = Math.atan2(v.vy || 0, v.vx || 0);
           this.ctx.rotate(moveAngle);
           this.ctx.fillStyle = v.color;
@@ -3970,7 +3482,6 @@ export class DefenseGame {
           break;
 
         case "BOMBER":
-          // TODO
           if (!isMobile) {
             const blink = Math.sin(time * 10) > 0 ? 1 : 0.6;
             this.ctx.globalAlpha = blink;
@@ -3979,7 +3490,6 @@ export class DefenseGame {
           this.ctx.beginPath();
           this.ctx.arc(0, 0, v.radius, 0, Math.PI * 2);
           this.ctx.fill();
-          // TODO
           this.ctx.fillStyle = "#ffff00";
           this.ctx.beginPath();
           this.ctx.arc(0, 0, v.radius * 0.4, 0, Math.PI * 2);
@@ -3987,15 +3497,11 @@ export class DefenseGame {
           break;
 
         case "HEALER":
-          // TODO
           this.ctx.fillStyle = v.color;
           const armWidth = v.radius * 0.4;
           const armLength = v.radius;
-          // TODO
           this.ctx.fillRect(-armLength, -armWidth / 2, armLength * 2, armWidth);
-          // TODO
           this.ctx.fillRect(-armWidth / 2, -armLength, armWidth, armLength * 2);
-          // TODO
           this.ctx.beginPath();
           this.ctx.arc(0, 0, armWidth * 0.8, 0, Math.PI * 2);
           this.ctx.fill();
@@ -4003,7 +3509,6 @@ export class DefenseGame {
 
         case "SWARM":
         default:
-          // TODO
           this.ctx.fillStyle = v.color;
           this.ctx.beginPath();
           this.ctx.arc(0, 0, v.radius, 0, Math.PI * 2);
@@ -4011,7 +3516,6 @@ export class DefenseGame {
           break;
       }
 
-      // TODO
       const eyeSize = v.radius * 0.2;
 
       this.ctx.fillStyle = "#000";
@@ -4020,17 +3524,14 @@ export class DefenseGame {
       this.ctx.arc(v.radius * 0.3, -v.radius * 0.1, eyeSize, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // TODO
       if (v.hp < v.maxHp) {
-        if (!isMobile) this.ctx.shadowBlur = 0; // TODO
+        if (!isMobile) this.ctx.shadowBlur = 0;
         const barWidth = v.radius * 2;
         const barHeight = 2;
         const hpPercent = v.hp / v.maxHp;
 
-        // TODO
         this.ctx.fillStyle = "#333";
         this.ctx.fillRect(-barWidth / 2, -v.radius - 6, barWidth, barHeight);
-        // TODO
         this.ctx.fillStyle =
           hpPercent > 0.5
             ? "#00ff00"
@@ -4048,77 +3549,62 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // TODO
-    // TODO
     if (this.helper && this.helper.x !== 0) {
       const h = this.helper;
       const mode = this.getCurrentWeaponMode();
 
-      // TODO
       this.ctx.fillStyle = h.color;
       this.ctx.beginPath();
       this.ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // TODO
       this.ctx.strokeStyle = "#ffffff";
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
 
-      // TODO
       this.ctx.save();
       this.ctx.translate(h.x, h.y);
 
-      // TODO
       const now = performance.now();
       const lastFire = h.faceLookTime || 0;
       const timeSinceFire = now - lastFire;
-      const lookDuration = 200; // TODO
-      const returnDuration = 300; // TODO
+      const lookDuration = 200;
+      const returnDuration = 300;
 
       let lookIntensity = 0;
       if (timeSinceFire < lookDuration) {
-        // TODO
         lookIntensity = 1;
       } else if (timeSinceFire < lookDuration + returnDuration) {
-        // TODO
         lookIntensity = 1 - (timeSinceFire - lookDuration) / returnDuration;
       }
-      // TODO
 
-      const lookStrength = h.radius * 0.2 * lookIntensity; // TODO
+      const lookStrength = h.radius * 0.2 * lookIntensity;
       const fireAngle = h.faceLookAngle || 0;
       const lookX = Math.cos(fireAngle) * lookStrength;
       const lookY = Math.sin(fireAngle) * lookStrength;
 
-      // TODO
       const faceOffsetX = lookX;
-      const faceOffsetY = -h.radius * 0.25 + lookY * 0.5; // TODO
-      // TODO
+      const faceOffsetY = -h.radius * 0.25 + lookY * 0.5;
       const eyeRadius = h.radius * 0.12;
       const eyeY = faceOffsetY - h.radius * 0.1;
       const eyeSpacing = h.radius * 0.3;
 
-      // TODO
       this.ctx.fillStyle = "#000";
       this.ctx.beginPath();
       this.ctx.arc(faceOffsetX - eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // TODO
       this.ctx.fillStyle = "#000";
       this.ctx.beginPath();
       this.ctx.arc(faceOffsetX + eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // TODO
       const mouthY = faceOffsetY + h.radius * 0.2;
       const mouthWidth = h.radius * 0.4;
 
       this.ctx.strokeStyle = "#000";
       this.ctx.lineWidth = 1.2;
       this.ctx.beginPath();
-      // TODO
       this.ctx.moveTo(faceOffsetX - mouthWidth, mouthY);
       this.ctx.quadraticCurveTo(faceOffsetX - mouthWidth * 0.5, mouthY + h.radius * 0.15, faceOffsetX, mouthY);
       this.ctx.quadraticCurveTo(faceOffsetX + mouthWidth * 0.5, mouthY + h.radius * 0.15, faceOffsetX + mouthWidth, mouthY);
@@ -4126,12 +3612,10 @@ export class DefenseGame {
 
       this.ctx.restore();
 
-      // TODO
       if (h.isReloading && mode.hasReload) {
         const reloadRadius = h.radius + 8;
         const progress = h.reloadProgress;
 
-        // TODO
         this.ctx.beginPath();
         this.ctx.arc(
           h.x,
@@ -4146,14 +3630,12 @@ export class DefenseGame {
         this.ctx.stroke();
         this.ctx.lineCap = "butt";
 
-        // TODO
         this.ctx.beginPath();
         this.ctx.arc(h.x, h.y, reloadRadius, 0, Math.PI * 2);
         this.ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
 
-        // TODO
         const glitchTime = Date.now();
         const glitchX = (Math.random() - 0.5) * 4;
         const glitchY = (Math.random() - 0.5) * 2;
@@ -4163,7 +3645,6 @@ export class DefenseGame {
         this.ctx.textAlign = "center";
         this.ctx.textBaseline = "middle";
 
-        // TODO
         if (glitchTime % 100 < 50) {
           this.ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
           this.ctx.fillText(
@@ -4179,7 +3660,6 @@ export class DefenseGame {
           );
         }
 
-        // TODO
         if (glitchTime % 200 < 150) {
           this.ctx.fillStyle = h.color;
           this.ctx.shadowColor = h.color;
@@ -4192,7 +3672,6 @@ export class DefenseGame {
           this.ctx.shadowBlur = 0;
         }
 
-        // TODO
         this.ctx.fillStyle = "#ffffff";
         this.ctx.font = "bold 8px monospace";
         this.ctx.fillText(
@@ -4204,7 +3683,6 @@ export class DefenseGame {
         this.ctx.restore();
       }
 
-      // TODO
       if (mode.hasReload && !h.isReloading) {
         this.ctx.save();
         this.ctx.font = "bold 8px monospace";
@@ -4220,12 +3698,10 @@ export class DefenseGame {
       }
     }
 
-    // TODO
     this.ctx.font = "bold 12px monospace";
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
     this.projectiles.forEach((p) => {
-      // TODO
       const color = p.fromHelper ? "#ffff00" : "#00ff00";
       this.ctx.fillStyle = color;
       this.ctx.shadowColor = color;
@@ -4234,29 +3710,25 @@ export class DefenseGame {
     });
     this.ctx.shadowBlur = 0;
 
-    // TODO
     this.enemies.forEach((e) => {
       this.ctx.fillStyle = "#ff3333";
       this.ctx.beginPath();
       this.ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
       this.ctx.fill();
 
-      const hpPct = Math.max(0, Math.min(1, e.hp / e.maxHp)); // TODO
+      const hpPct = Math.max(0, Math.min(1, e.hp / e.maxHp));
       this.ctx.fillStyle = "#550000";
       this.ctx.fillRect(e.x - 10, e.y - 20, 20, 4);
       this.ctx.fillStyle = "#ff0000";
       this.ctx.fillRect(e.x - 10, e.y - 20, 20 * hpPct, 4);
     });
 
-    // TODO
     const coreScale = this.core.scale || 1;
     const scaledRadius = this.core.radius * coreScale;
 
-    // TODO
     const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
     const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
 
-    // TODO
     this.ctx.save();
     this.ctx.translate(coreVisualX, coreVisualY);
     this.ctx.rotate(this.turret.angle);
@@ -4270,11 +3742,9 @@ export class DefenseGame {
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.stroke();
 
-    // TODO
     if (this.showCoreHP !== false && !this.isOutroPlaying) {
       const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
 
-      // TODO
       const offsetX = this.glitchText ? this.glitchOffset?.x || 0 : 0;
       const offsetY = this.glitchText ? this.glitchOffset?.y || 0 : 0;
 
@@ -4282,16 +3752,13 @@ export class DefenseGame {
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
 
-      // TODO
       if (this.glitchText) {
-        // TODO
         this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
         this.ctx.fillText(
           `${hpPercent}%`,
           coreVisualX + offsetX - 2,
           coreVisualY + scaledRadius + 20 + offsetY
         );
-        // TODO
         this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
         this.ctx.fillText(
           `${hpPercent}%`,
@@ -4300,7 +3767,6 @@ export class DefenseGame {
         );
       }
 
-      // TODO
       this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
       this.ctx.fillText(
         `${hpPercent}%`,
@@ -4309,31 +3775,26 @@ export class DefenseGame {
       );
     }
 
-    // TODO
     this.ctx.font = "bold 10px monospace";
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
 
     this.particles.forEach((p) => {
-      // TODO
       const glitchX = p.char ? (Math.random() - 0.5) * 3 : 0;
       const glitchY = p.char ? (Math.random() - 0.5) * 3 : 0;
 
-      // TODO
       if (p.char && Math.random() < 0.3 && p.life < p.maxLife * 0.5) {
-        return; // TODO
+        return;
       }
 
       this.ctx.globalAlpha = p.alpha;
       this.ctx.fillStyle = p.color;
 
       if (p.char) {
-        // TODO
         this.ctx.font = `bold ${p.size}px monospace`;
         this.ctx.shadowColor = p.color;
         this.ctx.shadowBlur = 3;
 
-        // TODO
         if (p.life < p.maxLife * 0.4) {
           this.ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
           this.ctx.fillText(p.char, p.x + glitchX - 1, p.y + glitchY);
@@ -4345,7 +3806,6 @@ export class DefenseGame {
         this.ctx.fillText(p.char, p.x + glitchX, p.y + glitchY);
         this.ctx.shadowBlur = 0;
       } else {
-        // TODO
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         this.ctx.fill();
@@ -4354,7 +3814,6 @@ export class DefenseGame {
       this.ctx.globalAlpha = 1.0;
     });
 
-    // TODO
     this.shockwaves.forEach((wave) => {
       const safeRadius = Math.max(0, wave.radius);
       this.ctx.beginPath();
@@ -4364,7 +3823,6 @@ export class DefenseGame {
       this.ctx.globalAlpha = wave.alpha;
       this.ctx.stroke();
 
-      // TODO
       if (safeRadius > 50) {
         this.ctx.beginPath();
         this.ctx.arc(wave.x, wave.y, safeRadius * 0.7, 0, Math.PI * 2);
@@ -4376,39 +3834,31 @@ export class DefenseGame {
       this.ctx.globalAlpha = 1.0;
     });
 
-    // TODO
     this.renderStaticEffects();
 
-    // TODO
     this.renderDroppedItems();
     this.renderCollectorViruses();
 
-    // TODO
     this.renderSpeechBubbles();
 
-    // TODO
     this.ctx.restore();
 
-    // TODO
     if (this.isBossFight && this.bossManager) {
       this.renderBossUI();
     }
 
-    // TODO
     if (this.isMiniDisplay && this.miniCanvas) {
       const miniCtx = this.miniCanvas.getContext("2d");
       const miniW = this.miniCanvas.width || 400;
       const miniH = this.miniCanvas.height || 150;
 
-      // TODO
       if (this.renderDebugFrameCount < 3) {
-        debugLog("Canvas", "===  ???? ??===");
-        debugLog("Canvas", "1.  ???: miniW =", miniW, "miniH =", miniH);
-        debugLog("Canvas", "2. ? ???: canvas.width =", this.canvas.width, "canvas.height =", this.canvas.height);
+        debugLog("Canvas", "TODO");
+        debugLog("Canvas", "TODO", miniW, "miniH =", miniH);
+        debugLog("Canvas", "TODO", this.canvas.width, "canvas.height =", this.canvas.height);
         debugLog("Canvas", "3. isMobile =", this.isMobile);
       }
 
-      // TODO
       const srcW = this.canvas.width;
       const srcH = this.canvas.height;
       const contentRatio = srcW / srcH;
@@ -4436,44 +3886,35 @@ export class DefenseGame {
         destX, destY, destW, destH
       );
 
-      // TODO
       if (this.isBossFight && this.bossManager) {
         const hpSpan = document.getElementById("conquest-core-hp");
-        if (hpSpan) hpSpan.innerText = "??" + Math.ceil(this.bossManager.bossHP) + "%";
+        if (hpSpan) hpSpan.innerText = "TODO" + Math.ceil(this.bossManager.bossHP) + "%";
       }
     }
   }
 
-  /**
-   * ??UI ??(:  HP?/ ?:  )
-   * ????? ? ???? ???
-   */
+  
   renderBossUI() {
     const status = this.bossManager.getStatus();
     const ctx = this.ctx;
     const canvasWidth = this.canvas.width;
     const canvasHeight = this.canvas.height;
 
-    // TODO
     const isMobile = canvasWidth < 500;
     const barWidth = isMobile ? 16 : 24;
     const barHeight = Math.min(canvasHeight * 0.5, 300);
     const margin = isMobile ? 10 : 20;
     const barY = (canvasHeight - barHeight) / 2;
 
-    // TODO
     const hpBarX = margin;
 
-    // TODO
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(hpBarX - 4, barY - 30, barWidth + 8, barHeight + 60);
 
-    // TODO
     ctx.strokeStyle = '#ff0000';
     ctx.lineWidth = 2;
     ctx.strokeRect(hpBarX, barY, barWidth, barHeight);
 
-    // TODO
     const hpRatio = status.bossHP / status.maxBossHP;
     const hpFillHeight = barHeight * hpRatio;
     const hpGradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY + barHeight - hpFillHeight);
@@ -4482,7 +3923,6 @@ export class DefenseGame {
     ctx.fillStyle = hpGradient;
     ctx.fillRect(hpBarX, barY + barHeight - hpFillHeight, barWidth, hpFillHeight);
 
-    // TODO
     if (status.minBossHP > 0) {
       const minHPY = barY + barHeight - (status.minBossHP / status.maxBossHP) * barHeight;
       ctx.strokeStyle = '#ffff00';
@@ -4495,7 +3935,6 @@ export class DefenseGame {
       ctx.setLineDash([]);
     }
 
-    // TODO
     ctx.save();
     ctx.fillStyle = '#ff6600';
     ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
@@ -4504,26 +3943,21 @@ export class DefenseGame {
     ctx.fillStyle = '#ffffff';
     ctx.fillText(`${Math.ceil(status.bossHP)}%`, hpBarX + barWidth / 2, barY - 3);
 
-    // TODO
     ctx.fillStyle = '#ffff00';
     ctx.font = `${isMobile ? 8 : 10}px monospace`;
     ctx.fillText(`P${status.currentPhase}`, hpBarX + barWidth / 2, barY + barHeight + 15);
     ctx.restore();
 
-    // TODO
     const breachBarX = canvasWidth - margin - barWidth;
 
-    // TODO
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(breachBarX - 4, barY - 30, barWidth + 8, barHeight + 60);
 
-    // TODO
     const breachColor = status.isBreachReady ? '#00ff00' : '#00aaff';
     ctx.strokeStyle = breachColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(breachBarX, barY, barWidth, barHeight);
 
-    // TODO
     const breachRatio = status.breachGauge / status.maxBreachGauge;
     const breachFillHeight = barHeight * breachRatio;
     const breachGradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY + barHeight - breachFillHeight);
@@ -4532,11 +3966,9 @@ export class DefenseGame {
     ctx.fillStyle = breachGradient;
     ctx.fillRect(breachBarX, barY + barHeight - breachFillHeight, barWidth, breachFillHeight);
 
-    // TODO
     ctx.save();
     ctx.textAlign = 'center';
     if (status.isBreachReady) {
-      // TODO
       const blink = Math.floor(Date.now() / 300) % 2 === 0;
       ctx.fillStyle = blink ? '#00ff00' : '#ffffff';
       ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
@@ -4550,7 +3982,6 @@ export class DefenseGame {
       ctx.fillText(`${Math.ceil(status.breachPercent)}%`, breachBarX + barWidth / 2, barY - 3);
     }
 
-    // TODO
     if (!status.isBreachReady) {
       ctx.fillStyle = '#00aaff';
       ctx.font = `${isMobile ? 8 : 10}px monospace`;
@@ -4559,16 +3990,13 @@ export class DefenseGame {
     ctx.restore();
   }
 
-  /**
-   * ???? ? ??   */
+  
   renderStaticEffects() {
     const ss = this.staticSystem;
     const se = this.staticEffects;
     const chargeRatio = ss.currentCharge / ss.maxCharge;
 
-    // TODO
 
-    // TODO
     const pct = Math.max(0, Math.min(100, Math.round(chargeRatio * 100)));
     const textY = this.core.y - this.core.radius - 18;
     const barW = 56;
@@ -4590,7 +4018,6 @@ export class DefenseGame {
     this.ctx.fillRect(barX, barY, barW * (pct / 100), barH);
     this.ctx.restore();
 
-    // TODO
     se.sparks.forEach((spark) => {
       this.ctx.save();
       this.ctx.globalAlpha = spark.alpha;
@@ -4603,7 +4030,6 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // TODO
     se.chains.forEach((chain) => {
       this.ctx.save();
       this.ctx.globalAlpha = chain.alpha;
@@ -4612,7 +4038,6 @@ export class DefenseGame {
       this.ctx.shadowColor = "#ffff00";
       this.ctx.shadowBlur = 15;
 
-      // TODO
       this.ctx.beginPath();
       this.ctx.moveTo(chain.x1, chain.y1);
 
@@ -4634,21 +4059,16 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // TODO
   }
 
-  /**
-   * ? ??????? ? ?
-   * @param {string} effectType - "knockback_slow", "knockback_damage", "knockback_damage_x3"
-   */
+  
   applyWaveEffect(effectType) {
     debugLog("Defense", "? ?:", effectType);
 
-    const knockbackDist = 50; // TODO
-    const slowDuration = 2000; // TODO
-    const damage = 10; // TODO
+    const knockbackDist = 50;
+    const slowDuration = 2000;
+    const damage = 10;
 
-    // TODO
     let waveColor = "#0f0";
     if (effectType === "knockback_damage") waveColor = "#ff0";
     if (effectType === "knockback_damage_x3") waveColor = "#f00";
@@ -4665,27 +4085,20 @@ export class DefenseGame {
       damageDealt: false,
     });
 
-    // TODO
     this.enemies.forEach((enemy) => {
-      // TODO
       if (effectType === "knockback_slow") {
-        // TODO
         this.applyKnockback(enemy, 300, 0.3, 2);
       } else if (effectType === "knockback_damage") {
-        // TODO
         this.applyKnockback(enemy, 300);
         enemy.hp -= damage;
       } else if (effectType === "knockback_damage_x3") {
-        // TODO
         this.applyKnockback(enemy, 350);
         enemy.hp -= damage * 3;
 
-        // TODO
         this.createExplosion(enemy.x, enemy.y, "#ff4400", 10);
       }
     });
 
-    // TODO
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       if (this.enemies[i].hp <= 0) {
         this.createExplosion(
@@ -4700,7 +4113,6 @@ export class DefenseGame {
   }
 
   spawnEnemy() {
-    // TODO
     if (this.isSafeZone || this.isConquered) {
       debugLog("Enemy", "spawnEnemy blocked - isSafeZone:", this.isSafeZone, "isConquered:", this.isConquered);
       return;
@@ -4713,26 +4125,20 @@ export class DefenseGame {
     const ex = this.core.x + Math.cos(angle) * distance;
     const ey = this.core.y + Math.sin(angle) * distance;
 
-    // TODO
     let difficultyScale;
 
-    // TODO
-    const baseSpeed = 60 + Math.random() * 40; // TODO
-    const baseHp = 10; // TODO
+    const baseSpeed = 60 + Math.random() * 40;
+    const baseHp = 10;
 
     if (this.isReinforcementMode) {
-      // TODO
-      // TODO
       const stageBase = this.calculateStageBaseDifficulty();
-      const reinforcementBonus = 0.5 + (this.reinforcementPage - 1) * 0.3; // TODO
+      const reinforcementBonus = 0.5 + (this.reinforcementPage - 1) * 0.3;
       difficultyScale = stageBase + reinforcementBonus;
     } else {
-      // TODO
       const stageBase = this.calculateStageBaseDifficulty();
-      const pageProgress = (this.currentPage - 1) / (this.stageMaxPages - 1); // TODO
-      // TODO
+      const pageProgress = (this.currentPage - 1) / (this.stageMaxPages - 1);
       const pageMultiplier =
-        pageProgress * (this.stageDifficultyScale * stageBase * 0.5); // TODO
+        pageProgress * (this.stageDifficultyScale * stageBase * 0.5);
       difficultyScale = stageBase + pageMultiplier;
     }
 
@@ -4747,7 +4153,6 @@ export class DefenseGame {
     });
   }
 
-  // TODO
   spawnSafeZoneAllies() {
     debugLog("Enemy", "spawnSafeZoneAllies called - isSafeZone:", this.isSafeZone);
     if (!this.isSafeZone) {
@@ -4755,10 +4160,8 @@ export class DefenseGame {
       return;
     }
 
-    // TODO
     this.alliedViruses = [];
 
-    // TODO
     const virusTypes = {
       SWARM: { color: "#88ff88", baseHp: 8, baseDamage: 5, baseSpeed: 180, radius: 6, attackType: "melee" },
       TANK: { color: "#ff8800", baseHp: 60, baseDamage: 8, baseSpeed: 80, radius: 12, attackType: "melee", tauntRadius: 150, aggroRadius: 180 },
@@ -4767,9 +4170,8 @@ export class DefenseGame {
       HEALER: { color: "#00ff88", baseHp: 40, baseDamage: 0, baseSpeed: 90, radius: 8, attackType: "support", healAmount: 5, healRadius: 80 }
     };
 
-    // TODO
     const types = ["SWARM", "SWARM", "SWARM", "TANK", "HUNTER", "HUNTER", "BOMBER", "HEALER", "SWARM", "HUNTER", "SWARM", "BOMBER"];
-    const count = 12 + Math.floor(Math.random() * 7); // TODO
+    const count = 12 + Math.floor(Math.random() * 7);
 
     for (let i = 0; i < count; i++) {
       const type = types[i % types.length];
@@ -4777,37 +4179,34 @@ export class DefenseGame {
 
       if (!typeData) continue;
 
-      // TODO
       const margin = 40;
       const screenW = this.canvas.width;
       const screenH = this.canvas.height;
       const coreX = this.core.x;
       const coreY = this.core.y;
 
-      // TODO
-      const zone = i % 4; // TODO
+      const zone = i % 4;
       let spawnX, spawnY;
 
       switch (zone) {
-        case 0: // TODO
+        case 0:
           spawnX = margin + Math.random() * (screenW * 0.35 - margin);
           spawnY = margin + Math.random() * (screenH * 0.35 - margin);
           break;
-        case 1: // TODO
+        case 1:
           spawnX = screenW * 0.65 + Math.random() * (screenW * 0.35 - margin);
           spawnY = margin + Math.random() * (screenH * 0.35 - margin);
           break;
-        case 2: // TODO
+        case 2:
           spawnX = margin + Math.random() * (screenW * 0.35 - margin);
           spawnY = screenH * 0.65 + Math.random() * (screenH * 0.35 - margin);
           break;
-        case 3: // TODO
+        case 3:
           spawnX = screenW * 0.65 + Math.random() * (screenW * 0.35 - margin);
           spawnY = screenH * 0.65 + Math.random() * (screenH * 0.35 - margin);
           break;
       }
 
-      // TODO
       const distFromCore = Math.hypot(spawnX - coreX, spawnY - coreY);
       if (distFromCore < 150) {
         const pushAngle = Math.atan2(spawnY - coreY, spawnX - coreX);
@@ -4824,23 +4223,20 @@ export class DefenseGame {
         maxHp: typeData.baseHp || 20,
         baseMaxHp: typeData.baseHp || 20,
         damage: typeData.baseDamage || 10,
-        virusType: type, // TODO
+        virusType: type,
         color: typeData.color || "#88ff88",
         attackType: typeData.attackType || "melee",
-        // TODO
         homeX: spawnX,
         homeY: spawnY,
-        homeRadius: 80 + Math.random() * 60, // TODO
-        // TODO
+        homeRadius: 80 + Math.random() * 60,
         vx: 0,
         vy: 0,
-        wobblePhase: Math.random() * Math.PI * 2, // TODO
+        wobblePhase: Math.random() * Math.PI * 2,
         wanderTargetX: null,
         wanderTargetY: null,
         wanderTimer: 0,
         wanderDuration: 2 + Math.random() * 4,
-        isIdle: Math.random() < 0.2, // TODO
-        // TODO
+        isIdle: Math.random() < 0.2,
         ...(type === "TANK" && {
           tauntCooldown: 0,
           tauntRadius: typeData.tauntRadius || 150,
@@ -4872,49 +4268,37 @@ export class DefenseGame {
     debugLog("SafeZone", `Spawned ${this.alliedViruses.length} allied viruses`);
   }
 
-  // TODO
   calculateStageBaseDifficulty() {
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
 
     let baseDifficulty;
     if (this.currentStageId === 0) {
-      baseDifficulty = 0.5; // TODO
+      baseDifficulty = 0.5;
     } else if (this.currentStageId <= 2) {
-      baseDifficulty = 1.0; // TODO
+      baseDifficulty = 1.0;
     } else if (this.currentStageId <= 4) {
-      baseDifficulty = 1.5; // TODO
+      baseDifficulty = 1.5;
     } else {
-      baseDifficulty = 2.0; // TODO
+      baseDifficulty = 2.0;
     }
 
-    // TODO
-    // TODO
-    // TODO
     return baseDifficulty;
   }
 
-  // TODO
   updateHelper(dt, now) {
     const helper = this.helper;
-    const shieldRadius = this.core.shieldRadius - 15; // TODO
-    const minDistFromCore = 45; // TODO
+    const shieldRadius = this.core.shieldRadius - 15;
+    const minDistFromCore = 45;
 
-    // TODO
     if (helper.x === 0 && helper.y === 0) {
-      helper.x = this.core.x + 50; // TODO
+      helper.x = this.core.x + 50;
       helper.y = this.core.y;
       helper.targetX = helper.x;
       helper.targetY = helper.y;
     }
 
-    // TODO
     let nearestEnemy = null;
     let minDist = Infinity;
-    let enemyInsideShield = null; // TODO
+    let enemyInsideShield = null;
     this.enemies.forEach((enemy) => {
       const distToCore = Math.hypot(
         enemy.x - this.core.x,
@@ -4922,7 +4306,6 @@ export class DefenseGame {
       );
       const distToHelper = Math.hypot(enemy.x - helper.x, enemy.y - helper.y);
 
-      // TODO
       if (distToCore < this.core.shieldRadius) {
         if (
           !enemyInsideShield ||
@@ -4936,25 +4319,21 @@ export class DefenseGame {
         }
       }
 
-      // TODO
       if (distToHelper < helper.range && distToHelper < minDist) {
         minDist = distToHelper;
         nearestEnemy = enemy;
       }
     });
 
-    // TODO
     if (enemyInsideShield) {
       const dx = helper.x - enemyInsideShield.x;
       const dy = helper.y - enemyInsideShield.y;
       const dist = Math.hypot(dx, dy);
 
       if (dist < helper.evadeDistance && dist > 0) {
-        // TODO
         const evadeX = helper.x + (dx / dist) * 40;
         const evadeY = helper.y + (dy / dist) * 40;
 
-        // TODO
         const evadeDistToCore = Math.hypot(
           evadeX - this.core.x,
           evadeY - this.core.y
@@ -4966,14 +4345,12 @@ export class DefenseGame {
           helper.targetX = evadeX;
           helper.targetY = evadeY;
         } else if (evadeDistToCore <= minDistFromCore) {
-          // TODO
           const angle = Math.atan2(evadeY - this.core.y, evadeX - this.core.x);
           helper.targetX =
             this.core.x + Math.cos(angle) * (minDistFromCore + 10);
           helper.targetY =
             this.core.y + Math.sin(angle) * (minDistFromCore + 10);
         } else {
-          // TODO
           const angle = Math.atan2(
             helper.y - this.core.y,
             helper.x - this.core.x
@@ -4983,7 +4360,6 @@ export class DefenseGame {
         }
       }
     } else if (nearestEnemy) {
-      // TODO
       const angleToEnemy = Math.atan2(
         nearestEnemy.y - this.core.y,
         nearestEnemy.x - this.core.x
@@ -4992,27 +4368,23 @@ export class DefenseGame {
       helper.targetX = this.core.x + Math.cos(angleToEnemy) * targetDist;
       helper.targetY = this.core.y + Math.sin(angleToEnemy) * targetDist;
     } else {
-      // TODO
       if (!helper.patrolAngle) helper.patrolAngle = 0;
-      helper.patrolAngle += dt * 0.3; // TODO
+      helper.patrolAngle += dt * 0.3;
       const patrolDist = minDistFromCore + 10;
       helper.targetX = this.core.x + Math.cos(helper.patrolAngle) * patrolDist;
       helper.targetY = this.core.y + Math.sin(helper.patrolAngle) * patrolDist;
     }
 
-    // TODO
-    const lerpSpeed = enemyInsideShield ? 3.5 : 1.5; // TODO
+    const lerpSpeed = enemyInsideShield ? 3.5 : 1.5;
     helper.x += (helper.targetX - helper.x) * dt * lerpSpeed;
     helper.y += (helper.targetY - helper.y) * dt * lerpSpeed;
 
-    // TODO
     const distToCore = Math.hypot(
       helper.x - this.core.x,
       helper.y - this.core.y
     );
     const angle = Math.atan2(helper.y - this.core.y, helper.x - this.core.x);
 
-    // TODO
     if (distToCore > shieldRadius) {
       const clampedX = this.core.x + Math.cos(angle) * shieldRadius;
       const clampedY = this.core.y + Math.sin(angle) * shieldRadius;
@@ -5020,7 +4392,6 @@ export class DefenseGame {
       helper.y += (clampedY - helper.y) * dt * 5;
     }
 
-    // TODO
     if (distToCore < minDistFromCore) {
       const pushX = this.core.x + Math.cos(angle) * minDistFromCore;
       const pushY = this.core.y + Math.sin(angle) * minDistFromCore;
@@ -5028,15 +4399,12 @@ export class DefenseGame {
       helper.y += (pushY - helper.y) * dt * 5;
     }
 
-    // TODO
     if (nearestEnemy) {
-      // TODO
       helper.angle = Math.atan2(
         nearestEnemy.y - helper.y,
         nearestEnemy.x - helper.x
       );
 
-      // TODO
       const fireInterval = 1 / helper.fireRate;
       const timeSinceLastFire = now - helper.lastFireTime;
 
@@ -5044,7 +4412,7 @@ export class DefenseGame {
         debugLog(
           "Helper",
           "!",
-          "??",
+          "TODO",
           nearestEnemy.x.toFixed(0),
           nearestEnemy.y.toFixed(0)
         );
@@ -5052,7 +4420,6 @@ export class DefenseGame {
         helper.lastFireTime = now;
       }
     } else if (this.enemies.length > 0) {
-      // TODO
       if (!this._helperNoTargetLogged) {
         const firstEnemy = this.enemies[0];
         const dist = Math.hypot(
@@ -5061,10 +4428,10 @@ export class DefenseGame {
         );
         debugLog(
           "Helper",
-          "???",
+          "TODO",
           ":",
           dist.toFixed(0),
-          "??",
+          "TODO",
           helper.range
         );
         this._helperNoTargetLogged = true;
@@ -5075,7 +4442,6 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   setWeaponMode(modeName) {
     const mode = this.weaponModes[modeName];
     if (!mode) {
@@ -5086,13 +4452,11 @@ export class DefenseGame {
     this.helper.weaponMode = modeName;
     this.helper.color = mode.color;
 
-    // TODO
     this.helper.damage = mode.baseDamage;
     this.helper.fireRate = mode.baseFireRate;
     this.helper.range = mode.baseRange;
     this.helper.projectileSpeed = mode.baseProjectileSpeed;
 
-    // TODO
     const magazineBonus = this.helper.magazineBonus || 0;
     this.helper.currentAmmo = mode.magazineSize + magazineBonus;
     this.helper.isReloading = false;
@@ -5107,12 +4471,10 @@ export class DefenseGame {
     );
   }
 
-  // TODO
   getCurrentWeaponMode() {
     return this.weaponModes[this.helper.weaponMode] || this.weaponModes.NORMAL;
   }
 
-  // TODO
   applyUpgradeBonus(
     bonusDamage,
     bonusFireRate,
@@ -5126,7 +4488,7 @@ export class DefenseGame {
     this.helper.fireRate = mode.baseFireRate + bonusFireRate;
     this.helper.range = mode.baseRange + bonusRange;
     this.helper.projectileSpeed = mode.baseProjectileSpeed + bonusBulletSpeed;
-    this.helper.magazineBonus = bonusMagazine; // TODO
+    this.helper.magazineBonus = bonusMagazine;
     debugLog("Defense", "Upgrade bonus applied:", {
       damage: this.helper.damage,
       fireRate: this.helper.fireRate,
@@ -5136,16 +4498,14 @@ export class DefenseGame {
     });
   }
 
-  // TODO
   fireHelperProjectile(target) {
     const mode = this.getCurrentWeaponMode();
     const asciiChars =
       "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-    // TODO
     if (mode.hasReload) {
       if (this.helper.isReloading) {
-        return; // TODO
+        return;
       }
       if (this.helper.currentAmmo <= 0) {
         this.startReload();
@@ -5159,7 +4519,6 @@ export class DefenseGame {
     const dist = Math.hypot(dx, dy);
     const baseAngle = Math.atan2(dy, dx);
 
-    // TODO
     this.helper.faceLookAngle = baseAngle;
     this.helper.faceLookTime = performance.now();
     debugLog("Helper", "angle:", baseAngle.toFixed(2), "time:", this.helper.faceLookTime);
@@ -5168,18 +4527,15 @@ export class DefenseGame {
     const projectileCount = mode.projectileCount || 1;
     const spreadAngle = mode.spreadAngle || 0;
 
-    // TODO
     for (let i = 0; i < projectileCount; i++) {
       let angle = baseAngle;
 
-      // TODO
       if (projectileCount > 1) {
         const spreadOffset =
           (i - (projectileCount - 1) / 2) *
           (spreadAngle / (projectileCount - 1));
         angle = baseAngle + spreadOffset;
       }
-      // TODO
       else if (spreadAngle > 0) {
         angle += (Math.random() - 0.5) * spreadAngle;
       }
@@ -5198,21 +4554,17 @@ export class DefenseGame {
         char: randomChar,
         color: mode.color,
         fromHelper: true,
-        // TODO
         explosive: mode.explosive || false,
         explosionRadius: mode.explosionRadius || 0,
-        // TODO
         piercing: mode.piercing || false,
       });
     }
 
-    // TODO
     if (mode.hasReload && this.helper.currentAmmo <= 0) {
       this.startReload();
     }
   }
 
-  // TODO
   startReload() {
     const mode = this.getCurrentWeaponMode();
     if (!mode.hasReload || this.helper.isReloading) return;
@@ -5224,7 +4576,6 @@ export class DefenseGame {
     debugLog("Defense", "Reload started:", mode.name);
   }
 
-  // TODO
   updateReload(dt) {
     if (!this.helper.isReloading) return;
 
@@ -5234,11 +4585,9 @@ export class DefenseGame {
       return;
     }
 
-    // TODO
     const reloadSpeedMultiplier = 1 + this.helper.fireRate * 0.1;
     const calculatedReloadTime = mode.reloadTime / reloadSpeedMultiplier;
 
-    // TODO
     const minReloadTime =
       mode.name === "SNIPER" || mode.name === "LAUNCHER" ? 1.2 : 1.0;
     const actualReloadTime = Math.max(minReloadTime, calculatedReloadTime);
@@ -5247,7 +4596,6 @@ export class DefenseGame {
     this.helper.reloadProgress = Math.min(elapsed / actualReloadTime, 1);
 
     if (this.helper.reloadProgress >= 1) {
-      // TODO
       const magazineBonus = this.helper.magazineBonus || 0;
       this.helper.currentAmmo = mode.magazineSize + magazineBonus;
       this.helper.isReloading = false;
@@ -5262,12 +4610,9 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   handleExplosion(x, y, radius, damage, color) {
-    // TODO
     this.createExplosion(x, y, color || "#ff4400", 25);
 
-    // TODO
     this.shockwaves.push({
       x: x,
       y: y,
@@ -5280,25 +4625,20 @@ export class DefenseGame {
       damageDealt: false,
     });
 
-    // TODO
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
       const dist = Math.hypot(enemy.x - x, enemy.y - y);
 
       if (dist <= radius) {
-        // TODO
         const damageMultiplier = 1 - (dist / radius) * 0.5;
         const actualDamage = Math.floor(damage * damageMultiplier);
 
         enemy.hp -= actualDamage;
 
-        // TODO
         this.applyKnockback(enemy, 150, 0.5, 1);
 
-        // TODO
         this.createExplosion(enemy.x, enemy.y, "#ff8800", 3);
 
-        // TODO
         if (enemy.hp <= 0) {
           this.enemies.splice(i, 1);
           this.createExplosion(enemy.x, enemy.y, "#ff0000", 15);
@@ -5324,14 +4664,12 @@ export class DefenseGame {
   }
 
   fireProjectile(target) {
-    // TODO
     const asciiChars =
       "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     const randomChar =
       asciiChars[Math.floor(Math.random() * asciiChars.length)];
 
-    // TODO
-    const recoilDist = 8; // TODO
+    const recoilDist = 8;
     this.core.targetOffsetX = Math.cos(this.turret.angle) * recoilDist;
     this.core.targetOffsetY = Math.sin(this.turret.angle) * recoilDist;
 
@@ -5340,11 +4678,11 @@ export class DefenseGame {
       y: this.core.y,
       target: target,
       angle: this.turret.angle,
-      speed: 400, // TODO
+      speed: 400,
       damage: this.turret.damage,
       radius: 4,
       life: 2.0,
-      char: randomChar, // TODO
+      char: randomChar,
     });
 
     this.createExplosion(
@@ -5355,14 +4693,12 @@ export class DefenseGame {
     );
   }
 
-  // TODO
   fireProjectileToward(angle) {
     const asciiChars =
       "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     const randomChar =
       asciiChars[Math.floor(Math.random() * asciiChars.length)];
 
-    // TODO
     const recoilDist = 8;
     this.core.targetOffsetX = Math.cos(angle) * recoilDist;
     this.core.targetOffsetY = Math.sin(angle) * recoilDist;
@@ -5370,7 +4706,7 @@ export class DefenseGame {
     this.projectiles.push({
       x: this.core.x,
       y: this.core.y,
-      target: null, // TODO
+      target: null,
       angle: angle,
       speed: 400,
       damage: this.turret.damage,
@@ -5387,24 +4723,19 @@ export class DefenseGame {
     );
   }
 
-  // TODO
   handleCanvasClick(e) {
-    // TODO
     if (this.isPaused) return;
 
-    // TODO
     if (e.target === this.shieldBtn) return;
 
     const rect = this.canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    // TODO
     const worldPos = this.screenToWorld(clickX, clickY);
     const scaledClickX = worldPos.x;
     const scaledClickY = worldPos.y;
 
-    // TODO
     if (this.isSafeZone && this.miningManager) {
       const result = this.miningManager.handleCabinetTap(scaledClickX, scaledClickY);
       if (result.collected) {
@@ -5423,33 +4754,27 @@ export class DefenseGame {
     this.fireAtPosition(scaledClickX, scaledClickY);
   }
 
-  // TODO
   handleCanvasTouch(e) {
     if (this.isPaused) return;
 
-    // TODO
     e.preventDefault();
 
-    // TODO
     for (let i = 0; i < e.touches.length; i++) {
       const touch = e.touches[i];
       const rect = this.canvas.getBoundingClientRect();
       const touchX = touch.clientX - rect.left;
       const touchY = touch.clientY - rect.top;
 
-      // TODO
       if (
         touchX >= 0 &&
         touchX <= rect.width &&
         touchY >= 0 &&
         touchY <= rect.height
       ) {
-        // TODO
         const worldPos = this.screenToWorld(touchX, touchY);
         const scaledTouchX = worldPos.x;
         const scaledTouchY = worldPos.y;
 
-        // TODO
         if (this.isSafeZone && this.miningManager) {
           const result = this.miningManager.handleCabinetTap(scaledTouchX, scaledTouchY);
           if (result.collected) {
@@ -5470,7 +4795,6 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   handleKeyDown(e) {
     if (this.isPaused) return;
 
@@ -5480,8 +4804,8 @@ export class DefenseGame {
     if (e.code === "KeyD") this.keyState.right = true;
 
     if (e.code === "Space" || e.key === " ") {
-      e.preventDefault(); // TODO
-      this.fireAtPosition(0, 0); // TODO
+      e.preventDefault();
+      this.fireAtPosition(0, 0);
     }
   }
 
@@ -5500,9 +4824,7 @@ export class DefenseGame {
     return { x: worldX, y: worldY };
   }
 
-  // TODO
   fireAtPosition(x, y) {
-    // TODO
     if (this.enemies.length > 0) {
       let closestEnemy = null;
       let closestDist = Infinity;
@@ -5522,44 +4844,38 @@ export class DefenseGame {
           closestEnemy.y - this.core.y,
           closestEnemy.x - this.core.x
         );
-        this.turret.angle = angle; // TODO
+        this.turret.angle = angle;
         this.fireProjectileToward(angle);
       }
     } else {
-      // TODO
       this.fireProjectileToward(this.turret.angle);
     }
   }
 
   createExplosion(x, y, color, count = 10) {
-    // TODO
     const actualCount = Math.ceil(count * this.particleMultiplier);
 
-    // TODO
     if (this.particles.length >= this.maxParticles) {
-      // TODO
       this.particles.splice(0, actualCount);
     }
 
-    // TODO
-    const glitchChars = "!@#$%^&*?/<>[]{}|\\~`??????";
+    const glitchChars = "TODO";
 
     for (let i = 0; i < actualCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 120; // TODO
-      const life = 0.2 + Math.random() * 0.4; // TODO
+      const speed = Math.random() * 120;
+      const life = 0.2 + Math.random() * 0.4;
 
-      // TODO
       let particleColor = color;
       const colorRoll = Math.random();
       if (colorRoll < 0.15) {
-        particleColor = "#ff0000"; // TODO
-      } else if (colorRoll < 0.25) { // TODO
-        particleColor = "#ffffff"; // TODO
+        particleColor = "#ff0000";
+      } else if (colorRoll < 0.25) {
+        particleColor = "#ffffff";
       }
 
       this.particles.push({
-        x: x + (Math.random() - 0.5) * 10, // TODO
+        x: x + (Math.random() - 0.5) * 10,
         y: y + (Math.random() - 0.5) * 10,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
@@ -5567,17 +4883,15 @@ export class DefenseGame {
         maxLife: life,
         alpha: 1,
         color: particleColor,
-        size: 10 + Math.random() * 4, // TODO
-        char: glitchChars[Math.floor(Math.random() * glitchChars.length)], // TODO
-        glitchOffset: { x: 0, y: 0 }, // TODO
-        flickerTimer: Math.random() * 0.1, // TODO
+        size: 10 + Math.random() * 4,
+        char: glitchChars[Math.floor(Math.random() * glitchChars.length)],
+        glitchOffset: { x: 0, y: 0 },
+        flickerTimer: Math.random() * 0.1,
       });
     }
   }
 
-  // TODO
   createTauntEffect(x, y, radius, color) {
-    // TODO
     this.shockwaves.push({
       x: x,
       y: y,
@@ -5587,10 +4901,9 @@ export class DefenseGame {
       alpha: 0.8,
       color: color,
       lineWidth: 3,
-      isTaunt: true, // TODO
+      isTaunt: true,
     });
 
-    // TODO
     setTimeout(() => {
       if (!this.isRunning) return;
       this.shockwaves.push({
@@ -5606,7 +4919,6 @@ export class DefenseGame {
       });
     }, 100);
 
-    // TODO
     if (!this.isMobile) {
       const particleCount = 6;
       for (let i = 0; i < particleCount; i++) {
@@ -5621,7 +4933,7 @@ export class DefenseGame {
           alpha: 0.8,
           color: color,
           size: 4,
-          char: "??",
+          char: "TODO",
         });
       }
     }
@@ -5636,23 +4948,18 @@ export class DefenseGame {
     requestAnimationFrame((t) => this.animate(t));
   }
 
-  /**
-   * ???  ? (????+ )
-   */
+  
   playIntroAnimation() {
     return new Promise((resolve) => {
-      // TODO
       const centerX = this.coreHome.x || this.canvas.width / 2;
       const centerY = this.coreHome.y || this.canvas.height / 2;
 
-      // TODO
       this.enemies = [];
       this.projectiles = [];
       this.particles = [];
 
       debugLog("Defense", "playIntroAnimation - isSafeZone:", this.isSafeZone, "alliedViruses before:", this.alliedViruses.length);
 
-      // TODO
       if (!this.isSafeZone) {
         debugLog("Defense", "playIntroAnimation - CLEARING alliedViruses (not Safe Zone)");
         this.alliedViruses = [];
@@ -5668,13 +4975,11 @@ export class DefenseGame {
       this.core.x = centerX;
       this.core.y = centerY;
 
-      // TODO
       this.showCoreHP = false;
 
-      // TODO
       const isMobile = window.innerWidth <= 768;
-      const startScale = isMobile ? 20.0 : 50.0; // TODO
-      const duration = isMobile ? 250 : 300; // TODO
+      const startScale = isMobile ? 20.0 : 50.0;
+      const duration = isMobile ? 250 : 300;
       const startTime = performance.now();
 
       this.core.scale = startScale;
@@ -5689,26 +4994,20 @@ export class DefenseGame {
           const elapsed = now - startTime;
           const progress = Math.min(elapsed / duration, 1);
 
-          // TODO
           const easeInQuint = (t) => t * t * t * t * t;
 
-          // TODO
           this.core.scale =
             startScale - (startScale - 1) * easeInQuint(progress);
 
           if (progress < 1) {
             requestAnimationFrame(animateDrop);
           } else {
-            // TODO
             this.core.scale = 1;
 
-            // TODO
             this.impactEffect();
 
-            // TODO
             this.glitchShowHP()
               .then(() => {
-                // TODO
                 if (this.isSafeZone) {
                   debugLog("Defense", "playIntroAnimation - SKIPPING spawnAlliesSequentially (Safe Zone)");
                   return Promise.resolve();
@@ -5719,7 +5018,7 @@ export class DefenseGame {
               .then(resolve)
               .catch((err) => {
                 console.error("IntroAnimation error:", err);
-                resolve(); // TODO
+                resolve();
               });
           }
         } catch (err) {
@@ -5733,13 +5032,10 @@ export class DefenseGame {
     });
   }
 
-  /**
-   * ??? ? ? (??? ?)
-   * ????? - ??? ? ?? ? ?
-   */
+  
   playOutroAnimation() {
     return new Promise((resolve) => {
-      debugLog("Defense", "????");
+      debugLog("Defense", "TODO");
 
       const isMobile = window.innerWidth <= 768;
       const duration = isMobile ? 400 : 500;
@@ -5747,11 +5043,9 @@ export class DefenseGame {
       const startScale = 1;
       const endScale = isMobile ? 30.0 : 50.0;
 
-      // TODO
       this.enemySpawnTimer = 99999;
       this.isOutroPlaying = true;
 
-      // TODO
       const overlay = document.createElement("div");
       overlay.id = "outro-overlay";
       overlay.style.cssText = `
@@ -5770,14 +5064,11 @@ export class DefenseGame {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // TODO
         const easeInQuint = (t) => t * t * t * t * t;
         const easedProgress = easeInQuint(progress);
 
-        // TODO
         this.core.scale = startScale + (endScale - startScale) * easedProgress;
 
-        // TODO
         if (progress > 0.7) {
           const fadeProgress = (progress - 0.7) / 0.3;
           overlay.style.opacity = fadeProgress.toString();
@@ -5785,23 +5076,19 @@ export class DefenseGame {
 
         debugLog("Defense", "progress:", progress.toFixed(2), "scale:", this.core.scale.toFixed(1));
 
-        // TODO
         this.render();
 
         if (progress < 1) {
           requestAnimationFrame(animateAscend);
         } else {
-          debugLog("Defense", "???? - ? ??");
-          // TODO
+          debugLog("Defense", "TODO");
           overlay.style.opacity = "1";
 
-          // TODO
           setTimeout(() => {
             overlay.remove();
-            debugLog("Defense", "?? ?");
+            debugLog("Defense", "TODO");
           }, 500);
 
-          // TODO
           this.core.scale = 1;
           this.isOutroPlaying = false;
           resolve();
@@ -5812,12 +5099,9 @@ export class DefenseGame {
     });
   }
 
-  // TODO
   impactEffect() {
-    // TODO
     this.playImpactSound();
 
-    // TODO
     const flash = document.createElement("div");
     flash.style.cssText = `
       position: fixed;
@@ -5836,25 +5120,20 @@ export class DefenseGame {
       setTimeout(() => flash.remove(), 200);
     }, 50);
 
-    // TODO
     this.shakeScreen();
 
-    // TODO
     this.spawnShockwave();
 
-    // TODO
     if (this.isSafeZone) {
       setTimeout(() => this.showSafeZoneText(), 300);
     }
   }
 
-  // TODO
   playImpactSound() {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const now = audioCtx.currentTime;
 
-      // TODO
       const bass = audioCtx.createOscillator();
       const bassGain = audioCtx.createGain();
       bass.type = 'sine';
@@ -5867,7 +5146,6 @@ export class DefenseGame {
       bass.start(now);
       bass.stop(now + 0.4);
 
-      // TODO
       const punch = audioCtx.createOscillator();
       const punchGain = audioCtx.createGain();
       punch.type = 'triangle';
@@ -5880,12 +5158,10 @@ export class DefenseGame {
       punch.start(now);
       punch.stop(now + 0.15);
 
-      // TODO
       const bufferSize = audioCtx.sampleRate * 0.08;
       const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const noiseData = noiseBuffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
-        // TODO
         noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
       }
 
@@ -5893,7 +5169,7 @@ export class DefenseGame {
       const noiseGain = audioCtx.createGain();
       const lowpass = audioCtx.createBiquadFilter();
       lowpass.type = 'lowpass';
-      lowpass.frequency.value = 400; // TODO
+      lowpass.frequency.value = 400;
 
       noise.buffer = noiseBuffer;
       noise.connect(lowpass);
@@ -5906,12 +5182,10 @@ export class DefenseGame {
     }
   }
 
-  // TODO
   showSafeZoneText() {
     const isMobile = window.innerWidth <= 768;
     const fontSize = isMobile ? 28 : 48;
 
-    // TODO
     const container = document.createElement("div");
     container.id = "safezone-text";
     container.style.cssText = `
@@ -5932,14 +5206,12 @@ export class DefenseGame {
     container.textContent = "SAFE ZONE";
     document.body.appendChild(container);
 
-    // TODO
     let glitchCount = 0;
     const maxGlitches = 12;
 
     const glitchInterval = setInterval(() => {
       glitchCount++;
 
-      // TODO
       const offsetX = (Math.random() - 0.5) * 20;
       const offsetY = (Math.random() - 0.5) * 10;
       const skewX = (Math.random() - 0.5) * 5;
@@ -5947,7 +5219,6 @@ export class DefenseGame {
       container.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) skewX(${skewX}deg)`;
       container.style.opacity = Math.random() > 0.3 ? "1" : "0.5";
 
-      // TODO
       if (Math.random() > 0.5) {
         container.style.textShadow = `
           ${Math.random() * 5}px 0 #ff0000,
@@ -5959,14 +5230,12 @@ export class DefenseGame {
         container.style.textShadow = "0 0 10px #00ff00, 0 0 20px #00ff00";
       }
 
-      // TODO
       if (glitchCount <= 6 && Math.random() > 0.5) {
         this.playGlitchSound();
       }
 
       if (glitchCount >= maxGlitches) {
         clearInterval(glitchInterval);
-        // TODO
         container.style.transform = "translate(-50%, -50%)";
         container.style.textShadow = "0 0 10px #00ff00, 0 0 20px #00ff00";
         container.style.opacity = "1";
@@ -5980,12 +5249,10 @@ export class DefenseGame {
     }, 80);
   }
 
-  // TODO
   playGlitchSound() {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-      // TODO
       const bufferSize = audioCtx.sampleRate * 0.05;
       const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const noiseData = noiseBuffer.getChannelData(0);
@@ -6011,11 +5278,9 @@ export class DefenseGame {
 
       noiseSource.start(audioCtx.currentTime);
     } catch (e) {
-      // TODO
     }
   }
 
-  // TODO
   glitchShowHP() {
     return new Promise((resolve) => {
       let glitchCount = 0;
@@ -6029,7 +5294,6 @@ export class DefenseGame {
           return;
         }
 
-        // TODO
         this.showCoreHP = Math.random() > 0.3;
         this.glitchText = true;
         this.glitchOffset = {
@@ -6045,7 +5309,6 @@ export class DefenseGame {
     });
   }
 
-  // TODO
   shakeScreen() {
     const container = document.getElementById("game-container");
     if (!container) return;
@@ -6053,7 +5316,7 @@ export class DefenseGame {
     container.style.transition = "none";
     let shakeCount = 0;
     const maxShakes = 8;
-    const shakeIntensity = 15; // TODO
+    const shakeIntensity = 15;
     const doShake = () => {
       if (shakeCount >= maxShakes) {
         container.style.transform = "translate(0, 0)";
@@ -6072,7 +5335,6 @@ export class DefenseGame {
     doShake();
   }
 
-  // TODO
   flashScreen(color = "#ffffff", duration = 0.2) {
     const flash = document.createElement("div");
     flash.style.cssText = `
@@ -6086,7 +5348,6 @@ export class DefenseGame {
     `;
     document.body.appendChild(flash);
 
-    // TODO
     const startTime = performance.now();
     const animate = (now) => {
       const elapsed = now - startTime;
@@ -6102,7 +5363,6 @@ export class DefenseGame {
     requestAnimationFrame(animate);
   }
 
-  // TODO
   spawnImpactParticles(intensity) {
     for (let i = 0; i < intensity * 3; i++) {
       this.particles.push({
@@ -6120,7 +5380,6 @@ export class DefenseGame {
   }
 
   spawnShockwave() {
-    // TODO
     const count = this.isMobile ? 8 : 20;
     for (let i = 0; i < count; i++) {
       this.particles.push({
@@ -6138,13 +5397,11 @@ export class DefenseGame {
   }
 
   async spawnAlliesSequentially() {
-    // TODO
     if (this.alliedConfig) {
       await this.spawnAlliesWithConfig();
       return;
     }
 
-    // TODO
     const count = this.alliedInfo.count;
     debugLog("Defense", "spawnAllies Starting (legacy), count:", count);
 
@@ -6153,18 +5410,16 @@ export class DefenseGame {
       return;
     }
 
-    // TODO
     this.alliedViruses = [];
 
-    const delay = 250; // TODO
-    const targetRadius = 95; // TODO
+    const delay = 250;
+    const targetRadius = 95;
 
     for (let i = 0; i < count; i++) {
-      const angle = ((Math.PI * 2) / count) * i; // TODO
+      const angle = ((Math.PI * 2) / count) * i;
 
-      // TODO
       const ally = {
-        x: this.core.x, // TODO
+        x: this.core.x,
         y: this.core.y,
         targetX: this.core.x + Math.cos(angle) * targetRadius,
         targetY: this.core.y + Math.sin(angle) * targetRadius,
@@ -6176,21 +5431,17 @@ export class DefenseGame {
         color: this.alliedInfo.color || "#00aaff",
         target: null,
         attackTimer: 0,
-        // TODO
         spawning: true,
         spawnProgress: 0,
-        // TODO
         virusType: "SWARM",
         attackType: "melee",
       };
 
       this.alliedViruses.push(ally);
-      debugLog("Defense", "spawnAllies ?? Ally", i + 1, "of", count);
+      debugLog("Defense", "TODO", i + 1, "of", count);
 
-      // TODO
       this.animateAllySpawn(ally, targetRadius, angle);
 
-      // TODO
       await new Promise((r) => setTimeout(r, delay));
     }
 
@@ -6201,9 +5452,7 @@ export class DefenseGame {
     );
   }
 
-  /**
-   * ???? ???? ?
-   */
+  
   async spawnAlliesWithConfig() {
     const config = this.alliedConfig;
     if (!config) return;
@@ -6218,10 +5467,9 @@ export class DefenseGame {
 
     this.alliedViruses = [];
 
-    const delay = 200; // TODO
+    const delay = 200;
     const targetRadius = 95;
 
-    // TODO
     for (let i = 0; i < config.mainCount; i++) {
       const angle = ((Math.PI * 2) / totalCount) * i;
       const ally = this.createVirusFromType(
@@ -6237,7 +5485,6 @@ export class DefenseGame {
       await new Promise((r) => setTimeout(r, delay));
     }
 
-    // TODO
     if (config.subType && config.subCount > 0) {
       for (let i = 0; i < config.subCount; i++) {
         const angle = ((Math.PI * 2) / totalCount) * (config.mainCount + i);
@@ -6262,14 +5509,10 @@ export class DefenseGame {
     );
   }
 
-  /**
-   * ????? ?  ?
-   */
+  
   createVirusFromType(typeName, typeData, angle, targetRadius, config) {
-    // TODO
     const pureBonus = config.isPureSpecialization ? config.pureBonus : 1.0;
 
-    // TODO
     const hp = Math.floor(typeData.baseHp * config.hpMultiplier * pureBonus);
     const damage = Math.floor(
       typeData.baseDamage * config.damageMultiplier * pureBonus
@@ -6283,7 +5526,7 @@ export class DefenseGame {
       targetY: this.core.y + Math.sin(angle) * targetRadius,
       hp: hp,
       maxHp: hp,
-      baseMaxHp: hp, // TODO
+      baseMaxHp: hp,
       damage: damage,
       speed: speed,
       angle: angle,
@@ -6294,11 +5537,9 @@ export class DefenseGame {
       spawning: true,
       spawnProgress: 0,
 
-      // TODO
       virusType: typeName,
       attackType: typeData.attackType,
 
-      // TODO
       special: typeData.special || null,
       range: typeData.range || 0,
       fireRate: typeData.fireRate || 0,
@@ -6309,30 +5550,25 @@ export class DefenseGame {
       healAmount: typeData.healAmount || 0,
       healRadius: typeData.healRadius || 0,
 
-      // TODO
       tauntRadius: typeData.tauntRadius || 0,
       tauntCooldown: typeData.tauntCooldown || 0,
       aggroRadius: typeData.aggroRadius || 0,
 
-      // TODO
       respawnTime: config.respawnTime,
 
-      // TODO
       synergy: config.synergy,
     };
   }
 
-  // TODO
   animateAllySpawn(ally, targetRadius, angle) {
-    const duration = 300; // TODO
+    const duration = 300;
     const startTime = performance.now();
-    const overshoot = 1.3; // TODO
+    const overshoot = 1.3;
 
     const animate = (now) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
-      // TODO
       const elasticOut = (t) => {
         if (t === 0 || t === 1) return t;
         return (
@@ -6344,7 +5580,6 @@ export class DefenseGame {
 
       const eased = elasticOut(progress);
 
-      // TODO
       const currentRadius = targetRadius * eased;
 
       ally.x = this.core.x + Math.cos(angle) * currentRadius;
@@ -6357,7 +5592,6 @@ export class DefenseGame {
         ally.x = this.core.x + Math.cos(angle) * targetRadius;
         ally.y = this.core.y + Math.sin(angle) * targetRadius;
 
-        // TODO
         const particleCount = this.isMobile ? 3 : 6;
         for (let p = 0; p < particleCount; p++) {
           const pAngle = ((Math.PI * 2) / particleCount) * p;
@@ -6376,7 +5610,6 @@ export class DefenseGame {
       }
     };
 
-    // TODO
     const startParticles = this.isMobile ? 2 : 4;
     for (let p = 0; p < startParticles; p++) {
       this.particles.push({
@@ -6398,14 +5631,13 @@ export class DefenseGame {
   expandShield() {
     return new Promise((resolve) => {
       const targetRadius = 70;
-      const duration = 300; // TODO
+      const duration = 300;
       const start = performance.now();
 
       const animateShield = (now) => {
         const elapsed = now - start;
         const progress = Math.min(elapsed / duration, 1);
 
-        // TODO
         const elastic = (x) =>
           x === 0
             ? 0
@@ -6428,11 +5660,8 @@ export class DefenseGame {
     });
   }
 
-  // TODO
 
-  /**
-   * ???JSON 
-   */
+  
   async loadVirusDialogues() {
     try {
       const response = await fetch('./js/data/virusDialogues.json');
@@ -6444,9 +5673,7 @@ export class DefenseGame {
     }
   }
 
-  /**
-   * ? ?????  * @param {string} category ??? (battle, idle, hurt, kill, spawn, etc.)
-   */
+  
   getRandomDialogue(category) {
     if (!this.virusDialogues || !this.virusDialogues[category]) return null;
     const dialogues = this.virusDialogues[category];
@@ -6454,15 +5681,10 @@ export class DefenseGame {
     return dialogues[Math.floor(Math.random() * dialogues.length)];
   }
 
-  /**
-   * ???
-   * @param {object} virus ? 
-   * @param {string} text ??????  * @param {number} duration ? ? (ms)
-   */
+  
   createSpeechBubble(virus, text, duration = 1500) {
     if (!text) return;
 
-    // TODO
     if (virus.isSpeaking) return;
     virus.isSpeaking = true;
 
@@ -6476,17 +5698,12 @@ export class DefenseGame {
 
     this.activeSpeechBubbles.push(bubble);
 
-    // TODO
     setTimeout(() => {
       virus.isSpeaking = false;
     }, duration + 500);
   }
 
-  /**
-   * ? ? ? ?? ???  * @param {object} virus ? 
-   * @param {string} situation ? (battle, hurt, kill, idle, spawn)
-   * @param {number} chance ? (0~1)
-   */
+  
   tryVirusSpeech(virus, situation, chance = 0.1) {
     if (Math.random() > chance) return;
     const text = this.getRandomDialogue(situation);
@@ -6495,19 +5712,15 @@ export class DefenseGame {
     }
   }
 
-  /**
-   * ????
-   */
+  
   updateSpeechBubbles() {
     const now = performance.now();
 
-    // TODO
     this.activeSpeechBubbles = this.activeSpeechBubbles.filter(bubble => {
       const elapsed = now - bubble.startTime;
       if (elapsed > bubble.duration) {
         return false;
       }
-      // TODO
       if (elapsed > bubble.duration - 300) {
         bubble.opacity = 1 - (elapsed - (bubble.duration - 300)) / 300;
       }
@@ -6515,8 +5728,7 @@ export class DefenseGame {
     });
   }
 
-  /**
-   * ????  */
+  
   renderSpeechBubbles() {
     const ctx = this.ctx;
 
@@ -6527,20 +5739,16 @@ export class DefenseGame {
       ctx.save();
       ctx.globalAlpha = bubble.opacity;
 
-      // TODO
       const textY = v.y - v.radius - 15;
 
-      // TODO
       ctx.font = "bold 13px 'VT323', 'Courier New', monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      // TODO
       ctx.strokeStyle = "#000";
       ctx.lineWidth = 3;
       ctx.strokeText(bubble.text, v.x, textY);
 
-      // TODO
       ctx.fillStyle = "#00ff41";
       ctx.fillText(bubble.text, v.x, textY);
 
@@ -6548,28 +5756,18 @@ export class DefenseGame {
     });
   }
 
-  // TODO
-  // TODO
-  // TODO
 
-  /**
-   * BGM ? ?
-   * @param {string} trackName - ? ? (SAFE_ZONE, DEFENSE, FINAL)
-   */
+  
   playBGMTrack(trackName) {
-    if (this.currentBGMTrack === trackName) return; // TODO
+    if (this.currentBGMTrack === trackName) return;
     this.currentBGMTrack = trackName;
     this.bgmManager.play(trackName);
   }
 
-  /**
-   * BGM  ??
-   * @returns {boolean} -  ? ??true (ON)
-   */
+  
   toggleBGM() {
     const isOn = this.bgmManager.toggleMute();
 
-    // TODO
     if (isOn && this.isRunning) {
       if (this.isSafeZone) {
         this.playBGMTrack('SAFE_ZONE');
@@ -6607,10 +5805,12 @@ export class DefenseGame {
   }
 
   updateCoreMovement(dt) {
-    // TODO
-    if (this.core.shieldActive || this.core.shieldState !== "OFF") {
+    const sway = 6;
+    if (this.core.shieldState === "DISABLED") {
       this.moveInput.x = 0;
       this.moveInput.y = 0;
+      this.core.targetOffsetX = 0;
+      this.core.targetOffsetY = 0;
       return;
     }
 
@@ -6618,25 +5818,44 @@ export class DefenseGame {
     this.core.x += this.moveInput.x * speed * dt;
     this.core.y += this.moveInput.y * speed * dt;
 
-    // TODO
-    this.core.x = Math.min(Math.max(this.core.x, 0), this.worldWidth);
-    this.core.y = Math.min(Math.max(this.core.y, 0), this.worldHeight);
+    if (this.core.shieldActive) {
+      const maxDist = Math.max(0, this.core.shieldRadius - this.core.radius);
+      const dx = this.core.x - this.shieldAnchor.x;
+      const dy = this.core.y - this.shieldAnchor.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > maxDist && dist > 0) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        this.core.x = this.shieldAnchor.x + nx * maxDist;
+        this.core.y = this.shieldAnchor.y + ny * maxDist;
+      }
+    } else {
+      this.core.x = Math.min(Math.max(this.core.x, 0), this.worldWidth);
+      this.core.y = Math.min(Math.max(this.core.y, 0), this.worldHeight);
+    }
+    this.core.targetOffsetX = this.moveInput.x * sway;
+    this.core.targetOffsetY = this.moveInput.y * sway;
   }
 
   updateCoreReturn(dt) {
     const dx = this.coreHome.x - this.core.x;
     const dy = this.coreHome.y - this.core.y;
     const dist = Math.hypot(dx, dy);
+    const sway = 6;
 
     if (dist > 2) {
       const nx = dx / dist;
       const ny = dy / dist;
       this.core.x += nx * this.coreReturnSpeed * dt;
       this.core.y += ny * this.coreReturnSpeed * dt;
+      this.core.targetOffsetX = nx * sway;
+      this.core.targetOffsetY = ny * sway;
     } else {
       this.core.x = this.coreHome.x;
       this.core.y = this.coreHome.y;
       this.coreReturnAtHome = true;
+      this.core.targetOffsetX = 0;
+      this.core.targetOffsetY = 0;
     }
 
     if (this.coreReturnAtHome) {
@@ -6705,4 +5924,63 @@ export class DefenseGame {
     const thumbY = ny * (max - 20);
     this.joystickThumb.style.transform = `translate(calc(-50% + ${thumbX}px), calc(-50% + ${thumbY}px))`;
   }
+
+  renderMiningEffect(ctx, time) {
+    if (!this.miningManager) return;
+    const cx = this.shieldAnchor.x;
+    const cy = this.shieldAnchor.y;
+    const base = Math.max(10, this.core.shieldRadius * 0.35);
+    const t = time;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.globalCompositeOperation = "lighter";
+
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = "#00ff88";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, base + Math.sin(t * 2) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.arc(0, 0, base * 0.6, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const dotCount = 8;
+    for (let i = 0; i < dotCount; i++) {
+      const ang = t * 1.6 + (i * Math.PI * 2) / dotCount;
+      const r = base * 0.9;
+      const x = Math.cos(ang) * r;
+      const y = Math.sin(ang) * r;
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = "#7dffb3";
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const streaks = 4;
+    for (let i = 0; i < streaks; i++) {
+      const ang = t * 2 + i * 1.7;
+      const travel = (t * 60 + i * 25) % (base * 1.2);
+      const r = base * 1.2 - travel;
+      const x1 = Math.cos(ang) * r;
+      const y1 = Math.sin(ang) * r;
+      const x2 = Math.cos(ang) * Math.max(0, r - 10);
+      const y2 = Math.sin(ang) * Math.max(0, r - 10);
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = "#00ff88";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
 }
+
+
