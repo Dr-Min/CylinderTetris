@@ -57,6 +57,27 @@ export class TerminalUI {
     // dataDisplay 바로 뒤에 추가
     this.dataDisplay.after(this.pageDisplay);
 
+    // PAGE skip button (shown only during PAGE display)
+    this.pageSkipBtn = document.createElement("button");
+    this.pageSkipBtn.id = "terminal-page-skip";
+    this.pageSkipBtn.style.cssText = `
+      margin-top: 4px;
+      padding: 4px 8px;
+      font-family: var(--term-font);
+      font-size: 11px;
+      color: #00f0ff;
+      background: rgba(0, 20, 40, 0.6);
+      border: 1px solid #00f0ff;
+      cursor: pointer;
+      pointer-events: auto;
+      display: none;
+    `;
+    this.pageSkipBtn.innerText = "SKIP PAGE";
+    this.pageSkipBtn.onclick = () => {
+      if (this.onPageSkip) this.onPageSkip();
+    };
+    this.pageDisplay.after(this.pageSkipBtn);
+
     // 입력창 직접 클릭 시에만 포커스 (화면 터치로 키보드 올라오는 문제 방지)
     this.cmdInput.addEventListener("click", (e) => {
       e.stopPropagation(); // 이벤트 버블링 방지
@@ -865,6 +886,10 @@ export class TerminalUI {
       this.pageDisplay.innerText = text;
       this.pageDisplay.style.color = color;
       this.pageDisplay.style.textShadow = `0 0 5px ${color}`;
+    }
+    if (this.pageSkipBtn) {
+      const show = typeof text === "string" && text.startsWith("PAGE:");
+      this.pageSkipBtn.style.display = show ? "inline-block" : "none";
     }
   }
 

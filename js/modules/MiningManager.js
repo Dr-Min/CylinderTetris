@@ -25,6 +25,7 @@ export class MiningManager {
     this._bgLogTimer = 0;
     this._currentSceneStageId = null;
     this._currentSceneIsSafe = false;
+    this._currentSceneIsConquered = false;
     this.pendingData = 0;
     this._territoryExit = null;
   }
@@ -44,11 +45,12 @@ export class MiningManager {
   }
 
   // === ???꾪솚 ???몄텧 ===
-  onSceneChange(stageId, isSafeZone, canvas, core) {
+  onSceneChange(stageId, isSafeZone, canvas, core, isConquered = false) {
     const id = String(stageId);
     const isPrimarySafe = isSafeZone && id === "0";
     this._currentSceneStageId = id;
     this._currentSceneIsSafe = isPrimarySafe;
+    this._currentSceneIsConquered = !!isConquered;
     this.miners = [];
 
     console.log(`[Mining] onSceneChange: stageId=${stageId} (type:${typeof stageId}), isSafeZone=${isSafeZone}`);
@@ -59,16 +61,13 @@ export class MiningManager {
       console.log(`[Mining] Safe zone entered - spawned ${this.miners.length} deposit miners`);
     } else {
       // Check if this territory is registered
-      if (this.territories[id]) {
+      if (this._currentSceneIsConquered && this.territories[id]) {
         if (!core || typeof core.x !== 'number') {
            console.error("[Mining] ??Core is invalid or missing coordinates! Cannot spawn miners.");
            return;
         }
-        this._territoryExit = {
-          x: -30,
-          y: canvas.height * 0.8,
-        };
-        this._spawnTerritoryMiners(core);
+        this._territoryExit = this._getTerritoryExit(canvas);
+        this._spawnTerritoryMiners(core, canvas);
         console.log(`[Mining] Territory ${id} entered - spawned ${this.miners.length} miners`);
       } else {
         console.warn(`[Mining] ?좑툘 Stage ${id} is NOT registered as a territory. No miners spawned. Known territories:`, Object.keys(this.territories));
@@ -77,35 +76,31 @@ export class MiningManager {
   }
 
   // === 留??꾨젅???낅뜲?댄듃 (DefenseGame.update?먯꽌 ?몄텧) ===
-  update(dt, core, canvas, isSafeZone, createExplosion) {
+  update(dt, core, canvas, isSafeZone, createExplosion, isConquered = false) {
     const safeNow = !!isSafeZone;
+    const conqueredNow = !!isConquered;
     if (this._currentSceneIsSafe !== safeNow) {
       this._currentSceneIsSafe = safeNow;
+      this._currentSceneIsConquered = conqueredNow;
       this.miners = [];
       if (safeNow) {
         this.initCabinet(canvas, core);
         this._spawnSafeZoneMiners(canvas);
       } else {
         const id = this._currentSceneStageId;
-        if (id && this.territories[id] && core && typeof core.x === "number") {
-          this._territoryExit = {
-            x: -30,
-            y: canvas.height * 0.8,
-          };
-          this._spawnTerritoryMiners(core);
+        if (id && this._currentSceneIsConquered && this.territories[id] && core && typeof core.x === "number") {
+          this._territoryExit = this._getTerritoryExit(canvas);
+          this._spawnTerritoryMiners(core, canvas);
         }
       }
     }
     this._updateBackground(dt);
     this._updateFloatingTexts(dt);
-    if (!this._currentSceneIsSafe && this.miners.length === 0) {
+    if (!this._currentSceneIsSafe && this._currentSceneIsConquered && this.miners.length === 0) {
       const id = this._currentSceneStageId;
       if (id && this.territories[id] && core && typeof core.x === "number") {
-        this._territoryExit = {
-          x: -30,
-          y: canvas.height * 0.8,
-        };
-        this._spawnTerritoryMiners(core);
+        this._territoryExit = this._getTerritoryExit(canvas);
+        this._spawnTerritoryMiners(core, canvas);
       }
     }
     if (this._currentSceneIsSafe && this.pendingData > 0 && this.miners.length === 0) {
@@ -187,13 +182,12 @@ export class MiningManager {
 
   // ============ PRIVATE ============
 
-  _spawnTerritoryMiners(core) {
+  _spawnTerritoryMiners(core, canvas) {
+    const entry = this._getTerritoryEntry(canvas);
     for (let i = 0; i < this.minerCount; i++) {
-      const angle = ((Math.PI * 2) / this.minerCount) * i;
-      const r = 95;
       this.miners.push({
-        x: core.x + Math.cos(angle) * r,
-        y: core.y + Math.sin(angle) * r,
+        x: entry.x,
+        y: entry.y + i * 4,
         vx: 0, vy: 0,
         radius: 6,
         color: "#ffcc00",
@@ -205,7 +199,7 @@ export class MiningManager {
         targetX: core.x,
         targetY: core.y,
         miningProgress: 0,
-        initialDelay: i * 1.5,
+        initialDelay: i * 0.8,
       });
     }
   }
@@ -324,10 +318,7 @@ export class MiningManager {
           this.pendingData += miner.dataCarrying;
           miner.dataCarrying = 0;
           // ?먮졊吏 ?붾㈃?대㈃ ?ㅼ떆 肄붿뼱濡??뚯븘??
-          const enterEdge = {
-            x: canvas.width + 20,
-            y: canvas.height * 0.2,
-          };
+          const enterEdge = this._getTerritoryEntry(canvas);
           miner.x = enterEdge.x;
           miner.y = enterEdge.y;
           miner.targetX = core.x;
@@ -619,6 +610,20 @@ export class MiningManager {
       case 2: return { x: Math.random() * canvas.width, y: -20 };
       default: return { x: Math.random() * canvas.width, y: canvas.height + 20 };
     }
+  }
+
+  _getTerritoryEntry(canvas) {
+    return {
+      x: -20,
+      y: canvas.height * 0.8,
+    };
+  }
+
+  _getTerritoryExit(canvas) {
+    return {
+      x: -30,
+      y: canvas.height * 0.2,
+    };
   }
 
   _getSafeEntry(canvas) {

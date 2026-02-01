@@ -1,5 +1,5 @@
-// v2.1.31 - Fix: Safe zone miners loop from right-up only
-const CACHE_NAME = "hacker-tetris-v2.1.31";
+// v2.1.45 - Fix: Miners only on conquered stages
+const CACHE_NAME = "hacker-tetris-v2.1.45";
 const ASSETS = [
   "./",
   "./index.html",

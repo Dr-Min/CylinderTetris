@@ -154,6 +154,7 @@ export class GameManager {
     // PAGE 업데이트 연결 (터미널에 표시)
     this.defenseGame.onPageUpdate = (text, color) =>
       this.terminal.updatePage(text, color);
+    this.terminal.onPageSkip = () => this.defenseGame.skipPageOverlap();
 
     // 적 처치 시 아이템 드롭 콜백
     this.defenseGame.onEnemyKilled = (x, y) => this.tryItemDrop(x, y, "defense");
@@ -1704,7 +1705,8 @@ export class GameManager {
       stageId,
       stage.type === "safe",
       this.defenseGame.canvas,
-      this.defenseGame.core
+      this.defenseGame.core,
+      !!stage.conquered
     );
 
     this.defenseGame.resume();
@@ -2888,7 +2890,8 @@ export class GameManager {
       String(currentStage.id),
       false,
       this.defenseGame.canvas,
-      this.defenseGame.core
+      this.defenseGame.core,
+      true
     );
 
     debugLog("Conquest", "Calling defenseGame.resume()");
@@ -6735,7 +6738,8 @@ export class GameManager {
         String(stage.id),
         isSafe,
         canvas,
-        core
+        core,
+        !!stage.conquered
       );
     }
   }

@@ -329,10 +329,13 @@ export class DefenseGame {
 
     // 웨이브 관리
     this.waveTimer = 0;
-    this.spawnRate = 0.4; // 1.2 → 0.4 (스폰 수 3배 증가: 1.2 / 3)
+    this.pageDurationBase = 12.5;
+    this.pageDuration = 10; // 페이지당 10초
+    this.pageSpawnScale = this.pageDuration / this.pageDurationBase;
+    this.spawnRate = 0.4 * this.pageSpawnScale; // 총 스폰량 유지용 스케일
     this.currentPage = 1; // 1 ~ 12
     this.pageTimer = 0;
-    this.pageDuration = 25; // 페이지당 25초 (20 → 25, 더 오래 생존해야 함)
+    this.pageDuration = 10; // 페이지당 10초
 
     // 스테이지 관리
     this.currentStage = 0; // 0 = 안전영역, 1+ = 일반 스테이지
@@ -1160,7 +1163,7 @@ export class DefenseGame {
           // 1페이지: 0.17초, 2페이지: 0.12초, 3페이지: 0.08초
           const reinforcementSpawnRates = [0.17, 0.12, 0.08];
           this.spawnRate =
-            reinforcementSpawnRates[Math.min(this.reinforcementPage - 1, 2)];
+            reinforcementSpawnRates[Math.min(this.reinforcementPage - 1, 2)] * this.pageSpawnScale;
 
           this.updateWaveDisplay();
           debugLog(
@@ -1200,8 +1203,8 @@ export class DefenseGame {
           // 최소값도 1/3로 조정: 0.4 → 0.13, 기본값도 1/3: 1.2 → 0.4
           if (!this.isFarmingZone) {
             this.spawnRate = Math.max(
-              0.13,
-              0.4 - this.currentPage * 0.04 * diffScale
+              0.13 * this.pageSpawnScale,
+              (0.4 - this.currentPage * 0.04 * diffScale) * this.pageSpawnScale
             );
           }
           this.updateWaveDisplay();
@@ -1273,7 +1276,8 @@ export class DefenseGame {
     if (this.miningManager) {
       this.miningManager.update(
         dt, this.core, this.canvas, this.isSafeZone,
-        (x, y, color, count) => this.createExplosion(x, y, color, count)
+        (x, y, color, count) => this.createExplosion(x, y, color, count),
+        this.isConquered
       );
       this.miningManager.resolveCabinetCollisions(this.alliedViruses, 3);
     }
@@ -1872,6 +1876,37 @@ export class DefenseGame {
     }
   }
 
+  skipPageOverlap() {
+    if (this.isSafeZone || this.isConquered || this.isReinforcementMode) return;
+    const maxPages = this.maxPages || 12;
+    const diffScale = this.stageDifficultyScale || 1.0;
+
+    if (this.currentPage < maxPages || this.isFarmingZone) {
+      this.currentPage++;
+      this.pageTimer = 0;
+      if (!this.isFarmingZone) {
+        this.spawnRate = Math.max(
+          0.13,
+          0.4 - this.currentPage * 0.04 * diffScale
+        );
+      }
+
+      const burstCount = Math.min(30, Math.ceil(this.pageDuration / this.spawnRate));
+      for (let i = 0; i < burstCount; i++) {
+        this.spawnEnemy();
+      }
+      this.updateWaveDisplay();
+    } else if (!this.conquerReady && !this.isFarmingZone) {
+      this.conquerReady = true;
+      if (this.onPageUpdate) {
+        this.onPageUpdate("??READY", "#ff3333");
+      }
+      if (this.onConquerReady) {
+        this.onConquerReady();
+      }
+    }
+  }
+
   // 강화 페이지 모드 시작 (점령 시)
   startReinforcementMode(maxPages = 3) {
     this.isReinforcementMode = true;
@@ -1879,7 +1914,7 @@ export class DefenseGame {
     this.reinforcementMaxPages = maxPages;
     this.reinforcementComplete = false;
     this.pageTimer = 0;
-    this.spawnRate = 0.17; // 강화 1페이지: 스폰 수 3배 (0.5 / 3)
+    this.spawnRate = 0.17 * this.pageSpawnScale; // 강화 1페이지: 스폰 수 3배 (0.5 / 3)
     this.updateWaveDisplay();
     debugLog(
       "Defense",
@@ -1897,7 +1932,7 @@ export class DefenseGame {
     this.reinforcementComplete = false;
     this.currentPage = 1;
     this.pageTimer = 0;
-    this.spawnRate = 0.4; // 리셋 시 초기값 (스폰 수 3배)
+    this.spawnRate = 0.4 * this.pageSpawnScale; // 리셋 시 초기값 (스폰 수 3배)
 
     // 실드 복구
     this.core.shieldRadius = 70;
