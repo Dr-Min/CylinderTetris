@@ -353,7 +353,7 @@ export class MiningManager {
 
       case "EXIT_SAFE":
         this._moveToward(miner, miner.targetX, miner.targetY, dt);
-        if (this._isOffScreen(miner, canvas)) {
+        if (this._isOffScreenSafe(miner, canvas)) {
           const enterEdge = this._getSafeEntry(canvas);
           miner.x = enterEdge.x;
           miner.y = enterEdge.y;
@@ -632,6 +632,12 @@ export class MiningManager {
   _isOffScreen(m, canvas) {
     const w = this._worldW || canvas.width;
     const h = this._worldH || canvas.height;
+    return m.x < -15 || m.x > w + 15 || m.y < -15 || m.y > h + 15;
+  }
+
+  _isOffScreenSafe(m, canvas) {
+    const w = canvas.width;
+    const h = canvas.height;
     return m.x < -15 || m.x > w + 15 || m.y < -15 || m.y > h + 15;
   }
 }
