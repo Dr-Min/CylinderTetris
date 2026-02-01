@@ -16,9 +16,9 @@ export class MiningManager {
     this.dataPerTrip = 5;
     this.miningDuration = 2.0;
     this.depositDuration = 1.0;
-    this.baseMinerSpeed = 50;
+    this.baseMinerSpeed = 150;
     this.minerSpeed = this.baseMinerSpeed;
-    this.offScreenDelay = 3.0;
+    this.offScreenDelay = 5.0;
     this.minerCount = 5;
     this.travelBuffer = 4;
 
@@ -83,10 +83,9 @@ export class MiningManager {
     }
   }
 
-  update(dt, core, canvas, isSafeZone, createExplosion, isConquered = false, camera = null, gameScale = 1) {
+  update(dt, core, canvas, isSafeZone, createExplosion, isConquered = false) {
     const safeNow = !!isSafeZone;
     const conqueredNow = !!isConquered;
-    this._updateSafeView(canvas, camera, gameScale);
     if (this._currentSceneIsSafe !== safeNow) {
       this._currentSceneIsSafe = safeNow;
       this._currentSceneIsConquered = conqueredNow;
@@ -549,22 +548,6 @@ export class MiningManager {
     this.cabinet.y = Math.min(Math.max(10, rawY), maxY);
   }
 
-  _updateSafeView(canvas, camera, gameScale) {
-    if (!canvas) return;
-    const scale = gameScale || 1;
-    const viewW = canvas.width / scale;
-    const viewH = canvas.height / scale;
-    const camX = camera?.x ?? this._lastCore?.x ?? canvas.width / 2;
-    const camY = camera?.y ?? this._lastCore?.y ?? canvas.height / 2;
-    this._safeView = {
-      minX: camX - viewW / 2,
-      maxX: camX + viewW / 2,
-      minY: camY - viewH / 2,
-      maxY: camY + viewH / 2,
-      viewW,
-      viewH
-    };
-  }
 
   resolveCabinetCollisions(entities, padding = 2) {
     if (!this._currentSceneIsSafe) return;
@@ -682,12 +665,6 @@ export class MiningManager {
   }
 
   _getSafeEntry(canvas) {
-    if (this._safeView) {
-      return {
-        x: this._safeView.maxX + 20,
-        y: this._safeView.minY + this._safeView.viewH * 0.2,
-      };
-    }
     return {
       x: canvas.width + 20,
       y: canvas.height * 0.2,
@@ -701,16 +678,8 @@ export class MiningManager {
   }
 
   _isOffScreenSafe(m, canvas) {
-    if (this._safeView) {
-      return (
-        m.x < this._safeView.minX - 15 ||
-        m.x > this._safeView.maxX + 15 ||
-        m.y < this._safeView.minY - 15 ||
-        m.y > this._safeView.maxY + 15
-      );
-    }
-    const w = canvas.width;
-    const h = canvas.height;
+    const w = this._worldW || canvas.width;
+    const h = this._worldH || canvas.height;
     return m.x < -15 || m.x > w + 15 || m.y < -15 || m.y > h + 15;
   }
 }

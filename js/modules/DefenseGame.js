@@ -1237,9 +1237,7 @@ export class DefenseGame {
       this.miningManager.update(
         dt, this.core, this.canvas, this.isSafeZone,
         (x, y, color, count) => this.createExplosion(x, y, color, count),
-        this.isConquered,
-        this.camera,
-        this.gameScale
+        this.isConquered
       );
       this.miningManager.resolveCabinetCollisions(this.alliedViruses, 3);
     }
