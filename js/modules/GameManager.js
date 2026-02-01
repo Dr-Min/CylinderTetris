@@ -193,6 +193,7 @@ export class GameManager {
         turretDamage: 0, // MAX Lv.10, +3/Lv = 최종 +30
         turretRange: 0, // MAX Lv.10, +15/Lv = 최종 +150
         turretSpeed: 0, // MAX Lv.10, +30/Lv = 최종 +300
+        fireRate: 0, // MAX Lv.10, +0.5/Lv = 최종 +5/s
         staticDamage: 0, // MAX Lv.10, +5/Lv = 최종 +50
         staticChain: 0, // MAX Lv.10, +1/Lv = 최종 +10 (3→13)
       },
@@ -341,6 +342,7 @@ export class GameManager {
         turretDamage: 10,
         turretRange: 10,
         turretSpeed: 10,
+        fireRate: 10,
         staticDamage: 10,
         staticChain: 10,
       },
@@ -4375,6 +4377,18 @@ export class GameManager {
         },
       },
       {
+        id: "fireRate",
+        name: "Fire Rate",
+        increment: "+0.5/s",
+        cost: 140,
+        level: levels.fireRate,
+        maxLevel: maxLevels.fireRate,
+        effect: () => {
+          this.upgradeLevels.core.fireRate++;
+          this.applyCoreUpgradeBonuses();
+        },
+      },
+      {
         id: "staticDamage",
         name: "⚡ Static Damage",
         increment: "+5",
@@ -4573,6 +4587,18 @@ export class GameManager {
                   },
                 },
                 {
+                  id: "fireRate",
+                  name: "Fire Rate",
+                  increment: "+0.5/s",
+                  cost: 140,
+                  level: levels.fireRate,
+                  maxLevel: maxLevels.fireRate,
+                  effect: () => {
+                    this.upgradeLevels.core.fireRate++;
+                    this.applyCoreUpgradeBonuses();
+                  },
+                },
+                {
                   id: "staticDamage",
                   name: "⚡ Static Damage",
                   increment: "+5",
@@ -4627,6 +4653,7 @@ export class GameManager {
     const baseTurretDamage = 10;
     const baseTurretRange = 200;
     const baseTurretSpeed = 300;
+    const baseTurretFireRate = 4;
     const baseStaticDamage = 10;
     const baseStaticChain = 3;
 
@@ -4635,6 +4662,7 @@ export class GameManager {
     const bonusTurretDamage = levels.turretDamage * 3;
     const bonusTurretRange = levels.turretRange * 15;
     const bonusTurretSpeed = levels.turretSpeed * 30;
+    const bonusTurretFireRate = levels.fireRate * 0.5;
     const bonusStaticDamage = levels.staticDamage * 5;
     const bonusStaticChain = levels.staticChain * 1;
 
@@ -4647,6 +4675,8 @@ export class GameManager {
     this.defenseGame.turret.range = baseTurretRange + bonusTurretRange;
     this.defenseGame.turret.projectileSpeed =
       baseTurretSpeed + bonusTurretSpeed;
+    this.defenseGame.turret.fireRate =
+      baseTurretFireRate + bonusTurretFireRate;
 
     this.defenseGame.staticSystem.damage = baseStaticDamage + bonusStaticDamage;
     this.defenseGame.staticSystem.chainCount =
@@ -6492,7 +6522,7 @@ export class GameManager {
   getDefaultUpgrades() {
     return {
       helper: { damage: 0, fireRate: 0, range: 0, projectileSpeed: 0, magazineSize: 0 },
-      core: { hp: 0, turretDamage: 0, turretRange: 0, turretSpeed: 0, staticDamage: 0, staticChain: 0 },
+      core: { hp: 0, turretDamage: 0, turretRange: 0, turretSpeed: 0, fireRate: 0, staticDamage: 0, staticChain: 0 },
       shield: { hp: 0 },
       ally: { slots: 0, hp: 0, damage: 0, speed: 0, respawn: 0 },
     };

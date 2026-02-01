@@ -85,6 +85,12 @@ export class DefenseGame {
     this.keyState = { up: false, down: false, left: false, right: false };
     this.joystick = { active: false, pointerId: null, inputX: 0, inputY: 0 };
     this.hasInitializedCore = false;
+    this.autoFireActive = false;
+    this.autoFireTimer = 0;
+    this.autoFireTouchId = null;
+    this.autoFireMouseActive = false;
+    this.autoFireStartTime = 0;
+    this.rightFireZoneRatio = 0.55;
     this.uiLayer = document.createElement("div");
     this.uiLayer.id = "defense-ui";
     this.uiLayer.style.position = "fixed";
@@ -422,11 +428,19 @@ export class DefenseGame {
     this.idleTurretSpeed = 1.5;
 
     this.canvas.addEventListener("click", (e) => this.handleCanvasClick(e));
+    this.canvas.addEventListener("mousedown", (e) => this.handleCanvasMouseDown(e));
+    window.addEventListener("mouseup", (e) => this.handleCanvasMouseUp(e));
     this.canvas.addEventListener(
       "touchstart",
       (e) => this.handleCanvasTouch(e),
       { passive: false }
     );
+    this.canvas.addEventListener("touchend", (e) => this.handleCanvasTouchEnd(e), {
+      passive: false
+    });
+    this.canvas.addEventListener("touchcancel", (e) => this.handleCanvasTouchEnd(e), {
+      passive: false
+    });
 
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     window.addEventListener("keyup", (e) => this.handleKeyUp(e));
@@ -1567,6 +1581,8 @@ export class DefenseGame {
     if (ss.currentCharge > ss.maxCharge * 0.5 && Math.random() < 0.1) {
       this.createStaticSpark();
     }
+
+    this.updateAutoFire(dt);
   }
 
   
@@ -4759,6 +4775,10 @@ export class DefenseGame {
 
     if (e.target === this.shieldBtn) return;
 
+    if (this.autoFireMouseActive && performance.now() - this.autoFireStartTime < 200) {
+      return;
+    }
+
     const rect = this.canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
@@ -4821,9 +4841,69 @@ export class DefenseGame {
           }
         }
 
+        if (touchX >= rect.width * this.rightFireZoneRatio) {
+          if (!this.autoFireActive) {
+            this.autoFireActive = true;
+            this.autoFireTouchId = touch.identifier;
+            this.autoFireTimer = this.getAutoFireInterval();
+            this.fireAtPosition(0, 0);
+          }
+          continue;
+        }
+
         this.fireAtPosition(scaledTouchX, scaledTouchY);
       }
     }
+  }
+
+  handleCanvasTouchEnd(e) {
+    if (!this.autoFireActive) return;
+    if (this.autoFireTouchId === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === this.autoFireTouchId) {
+        this.autoFireActive = false;
+        this.autoFireTouchId = null;
+        this.autoFireTimer = 0;
+        break;
+      }
+    }
+  }
+
+  handleCanvasMouseDown(e) {
+    if (this.isPaused) return;
+    if (e.button !== 0) return;
+    if (e.target === this.shieldBtn) return;
+    if (this.isSafeZone && this.miningManager) {
+      const rect = this.canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const worldPos = this.screenToWorld(clickX, clickY);
+      const result = this.miningManager.handleCabinetTap(worldPos.x, worldPos.y);
+      if (result.collected) {
+        this.currentData += result.amount;
+        this.updateResourceDisplay(this.currentData);
+        if (this.onResourceGained) this.onResourceGained(result.amount);
+        this.createExplosion(
+          this.miningManager.cabinet.x + this.miningManager.cabinet.width / 2,
+          this.miningManager.cabinet.y,
+          "#00ff88", 8
+        );
+        return;
+      }
+    }
+    this.autoFireMouseActive = true;
+    this.autoFireActive = true;
+    this.autoFireStartTime = performance.now();
+    this.autoFireTimer = this.getAutoFireInterval();
+    this.fireAtPosition(0, 0);
+  }
+
+  handleCanvasMouseUp(e) {
+    if (e.button !== 0) return;
+    this.autoFireMouseActive = false;
+    this.autoFireActive = false;
+    this.autoFireTimer = 0;
   }
 
   handleKeyDown(e) {
@@ -4880,6 +4960,24 @@ export class DefenseGame {
       }
     } else {
       this.fireProjectileToward(this.turret.angle);
+    }
+  }
+
+  getAutoFireInterval() {
+    const effects = this.getItemEffects ? this.getItemEffects() : null;
+    const bonus = effects && Number.isFinite(effects.attackSpeed) ? effects.attackSpeed : 0;
+    const baseRate = Number.isFinite(this.turret.fireRate) ? this.turret.fireRate : 4;
+    const rate = Math.max(0.5, baseRate * (1 + bonus));
+    return 1 / rate;
+  }
+
+  updateAutoFire(dt) {
+    if (!this.autoFireActive || this.isPaused) return;
+    const interval = this.getAutoFireInterval();
+    this.autoFireTimer += dt;
+    if (this.autoFireTimer >= interval) {
+      this.autoFireTimer = 0;
+      this.fireAtPosition(0, 0);
     }
   }
 
