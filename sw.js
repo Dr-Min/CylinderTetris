@@ -1,5 +1,5 @@
-// v2.1.16 - Fix: Sync mining scene after load to spawn miners
-const CACHE_NAME = "hacker-tetris-v2.1.16";
+// v2.1.31 - Fix: Safe zone miners loop from right-up only
+const CACHE_NAME = "hacker-tetris-v2.1.31";
 const ASSETS = [
   "./",
   "./index.html",

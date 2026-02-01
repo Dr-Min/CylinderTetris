@@ -1,9 +1,9 @@
-const debugLog = window.debugLog || function () {};
+﻿const debugLog = window.debugLog || function () {};
 
 export class MiningManager {
   constructor() {
     this.territories = {};
-    this.miners = []; // 자체 배열 (alliedViruses와 완전 분리)
+    this.miners = []; // ?먯껜 諛곗뿴 (alliedViruses? ?꾩쟾 遺꾨━)
 
     this.cabinet = {
       storedData: 0,
@@ -25,78 +25,119 @@ export class MiningManager {
     this._bgLogTimer = 0;
     this._currentSceneStageId = null;
     this._currentSceneIsSafe = false;
+    this.pendingData = 0;
+    this._territoryExit = null;
   }
 
-  // === 점령지 등록 ===
+  // === ?먮졊吏 ?깅줉 ===
   registerTerritory(stageId) {
     const id = String(stageId); // Normalize to string
     if (this.territories[id]) {
-      console.log(`[Mining] ⚠️ Territory ${id} already registered. Skipping.`);
+      console.log(`[Mining] ?좑툘 Territory ${id} already registered. Skipping.`);
       return;
     }
     this.territories[id] = {
       minerCount: this.minerCount,
       tripTimer: 0,
     };
-    console.log(`[Mining] ✅ Territory ${id} registered successfully.`);
+    console.log(`[Mining] ??Territory ${id} registered successfully.`);
   }
 
-  // === 씬 전환 시 호출 ===
+  // === ???꾪솚 ???몄텧 ===
   onSceneChange(stageId, isSafeZone, canvas, core) {
-    this._currentSceneStageId = String(stageId);
-    this._currentSceneIsSafe = isSafeZone;
+    const id = String(stageId);
+    const isPrimarySafe = isSafeZone && id === "0";
+    this._currentSceneStageId = id;
+    this._currentSceneIsSafe = isPrimarySafe;
     this.miners = [];
 
     console.log(`[Mining] onSceneChange: stageId=${stageId} (type:${typeof stageId}), isSafeZone=${isSafeZone}`);
 
-    if (isSafeZone) {
-      this.initCabinet(canvas);
+    if (isPrimarySafe) {
+      this.initCabinet(canvas, core);
       this._spawnSafeZoneMiners(canvas);
       console.log(`[Mining] Safe zone entered - spawned ${this.miners.length} deposit miners`);
     } else {
       // Check if this territory is registered
-      const id = String(stageId);
       if (this.territories[id]) {
         if (!core || typeof core.x !== 'number') {
-           console.error("[Mining] ❌ Core is invalid or missing coordinates! Cannot spawn miners.");
+           console.error("[Mining] ??Core is invalid or missing coordinates! Cannot spawn miners.");
            return;
         }
+        this._territoryExit = {
+          x: -30,
+          y: canvas.height * 0.8,
+        };
         this._spawnTerritoryMiners(core);
         console.log(`[Mining] Territory ${id} entered - spawned ${this.miners.length} miners`);
       } else {
-        console.warn(`[Mining] ⚠️ Stage ${id} is NOT registered as a territory. No miners spawned. Known territories:`, Object.keys(this.territories));
+        console.warn(`[Mining] ?좑툘 Stage ${id} is NOT registered as a territory. No miners spawned. Known territories:`, Object.keys(this.territories));
       }
     }
   }
 
-  // === 매 프레임 업데이트 (DefenseGame.update에서 호출) ===
+  // === 留??꾨젅???낅뜲?댄듃 (DefenseGame.update?먯꽌 ?몄텧) ===
   update(dt, core, canvas, isSafeZone, createExplosion) {
+    const safeNow = !!isSafeZone;
+    if (this._currentSceneIsSafe !== safeNow) {
+      this._currentSceneIsSafe = safeNow;
+      this.miners = [];
+      if (safeNow) {
+        this.initCabinet(canvas, core);
+        this._spawnSafeZoneMiners(canvas);
+      } else {
+        const id = this._currentSceneStageId;
+        if (id && this.territories[id] && core && typeof core.x === "number") {
+          this._territoryExit = {
+            x: -30,
+            y: canvas.height * 0.8,
+          };
+          this._spawnTerritoryMiners(core);
+        }
+      }
+    }
     this._updateBackground(dt);
     this._updateFloatingTexts(dt);
+    if (!this._currentSceneIsSafe && this.miners.length === 0) {
+      const id = this._currentSceneStageId;
+      if (id && this.territories[id] && core && typeof core.x === "number") {
+        this._territoryExit = {
+          x: -30,
+          y: canvas.height * 0.8,
+        };
+        this._spawnTerritoryMiners(core);
+      }
+    }
+    if (this._currentSceneIsSafe && this.pendingData > 0 && this.miners.length === 0) {
+      this._spawnSafeZoneMiners(canvas);
+    }
 
     for (const miner of this.miners) {
       this._updateMiner(miner, dt, core, canvas, isSafeZone, createExplosion);
+      if (this._currentSceneIsSafe) {
+        this._pushOutOfCabinet(miner, 2);
+      }
     }
   }
 
-  // === 렌더링 (DefenseGame.render에서 호출) ===
+  // === ?뚮뜑留?(DefenseGame.render?먯꽌 ?몄텧) ===
   render(ctx, time, isMobile) {
-    // 마이너 몸체 그리기
+    // 留덉씠??紐몄껜 洹몃━湲?
     for (const miner of this.miners) {
       if (this._isOffScreen(miner, ctx.canvas)) continue;
       this._renderMiner(ctx, miner, time, isMobile);
     }
 
-    // 수납장 (세이프존만)
+    // ?섎궔??(?몄씠?꾩〈留?
     if (this._currentSceneIsSafe) {
       this._renderCabinet(ctx, time);
     }
 
-    // 플로팅 텍스트
+    // ?뚮줈???띿뒪??
     this._renderFloatingTexts(ctx);
   }
 
-  // === 수납장 터치 ===
+  // === ?섎궔???곗튂 ===
   handleCabinetTap(x, y) {
     const cab = this.cabinet;
     const margin = 20;
@@ -129,6 +170,7 @@ export class MiningManager {
     return {
       territories: { ...this.territories },
       cabinetStoredData: this.cabinet.storedData,
+      pendingData: this.pendingData,
     };
   }
 
@@ -137,6 +179,9 @@ export class MiningManager {
     if (data.territories) this.territories = { ...data.territories };
     if (typeof data.cabinetStoredData === "number") {
       this.cabinet.storedData = data.cabinetStoredData;
+    }
+    if (typeof data.pendingData === "number") {
+      this.pendingData = data.pendingData;
     }
   }
 
@@ -166,12 +211,14 @@ export class MiningManager {
   }
 
   _spawnSafeZoneMiners(canvas) {
-    const ids = Object.keys(this.territories);
-    if (ids.length === 0) return;
-    const count = Math.min(this.minerCount, ids.length * 3);
+    if (this.pendingData <= 0) return;
+    const count = Math.min(this.minerCount, Math.ceil(this.pendingData / this.dataPerTrip));
 
     for (let i = 0; i < count; i++) {
-      const edge = this._getRandomEdge(canvas);
+      const carry = Math.min(this.dataPerTrip, this.pendingData);
+      if (carry <= 0) break;
+      this.pendingData -= carry;
+      const edge = this._getSafeEntry(canvas);
       this.miners.push({
         x: edge.x,
         y: edge.y,
@@ -182,7 +229,7 @@ export class MiningManager {
         wobblePhase: Math.random() * Math.PI * 2,
         minerState: "ENTER_SAFE",
         stateTimer: 0,
-        dataCarrying: this.dataPerTrip,
+        dataCarrying: carry,
         targetX: this.cabinet.x + this.cabinet.width / 2,
         targetY: this.cabinet.y + this.cabinet.height / 2,
         miningProgress: 0,
@@ -198,19 +245,20 @@ export class MiningManager {
     this._bgLogTimer += dt;
     if (this._bgLogTimer > 5) {
       if (keys.length > 0) {
-        console.log(`[Mining] bg tick - territories: ${keys.length}, cabinet: ${this.cabinet.storedData} MB`);
+        console.log(`[Mining] bg tick - territories: ${keys.length}, cabinet: ${this.cabinet.storedData} MB, pending: ${this.pendingData} MB`);
       }
       this._bgLogTimer = 0;
     }
 
     for (const id of keys) {
+      if (!this._currentSceneIsSafe && this._currentSceneStageId === id) continue;
       const t = this.territories[id];
       t.tripTimer += dt;
       if (t.tripTimer >= tripCycle) {
         t.tripTimer -= tripCycle;
         const mined = this.dataPerTrip * t.minerCount;
-        this.cabinet.storedData += mined;
-        console.log(`[Mining] ✅ bg mined ${mined} MB from territory ${id}, stored: ${this.cabinet.storedData}`);
+        this.pendingData += mined;
+        console.log(`[Mining] ??bg mined ${mined} MB from territory ${id}, pending: ${this.pendingData}`);
       }
     }
   }
@@ -257,9 +305,9 @@ export class MiningManager {
 
         if (miner.stateTimer >= this.miningDuration) {
           miner.dataCarrying = this.dataPerTrip;
-          const edge = this._getNearestEdge(miner, canvas);
-          miner.targetX = edge.x;
-          miner.targetY = edge.y;
+          const exit = this._territoryExit || this._getNearestEdge(miner, canvas);
+          miner.targetX = exit.x;
+          miner.targetY = exit.y;
           this._changeState(miner, "CARRYING");
         }
         break;
@@ -273,10 +321,13 @@ export class MiningManager {
 
       case "EXIT_SCREEN":
         if (miner.stateTimer >= this.offScreenDelay) {
-          this.cabinet.storedData += miner.dataCarrying;
+          this.pendingData += miner.dataCarrying;
           miner.dataCarrying = 0;
-          // 점령지 화면이면 다시 코어로 돌아옴
-          const enterEdge = this._getRandomEdge(canvas);
+          // ?먮졊吏 ?붾㈃?대㈃ ?ㅼ떆 肄붿뼱濡??뚯븘??
+          const enterEdge = {
+            x: canvas.width + 20,
+            y: canvas.height * 0.2,
+          };
           miner.x = enterEdge.x;
           miner.y = enterEdge.y;
           miner.targetX = core.x;
@@ -287,7 +338,7 @@ export class MiningManager {
 
       case "ENTER_SAFE":
         this._moveToward(miner, miner.targetX, miner.targetY, dt);
-        if (this._distanceTo(miner, this.cabinet.x + this.cabinet.width / 2, this.cabinet.y + this.cabinet.height / 2) < 20) {
+        if (this._distanceTo(miner, this.cabinet.x + this.cabinet.width / 2, this.cabinet.y + this.cabinet.height / 2) < this._cabinetRadius() + miner.radius + 2) {
           this._changeState(miner, "DEPOSITING");
         }
         break;
@@ -300,7 +351,7 @@ export class MiningManager {
           if (createExplosion) {
             createExplosion(this.cabinet.x + this.cabinet.width / 2, this.cabinet.y, "#00ffaa", 3);
           }
-          const edge = this._getNearestEdge(miner, canvas);
+          const edge = this._getSafeEntry(canvas);
           miner.targetX = edge.x;
           miner.targetY = edge.y;
           this._changeState(miner, "EXIT_SAFE");
@@ -310,28 +361,43 @@ export class MiningManager {
       case "EXIT_SAFE":
         this._moveToward(miner, miner.targetX, miner.targetY, dt);
         if (this._isOffScreen(miner, canvas)) {
-          // 다시 데이터 들고 입장
-          const enterEdge = this._getRandomEdge(canvas);
+          const enterEdge = this._getSafeEntry(canvas);
           miner.x = enterEdge.x;
           miner.y = enterEdge.y;
-          miner.dataCarrying = this.dataPerTrip;
+          const carry = Math.min(this.dataPerTrip, this.pendingData);
+          this.pendingData -= carry;
+          miner.dataCarrying = carry;
           miner.targetX = this.cabinet.x + this.cabinet.width / 2;
           miner.targetY = this.cabinet.y + this.cabinet.height / 2;
           this._changeState(miner, "ENTER_SAFE");
-          miner.initialDelay = 2.0; // 잠시 대기 후 재입장
+          miner.initialDelay = 2.0; // ?좎떃 ?湲????ъ엥??
+        }
+        break;
+
+      case "WAITING":
+        if (this.pendingData > 0) {
+          const enterEdge = this._getSafeEntry(canvas);
+          miner.x = enterEdge.x;
+          miner.y = enterEdge.y;
+          const carry = Math.min(this.dataPerTrip, this.pendingData);
+          this.pendingData -= carry;
+          miner.dataCarrying = carry;
+          miner.targetX = this.cabinet.x + this.cabinet.width / 2;
+          miner.targetY = this.cabinet.y + this.cabinet.height / 2;
+          this._changeState(miner, "ENTER_SAFE");
         }
         break;
     }
   }
 
-  // === 렌더링 ===
+  // === ?뚮뜑留?===
   _renderMiner(ctx, miner, time, isMobile) {
     const state = miner.minerState;
-    if (state === "EXIT_SCREEN" || state === "EXIT_SAFE") return;
+    if (state === "EXIT_SCREEN") return;
 
     ctx.save();
 
-    // 위치
+    // ?꾩튂
     if (!isMobile) {
       const wobble = Math.sin(time * 5 + miner.wobblePhase) * 1.5;
       ctx.translate(miner.x + wobble * 0.3, miner.y + wobble * 0.2);
@@ -339,7 +405,7 @@ export class MiningManager {
       ctx.translate(miner.x, miner.y);
     }
 
-    // 몸체 (금색 원)
+    // 紐몄껜 (湲덉깋 ??
     ctx.fillStyle = miner.color;
     ctx.beginPath();
     ctx.arc(0, 0, miner.radius, 0, Math.PI * 2);
@@ -350,7 +416,7 @@ export class MiningManager {
       ctx.shadowBlur = 6;
     }
 
-    // 눈
+    // ??
     const eyeSize = miner.radius * 0.2;
     ctx.fillStyle = "#000";
     ctx.beginPath();
@@ -359,7 +425,7 @@ export class MiningManager {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // 안전모
+    // ?덉쟾紐?
     ctx.fillStyle = "#ffdd44";
     ctx.beginPath();
     ctx.moveTo(0, -miner.radius - 5);
@@ -370,7 +436,7 @@ export class MiningManager {
 
     ctx.restore();
 
-    // 데이터 블록 (운반 중) - translate 밖에서 절대좌표로
+    // ?곗씠??釉붾줉 (?대컲 以? - translate 諛뽰뿉???덈?醫뚰몴濡?
     if (miner.dataCarrying > 0) {
       const bobY = Math.sin(time * 4 + miner.wobblePhase) * 1.5;
       const bx = miner.x - 3;
@@ -383,7 +449,7 @@ export class MiningManager {
       ctx.strokeRect(bx, by, 6, 6);
     }
 
-    // 채굴 진행 바
+    // 梨꾧뎬 吏꾪뻾 諛?
     if (state === "MINING") {
       const bw = 16, bh = 2;
       const bx = miner.x - bw / 2;
@@ -461,23 +527,71 @@ export class MiningManager {
     ctx.restore();
   }
 
-  initCabinet(canvas) {
-    this.cabinet.x = canvas.width - 90;
-    this.cabinet.y = canvas.height - 120;
+  initCabinet(canvas, core) {
+    const offsetX = Math.min(160, canvas.width * 0.18);
+    const offsetY = -Math.min(180, canvas.height * 0.22);
+    const cx = core?.x ?? canvas.width - 90;
+    const cy = core?.y ?? canvas.height - 120;
+    const rawX = cx + offsetX;
+    const rawY = cy + offsetY;
+    const maxX = canvas.width - this.cabinet.width - 10;
+    const maxY = canvas.height - this.cabinet.height - 10;
+    this.cabinet.x = Math.min(Math.max(10, rawX), maxX);
+    this.cabinet.y = Math.min(Math.max(10, rawY), maxY);
   }
 
-  // === 유틸리티 ===
+  resolveCabinetCollisions(entities, padding = 2) {
+    if (!this._currentSceneIsSafe) return;
+    for (const e of entities) {
+      this._pushOutOfCabinet(e, padding);
+    }
+  }
+
+  _cabinetRadius() {
+    return Math.max(this.cabinet.width, this.cabinet.height) * 0.5;
+  }
+
+  _pushOutOfCabinet(e, padding) {
+    if (!e) return;
+    const cab = this.cabinet;
+    const cx = cab.x + cab.width / 2;
+    const cy = cab.y + cab.height / 2;
+    const rx = cab.width / 2 + (e.radius || 0) + padding;
+    const ry = cab.height / 2 + (e.radius || 0) + padding;
+    const dx = e.x - cx;
+    const dy = e.y - cy;
+    const ax = Math.abs(dx);
+    const ay = Math.abs(dy);
+    if (ax > rx || ay > ry) return;
+
+    if (ax > 0 || ay > 0) {
+      const pushX = rx - ax;
+      const pushY = ry - ay;
+      if (pushX < pushY) {
+        e.x += dx < 0 ? -pushX : pushX;
+      } else {
+        e.y += dy < 0 ? -pushY : pushY;
+      }
+    } else {
+      e.x += rx;
+    }
+  }
+
+  // === ?좏떥由ы떚 ===
   _changeState(m, s) { m.minerState = s; m.stateTimer = 0; }
 
   _moveToward(m, tx, ty, dt) {
     const dx = tx - m.x, dy = ty - m.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist < 2) { m.x = tx; m.y = ty; return; }
-    const r = Math.min(m.speed * dt / dist, 1);
-    m.x += dx * r;
-    m.y += dy * r;
-    m.vx = dx / dist;
-    m.vy = dy / dist;
+    const desiredX = dx / dist;
+    const desiredY = dy / dist;
+    const accel = 0.18;
+    m.vx = (m.vx || 0) * (1 - accel) + desiredX * accel;
+    m.vy = (m.vy || 0) * (1 - accel) + desiredY * accel;
+    const r = Math.min(m.speed * dt, dist);
+    m.x += m.vx * r;
+    m.y += m.vy * r;
   }
 
   _distanceTo(m, tx, ty) {
@@ -507,7 +621,18 @@ export class MiningManager {
     }
   }
 
+  _getSafeEntry(canvas) {
+    return {
+      x: canvas.width + 20,
+      y: canvas.height * 0.2,
+    };
+  }
+
   _isOffScreen(m, canvas) {
     return m.x < -15 || m.x > canvas.width + 15 || m.y < -15 || m.y > canvas.height + 15;
   }
 }
+
+
+
+

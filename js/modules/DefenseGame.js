@@ -24,10 +24,12 @@ export class DefenseGame {
     this.isGodMode = false;
 
     // 코어 설정 (가장 먼저 초기화)
+    this.baseCoreRadius = 15;
+    this.baseShieldRadius = 70;
     this.core = {
       x: 0,
       y: 0,
-      radius: 15,
+      radius: this.baseCoreRadius,
       hp: 100,
       maxHp: 100,
       color: "#00f0ff",
@@ -35,7 +37,7 @@ export class DefenseGame {
       shieldState: "ACTIVE",
       shieldHp: 100,
       shieldMaxHp: 100,
-      shieldRadius: 70,
+      shieldRadius: this.baseShieldRadius,
       shieldTimer: 0,
       scale: 1, // 원근감 애니메이션용
       // 발사 시 시각적 움직임용
@@ -539,13 +541,17 @@ export class DefenseGame {
 
     // 모바일에서 줌 아웃 효과 (더 멀리서 보기)
     if (window.innerWidth <= 768) {
-      this.gameScale = 0.65; // 모바일: 65% 크기 (줌 아웃)
+      this.gameScale = 1.0; // 모바일: 화면 꽉 채우기
     } else if (window.innerWidth <= 1024) {
       this.gameScale = 0.8; // 태블릿: 80% 크기
     } else {
       this.gameScale = 1.0; // PC: 100%
     }
 
+    const isMobile = window.innerWidth <= 768;
+    const shieldScale = isMobile ? 0.5 : 1.0;
+    this.core.radius = this.baseCoreRadius * (isMobile ? 0.7 : 1.0);
+    this.core.shieldRadius = this.baseShieldRadius * shieldScale;
     this.core.x = targetCanvas.width / 2;
     this.core.y = targetCanvas.height / 2;
 
@@ -1269,6 +1275,7 @@ export class DefenseGame {
         dt, this.core, this.canvas, this.isSafeZone,
         (x, y, color, count) => this.createExplosion(x, y, color, count)
       );
+      this.miningManager.resolveCabinetCollisions(this.alliedViruses, 3);
     }
 
     // 0.8 아군 바이러스 로직 (타입별 행동) - for 루프로 안전하게 처리
@@ -3708,6 +3715,14 @@ export class DefenseGame {
     this.ctx.scale(this.gameScale, this.gameScale);
     this.ctx.translate(-centerX, -centerY);
 
+    const time = Date.now() / 1000;
+    const isMobile = this.isMobile;
+
+    // 채굴 시스템 렌더링 (가장 뒤 레이어)
+    if (this.miningManager) {
+      this.miningManager.render(this.ctx, time, isMobile);
+    }
+
     // 점령 상태 시각화 (깃발 + 별 모양 방어막)
     if (this.isConquered) {
       // 디버그: 점령 상태 확인 (처음 한 번만)
@@ -3798,9 +3813,6 @@ export class DefenseGame {
     }
 
     // 아군 바이러스 그리기 (타입별 모양 + 생동감) - 배리어 밖
-    const time = Date.now() / 1000;
-    const isMobile = this.isMobile;
-
     this.alliedViruses.forEach((v) => {
       this.ctx.save();
 
@@ -3935,10 +3947,7 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // 채굴 시스템 렌더링 (마이너 + 수납장 + 플로팅 텍스트)
-    if (this.miningManager) {
-      this.miningManager.render(this.ctx, time, isMobile);
-    }
+    // 채굴 시스템 렌더링은 아군보다 뒤에 배치됨
 
     // 조력자(Helper) 그리기 - 배리어 내부 (0w0 얼굴!)
     if (this.helper && this.helper.x !== 0) {
@@ -4459,30 +4468,29 @@ export class DefenseGame {
     const se = this.staticEffects;
     const chargeRatio = ss.currentCharge / ss.maxCharge;
 
-    // 1. 충전 게이지 (코어 주변 원형)
-    if (chargeRatio > 0) {
-      const gaugeRadius = 35;
-      const startAngle = -Math.PI / 2;
-      const endAngle = startAngle + Math.PI * 2 * chargeRatio;
+    // 1. 원형 충전 게이지 제거 (텍스트만 표시)
 
-      // 배경 원
-      this.ctx.beginPath();
-      this.ctx.arc(this.core.x, this.core.y, gaugeRadius, 0, Math.PI * 2);
-      this.ctx.strokeStyle = "rgba(100, 100, 0, 0.3)";
-      this.ctx.lineWidth = 4;
-      this.ctx.stroke();
-
-      // 충전량 표시
-      this.ctx.beginPath();
-      this.ctx.arc(this.core.x, this.core.y, gaugeRadius, startAngle, endAngle);
-      const glowIntensity = 0.5 + chargeRatio * 0.5;
-      this.ctx.strokeStyle = `rgba(255, 255, 0, ${glowIntensity})`;
-      this.ctx.lineWidth = 4;
-      this.ctx.shadowColor = "#ffff00";
-      this.ctx.shadowBlur = 10 * chargeRatio;
-      this.ctx.stroke();
-      this.ctx.shadowBlur = 0;
-    }
+    // 1.5. 정적 체인 진행률 (코어 위)
+    const pct = Math.max(0, Math.min(100, Math.round(chargeRatio * 100)));
+    const textY = this.core.y - this.core.radius - 18;
+    const barW = 56;
+    const barH = 4;
+    const barX = this.core.x - barW / 2;
+    const barY = textY + 4;
+    this.ctx.save();
+    this.ctx.font = "bold 10px monospace";
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "bottom";
+    this.ctx.shadowColor = "#ffff00";
+    this.ctx.shadowBlur = 6;
+    this.ctx.fillStyle = "#ffff00";
+    this.ctx.fillText(`${pct}%`, this.core.x, textY);
+    this.ctx.shadowBlur = 0;
+    this.ctx.fillStyle = "rgba(80, 80, 0, 0.5)";
+    this.ctx.fillRect(barX, barY, barW, barH);
+    this.ctx.fillStyle = "#ffff00";
+    this.ctx.fillRect(barX, barY, barW * (pct / 100), barH);
+    this.ctx.restore();
 
     // 2. 스파크 파티클
     se.sparks.forEach((spark) => {
@@ -4528,14 +4536,7 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // 4. 충전 완료 임박 시 글로우
-    if (chargeRatio > 0.8) {
-      const pulseAlpha = 0.2 + Math.sin(Date.now() / 100) * 0.1;
-      this.ctx.beginPath();
-      this.ctx.arc(this.core.x, this.core.y, 40, 0, Math.PI * 2);
-      this.ctx.fillStyle = `rgba(255, 255, 0, ${pulseAlpha})`;
-      this.ctx.fill();
-    }
+    // 4. 충전 완료 임박 글로우 제거
   }
 
   /**
