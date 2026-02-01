@@ -1330,14 +1330,19 @@ export class GameManager {
       // 4. 기존 아군 제거 후 게임 시작
       this.defenseGame.alliedViruses = [];
 
-      // Safe Zone이면 아군 바이러스 미리 배치
-      debugLog("GameManager", "switchMode defense - isSafeZone:", this.defenseGame.isSafeZone);
+      // Ensure stage settings are applied before starting
+      const initialStage = this.stageManager.getCurrentStage();
+      if (initialStage) {
+        this.applyStageSettings(initialStage);
+      }
+
+      this.defenseGame.start(); // start()로 게임 시작!
+
+      // Safe Zone이면 아군 바이러스 배치
       if (this.defenseGame.isSafeZone) {
         debugLog("GameManager", "Calling spawnSafeZoneAllies from switchMode");
         this.defenseGame.spawnSafeZoneAllies();
       }
-
-      this.defenseGame.start(); // start()로 게임 시작!
 
       // 5. 코어 드랍 연출
       await this.defenseGame.playIntroAnimation();
@@ -3378,13 +3383,22 @@ export class GameManager {
     // 여기서는 설정만 하고, 실제 spawn은 호출하는 쪽에서 처리
     debugLog("GameManager", "applyStageSettings - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
 
-    // 실드 상태 복구 (스테이지 이동 시 항상 리셋)
-    this.defenseGame.core.shieldActive = true;
-    this.defenseGame.core.shieldState = "ACTIVE";
-    this.defenseGame.core.shieldHp = this.defenseGame.core.shieldMaxHp;
-    this.defenseGame.core.shieldRadius = 70; // 기본 반경
-    this.defenseGame.core.shieldTimer = 0;
-    this.defenseGame.updateShieldBtnUI("ACTIVE", "#fff");
+    // 실드 상태 복구 (스테이지 이동 시 리셋)
+    if (this.defenseGame.isSafeZone) {
+      this.defenseGame.core.shieldActive = false;
+      this.defenseGame.core.shieldState = "OFF";
+      this.defenseGame.core.shieldHp = this.defenseGame.core.shieldMaxHp;
+      this.defenseGame.core.shieldRadius = 70; // 기본 반경
+      this.defenseGame.core.shieldTimer = 0;
+      this.defenseGame.updateShieldBtnUI("OFFLINE", "#f00");
+    } else {
+      this.defenseGame.core.shieldActive = true;
+      this.defenseGame.core.shieldState = "ACTIVE";
+      this.defenseGame.core.shieldHp = this.defenseGame.core.shieldMaxHp;
+      this.defenseGame.core.shieldRadius = 70; // 기본 반경
+      this.defenseGame.core.shieldTimer = 0;
+      this.defenseGame.updateShieldBtnUI("ACTIVE", "#fff");
+    }
     this.defenseGame.shieldBtn.style.pointerEvents = "auto";
 
     // 점령 상태 확인 및 적용
