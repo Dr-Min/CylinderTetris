@@ -281,6 +281,8 @@ export class StageManager {
         } catch (e) {
             console.error("Failed to load stage state:", e);
         }
+        this.currentStageId = 0;
+        this.saveState();
     }
 
     /**
