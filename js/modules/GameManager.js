@@ -889,6 +889,7 @@ export class GameManager {
       { key: "Recall", label: "🔙 리콜" },
       { key: "Boss", label: "👹 보스" },
     ];
+    categories.push({ key: "Mining", label: "Mining" });
 
     categories.forEach(({ key, label }) => {
       const row = document.createElement("div");
