@@ -8,6 +8,7 @@ import { StageManager } from "./StageManager.js";
 import { InventoryManager } from "./InventoryManager.js";
 import { ItemDatabase } from "./ItemDatabase.js";
 import { BossManager } from "./BossManager.js";
+import { MiningManager } from "./MiningManager.js";
 
 // ===== 전역 디버그 로깅 시스템 =====
 window.DEBUG_LOG_ENABLED = false; // 전체 디버그 ON/OFF
@@ -103,6 +104,8 @@ export class GameManager {
     this.inventoryManager = new InventoryManager(); // 인벤토리 매니저 추가
     this.itemDatabase = new ItemDatabase(); // 아이템 데이터베이스
     this.bossManager = new BossManager(); // 보스 매니저 추가
+    this.miningManager = new MiningManager(); // 채굴 매니저
+    this.defenseGame.miningManager = this.miningManager;
     this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
     
     // 해금 진행률 (Decryption Progress)
@@ -132,6 +135,7 @@ export class GameManager {
     this.defenseGame.onResourceGained = (amount) => {
       this.currentMoney += amount;
       this.saveMoney(); // 자동 저장
+      this.saveMiningData(); // 채굴 데이터도 저장 (수납장 수집 시)
       // 터미널에 DATA 표시 업데이트
       this.terminal.updateData(this.currentMoney);
     };
@@ -171,6 +175,7 @@ export class GameManager {
     // 게임 상태
     this.activeMode = "none"; // 'defense', 'breach'
     this.currentMoney = this.loadSavedMoney(); // localStorage에서 로드
+    this.loadMiningData(); // 채굴 데이터 로드
     this.reputation = 0; // Reputation
 
     // 업그레이드 레벨 추적 (MAX Lv.10)
@@ -1661,34 +1666,46 @@ export class GameManager {
     // 스테이지 이동 (StageManager에서 현재 스테이지 업데이트)
     this.stageManager.currentStageId = stageId;
     this.stageManager.saveState();
+
+    // 기존 아군 제거 (applyStageSettings에서 재스폰하므로 먼저 초기화)
+    this.defenseGame.alliedViruses = [];
+
     this.applyStageSettings(stage);
-    
+
     // 디펜스 게임 설정 적용
     this.defenseGame.isSafeZone = stage.type === "safe";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate || 2;
-    
+
     // 보스전 모드 설정
     if (stage.type === "boss") {
       this.startBossFight();
     } else {
       this.endBossFight();
     }
-    
+
     // 아군 정보 업데이트 (playIntroAnimation 전에!)
     const alliedInfo = this.conquestManager.getAlliedInfo();
     this.defenseGame.updateAlliedInfo(alliedInfo);
     this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
-    
-    // 기존 아군 제거 (겹침 방지) 후 게임 재개
-    this.defenseGame.alliedViruses = [];
-    
+
     // Safe Zone이면 아군 바이러스 미리 배치
     debugLog("GameManager", "moveToStage - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
     if (stage.type === "safe") {
       debugLog("GameManager", "Calling spawnSafeZoneAllies from moveToStage");
       this.defenseGame.spawnSafeZoneAllies();
     }
-    
+
+    // 채굴 시스템: 씬 전환 알림 (마이너 스폰)
+    if (stage.conquered && stage.type === "conquest") {
+      this.miningManager.registerTerritory(stageId);
+    }
+    this.miningManager.onSceneChange(
+      stageId,
+      stage.type === "safe",
+      this.defenseGame.canvas,
+      this.defenseGame.core
+    );
+
     this.defenseGame.resume();
     
     // 드랍 연출과 함께 시작 (await으로 완료 대기)
@@ -1729,6 +1746,12 @@ export class GameManager {
       // ConquestManager 초기화
       if (this.conquestManager) {
         this.conquestManager.conqueredStages = [];
+      }
+
+      // MiningManager 초기화
+      if (this.miningManager) {
+        this.miningManager.territories = {};
+        this.miningManager.cabinet.storedData = 0;
       }
 
       // 현재 상태 초기화
@@ -2844,13 +2867,28 @@ export class GameManager {
 
     // 현재 스테이지를 점령 상태로 설정
     const currentStage = this.stageManager.getCurrentStage();
+    console.log("[GameManager] handleConquestComplete - currentStage:", currentStage);
     if (currentStage) {
       this.stageManager.setConquered(currentStage.id, true);
+      // 채굴 등록
+      console.log("[GameManager] Registering territory for mining:", currentStage.id);
+      this.miningManager.registerTerritory(currentStage.id);
+      this.saveMiningData();
+      console.log("[GameManager] Mining data saved");
     }
 
     // 디펜스 게임에 점령 상태 설정 (시각화 + 아군 10마리)
     debugLog("Conquest", "Setting conquered state");
     this.defenseGame.setConqueredState(true);
+
+    // 채굴 마이너 스폰
+    this.miningManager.onSceneChange(
+      currentStage.id,
+      false,
+      this.defenseGame.canvas,
+      this.defenseGame.core
+    );
+
     debugLog("Conquest", "Calling defenseGame.resume()");
     this.defenseGame.resume(); // 디펜스 재개
     debugLog("Conquest", "After resume, isRunning:", this.defenseGame.isRunning);
@@ -6666,8 +6704,32 @@ export class GameManager {
     return this.currentMoney;
   }
   
+  // ============ 채굴 데이터 저장/로드 ============
+
+  saveMiningData() {
+    try {
+      localStorage.setItem(
+        "cylinderTetris_mining",
+        JSON.stringify(this.miningManager.saveData())
+      );
+    } catch (e) {
+      console.warn("Failed to save mining data:", e);
+    }
+  }
+
+  loadMiningData() {
+    try {
+      const saved = localStorage.getItem("cylinderTetris_mining");
+      if (saved) {
+        this.miningManager.loadData(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn("Failed to load mining data:", e);
+    }
+  }
+
   // ============ 보스전 시스템 ============
-  
+
   /**
    * 보스전 시작
    */

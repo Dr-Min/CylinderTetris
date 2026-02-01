@@ -1,5 +1,5 @@
-// v9.22.27 - Fix: 미니맵 우측 여백 수정 (renderBossUI 스케일 밖 이동) 및 크기 증가
-const CACHE_NAME = "hacker-tetris-v23.38"; // Calculate max square size from available screen space, fix black border with ratio-aware copy
+// v2.1.13 - Refactor: 마이너를 alliedViruses에서 완전 분리, 자체 배열 관리
+const CACHE_NAME = "hacker-tetris-v2.1.13";
 const ASSETS = [
   "./",
   "./index.html",
@@ -18,6 +18,7 @@ const ASSETS = [
   "./js/modules/EquipmentManager.js",
   "./js/modules/StageManager.js",
   "./js/modules/InventoryManager.js",
+  "./js/modules/MiningManager.js",
   "./js/data/virusDialogues.json",
   "./manifest.json",
   "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",

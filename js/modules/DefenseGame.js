@@ -313,6 +313,7 @@ export class DefenseGame {
     this.projectiles = [];
     this.particles = [];
     this.alliedViruses = []; // 아군 바이러스 (배리어 밖)
+    this.miningManager = null; // GameManager에서 주입
     this.shockwaves = []; // 파동 효과
     
     // 아이템 시스템
@@ -1260,6 +1261,14 @@ export class DefenseGame {
           this.tryVirusSpeech(randomAlly, 'idle', 1.0);
         }
       }
+    }
+
+    // 0.7.5 채굴 시스템 업데이트
+    if (this.miningManager) {
+      this.miningManager.update(
+        dt, this.core, this.canvas, this.isSafeZone,
+        (x, y, color, count) => this.createExplosion(x, y, color, count)
+      );
     }
 
     // 0.8 아군 바이러스 로직 (타입별 행동) - for 루프로 안전하게 처리
@@ -3926,6 +3935,11 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
+    // 채굴 시스템 렌더링 (마이너 + 수납장 + 플로팅 텍스트)
+    if (this.miningManager) {
+      this.miningManager.render(this.ctx, time, isMobile);
+    }
+
     // 조력자(Helper) 그리기 - 배리어 내부 (0w0 얼굴!)
     if (this.helper && this.helper.x !== 0) {
       const h = this.helper;
@@ -4234,17 +4248,18 @@ export class DefenseGame {
 
     // 5. 파동 효과 렌더링
     this.shockwaves.forEach((wave) => {
+      const safeRadius = Math.max(0, wave.radius);
       this.ctx.beginPath();
-      this.ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+      this.ctx.arc(wave.x, wave.y, safeRadius, 0, Math.PI * 2);
       this.ctx.strokeStyle = wave.color;
       this.ctx.lineWidth = wave.lineWidth;
       this.ctx.globalAlpha = wave.alpha;
       this.ctx.stroke();
 
       // 내부 잔상 링
-      if (wave.radius > 50) {
+      if (safeRadius > 50) {
         this.ctx.beginPath();
-        this.ctx.arc(wave.x, wave.y, wave.radius * 0.7, 0, Math.PI * 2);
+        this.ctx.arc(wave.x, wave.y, safeRadius * 0.7, 0, Math.PI * 2);
         this.ctx.lineWidth = wave.lineWidth * 0.5;
         this.ctx.globalAlpha = wave.alpha * 0.5;
         this.ctx.stroke();
@@ -5287,6 +5302,28 @@ export class DefenseGame {
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
+    // gameScale 보정
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2;
+    const scaledClickX = (clickX - centerX) / this.gameScale + centerX;
+    const scaledClickY = (clickY - centerY) / this.gameScale + centerY;
+
+    // 세이프존: 수납장 터치 우선
+    if (this.isSafeZone && this.miningManager) {
+      const result = this.miningManager.handleCabinetTap(scaledClickX, scaledClickY);
+      if (result.collected) {
+        this.currentData += result.amount;
+        this.updateResourceDisplay(this.currentData);
+        if (this.onResourceGained) this.onResourceGained(result.amount);
+        this.createExplosion(
+          this.miningManager.cabinet.x + this.miningManager.cabinet.width / 2,
+          this.miningManager.cabinet.y,
+          "#00ff88", 8
+        );
+        return;
+      }
+    }
+
     this.fireAtPosition(clickX, clickY);
   }
 
@@ -5311,6 +5348,28 @@ export class DefenseGame {
         touchY >= 0 &&
         touchY <= rect.height
       ) {
+        // gameScale 보정
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+        const scaledTouchX = (touchX - centerX) / this.gameScale + centerX;
+        const scaledTouchY = (touchY - centerY) / this.gameScale + centerY;
+
+        // 세이프존: 수납장 터치 우선
+        if (this.isSafeZone && this.miningManager) {
+          const result = this.miningManager.handleCabinetTap(scaledTouchX, scaledTouchY);
+          if (result.collected) {
+            this.currentData += result.amount;
+            this.updateResourceDisplay(this.currentData);
+            if (this.onResourceGained) this.onResourceGained(result.amount);
+            this.createExplosion(
+              this.miningManager.cabinet.x + this.miningManager.cabinet.width / 2,
+              this.miningManager.cabinet.y,
+              "#00ff88", 8
+            );
+            continue;
+          }
+        }
+
         this.fireAtPosition(touchX, touchY);
       }
     }

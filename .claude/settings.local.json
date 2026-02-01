@@ -6,7 +6,14 @@
       "Bash(awk:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(wc:*)",
+      "Bash(git -C \"C:\\\\Users\\\\mks01\\\\OneDrive\\\\바탕 화면\\\\code\\\\cylinder Tetris\" log --oneline)",
+      "Bash(git clone:*)",
+      "Bash(done)",
+      "Bash(dir \"C:\\\\Users\\\\mks01\\\\.claude\\\\rules\")",
+      "Bash(node -e:*)",
+      "Bash(test:*)"
     ]
   }
 }
