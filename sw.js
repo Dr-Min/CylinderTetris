@@ -1,5 +1,5 @@
 // v2.1.45 - Fix: Miners only on conquered stages
-const CACHE_NAME = "hacker-tetris-v2.1.45";
+const CACHE_NAME = "hacker-tetris-v2.1.50";
 const ASSETS = [
   "./",
   "./index.html",

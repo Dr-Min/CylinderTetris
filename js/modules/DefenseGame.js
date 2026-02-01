@@ -3,27 +3,26 @@ import { BGMManager } from "./BGMManager.js";
 export class DefenseGame {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
-    
-    // BGM 매니저 (트랙 기반 음악 시스템)
+
+    // TODO
     this.bgmManager = new BGMManager();
 
-    // 캔버스 생성 (body에 직접 부착하여 game-container와 분리)
+    // TODO
     this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d");
-    this.originalCanvas = this.canvas; // 미니 디스플레이 모드에서 복귀할 때 사용
-    this.isMiniDisplay = false; // 미니 디스플레이 모드 여부
-    // CSS 크기는 설정하지 않음 - resize()에서 내부 해상도만 설정
+    this.originalCanvas = this.canvas; // TODO
+    this.isMiniDisplay = false; // TODO
+    // TODO
     this.canvas.style.display = "none";
-    this.canvas.style.position = "fixed"; // absolute -> fixed
+    this.canvas.style.position = "fixed"; // TODO
     this.canvas.style.top = "0";
     this.canvas.style.left = "0";
-    this.canvas.style.zIndex = "50"; // 터미널(100)보다 아래, game-container(0)보다 위
-    document.body.appendChild(this.canvas); // [수정] body에 직접 부착
-
-    // 갓모드 (디버그용 무적)
+    this.canvas.style.zIndex = "50"; // TODO
+    document.body.appendChild(this.canvas); // TODO
+    // TODO
     this.isGodMode = false;
 
-    // 코어 설정 (가장 먼저 초기화)
+    // TODO
     this.baseCoreRadius = 15;
     this.baseShieldRadius = 70;
     this.core = {
@@ -39,59 +38,122 @@ export class DefenseGame {
       shieldMaxHp: 100,
       shieldRadius: this.baseShieldRadius,
       shieldTimer: 0,
-      scale: 1, // 원근감 애니메이션용
-      // 발사 시 시각적 움직임용
+      scale: 1,
       visualOffsetX: 0,
       visualOffsetY: 0,
       targetOffsetX: 0,
       targetOffsetY: 0,
     };
 
-    // 실드 시각 효과용 보간 변수 (부드러운 전환)
+    // TODO
+    // TODO
     this.shieldVisual = {
-      alpha: 0.7, // 현재 투명도
-      targetAlpha: 0.7, // 목표 투명도
-      dashGap: 0, // 현재 점선 간격 (0=실선)
-      targetDashGap: 0, // 목표 점선 간격
-      lineWidth: 2, // 현재 선 두께
-      targetLineWidth: 2, // 목표 선 두께
-      rotation: 0, // 현재 회전 오프셋
-      rotationSpeed: 0, // 현재 회전 속도
-      targetRotationSpeed: 0, // 목표 회전 속도
-      fillAlpha: 0.1, // 채우기 투명도
-      targetFillAlpha: 0.1, // 목표 채우기 투명도
+      alpha: 0.7,
+      targetAlpha: 0.7,
+      dashGap: 0,
+      targetDashGap: 0,
+      lineWidth: 2,
+      targetLineWidth: 2,
+      rotation: 0,
+      rotationSpeed: 0,
+      targetRotationSpeed: 0,
+      fillAlpha: 0.1,
+      targetFillAlpha: 0.1,
     };
 
-    // HP 표시 상태
+    // TODO
     this.showCoreHP = true;
     this.glitchText = false;
     this.glitchOffset = { x: 0, y: 0 };
 
-    // 게임 스케일 (모바일 줌 아웃용)
+    // TODO
     this.gameScale = 1.0;
 
-    // 모바일 성능 최적화
+    // TODO
     this.isMobile = window.innerWidth <= 768;
-    this.maxParticles = this.isMobile ? 30 : 100; // 파티클 수 제한
-    this.particleMultiplier = this.isMobile ? 0.3 : 1.0; // 파티클 생성량 감소
+    this.maxParticles = this.isMobile ? 30 : 100;
+    this.particleMultiplier = this.isMobile ? 0.3 : 1.0;
 
-    // UI 레이어 생성 (DOM 기반, 모바일 터치 최적화)
+
+    // TODO
+    this.worldScale = 2.0;
+    this.worldWidth = 0;
+    this.worldHeight = 0;
+    this.camera = { x: 0, y: 0 };
+
+    // TODO
+    this.coreHome = { x: 0, y: 0 };
+    this.coreMoveSpeed = 220;
+    this.coreReturnSpeed = 280;
+    this.coreReturnTimer = 0;
+    this.coreReturnAtHome = false;
+    this.moveInput = { x: 0, y: 0 };
+    this.keyState = { up: false, down: false, left: false, right: false };
+    this.joystick = { active: false, pointerId: null, inputX: 0, inputY: 0 };
+    this.hasInitializedCore = false;
+    // TODO
     this.uiLayer = document.createElement("div");
     this.uiLayer.id = "defense-ui";
-    this.uiLayer.style.position = "fixed"; // absolute -> fixed (전체 화면 기준)
+    this.uiLayer.style.position = "fixed"; // TODO
     this.uiLayer.style.top = "0";
     this.uiLayer.style.left = "0";
     this.uiLayer.style.width = "100%";
     this.uiLayer.style.height = "100%";
-    this.uiLayer.style.pointerEvents = "none"; // 게임 조작 방해 금지
-    this.uiLayer.style.zIndex = "90"; // 터미널(100)보다 낮게
+    this.uiLayer.style.pointerEvents = "none"; // TODO
+    this.uiLayer.style.zIndex = "90"; // TODO
     this.uiLayer.style.display = "none";
-    document.body.appendChild(this.uiLayer); // [수정] container가 아닌 body에 직접 부착
+    document.body.appendChild(this.uiLayer); // TODO
 
-    // PAGE 표시는 TerminalUI에서 관리 (onPageUpdate 콜백으로 업데이트)
-    this.onPageUpdate = null; // 페이지 업데이트 콜백
+    // TODO
+    this.joystickContainer = document.createElement("div");
+    this.joystickContainer.id = "move-joystick";
+    this.joystickContainer.style.cssText = `
+      position: absolute;
+      left: 24px;
+      bottom: 24px;
+      width: 110px;
+      height: 110px;
+      pointer-events: auto;
+      touch-action: none;
+      z-index: 40;
+      display: none;
+    `;
+    this.joystickBase = document.createElement("div");
+    this.joystickBase.style.cssText = `
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 90px;
+      height: 90px;
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(0, 240, 255, 0.6);
+      border-radius: 50%;
+      background: rgba(0, 20, 40, 0.4);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    `;
+    this.joystickThumb = document.createElement("div");
+    this.joystickThumb.style.cssText = `
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 40px;
+      height: 40px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(0, 240, 255, 0.8);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+    `;
+    this.joystickBase.appendChild(this.joystickThumb);
+    this.joystickContainer.appendChild(this.joystickBase);
+    this.uiLayer.appendChild(this.joystickContainer);
+    this.joystickContainer.addEventListener("pointerdown", (e) => this.startJoystick(e));
+    window.addEventListener("pointermove", (e) => this.moveJoystick(e));
+    window.addEventListener("pointerup", (e) => this.endJoystick(e));
+    window.addEventListener("pointercancel", (e) => this.endJoystick(e));
+    // TODO
+    this.onPageUpdate = null; // TODO
 
-    // 2. 배리어 토글 버튼 (모바일 친화적 위치: 하단 중앙)
+    // TODO
     this.shieldBtn = document.createElement("button");
     this.shieldBtn.id = "shield-btn";
     this.shieldBtn.style.position = "absolute";
@@ -108,16 +170,16 @@ export class DefenseGame {
     this.shieldBtn.style.cursor = "pointer";
     this.shieldBtn.style.pointerEvents = "auto";
     this.shieldBtn.style.zIndex = "30";
-    this.shieldBtn.style.touchAction = "manipulation"; // 모바일 터치 최적화
-    this.shieldBtn.style.userSelect = "none"; // 텍스트 선택 방지
-    this.shieldBtn.style.webkitTapHighlightColor = "transparent"; // iOS 탭 하이라이트 제거
+    this.shieldBtn.style.touchAction = "manipulation"; // TODO
+    this.shieldBtn.style.userSelect = "none"; // TODO
+    this.shieldBtn.style.webkitTapHighlightColor = "transparent"; // TODO
 
-    // 초기 텍스트 설정 (UI 업데이트 함수 호출로 통일)
+    // TODO
     this.shieldBtn.onclick = () => this.toggleShield();
     this.uiLayer.appendChild(this.shieldBtn);
-    this.updateShieldBtnUI("ACTIVE", "#00f0ff"); // 초기값 설정
+    this.updateShieldBtnUI("ACTIVE", "#00f0ff"); // TODO
 
-    // 3. 점령 버튼 (12페이지 달성 시 등장)
+    // TODO
     this.conquerBtn = document.createElement("button");
     this.conquerBtn.id = "conquer-btn";
     this.conquerBtn.style.position = "absolute";
@@ -143,83 +205,76 @@ export class DefenseGame {
     this.conquerBtn.onclick = () => this.handleConquerClick();
     this.uiLayer.appendChild(this.conquerBtn);
 
-    // 웨이브 정보 표시는 pageDisplay로 통합됨 (waveInfo 삭제)
+    // TODO
 
-    // 게임 상태 변수
+    // TODO
     this.isRunning = false;
     this.lastTime = 0;
 
-    // BGM 상태 (BGMManager로 위임)
+    // TODO
     this.currentBGMTrack = null;
 
-    // 포탑 설정 (수동 발사용 - 자동 발사는 조력자가 담당)
+    // TODO
     this.turret = {
       angle: 0,
-      range: 200, // 기본 사거리
-      fireRate: 4.0, // 공속 증가 (0.5 -> 4.0, 초당 4발)
+      range: 200, // TODO
+      fireRate: 4.0, // TODO
       lastFireTime: 0,
       damage: 10,
-      projectileSpeed: 300, // 탄환 속도
+      projectileSpeed: 300, // TODO
     };
 
-    // 스태틱 시스템 (체인 라이트닝)
+    // TODO
     this.staticSystem = {
-      currentCharge: 0, // 현재 충전량
-      maxCharge: 100, // 최대 충전량
-      chargeRate: 8, // 초당 충전량 (시간 기반)
-      hitChargeAmount: 15, // 피격 시 충전량
-      killChargeAmount: 25, // 처치 시 충전량
-      damage: 10, // 기본 데미지
-      chainCount: 3, // 튕기는 횟수
-      chainRange: 250, // 튕기는 거리 (150 → 250)
-      lastDischargeTime: 0, // 마지막 발동 시간
+      currentCharge: 0, // TODO
+      maxCharge: 100, // TODO
+      hitChargeAmount: 15, // TODO
+      killChargeAmount: 25, // TODO
+      chainCount: 3, // TODO
+      chainRange: 250, // TODO
+      lastDischargeTime: 0, // TODO
     };
 
-    // 스태틱 시각 효과
+    // TODO
     this.staticEffects = {
-      sparks: [], // 전기 스파크 파티클
-      chains: [], // 체인 라이트닝 라인
+      sparks: [], // TODO
+      chains: [], // TODO
     };
 
-    // 무기 모드 정의 (모든 무기가 풀업 시 동일한 스탯 도달)
-    // 최종 목표: DMG 50, RATE 10/s, RNG 500, BULLET 900
-    // 모든 무기 탄창 있음! 컨셉별 탄창 크기 다름
+    // TODO
+    // TODO
+    // TODO
     this.weaponModes = {
       NORMAL: {
         name: "NORMAL",
-        icon: "●",
+        icon: "N",
         color: "#ffff00",
-        desc: "밸런스형 | 탄창 12발",
-        // 기본 스탯
+        desc: "Balanced | LV cap 12",
         baseDamage: 10,
         baseFireRate: 4.0,
         baseRange: 300,
         baseProjectileSpeed: 400,
-        // 발사 패턴
         projectileCount: 1,
         spreadAngle: 0,
         piercing: false,
-        // 재장전 (MAX Lv.10에서 1.0초 도달)
         hasReload: true,
         magazineSize: 12,
         reloadTime: 2.0,
-        // 폭발 없음
         explosive: false,
         explosionRadius: 0,
       },
       SHOTGUN: {
         name: "SHOTGUN",
-        icon: "◎",
+        icon: "SG",
         color: "#ff8800",
-        desc: "5발 산탄 | 탄창 6발",
+        desc: "Spread x5 | LV cap 6",
         baseDamage: 5,
         baseFireRate: 2.0,
         baseRange: 150,
         baseProjectileSpeed: 300,
         projectileCount: 5,
-        spreadAngle: 0.5, // 넓은 산탄
+        spreadAngle: 0.5,
         piercing: false,
-        // 재장전 (MAX Lv.10에서 1.0초 도달)
         hasReload: true,
         magazineSize: 6,
         reloadTime: 1.8,
@@ -228,17 +283,16 @@ export class DefenseGame {
       },
       SNIPER: {
         name: "SNIPER",
-        icon: "◈",
+        icon: "SN",
         color: "#00ffff",
-        desc: "고데미지 관통 | 탄창 3발",
+        desc: "High dmg | LV cap 3",
         baseDamage: 30,
         baseFireRate: 1.0,
         baseRange: 500,
         baseProjectileSpeed: 700,
         projectileCount: 1,
         spreadAngle: 0,
-        piercing: true, // 관통!
-        // 재장전 (MAX Lv.10에서 1.2초 도달)
+        piercing: true,
         hasReload: true,
         magazineSize: 3,
         reloadTime: 2.04,
@@ -247,134 +301,129 @@ export class DefenseGame {
       },
       RAPID: {
         name: "RAPID",
-        icon: "◆",
+        icon: "R",
         color: "#00ff00",
-        desc: "고속 연사 | 탄창 30발",
-        baseDamage: 3, // 낮은 데미지
-        baseFireRate: 12.0, // 매우 빠른 연사
-        baseRange: 200, // 짧은 사거리
-        baseProjectileSpeed: 500, // 빠른 탄속
+        desc: "High rate | LV cap 30",
+        baseDamage: 3,
+        baseFireRate: 12.0,
+        baseRange: 200,
+        baseProjectileSpeed: 500,
         projectileCount: 1,
-        spreadAngle: 0.15, // 탄퍼짐
+        spreadAngle: 0.15,
         piercing: false,
-        // 재장전 (MAX Lv.10에서 1.0초 도달)
         hasReload: true,
-        magazineSize: 30, // 큰 탄창
+        magazineSize: 30,
         reloadTime: 2.8,
         explosive: false,
         explosionRadius: 0,
       },
       LAUNCHER: {
         name: "LAUNCHER",
-        icon: "◉",
+        icon: "L",
         color: "#ff0000",
-        desc: "범위 폭발 | 탄창 2발",
-        baseDamage: 25, // 직격 데미지
+        desc: "Splash dmg | LV cap 2",
+        baseDamage: 25,
         baseFireRate: 0.8,
         baseRange: 350,
-        baseProjectileSpeed: 200, // 느린 탄속
+        baseProjectileSpeed: 200,
         projectileCount: 1,
         spreadAngle: 0,
         piercing: false,
-        // 재장전 (MAX Lv.10에서 1.2초 도달)
         hasReload: true,
-        magazineSize: 2, // 작은 탄창
+        magazineSize: 2,
         reloadTime: 2.02,
-        explosive: true, // 폭발!
-        explosionRadius: 100, // 큰 폭발 범위
-        explosionDamage: 15, // 폭발 추가 데미지
+        explosive: true,
+        explosionRadius: 100,
+        explosionDamage: 15,
       },
     };
 
-    // 조력자 (Helper) - 배리어 내부에서 자동 공격
+    // TODO
     this.helper = {
       x: 0,
       y: 0,
       radius: 8,
-      color: "#ffff00", // 노란색으로 구별
-      speed: 40, // 이동 속도 (80 → 40, 천천히)
-      fireRate: 4.0, // 초당 4발 (기존 터렛과 동일)
+      color: "#ffff00", // TODO
+      speed: 40, // TODO
+      fireRate: 4.0, // TODO
       lastFireTime: 0,
-      range: 300, // 사거리
+      range: 300, // TODO
       damage: 10,
-      projectileSpeed: 400, // 탄환 속도
-      angle: 0, // 현재 바라보는 방향
-      evadeDistance: 50, // 적과 이 거리 이내면 회피 (40 → 50)
-      targetX: 0, // 목표 위치
+      projectileSpeed: 400, // TODO
+      angle: 0, // TODO
+      evadeDistance: 50, // TODO
+      targetX: 0, // TODO
       targetY: 0,
-      // 무기 모드
+      // TODO
       weaponMode: "NORMAL",
-      // 재장전 시스템
-      currentAmmo: 0, // 현재 탄약 (0 = 무제한 또는 미사용)
+      // TODO
+      currentAmmo: 0, // TODO
       isReloading: false,
-      reloadProgress: 0, // 0 ~ 1
+      reloadProgress: 0, // TODO
       reloadStartTime: 0,
     };
 
     this.enemies = [];
     this.projectiles = [];
     this.particles = [];
-    this.alliedViruses = []; // 아군 바이러스 (배리어 밖)
-    this.miningManager = null; // GameManager에서 주입
-    this.shockwaves = []; // 파동 효과
-    
-    // 아이템 시스템
-    this.droppedItems = []; // 바닥에 떨어진 아이템들
-    this.collectorViruses = []; // 수집 바이러스들
-    
-    // 대사 시스템
-    this.virusDialogues = null; // JSON에서 로드
-    this.activeSpeechBubbles = []; // 현재 표시 중인 대사들
-    this.loadVirusDialogues(); // 대사 로드
+    this.alliedViruses = []; // TODO
+    this.miningManager = null; // TODO
+    this.shockwaves = []; // TODO
 
-    // 웨이브 관리
+    // TODO
+    this.droppedItems = []; // TODO
+    this.collectorViruses = []; // TODO
+    // TODO
+    this.virusDialogues = null; // TODO
+    this.activeSpeechBubbles = []; // TODO
+    this.loadVirusDialogues(); // TODO
+
+    // TODO
     this.waveTimer = 0;
     this.pageDurationBase = 12.5;
-    this.pageDuration = 10; // 페이지당 10초
+    this.pageDuration = 10; // TODO
     this.pageSpawnScale = this.pageDuration / this.pageDurationBase;
-    this.spawnRate = 0.4 * this.pageSpawnScale; // 총 스폰량 유지용 스케일
-    this.currentPage = 1; // 1 ~ 12
+    this.spawnRate = 0.4 * this.pageSpawnScale; // TODO
+    this.currentPage = 1; // TODO
     this.pageTimer = 0;
-    this.pageDuration = 10; // 페이지당 10초
+    this.pageDuration = 10; // TODO
+    // TODO
+    this.currentStage = 0; // TODO
+    this.currentStageId = 0; // TODO
+    this.stageDifficultyScale = 1.0; // TODO
+    this.stageMaxPages = 12; // TODO
+    this.isFarmingZone = false; // TODO
+    this.safeZoneSpawnRate = 2; // TODO
 
-    // 스테이지 관리
-    this.currentStage = 0; // 0 = 안전영역, 1+ = 일반 스테이지
-    this.currentStageId = 0; // 스테이지 ID (난이도 계산용)
-    this.stageDifficultyScale = 1.0; // 스테이지별 난이도 스케일
-    this.stageMaxPages = 12; // 스테이지 최대 페이지 수
-    this.isSafeZone = true; // 안전영역 여부
-    this.isFarmingZone = false; // 파밍존 여부 (점령 불가, 무한 파밍)
-    this.safeZoneSpawnRate = 2; // 안전영역 적 생성 (6 → 2초, 스폰 수 3배)
-
-    // 강화 페이지 모드 (점령 시)
+    // TODO
     this.isReinforcementMode = false;
     this.reinforcementPage = 0;
     this.reinforcementMaxPages = 3;
     this.reinforcementComplete = false;
-    this.reinforcementSpawnRate = 0.27; // 0.8 → 0.27 (스폰 수 3배: 0.8 / 3)
+    this.reinforcementSpawnRate = 0.27; // TODO
 
-    // 점령 상태 (영구)
-    this.isConquered = false; // 이 스테이지가 점령되었는지
+    // TODO
+    this.isConquered = false; // TODO
 
-    // 보스전 상태
-    this.isBossFight = false; // 보스전 진행 중
-    this.bossManager = null; // BossManager 인스턴스 (GameManager에서 주입)
-    this.breachReadyShown = false; // BREACH READY 표시 여부
-    
-    // 이벤트 콜백
+    // TODO
+    this.isBossFight = false; // TODO
+    this.bossManager = null; // TODO
+    this.breachReadyShown = false; // TODO
+
+    // TODO
     this.onResourceGained = null;
     this.onGameOver = null;
-    this.onConquer = null; // 점령 요청 콜백
-    this.onConquerReady = null; // 점령 가능 상태 콜백 (선택지 갱신용)
-    this.onEnemyKilled = null; // 적 처치 콜백 (아이템 드롭용)
-    this.onItemCollected = null; // 아이템 수집 완료 콜백
-    this.onBreachReady = null; // 보스전 침투 준비 완료 콜백
-    
-    // 보스전 프레임당 카운터
+    this.onConquer = null; // TODO
+    this.onConquerReady = null; // TODO
+    this.onEnemyKilled = null; // TODO
+    this.onItemCollected = null; // TODO
+    this.onBreachReady = null; // TODO
+
+    // TODO
     this.frameEnemiesKilled = 0;
     this.frameCoreDamaged = 0;
-    
-    // 아이템 효과 getter (GameManager에서 설정)
+
+    // TODO
     this.getItemEffects = () => ({
       convert: 0,
       chain: 0,
@@ -384,35 +433,34 @@ export class DefenseGame {
       dropRate: 0
     });
 
-    // 점령 가능 상태
+    // TODO
     this.conquerReady = false;
 
-    // 아군 정보 (GameManager에서 주입) - 새로운 슬롯 시스템
-    this.alliedConfig = null; // GameManager.getAllyConfiguration() 결과
-    this.alliedInfo = { count: 0, level: 1, color: "#00aaff" }; // 레거시 호환용
-
-    // 현재 자원 (GameManager와 동기화용)
+    // TODO
+    this.alliedConfig = null; // TODO
+    this.alliedInfo = { count: 0, level: 1, color: "#00aaff" }; // TODO
+    // TODO
     this.currentData = 0;
 
     window.addEventListener("resize", () => this.resize());
 
-    // 🛡️ 탭 비활성화/활성화 감지 (모바일 앱 전환 대응)
+    // TODO
     document.addEventListener("visibilitychange", () =>
       this.handleVisibilityChange()
     );
 
-    // 모바일 스타일 조정
+    // TODO
     if (window.innerWidth <= 768) {
       this.shieldBtn.style.bottom = "80px";
       this.shieldBtn.style.width = "160px";
       this.shieldBtn.style.height = "50px";
     }
 
-    // 포탑 자동 회전 (적 없을 때)
+    // TODO
     this.idleTurretAngle = 0;
-    this.idleTurretSpeed = 1.5; // 초당 1.5 라디안 (시계방향)
+    this.idleTurretSpeed = 1.5; // TODO
 
-    // 화면 터치/클릭으로 탄환 발사
+    // TODO
     this.canvas.addEventListener("click", (e) => this.handleCanvasClick(e));
     this.canvas.addEventListener(
       "touchstart",
@@ -420,75 +468,77 @@ export class DefenseGame {
       { passive: false }
     );
 
-    // 스페이스바 발사 (PC용)
+    // TODO
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
+    window.addEventListener("keyup", (e) => this.handleKeyUp(e));
 
     this.resize();
   }
 
-  // 🛡️ 탭 비활성화/활성화 처리
+  // TODO
   handleVisibilityChange() {
     if (document.visibilityState === "visible") {
       debugLog("Defense", "Tab restored - validating game state");
-      // 탭 복귀 시 상태 복구
+      // TODO
       this.validateGameState();
-      this.resize(); // 캔버스 재확인
-
-      // 시간 기준 리셋 (deltaTime 폭발 방지)
+      this.resize(); // TODO
+      // TODO
       this.lastTime = performance.now();
     } else {
       debugLog("Defense", "Tab hidden - pausing updates");
     }
   }
 
-  // 🛡️ 게임 상태 유효성 검증 및 복구
+  // TODO
   validateGameState() {
-    // 1. 코어 위치 검증
+    const worldW = this.worldWidth || this.canvas.width;
+    const worldH = this.worldHeight || this.canvas.height;
+    // TODO
     if (
       !this.core.x ||
       !this.core.y ||
       isNaN(this.core.x) ||
       isNaN(this.core.y) ||
       this.core.x < 0 ||
-      this.core.x > this.canvas.width ||
+      this.core.x > worldW ||
       this.core.y < 0 ||
-      this.core.y > this.canvas.height
+      this.core.y > worldH
     ) {
       debugWarn("Defense", "Core position invalid, resetting to center");
-      this.core.x = this.canvas.width / 2;
-      this.core.y = this.canvas.height / 2;
+      this.core.x = this.coreHome.x || worldW / 2;
+      this.core.y = this.coreHome.y || worldH / 2;
     }
 
-    // 2. 코어 HP 검증
+    // TODO
     if (isNaN(this.core.hp) || this.core.hp < 0) {
       debugWarn("Defense", "Core HP invalid, resetting");
       this.core.hp = this.core.maxHp;
     }
 
-    // 3. 실드 상태 검증
+    // TODO
     if (isNaN(this.core.shieldHp)) {
       debugWarn("Defense", "Shield HP invalid, resetting");
       this.core.shieldHp = this.core.shieldMaxHp;
     }
 
-    // 4. 화면 밖 적 제거
+    // TODO
     this.enemies = this.enemies.filter((e) => {
       const margin = 200;
       return (
         e.x > -margin &&
-        e.x < this.canvas.width + margin &&
+        e.x < worldW + margin &&
         e.y > -margin &&
-        e.y < this.canvas.height + margin &&
+        e.y < worldH + margin &&
         !isNaN(e.x) &&
         !isNaN(e.y)
       );
     });
 
-    // 5. 아군 바이러스 위치 검증 (NaN만 재배치, 거리는 keepOutsideBarrier에서 처리)
+    // TODO
     this.alliedViruses.forEach((v) => {
-      // NaN 체크만 (거리 제한은 keepOutsideBarrier에서 동적으로 처리)
+      // TODO
       if (isNaN(v.x) || isNaN(v.y)) {
-        // 코어 주변으로 재배치
+        // TODO
         const angle = Math.random() * Math.PI * 2;
         const dist = 80 + Math.random() * 40;
         v.x = this.core.x + Math.cos(angle) * dist;
@@ -499,20 +549,20 @@ export class DefenseGame {
       }
     });
 
-    // 6. 화면 밖 발사체 제거 (gameScale 고려)
-    const scaledMargin = 100 / this.gameScale; // 스케일링 고려한 마진
+    // TODO
+    const scaledMargin = 100 / this.gameScale; // TODO
     this.projectiles = this.projectiles.filter((p) => {
       return (
         p.x > -scaledMargin &&
-        p.x < this.canvas.width + scaledMargin &&
+        p.x < worldW + scaledMargin &&
         p.y > -scaledMargin &&
-        p.y < this.canvas.height + scaledMargin &&
+        p.y < worldH + scaledMargin &&
         !isNaN(p.x) &&
         !isNaN(p.y)
       );
     });
 
-    // 7. 실드 시각 효과 검증
+    // TODO
     if (!this.shieldVisual || isNaN(this.shieldVisual.alpha)) {
       debugWarn("Defense", "Shield visual state invalid, resetting");
       this.shieldVisual = {
@@ -532,160 +582,172 @@ export class DefenseGame {
   }
 
   resize() {
-    // 항상 원본 캔버스 크기 사용 (미니 모드에서도 게임 로직은 동일)
+    // TODO
     const targetCanvas = this.originalCanvas || this.canvas;
     targetCanvas.width = window.innerWidth;
     targetCanvas.height = window.innerHeight;
 
-    // 모바일 감지 및 성능 설정 업데이트
+    // TODO
     this.isMobile = window.innerWidth <= 768;
     this.maxParticles = this.isMobile ? 30 : 100;
     this.particleMultiplier = this.isMobile ? 0.3 : 1.0;
 
-    // 모바일에서 줌 아웃 효과 (더 멀리서 보기)
+    // TODO
     if (window.innerWidth <= 768) {
-      this.gameScale = 1.0; // 모바일: 화면 꽉 채우기
-    } else if (window.innerWidth <= 1024) {
-      this.gameScale = 0.8; // 태블릿: 80% 크기
+      this.gameScale = 1.0; // TODO
+      this.gameScale = 0.8; // TODO
     } else {
-      this.gameScale = 1.0; // PC: 100%
+      this.gameScale = 1.0; // TODO
     }
 
     const isMobile = window.innerWidth <= 768;
     const shieldScale = isMobile ? 0.5 : 1.0;
     this.core.radius = this.baseCoreRadius * (isMobile ? 0.7 : 1.0);
     this.core.shieldRadius = this.baseShieldRadius * shieldScale;
-    this.core.x = targetCanvas.width / 2;
-    this.core.y = targetCanvas.height / 2;
+
+    this.worldWidth = targetCanvas.width * this.worldScale;
+    this.worldHeight = targetCanvas.height * this.worldScale;
+    this.coreHome.x = this.worldWidth / 2;
+    this.coreHome.y = this.worldHeight / 2;
+
+    if (!this.hasInitializedCore) {
+      this.core.x = this.coreHome.x;
+      this.core.y = this.coreHome.y;
+      this.hasInitializedCore = true;
+    } else {
+      this.core.x = Math.min(Math.max(this.core.x, 0), this.worldWidth);
+      this.core.y = Math.min(Math.max(this.core.y, 0), this.worldHeight);
+    }
+
+    this.updateCamera();
 
     debugLog("Canvas", "resize() complete - size:", targetCanvas.width, "x", targetCanvas.height, "scale:", this.gameScale);
   }
 
   /**
-   * 미니맵 모드 설정 (보스 침투 중 디펜스 화면을 작게 표시)
-   * @param {string|null} canvasId - 미니 캔버스 ID (null이면 일반 모드로 복귀)
+   * ? ? ( ???????? ?)
+   * @param {string|null} canvasId -  ??ID (null? ? ??)
    */
   setMiniDisplay(canvasId) {
     debugLog("Canvas", "setMiniDisplay called with:", canvasId);
     if (canvasId) {
-      // 미니 디스플레이 모드
+      // TODO
       const miniCanvas = document.getElementById(canvasId);
       debugLog("Canvas", "miniCanvas found:", !!miniCanvas);
       if (miniCanvas) {
-        debugLog("Canvas", "미니 모드 전환 전 - canvas.id:", this.canvas.id, "isMiniDisplay:", this.isMiniDisplay);
+        debugLog("Canvas", "  ? ??- canvas.id:", this.canvas.id, "isMiniDisplay:", this.isMiniDisplay);
 
-        // 미니 캔버스 참조 저장 (복사용)
+        // TODO
         this.miniCanvas = miniCanvas;
         this.isMiniDisplay = true;
 
-        // 렌더링은 계속 originalCanvas에 함 (ctx는 변경하지 않음)
-        // this.ctx는 originalCanvas의 컨텍스트 유지
+        // TODO
+        // TODO
 
-        // render() 디버그 로그를 위해 카운터 리셋
+        // TODO
         this.renderDebugFrameCount = 0;
 
-        // 미니 캔버스를 명시적으로 보이게 설정
+        // TODO
         miniCanvas.style.display = "block";
 
         debugLog("Canvas", "Switched to mini display mode");
-        debugLog("Canvas", "게임은 originalCanvas에 렌더링, 미니 캔버스에 복사만 함");
-        debugLog("Canvas", "미니 모드 전환 후 - 코어 위치:", this.core.x, this.core.y);
-        debugLog("Canvas", "미니 모드 전환 후 - gameScale:", this.gameScale);
-        debugLog("Canvas", "미니 모드 전환 후 - 아군:", this.alliedViruses.length, "적:", this.enemies.length);
+        debugLog("Canvas", "? originalCanvas????  ? ???");
+        debugLog("Canvas", "  ? ??-  ?:", this.core.x, this.core.y);
+        debugLog("Canvas", "  ? ??- gameScale:", this.gameScale);
+        debugLog("Canvas", "  ? ??- ?:", this.alliedViruses.length, "??", this.enemies.length);
       }
     } else {
-      // 일반 모드로 복귀
-      debugLog("Canvas", "=== 원본 캔버스로 복귀 시작 ===");
-      debugLog("Canvas", "복귀 전 - isMiniDisplay:", this.isMiniDisplay);
+      // TODO
+      debugLog("Canvas", "=== ? ? ? ? ===");
+      debugLog("Canvas", "? ??- isMiniDisplay:", this.isMiniDisplay);
 
       if (this.originalCanvas) {
         debugLog("Canvas", "originalCanvas size:", this.originalCanvas.width, "x", this.originalCanvas.height);
         debugLog("Canvas", "originalCanvas.style.display:", this.originalCanvas.style.display);
 
-        // 미니 캔버스 참조 제거
+        // TODO
         this.miniCanvas = null;
         this.isMiniDisplay = false;
 
-        // render() 디버그 로그를 위해 카운터 리셋
+        // TODO
         this.renderDebugFrameCount = 0;
 
-        // 원본 캔버스를 명시적으로 보이게 설정
+        // TODO
         this.originalCanvas.style.display = "block";
 
         debugLog("Canvas", "Canvas restored - size:", this.originalCanvas.width, "x", this.originalCanvas.height);
         debugLog("Canvas", "Canvas display:", this.originalCanvas.style.display);
-        debugLog("Canvas", "=== 원본 캔버스로 복귀 완료 ===");
+        debugLog("Canvas", "=== ? ? ? ? ===");
       }
     }
   }
 
-  // 자원 업데이트 (GameManager에서 호출) - DATA는 터미널에 표시됨
+  // TODO
   updateResourceDisplay(amount) {
     this.currentData = amount;
-    // DATA 표시는 GameManager의 터미널에서 처리
+    // TODO
     if (this.onDataUpdate) {
       this.onDataUpdate(this.currentData);
     }
   }
 
-  // 외부에서 아군 정보 업데이트 (정보만 저장, 생성은 playIntroAnimation에서)
+  // TODO
   updateAlliedInfo(info) {
     this.alliedInfo = info;
     debugLog("Defense", "updateAlliedInfo - Info saved:", info);
-    // 아군 바이러스 생성은 playIntroAnimation에서 처리
+    // TODO
   }
 
-  // 새로운 슬롯 시스템용 아군 설정 업데이트
+  // TODO
   updateAlliedConfig(config) {
     this.alliedConfig = config;
     debugLog("Defense", "updateAlliedConfig - Config saved:", config);
   }
 
   handleConquerClick() {
-    // 점령 버튼 숨기기
+    // TODO
     this.conquerBtn.style.display = "none";
 
-    // 실드 파괴 연출 시작 (2초 후 콜백)
+    // TODO
     this.playConquestShieldBreak(() => {
-      // 연출 완료 후 실드 상태 변경
+      // TODO
       this.core.shieldActive = false;
       this.core.shieldState = "DISABLED";
       this.core.shieldHp = 0;
       this.updateShieldBtnUI("DISABLED", "#555");
       this.shieldBtn.style.pointerEvents = "none";
 
-      // 점령 콜백 호출 (GameManager가 테트리스 시작)
+      // TODO
       if (this.onConquer) this.onConquer();
 
-      // 페이지 리셋
+      // TODO
       this.currentPage = 1;
       this.updateWaveDisplay();
     });
   }
 
-  // 점령용 실드 파괴 연출 (2단계, 총 2초)
+  // TODO
   playConquestShieldBreak(onComplete) {
     const originalRadius = this.core.shieldRadius;
     const startTime = performance.now();
-    const totalDuration = 2000; // 2초
-    const phase1Duration = 800; // 1단계: 0.8초
-
-    // 점령 연출 중 플래그
+    const totalDuration = 2000; // TODO
+    const phase1Duration = 800; // TODO
+    // TODO
     this.isConquestBreaking = true;
 
     const animate = (now) => {
       const elapsed = now - startTime;
 
-      // === 1단계: 금이 가며 살짝 부서짐 (0 ~ 0.8초) ===
+      // TODO
       if (elapsed < phase1Duration) {
         const progress = elapsed / phase1Duration;
 
-        // 실드 떨림 효과
+        // TODO
         if (Math.random() < 0.3) {
           this.shakeScreen(5 + progress * 10);
         }
 
-        // 금이 가는 파티클 (조금씩)
+        // TODO
         if (Math.random() < 0.15) {
           const angle = Math.random() * Math.PI * 2;
           const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
@@ -701,17 +763,17 @@ export class DefenseGame {
             alpha: 1,
             color: "#00f0ff",
             size: 2 + Math.random() * 2,
-            char: "░▒▓"[Math.floor(Math.random() * 3)],
+            char: "???"[Math.floor(Math.random() * 3)],
           });
         }
 
-        // 1단계 끝에서 첫 번째 충격
+        // TODO
         if (elapsed > phase1Duration - 100 && !this._phase1Flash) {
           this._phase1Flash = true;
           this.flashScreen("#00ffff", 0.4);
           this.shakeScreen(15);
 
-          // 실드 금 파티클 대량 생성
+          // TODO
           for (let i = 0; i < 20; i++) {
             const angle = Math.random() * Math.PI * 2;
             const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
@@ -727,7 +789,7 @@ export class DefenseGame {
               alpha: 1,
               color: "#00f0ff",
               size: 3 + Math.random() * 3,
-              char: "▓█▄▀"[Math.floor(Math.random() * 4)],
+              char: "???"[Math.floor(Math.random() * 4)],
             });
           }
         }
@@ -736,22 +798,22 @@ export class DefenseGame {
         return;
       }
 
-      // === 2단계: 완전 박살 + 파동 발사 (0.8초 ~ 2초) ===
+      // TODO
       if (!this._phase2Started) {
         this._phase2Started = true;
 
-        // 강력한 플래시 + 흔들림
+        // TODO
         this.flashScreen("#ffffff", 0.6);
         this.shakeScreen(30);
 
-        // 실드 조각 대량 생성 (바깥으로 날아감)
+        // TODO
         const segments = 24;
         for (let i = 0; i < segments; i++) {
           const angle = ((Math.PI * 2) / segments) * i;
           const x = this.core.x + Math.cos(angle) * this.core.shieldRadius;
           const y = this.core.y + Math.sin(angle) * this.core.shieldRadius;
 
-          // 큰 조각들
+          // TODO
           for (let j = 0; j < 4; j++) {
             const spreadAngle = angle + (Math.random() - 0.5) * 0.5;
             this.particles.push({
@@ -764,29 +826,28 @@ export class DefenseGame {
               alpha: 1,
               color: Math.random() > 0.5 ? "#00f0ff" : "#ffffff",
               size: 4 + Math.random() * 6,
-              char: "█▓▒░■□▪▫"[Math.floor(Math.random() * 8)],
+              char: "????"[Math.floor(Math.random() * 8)],
             });
           }
         }
 
-        // 파동 생성 (캔버스 전체로 퍼짐)
+        // TODO
         this.shockwaves.push({
           x: this.core.x,
           y: this.core.y,
           radius: this.core.shieldRadius,
           maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.5,
-          speed: 400, // 픽셀/초
+          speed: 400, // TODO
           alpha: 0.8,
           color: "#00f0ff",
           lineWidth: 6,
-          damageDealt: false, // 데미지는 한번만
-        });
+          damageDealt: false,
+        }); // TODO
 
-        // 적에게 넉백 + 슬로우 + 데미지 적용
         this.applyShockwaveEffects();
       }
 
-      // 실드 반경 축소
+      // TODO
       const phase2Progress =
         (elapsed - phase1Duration) / (totalDuration - phase1Duration);
       this.core.shieldRadius = originalRadius * (1 - phase2Progress);
@@ -794,7 +855,7 @@ export class DefenseGame {
       if (elapsed < totalDuration) {
         requestAnimationFrame(animate);
       } else {
-        // 연출 완료
+        // TODO
         this.core.shieldRadius = 0;
         this.isConquestBreaking = false;
         this._phase1Flash = false;
@@ -807,19 +868,19 @@ export class DefenseGame {
     requestAnimationFrame(animate);
   }
 
-  // 파동 효과: 넉백 + 슬로우 + 데미지
+  // TODO
   applyShockwaveEffects() {
-    const damage = 25; // 고정 데미지
+    const damage = 25; // TODO
 
     this.enemies.forEach((enemy) => {
-      // 부드러운 넉백 + 슬로우
+      // TODO
       this.applyKnockback(enemy, 200, 0.3, 2);
 
-      // 데미지
+      // TODO
       enemy.hp -= damage;
       this.createExplosion(enemy.x, enemy.y, "#00f0ff", 5);
 
-      // 적 처치 확인
+      // TODO
       if (enemy.hp <= 0) {
         this.createExplosion(enemy.x, enemy.y, "#00ff00", 10);
         const gain = 10;
@@ -828,15 +889,16 @@ export class DefenseGame {
       }
     });
 
-    // 죽은 적 제거
+    // TODO
     this.enemies = this.enemies.filter((e) => e.hp > 0);
   }
 
   toggleShield() {
-    // 이미 전환 중이거나 파괴된 상태면 무시
+    // TODO
     if (
       this.core.shieldState === "CHARGING" ||
       this.core.shieldState === "DISCHARGING" ||
+      this.core.shieldState === "RETURNING" ||
       this.core.shieldState === "BROKEN" ||
       this.core.shieldState === "RECHARGING" ||
       this.core.shieldState === "DISABLED"
@@ -845,65 +907,66 @@ export class DefenseGame {
     }
 
     if (this.core.shieldActive) {
-      // 끄기 시도 (1초 소요)
+      // TODO
       this.core.shieldState = "DISCHARGING";
       this.core.shieldTimer = 1.0;
       this.updateShieldBtnUI("DISENGAGING...", "#ffff00");
     } else {
-      // 켜기 시도 (2초 소요)
-      this.core.shieldState = "CHARGING";
-      this.core.shieldTimer = 2.0;
-      this.updateShieldBtnUI("CHARGING...", "#ffff00");
+      // TODO
+      this.core.shieldState = "RETURNING";
+      this.coreReturnTimer = 3.0;
+      this.coreReturnAtHome = false;
+      this.updateShieldBtnUI("RETURNING...", "#ffff00");
     }
   }
 
-  // 실드 상태별 시각 효과 목표값 설정
+  // TODO
   updateShieldVisualTargets() {
     const sv = this.shieldVisual;
     const state = this.core.shieldState;
 
     if (state === "ACTIVE") {
-      // ACTIVE: 실선, 밝은 색, 채우기 있음
+      // TODO
       sv.targetAlpha = 0.8;
-      sv.targetDashGap = 0; // 실선
+      sv.targetDashGap = 0; // TODO
       sv.targetLineWidth = 2.5;
       sv.targetFillAlpha = 0.15;
-      sv.targetRotationSpeed = 0; // 회전 없음
-    } else if (state === "OFF") {
-      // OFF: 점선, 잘 보이게
+      sv.targetRotationSpeed = 0; // TODO
+    } else if (state === "OFF" || state === "RETURNING") {
+      // TODO
       sv.targetAlpha = 0.5;
-      sv.targetDashGap = 10; // 점선
+      sv.targetDashGap = 10; // TODO
       sv.targetLineWidth = 1.5;
       sv.targetFillAlpha = 0;
       sv.targetRotationSpeed = 0;
     } else if (state === "DISCHARGING") {
-      // DISCHARGING: 점선으로 전환 중, 약간 회전
+      // TODO
       sv.targetAlpha = 0.6;
       sv.targetDashGap = 10;
       sv.targetLineWidth = 1.5;
       sv.targetFillAlpha = 0.05;
-      sv.targetRotationSpeed = 30; // 느린 회전
+      sv.targetRotationSpeed = 30; // TODO
     } else if (state === "CHARGING") {
-      // CHARGING: 점선 → 실선, 가속 회전
+      // TODO
       const elapsed = 2.0 - this.core.shieldTimer;
       const progress = Math.min(1, elapsed / 2.0);
 
-      // 진행률에 따라 점점 실선으로, 밝아지고, 빨라짐
+      // TODO
       sv.targetAlpha = 0.5 + progress * 0.3;
-      sv.targetDashGap = 12 * (1 - progress); // 점선 → 실선
+      sv.targetDashGap = 12 * (1 - progress); // TODO
       sv.targetLineWidth = 1.5 + progress * 1;
       sv.targetFillAlpha = progress * 0.15;
-      sv.targetRotationSpeed = 50 + progress * 500; // 가속 회전
+      sv.targetRotationSpeed = 50 + progress * 500; // TODO
     } else if (state === "BROKEN" || state === "RECHARGING") {
-      // BROKEN/RECHARGING: 철컥철컥, 잘 보이게
+      // TODO
       sv.targetAlpha = 0.5;
       sv.targetDashGap = 12;
       sv.targetLineWidth = 1.5;
       sv.targetFillAlpha = 0;
-      // 철컥철컥은 별도 처리 (rotationSpeed 사용 안함)
+      // TODO
       sv.targetRotationSpeed = 0;
     } else if (state === "DISABLED") {
-      // DISABLED: 약하게 보임
+      // TODO
       sv.targetAlpha = 0.3;
       sv.targetDashGap = 15;
       sv.targetLineWidth = 1;
@@ -917,10 +980,10 @@ export class DefenseGame {
       (this.core.shieldHp / this.core.shieldMaxHp) * 100
     );
 
-    // 로딩 중일 때 (BROKEN 상태)
+    // TODO
     let topDisplay = `(${hpPct}%)`;
     if (loadingProgress !== null) {
-      // 로딩 동글동글 원형 표시
+      // TODO
       const circumference = 2 * Math.PI * 12;
       const dashOffset = circumference * (1 - loadingProgress);
       topDisplay = `
@@ -934,8 +997,7 @@ export class DefenseGame {
           `;
     }
 
-    // 버튼 내부: 상태 텍스트
-    // 버튼 위: 체력 텍스트 또는 로딩 표시
+    // TODO
     this.shieldBtn.innerHTML = `
           SHIELD: ${text}
           <div style='
@@ -959,21 +1021,21 @@ export class DefenseGame {
     this.resize();
     this.isRunning = true;
     this.canvas.style.display = "block";
-    this.uiLayer.style.display = "block"; // UI 표시
+    this.uiLayer.style.display = "block"; // TODO
 
-    // 스테이지 타입 자동 감지 (Safe Zone: 0, Data Mine: 3)
+    // TODO
     this.isSafeZone = (this.currentStageId === 0);
-    this.isFarmingZone = (this.currentStageId === 3); // Data Mine = 무한 파밍
+    this.isFarmingZone = (this.currentStageId === 3); // TODO
 
-    // 웨이브 초기화
+    // TODO
     this.currentPage = 1;
     this.pageTimer = 0;
-    this.conquerReady = false; // 점령 가능 상태 초기화
+    this.conquerReady = false; // TODO
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
     this.updateShieldBtnUI("ACTIVE", "#fff");
 
-    // BGM 시작 (트랙 선택)
+    // TODO
     if (this.isSafeZone) {
       this.playBGMTrack('SAFE_ZONE');
     } else {
@@ -988,17 +1050,17 @@ export class DefenseGame {
   stop() {
     this.isRunning = false;
     this.canvas.style.display = "none";
-    this.uiLayer.style.display = "none"; // UI 숨김
-    
-    // BGM 정지
+    this.uiLayer.style.display = "none"; // TODO
+
+    // TODO
     this.bgmManager.stop();
   }
 
   pause() {
     this.isRunning = false;
-    // 캔버스와 UI는 보이지만 업데이트 중지
-    
-    // BGM 정지
+    // TODO
+
+    // TODO
     this.bgmManager.stop();
   }
 
@@ -1014,7 +1076,7 @@ export class DefenseGame {
       requestAnimationFrame((t) => this.animate(t));
       debugLog("Canvas", "Animation frame requested");
 
-      // BGM 재개 (이전 트랙으로)
+      // TODO
       if (this.currentBGMTrack) {
         this.bgmManager.play(this.currentBGMTrack);
       }
@@ -1022,13 +1084,13 @@ export class DefenseGame {
       debugLog("Canvas", "Already running, skipping resume");
     }
 
-    // 미니 디스플레이 모드가 아닐 때만 canvas 보이게 (점령 모드에서 원본 캔버스 숨김 유지)
+    // TODO
     if (!this.isMiniDisplay) {
       this.canvas.style.display = "block";
       this.uiLayer.style.display = "block";
-      debugLog("Canvas", "Set canvas and uiLayer to block (일반 모드)");
+      debugLog("Canvas", "Set canvas and uiLayer to block (? )");
     } else {
-      debugLog("Canvas", "Skipped canvas display (미니 모드 - 원본 캔버스 숨김 유지)");
+      debugLog("Canvas", "Skipped canvas display (  - ? ???? ??)");
     }
     debugLog("Canvas", "canvas after set:", this.canvas.style.display);
   }
@@ -1036,27 +1098,40 @@ export class DefenseGame {
   update(deltaTime) {
     const now = performance.now() / 1000;
 
-    // 🛡️ deltaTime 제한 (최대 100ms) - 탭 비활성화 후 복귀 시 폭발 방지
+    // TODO
     const clampedDeltaTime = Math.min(deltaTime, 100);
     const dt = clampedDeltaTime / 1000;
 
-    // 🛡️ 상태 유효성 검증 (모바일 메모리 이슈 방어)
+    // TODO
     this.validateGameState();
 
-    // 코어 시각적 오프셋 업데이트 (발사 후 부드럽게 원위치로)
+    // TODO
     const core = this.core;
-    // 목표 오프셋으로 부드럽게 이동
+    // TODO
     core.visualOffsetX += (core.targetOffsetX - core.visualOffsetX) * dt * 15;
     core.visualOffsetY += (core.targetOffsetY - core.visualOffsetY) * dt * 15;
-    // 목표 오프셋은 천천히 0으로 (발사 후 원위치로 돌아옴)
+    // TODO
     core.targetOffsetX *= Math.pow(0.05, dt);
     core.targetOffsetY *= Math.pow(0.05, dt);
-    // 작은 값은 0으로 클램프
+    // TODO
     if (Math.abs(core.targetOffsetX) < 0.1) core.targetOffsetX = 0;
     if (Math.abs(core.targetOffsetY) < 0.1) core.targetOffsetY = 0;
 
-    // 0. 쉴드 상태 업데이트
-    if (this.core.shieldState === "CHARGING") {
+    // TODO
+    this.updateMoveInput();
+    if (this.core.shieldState === "RETURNING") {
+      this.updateCoreReturn(dt);
+    } else {
+      this.updateCoreMovement(dt);
+    }
+    this.updateCamera();
+    const canMove = !this.core.shieldActive && this.core.shieldState === "OFF";
+    this.joystickContainer.style.display = (this.isMobile && canMove) ? "block" : "none";
+
+    // TODO
+    if (this.core.shieldState === "RETURNING") {
+      // TODO
+    } else if (this.core.shieldState === "CHARGING") {
       this.core.shieldTimer -= dt;
       if (this.core.shieldTimer <= 0) {
         this.core.shieldActive = true;
@@ -1072,62 +1147,56 @@ export class DefenseGame {
       }
     } else if (this.core.shieldState === "BROKEN") {
       this.core.shieldTimer -= dt;
-      // 로딩 동글동글 애니메이션 (5초)
       const loadingProgress = 1 - this.core.shieldTimer / 5.0;
       const dots = ".".repeat(Math.floor((Date.now() / 300) % 4));
       this.updateShieldBtnUI(`REPAIRING${dots}`, "#ff6600", loadingProgress);
 
       if (this.core.shieldTimer <= 0) {
-        // 수리 완료 -> 충전 시작
         this.core.shieldState = "RECHARGING";
-        this.core.shieldHp = 1; // 1%부터 시작
+        this.core.shieldHp = 1;
         this.updateShieldBtnUI("RECHARGING", "#ffff00");
       }
     } else if (this.core.shieldState === "RECHARGING") {
-      // 충전 중: 1% -> 100% (초당 20% 충전)
       this.core.shieldHp += 20 * dt;
       if (this.core.shieldHp >= this.core.shieldMaxHp) {
         this.core.shieldHp = this.core.shieldMaxHp;
         this.core.shieldState = "OFF";
-        this.updateShieldBtnUI("OFFLINE", "#00ff00"); // 충전 완료!
+        this.updateShieldBtnUI("OFFLINE", "#00ff00");
       } else {
-        const pct = Math.floor(
-          (this.core.shieldHp / this.core.shieldMaxHp) * 100
-        );
+        const pct = Math.floor((this.core.shieldHp / this.core.shieldMaxHp) * 100);
         this.updateShieldBtnUI(`CHARGING ${pct}%`, "#ffff00");
       }
     }
-
-    // 쉴드 내구도 로직
+    // TODO
     if (this.core.shieldActive) {
-      // 켜져있을 때 자연 소모는 없음 (기획: 페널티 없음)
-      // 단, 공격 받으면 깎임 (충돌 로직에서 처리)
+      // TODO
+      // TODO
     } else {
-      // 꺼져있을 때 회복 (파괴 상태 아닐 때만)
+      // TODO
       if (
         this.core.shieldState === "OFF" &&
         this.core.shieldHp < this.core.shieldMaxHp
       ) {
-        this.core.shieldHp += 10 * dt; // 초당 10 회복
+        this.core.shieldHp += 10 * dt; // TODO
         if (this.core.shieldHp > this.core.shieldMaxHp)
           this.core.shieldHp = this.core.shieldMaxHp;
         this.updateShieldBtnUI("OFFLINE", "#f00");
       }
     }
 
-    // 실드 시각 효과 목표값 설정 (상태별)
+    // TODO
     this.updateShieldVisualTargets();
-    
-    // 보스전: 침투 게이지 업데이트
+
+    // TODO
     if (this.isBossFight && this.bossManager && !this.bossManager.isBreachReady) {
       const shieldOff = !this.core.shieldActive;
       this.bossManager.updateBreachGauge(dt, shieldOff, this.frameEnemiesKilled || 0, this.frameCoreDamaged || 0);
-      
-      // 프레임당 카운터 리셋
+
+      // TODO
       this.frameEnemiesKilled = 0;
       this.frameCoreDamaged = 0;
-      
-      // BREACH READY 콜백
+
+      // TODO
       if (this.bossManager.isBreachReady && !this.breachReadyShown) {
         this.breachReadyShown = true;
         if (this.onBreachReady) {
@@ -1136,8 +1205,8 @@ export class DefenseGame {
       }
     }
 
-    // 실드 시각 효과 보간 (부드러운 전환)
-    const lerpSpeed = 3.0; // 보간 속도 (높을수록 빠름)
+    // TODO
+    const lerpSpeed = 3.0; // TODO
     const sv = this.shieldVisual;
     sv.alpha += (sv.targetAlpha - sv.alpha) * lerpSpeed * dt;
     sv.dashGap += (sv.targetDashGap - sv.dashGap) * lerpSpeed * dt;
@@ -1146,12 +1215,12 @@ export class DefenseGame {
     sv.rotationSpeed +=
       (sv.targetRotationSpeed - sv.rotationSpeed) * lerpSpeed * dt;
 
-    // 회전 오프셋 업데이트
+    // TODO
     sv.rotation += sv.rotationSpeed * dt;
 
-    // 0.5 웨이브(페이지) 진행
+    // TODO
 
-    // 강화 페이지 모드 (점령 중) - 이미 완료된 경우 스킵
+    // TODO
     if (this.isReinforcementMode && !this.reinforcementComplete) {
       this.pageTimer += dt;
       if (this.pageTimer >= this.pageDuration) {
@@ -1159,8 +1228,8 @@ export class DefenseGame {
           this.reinforcementPage++;
           this.pageTimer = 0;
 
-          // 강화 페이지별 스폰 레이트 (스폰 수 3배: 1/3로 감소)
-          // 1페이지: 0.17초, 2페이지: 0.12초, 3페이지: 0.08초
+          // TODO
+          // TODO
           const reinforcementSpawnRates = [0.17, 0.12, 0.08];
           this.spawnRate =
             reinforcementSpawnRates[Math.min(this.reinforcementPage - 1, 2)] * this.pageSpawnScale;
@@ -1174,13 +1243,13 @@ export class DefenseGame {
             this.spawnRate
           );
         } else {
-          // 강화 페이지 완료 -> 점령 완료!
+          // TODO
           this.reinforcementComplete = true;
           debugLog("Defense", "Reinforcement Complete!");
         }
       }
     }
-    // 일반 페이지 모드 (점령 완료 상태가 아닐 때만)
+    // TODO
     else if (!this.isSafeZone && !this.isConquered && this.currentPage <= (this.maxPages || 12)) {
       const maxPages = this.maxPages || 12;
       const diffScale = this.stageDifficultyScale || 1.0;
@@ -1188,19 +1257,19 @@ export class DefenseGame {
       const prevSecond = Math.floor(this.pageTimer);
       this.pageTimer += dt;
       const currSecond = Math.floor(this.pageTimer);
-      
-      // 매초마다 타이머 UI 업데이트
+
+      // TODO
       if (currSecond !== prevSecond) {
         this.updateWaveDisplay();
       }
-      
+
       if (this.pageTimer >= this.pageDuration) {
         if (this.currentPage < maxPages || this.isFarmingZone) {
-          // 파밍존: 페이지 무한 증가
+          // TODO
           this.currentPage++;
           this.pageTimer = 0;
-          // 난이도 스케일 적용 (스폰 수 3배: 1/3로 감소)
-          // 최소값도 1/3로 조정: 0.4 → 0.13, 기본값도 1/3: 1.2 → 0.4
+          // TODO
+          // TODO
           if (!this.isFarmingZone) {
             this.spawnRate = Math.max(
               0.13 * this.pageSpawnScale,
@@ -1209,32 +1278,32 @@ export class DefenseGame {
           }
           this.updateWaveDisplay();
         } else if (!this.conquerReady && !this.isFarmingZone) {
-          // 최대 페이지 완료 -> 점령 가능 상태 (무한대 아이콘) - 파밍존 제외
+          // TODO
           this.conquerReady = true;
 
-          // 콜백으로 터미널에 업데이트
+          // TODO
           if (this.onPageUpdate) {
-            this.onPageUpdate("∞ READY", "#ff3333");
+            this.onPageUpdate("??READY", "#ff3333");
           }
 
-          // 점령 가능 콜백 호출 (선택지 갱신용)
+          // TODO
           if (this.onConquerReady) {
             this.onConquerReady();
           }
         }
       }
     }
-    // 파밍존 전용 페이지 모드 (점령 불가, 무한 파밍)
+    // TODO
     else if (this.isFarmingZone && !this.isConquered) {
       const prevSecond = Math.floor(this.pageTimer);
       this.pageTimer += dt;
       const currSecond = Math.floor(this.pageTimer);
-      
-      // 매초마다 타이머 UI 업데이트
+
+      // TODO
       if (currSecond !== prevSecond) {
         this.updateWaveDisplay();
       }
-      
+
       if (this.pageTimer >= this.pageDuration) {
         this.currentPage++;
         this.pageTimer = 0;
@@ -1242,29 +1311,29 @@ export class DefenseGame {
       }
     }
 
-    // 0.7 시너지 효과 적용 (매 프레임)
+    // TODO
     this.applySynergyEffects(dt);
-    
-    // 0.75 아이템 수집 바이러스 업데이트
+
+    // TODO
     this.updateCollectorViruses(dt);
-    
-    // 0.76 말풍선 업데이트
+
+    // TODO
     this.updateSpeechBubbles();
-    
-    // 0.77 랜덤 대사
+
+    // TODO
     if (this.isSafeZone) {
-      // Safe Zone: 매우 자주 대화! (약 2~3초에 1번)
+      // TODO
       if (Math.random() < 0.008) {
         const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
         if (randomAlly) {
-          // 70% 대화, 30% 혼잣말
+          // TODO
           const category = Math.random() < 0.7 ? 'safeChat' : 'safeSolo';
           this.tryVirusSpeech(randomAlly, category, 1.0);
         }
       }
     } else {
-      // 전투 중: 매우 드물게 idle 대사
-      if (Math.random() < 0.00005) { // 약 5분에 1번
+      // TODO
+      if (Math.random() < 0.00005) { // TODO
         const randomAlly = this.alliedViruses[Math.floor(Math.random() * this.alliedViruses.length)];
         if (randomAlly) {
           this.tryVirusSpeech(randomAlly, 'idle', 1.0);
@@ -1272,7 +1341,7 @@ export class DefenseGame {
       }
     }
 
-    // 0.7.5 채굴 시스템 업데이트
+    // TODO
     if (this.miningManager) {
       this.miningManager.update(
         dt, this.core, this.canvas, this.isSafeZone,
@@ -1282,17 +1351,17 @@ export class DefenseGame {
       this.miningManager.resolveCabinetCollisions(this.alliedViruses, 3);
     }
 
-    // 0.8 아군 바이러스 로직 (타입별 행동) - for 루프로 안전하게 처리
+    // TODO
     for (let idx = this.alliedViruses.length - 1; idx >= 0; idx--) {
       const v = this.alliedViruses[idx];
 
-      // HP가 없으면 제거 (사망)
+      // TODO
       if (v.hp <= 0) {
         this.handleAllyDeath(v, idx);
         continue;
       }
 
-      // 공격 타입별 행동 분기
+      // TODO
       switch (v.attackType) {
         case "melee":
           this.updateMeleeAlly(v, dt);
@@ -1307,11 +1376,11 @@ export class DefenseGame {
           this.updateSupportAlly(v, dt);
           break;
         default:
-          this.updateMeleeAlly(v, dt); // 기본은 근접
+          this.updateMeleeAlly(v, dt); // TODO
       }
     }
 
-    // 1. 적 생성 (점령 완료 상태가 아닐 때만)
+    // TODO
     if (!this.isConquered) {
       const currentSpawnRate = this.isSafeZone
         ? this.safeZoneSpawnRate
@@ -1323,15 +1392,15 @@ export class DefenseGame {
       }
     }
 
-    // 2. 적 이동 및 충돌
+    // TODO
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
 
-      // 패시브 어그로: 근처에 TANK가 있으면 TANK를 우선 타겟팅
+      // TODO
       let targetX = this.core.x;
       let targetY = this.core.y;
 
-      // 도발당한 적은 도발한 탱커를 타겟
+      // TODO
       if (enemy.tauntedBy) {
         const taunter = this.alliedViruses.find(
           (v) => v === enemy.tauntedBy && v.hp > 0
@@ -1340,10 +1409,10 @@ export class DefenseGame {
           targetX = taunter.x;
           targetY = taunter.y;
         } else {
-          enemy.tauntedBy = null; // 탱커 사망 시 도발 해제
+          enemy.tauntedBy = null; // TODO
         }
       } else {
-        // 패시브 어그로: 가장 가까운 TANK 찾기
+        // TODO
         let nearestTank = null;
         let nearestTankDist = Infinity;
 
@@ -1366,50 +1435,49 @@ export class DefenseGame {
         }
       }
 
-      // 이동 (타겟 방향으로)
+      // TODO
       const dx = targetX - enemy.x;
       const dy = targetY - enemy.y;
       const distToTarget = Math.hypot(dx, dy);
 
-      // 코어와의 거리 (실드/코어 충돌용)
+      // TODO
       const distToCore = Math.hypot(
         this.core.x - enemy.x,
         this.core.y - enemy.y
       );
 
-      // 쉴드 충돌 체크 (Active 상태일 때만) - 코어와의 거리로 판정!
+      // TODO
       if (
         this.core.shieldActive &&
         distToCore < this.core.shieldRadius + enemy.radius
       ) {
-        // 쉴드 피격
-        this.core.shieldHp -= 10; // 적 하나당 내구도 10 감소
-        this.chargeStaticOnHit(); // 피격 시 스태틱 충전
+        // TODO
+        this.core.shieldHp -= 10; // TODO
+        this.chargeStaticOnHit(); // TODO
         this.createExplosion(enemy.x, enemy.y, "#00f0ff", 5);
         this.enemies.splice(i, 1);
 
-        // 내구도 0 되면 파괴
+        // TODO
         if (this.core.shieldHp <= 0) {
           this.core.shieldHp = 0;
           this.core.shieldActive = false;
           this.core.shieldState = "BROKEN";
-          this.core.shieldTimer = 5.0; // 5초간 쉴드 사용 불가
+          this.core.shieldTimer = 5.0; // TODO
           this.updateShieldBtnUI("BROKEN", "#555");
-          this.createExplosion(this.core.x, this.core.y, "#00f0ff", 30); // 쉴드 파괴 이펙트
-        } else {
+          this.createExplosion(this.core.x, this.core.y, "#00f0ff", 30); // TODO
           this.updateShieldBtnUI("ACTIVE", "#fff");
         }
         continue;
       }
 
-      // 코어 충돌 체크 (쉴드 없거나 뚫림) - 코어와의 거리로 판정!
+      // TODO
       if (distToCore < this.core.radius + enemy.radius) {
-        // 갓모드가 아닐 때만 데미지
+        // TODO
         if (!this.isGodMode) {
           this.core.hp -= enemy.damage;
-          this.chargeStaticOnHit(); // 피격 시 스태틱 충전
-          
-          // 보스전: 코어 피격 카운터
+          this.chargeStaticOnHit(); // TODO
+
+          // TODO
           if (this.isBossFight) {
             this.frameCoreDamaged++;
           }
@@ -1426,17 +1494,17 @@ export class DefenseGame {
         continue;
       }
 
-      // 넉백 속도 적용 (부드러운 넉백)
+      // TODO
       if (enemy.knockbackVx || enemy.knockbackVy) {
         enemy.x += (enemy.knockbackVx || 0) * dt;
         enemy.y += (enemy.knockbackVy || 0) * dt;
 
-        // 마찰로 속도 감소 (0.9^60 ≈ 0.002, 약 1초 후 거의 0)
-        const friction = Math.pow(0.05, dt); // dt 기반 마찰
+        // TODO
+        const friction = Math.pow(0.05, dt); // TODO
         enemy.knockbackVx = (enemy.knockbackVx || 0) * friction;
         enemy.knockbackVy = (enemy.knockbackVy || 0) * friction;
 
-        // 속도가 거의 0이면 제거
+        // TODO
         if (
           Math.abs(enemy.knockbackVx) < 1 &&
           Math.abs(enemy.knockbackVy) < 1
@@ -1446,7 +1514,7 @@ export class DefenseGame {
         }
       }
 
-      // 이동 적용 (슬로우 효과 반영)
+      // TODO
       if (distToTarget > 0) {
         const slowMult = enemy.slowMultiplier || 1;
         enemy.x += (dx / distToTarget) * enemy.speed * slowMult * dt;
@@ -1454,10 +1522,10 @@ export class DefenseGame {
       }
     }
 
-    // 2.5. 모든 바이러스 겹침 방지 (분리)
+    // TODO
     this.separateAllViruses();
 
-    // 3. 포탑 로직 (수동 발사만 - 자동 발사는 조력자가 담당)
+    // TODO
     let nearestEnemy = null;
     let minDist = Infinity;
 
@@ -1470,24 +1538,24 @@ export class DefenseGame {
     });
 
     if (nearestEnemy) {
-      // 포탑이 적을 향하도록 회전 (발사는 수동으로만)
+      // TODO
       const dx = nearestEnemy.x - this.core.x;
       const dy = nearestEnemy.y - this.core.y;
       this.turret.angle = Math.atan2(dy, dx);
-      // 자동 발사 제거 - 수동 발사만 (fireAtPosition에서 처리)
+      // TODO
     } else {
-      // 적이 없을 때 포탑 자동 회전 (시계방향)
+      // TODO
       this.turret.angle += dt * this.idleTurretSpeed;
-      this.idleTurretAngle = this.turret.angle; // 동기화
+      this.idleTurretAngle = this.turret.angle; // TODO
     }
 
-    // 3.5 조력자(Helper) 로직 - 자동 공격 + 회피
+    // TODO
     this.updateHelper(dt, now);
 
-    // 3.6 재장전 업데이트
+    // TODO
     this.updateReload(dt);
 
-    // 4. 발사체 이동
+    // TODO
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
       p.life -= dt;
@@ -1509,14 +1577,14 @@ export class DefenseGame {
           this.createExplosion(p.x, p.y, "#ffff00", 3);
           this.projectiles.splice(i, 1);
 
-          // 적 처치
+          // TODO
           if (p.target.hp <= 0) {
             const idx = this.enemies.indexOf(p.target);
             if (idx > -1) {
               this.enemies.splice(idx, 1);
               this.createExplosion(p.target.x, p.target.y, "#00ff00", 15);
 
-              // [수정] 쉴드 켜져있어도 자원 획득! (페널티 없음)
+              // TODO
               const gain = 10;
               this.currentData += gain;
               this.updateResourceDisplay(this.currentData);
@@ -1525,8 +1593,8 @@ export class DefenseGame {
           }
         }
       } else {
-        // 직선탄 (타겟 없이 방향으로 발사)
-        // vx, vy가 있으면 사용 (조력자 발사체), 없으면 angle, speed 사용 (코어 발사체)
+        // TODO
+        // TODO
         if (p.vx !== undefined && p.vy !== undefined) {
           p.x += p.vx * dt;
           p.y += p.vy * dt;
@@ -1535,7 +1603,7 @@ export class DefenseGame {
           p.y += Math.sin(p.angle) * p.speed * dt;
         }
 
-        // 직선탄도 적과 충돌 검사
+        // TODO
         let hitEnemy = false;
         for (let j = this.enemies.length - 1; j >= 0; j--) {
           const enemy = this.enemies[j];
@@ -1544,11 +1612,11 @@ export class DefenseGame {
           const dist = Math.hypot(dx, dy);
 
           if (dist < p.radius + enemy.radius) {
-            // 직격 데미지
+            // TODO
             enemy.hp -= p.damage;
             this.createExplosion(p.x, p.y, p.color || "#00ff00", 5);
 
-            // 폭발 처리 (LAUNCHER)
+            // TODO
             if (p.explosive && p.explosionRadius > 0) {
               this.handleExplosion(
                 p.x,
@@ -1559,7 +1627,7 @@ export class DefenseGame {
               );
             }
 
-            // 적 처치
+            // TODO
             if (enemy.hp <= 0) {
               this.enemies.splice(j, 1);
               this.createExplosion(enemy.x, enemy.y, p.color || "#00ff00", 15);
@@ -1568,21 +1636,21 @@ export class DefenseGame {
               this.currentData += gain;
               this.updateResourceDisplay(this.currentData);
               if (this.onResourceGained) this.onResourceGained(gain);
-              this.chargeStaticOnKill(); // 처치 시 스태틱 충전
-              
-              // 처치 대사 (15% 확률) - 투사체 발사한 아군 찾기
+              this.chargeStaticOnKill(); // TODO
+
+              // TODO
               const shooter = this.alliedViruses.find(v => v.virusType === 'HUNTER');
               if (shooter) this.tryVirusSpeech(shooter, 'kill', 0.15);
             }
 
             hitEnemy = true;
 
-            // 관통 탄환은 계속 진행, 아니면 제거
+            // TODO
             if (!p.piercing) {
               this.projectiles.splice(i, 1);
               break;
             }
-            // 관통 시: 한 적당 한 번만 피해 (pierced 목록 사용)
+            // TODO
             if (!p.piercedEnemies) p.piercedEnemies = [];
             if (!p.piercedEnemies.includes(enemy)) {
               p.piercedEnemies.push(enemy);
@@ -1592,7 +1660,7 @@ export class DefenseGame {
       }
     }
 
-    // 5. 파티클
+    // TODO
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= dt;
@@ -1603,7 +1671,7 @@ export class DefenseGame {
       if (p.life <= 0) this.particles.splice(i, 1);
     }
 
-    // 6. 파동 효과 업데이트
+    // TODO
     for (let i = this.shockwaves.length - 1; i >= 0; i--) {
       const wave = this.shockwaves[i];
       wave.radius += wave.speed * dt;
@@ -1615,7 +1683,7 @@ export class DefenseGame {
       }
     }
 
-    // 7. 적 슬로우 효과 해제 체크
+    // TODO
     const nowMs = performance.now();
     this.enemies.forEach((enemy) => {
       if (enemy.slowEndTime && nowMs >= enemy.slowEndTime) {
@@ -1624,30 +1692,30 @@ export class DefenseGame {
       }
     });
 
-    // 8. 스태틱 시스템 업데이트
+    // TODO
     this.updateStaticSystem(dt);
   }
 
   /**
-   * 스태틱 시스템 업데이트
+   * ????????
    */
   updateStaticSystem(dt) {
     const ss = this.staticSystem;
 
-    // 시간 기반 충전
+    // TODO
     ss.currentCharge += ss.chargeRate * dt;
 
-    // 충전량 제한
+    // TODO
     if (ss.currentCharge > ss.maxCharge) {
       ss.currentCharge = ss.maxCharge;
     }
 
-    // 100% 충전 시 자동 발동
+    // TODO
     if (ss.currentCharge >= ss.maxCharge && this.enemies.length > 0) {
       this.dischargeStatic();
     }
 
-    // 스파크 파티클 업데이트
+    // TODO
     for (let i = this.staticEffects.sparks.length - 1; i >= 0; i--) {
       const spark = this.staticEffects.sparks[i];
       spark.life -= dt;
@@ -1657,7 +1725,7 @@ export class DefenseGame {
       if (spark.life <= 0) this.staticEffects.sparks.splice(i, 1);
     }
 
-    // 체인 라인 업데이트
+    // TODO
     for (let i = this.staticEffects.chains.length - 1; i >= 0; i--) {
       const chain = this.staticEffects.chains[i];
       chain.life -= dt;
@@ -1665,14 +1733,14 @@ export class DefenseGame {
       if (chain.life <= 0) this.staticEffects.chains.splice(i, 1);
     }
 
-    // 충전량에 따른 스파크 생성 (충전 50% 이상)
+    // TODO
     if (ss.currentCharge > ss.maxCharge * 0.5 && Math.random() < 0.1) {
       this.createStaticSpark();
     }
   }
 
   /**
-   * 스태틱 방전 (체인 라이트닝)
+   * ??? ( ??)
    */
   dischargeStatic() {
     const ss = this.staticSystem;
@@ -1681,7 +1749,7 @@ export class DefenseGame {
 
     if (this.enemies.length === 0) return;
 
-    // 가장 가까운 적 찾기
+    // TODO
     let nearestEnemy = null;
     let minDist = Infinity;
 
@@ -1695,18 +1763,18 @@ export class DefenseGame {
 
     if (!nearestEnemy) return;
 
-    // 체인 라이트닝 시작
+    // TODO
     const hitEnemies = [nearestEnemy];
     let currentTarget = nearestEnemy;
     let prevX = this.core.x;
     let prevY = this.core.y;
 
-    // 첫 번째 체인 (코어 → 첫 적)
+    // TODO
     this.addChainLine(prevX, prevY, currentTarget.x, currentTarget.y);
     currentTarget.hp -= ss.damage;
     this.createExplosion(currentTarget.x, currentTarget.y, "#ffff00", 8);
 
-    // 적 처치 체크
+    // TODO
     if (currentTarget.hp <= 0) {
       const idx = this.enemies.indexOf(currentTarget);
       if (idx !== -1) {
@@ -1719,12 +1787,12 @@ export class DefenseGame {
       }
     }
 
-    // 체인 연속 (최대 chainCount 번)
+    // TODO
     for (let i = 1; i < ss.chainCount; i++) {
       let nextTarget = null;
       let nextMinDist = Infinity;
 
-      // 아직 맞지 않은 적 중 가장 가까운 적 찾기
+      // TODO
       this.enemies.forEach((enemy) => {
         if (hitEnemies.includes(enemy)) return;
         const dist = Math.hypot(
@@ -1737,9 +1805,9 @@ export class DefenseGame {
         }
       });
 
-      if (!nextTarget) break; // 더 이상 튕길 적 없음
+      if (!nextTarget) break; // TODO
 
-      // 체인 라인 추가
+      // TODO
       this.addChainLine(
         currentTarget.x,
         currentTarget.y,
@@ -1747,11 +1815,11 @@ export class DefenseGame {
         nextTarget.y
       );
 
-      // 데미지 (거리에 따라 감소 없이 동일)
+      // TODO
       nextTarget.hp -= ss.damage;
       this.createExplosion(nextTarget.x, nextTarget.y, "#ffff00", 6);
 
-      // 적 처치 체크
+      // TODO
       if (nextTarget.hp <= 0) {
         const idx = this.enemies.indexOf(nextTarget);
         if (idx !== -1) {
@@ -1772,7 +1840,7 @@ export class DefenseGame {
   }
 
   /**
-   * 체인 라인 추가
+   * ? ?
    */
   addChainLine(x1, y1, x2, y2) {
     this.staticEffects.chains.push({
@@ -1788,7 +1856,7 @@ export class DefenseGame {
   }
 
   /**
-   * 스태틱 스파크 생성
+   * ???????
    */
   createStaticSpark() {
     const angle = Math.random() * Math.PI * 2;
@@ -1809,14 +1877,14 @@ export class DefenseGame {
   }
 
   /**
-   * 피격 시 스태틱 충전 (코어/실드 피격 시 호출)
+   * ? ????? (/? ? ???)
    */
   chargeStaticOnHit() {
     this.staticSystem.currentCharge += this.staticSystem.hitChargeAmount;
   }
 
   /**
-   * 처치 시 스태틱 충전
+   * ?????
    */
   chargeStaticOnKill() {
     this.staticSystem.currentCharge += this.staticSystem.killChargeAmount;
@@ -1828,13 +1896,13 @@ export class DefenseGame {
     let color = "#00ff00";
 
     if (this.isConquered) {
-      // 점령 완료 상태
-      text = "🚩 점령지";
+      // TODO
+      text = "? ?";
       color = "#00ff00";
-      this.playBGMTrack('SAFE_ZONE'); // 점령지는 안전
+      this.playBGMTrack('SAFE_ZONE'); // TODO
     } else if (this.isReinforcementMode) {
-      // 강화 페이지 모드 - FINAL 트랙
-      text = `⚔️ ${this.reinforcementPage}/${this.reinforcementMaxPages}`;
+      // TODO
+      text = `? ${this.reinforcementPage}/${this.reinforcementMaxPages}`;
       color = "#ff3333";
       this.playBGMTrack('FINAL');
       this.bgmManager.updateTempo(this.reinforcementPage, this.reinforcementMaxPages);
@@ -1843,25 +1911,25 @@ export class DefenseGame {
       color = "#00ff00";
       this.playBGMTrack('SAFE_ZONE');
     } else if (this.currentPage > maxPages) {
-      // 최대 페이지 초과 = 무한대 모드 - FINAL 트랙
-      text = "∞ READY";
+      // TODO
+      text = "??READY";
       color = "#ff3333";
       this.playBGMTrack('FINAL');
       this.bgmManager.updateTempo(maxPages, maxPages);
     } else if (this.isFarmingZone) {
-      // 파밍존: 페이지 무한, 남은 시간 표시
+      // TODO
       const remainingTime = Math.ceil(this.pageDuration - this.pageTimer);
       text = `PAGE: ${this.currentPage} (${remainingTime}s)`;
       color = "#ffaa00";
       this.playBGMTrack('DEFENSE');
-      this.bgmManager.updateTempo(this.currentPage, 99); // 파밍존은 느린 템포 유지
+      this.bgmManager.updateTempo(this.currentPage, 99); // TODO
     } else {
-      // 일반 스테이지: 페이지 진행 + 남은 시간 표시
+      // TODO
       const remainingTime = Math.ceil(this.pageDuration - this.pageTimer);
       text = `PAGE: ${this.currentPage}/${maxPages} (${remainingTime}s)`;
       color = "#00f0ff";
-      
-      // 페이지 10 이상이면 FINAL 트랙으로 전환
+
+      // TODO
       if (this.currentPage >= 10) {
         this.playBGMTrack('FINAL');
       } else {
@@ -1870,7 +1938,7 @@ export class DefenseGame {
       this.bgmManager.updateTempo(this.currentPage, maxPages);
     }
 
-    // 콜백으로 터미널에 업데이트
+    // TODO
     if (this.onPageUpdate) {
       this.onPageUpdate(text, color);
     }
@@ -1907,14 +1975,14 @@ export class DefenseGame {
     }
   }
 
-  // 강화 페이지 모드 시작 (점령 시)
+  // TODO
   startReinforcementMode(maxPages = 3) {
     this.isReinforcementMode = true;
     this.reinforcementPage = 1;
     this.reinforcementMaxPages = maxPages;
     this.reinforcementComplete = false;
     this.pageTimer = 0;
-    this.spawnRate = 0.17 * this.pageSpawnScale; // 강화 1페이지: 스폰 수 3배 (0.5 / 3)
+    this.spawnRate = 0.17 * this.pageSpawnScale; // TODO
     this.updateWaveDisplay();
     debugLog(
       "Defense",
@@ -1925,16 +1993,16 @@ export class DefenseGame {
     );
   }
 
-  // 일반 모드로 복귀
+  // TODO
   resetToNormalMode() {
     this.isReinforcementMode = false;
     this.reinforcementPage = 0;
     this.reinforcementComplete = false;
     this.currentPage = 1;
     this.pageTimer = 0;
-    this.spawnRate = 0.4 * this.pageSpawnScale; // 리셋 시 초기값 (스폰 수 3배)
+    this.spawnRate = 0.4 * this.pageSpawnScale; // TODO
 
-    // 실드 복구
+    // TODO
     this.core.shieldRadius = 70;
     this.core.shieldState = "OFF";
     this.core.shieldHp = this.core.shieldMaxHp;
@@ -1944,99 +2012,99 @@ export class DefenseGame {
     debugLog("Defense", "Reset to Normal Mode");
   }
 
-  // 점령 상태로 설정
+  // TODO
   setConqueredState(conquered) {
     debugLog(
       "DefenseGame",
-      "setConqueredState 호출됨, conquered:",
+      "setConqueredState ??? conquered:",
       conquered,
-      "현재 isConquered:",
+      "? isConquered:",
       this.isConquered
     );
     this.isConquered = conquered;
     if (conquered) {
-      // 점령 시작 시간 기록 (회전 애니메이션용)
+      // TODO
       this.conqueredStartTime = Date.now() / 1000;
-      this.lastRotationStep = -1; // 회전 단계 추적 (파동 발생용)
+      this.lastRotationStep = -1; // TODO
       debugLog(
         "DefenseGame",
-        "점령 상태 활성화! conqueredStartTime:",
+        "? ? ??? conqueredStartTime:",
         this.conqueredStartTime
       );
 
-      // 점령 시 강한 파동 발사!
+      // TODO
       this.emitConquestWave();
 
-      // 점령 시 적 스폰 중지, 실드 비활성화
-      this.spawnRate = 9999; // 적 거의 안 나옴
+      // TODO
+      this.spawnRate = 9999; // TODO
       this.core.shieldActive = false;
-      this.shieldBtn.style.display = "none"; // 실드 버튼 숨김
+      this.shieldBtn.style.display = "none"; // TODO
 
-      // 아군 바이러스 10마리 소환
+      // TODO
       this.spawnConqueredAllies(10);
     } else {
-      debugLog("Conquest", "점령 상태 비활성화");
-      this.conqueredStartTime = null; // 리셋
-      this.conqueredDebugFrame = 0; // 디버그 프레임 카운터 리셋
+      debugLog("Conquest", "? ? ?");
+      this.conqueredStartTime = null; // TODO
+      this.conqueredDebugFrame = 0; // TODO
       this.lastRotationStep = -1;
     }
     this.updateWaveDisplay();
   }
 
-  // 점령 완료 시 강한 파동
+  // TODO
   emitConquestWave() {
     this.shockwaves.push({
       x: this.core.x,
       y: this.core.y,
       radius: 0,
       maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.5,
-      speed: 600, // 빠른 속도
+      speed: 600, // TODO
       alpha: 1.0,
-      color: "#00ff00", // 녹색
+      color: "#00ff00", // TODO
       lineWidth: 10,
       damageDealt: false,
     });
 
-    // 강한 넉백 적용 (부드럽게)
+    // TODO
     this.enemies.forEach((enemy) => {
-      this.applyKnockback(enemy, 400, 0.3, 3); // 속도 400, 슬로우 0.3, 3초
+      this.applyKnockback(enemy, 400, 0.3, 3); // TODO
     });
   }
 
-  // 부드러운 넉백 적용 헬퍼
+  // TODO
   applyKnockback(enemy, speed, slowMult = 1, slowDuration = 0) {
     const dx = enemy.x - this.core.x;
     const dy = enemy.y - this.core.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-    // 넉백 속도 설정 (기존 속도에 추가)
+    // TODO
     enemy.knockbackVx = (enemy.knockbackVx || 0) + (dx / dist) * speed;
     enemy.knockbackVy = (enemy.knockbackVy || 0) + (dy / dist) * speed;
 
-    // 슬로우 적용
+    // TODO
     if (slowMult < 1 && slowDuration > 0) {
       enemy.slowMultiplier = slowMult;
       enemy.slowTimer = slowDuration;
     }
   }
 
-  // 회전 단계 완료 시 파동 발사
+  // TODO
   emitRotationWave(type) {
     let color, lineWidth;
 
     if (type === "green") {
-      color = "rgba(0, 255, 100, 0.8)"; // 초록색 (사각형1 색상)
+      color = "rgba(0, 255, 100, 0.8)"; // TODO
       lineWidth = 4;
     } else if (type === "blue") {
-      color = "rgba(0, 200, 255, 0.8)"; // 파란색 (사각형2 색상)
+      color = "rgba(0, 200, 255, 0.8)"; // TODO
       lineWidth = 4;
     } else {
-      // 혼합색 (청록색)
+      // TODO
       color = "rgba(0, 255, 200, 0.9)";
       lineWidth = 6;
     }
 
-    // 파동 추가
+    // TODO
     this.shockwaves.push({
       x: this.core.x,
       y: this.core.y,
@@ -2049,25 +2117,25 @@ export class DefenseGame {
       damageDealt: false,
     });
 
-    // 적에게 효과 적용 (부드러운 넉백)
+    // TODO
     this.enemies.forEach((enemy) => {
       if (type === "mixed") {
-        // 혼합색: 넉백 + 데미지
+        // TODO
         this.applyKnockback(enemy, 200);
-        enemy.hp -= 15; // 데미지
+        enemy.hp -= 15; // TODO
       } else {
-        // 초록/파랑: 넉백 + 슬로우
+        // TODO
         this.applyKnockback(enemy, 250, 0.5, 2);
       }
     });
   }
 
-  // 점령 시 아군 바이러스 소환 (배리어 밖에 위치)
+  // TODO
   spawnConqueredAllies(count) {
     this.alliedViruses = [];
     for (let i = 0; i < count; i++) {
       const angle = ((Math.PI * 2) / count) * i;
-      const distance = 90 + Math.random() * 30; // 배리어(70) 밖: 90~120
+      const distance = 90 + Math.random() * 30; // TODO
       this.alliedViruses.push({
         x: this.core.x + Math.cos(angle) * distance,
         y: this.core.y + Math.sin(angle) * distance,
@@ -2082,34 +2150,34 @@ export class DefenseGame {
     }
   }
 
-  // 아군 바이러스 1마리 리스폰 (타입 정보 포함)
+  // TODO
   respawnOneAlly(deadAlly = null) {
-    // 새로운 슬롯 시스템 사용
+    // TODO
     if (this.alliedConfig) {
       this.respawnAllyWithConfig(deadAlly);
       return;
     }
 
-    // 레거시 시스템
+    // TODO
     const targetCount = this.isConquered ? 10 : this.alliedInfo.count || 0;
 
     debugLog(
       "DefenseGame",
-      "respawnOneAlly 호출됨, isConquered:",
+      "respawnOneAlly ??? isConquered:",
       this.isConquered,
       "targetCount:",
       targetCount,
-      "현재 아군 수:",
+      "? ? ??",
       this.alliedViruses.length
     );
 
     if (targetCount <= 0) {
-      debugLog("AllyMovement", "targetCount가 0이라서 리스폰 취소");
+      debugLog("AllyMovement", "targetCount 0?????");
       return;
     }
 
     if (this.alliedViruses.length >= targetCount) {
-      debugLog("AllyMovement", "이미 목표 수 달성, 리스폰 취소");
+      debugLog("AllyMovement", "??  ???, ??");
       return;
     }
 
@@ -2135,14 +2203,14 @@ export class DefenseGame {
     this.alliedViruses.push(newAlly);
     debugLog(
       "DefenseGame",
-      "아군 바이러스 리스폰 완료, 현재 아군 수:",
+      "? ? ???, ? ? ??",
       this.alliedViruses.length
     );
 
     this.createExplosion(newAlly.x, newAlly.y, "#00aaff", 5);
   }
 
-  // 새로운 슬롯 시스템으로 리스폰
+  // TODO
   respawnAllyWithConfig(deadAlly) {
     const config = this.alliedConfig;
     if (!config) return;
@@ -2150,7 +2218,7 @@ export class DefenseGame {
     const targetCount = config.mainCount + config.subCount;
     if (this.alliedViruses.length >= targetCount) return;
 
-    // 죽은 아군과 같은 타입으로 리스폰
+    // TODO
     const typeName = deadAlly?.virusType || config.mainType;
     const typeData =
       typeName === config.mainType ? config.mainTypeData : config.subTypeData;
@@ -2173,21 +2241,21 @@ export class DefenseGame {
 
     this.alliedViruses.push(newAlly);
     this.createExplosion(newAlly.x, newAlly.y, newAlly.color, 5);
-    
-    // 스폰 대사 (50% 확률)
+
+    // TODO
     this.tryVirusSpeech(newAlly, 'spawn', 0.5);
 
     debugLog(
       "DefenseGame",
-      `리스폰: ${typeName}, 현재 아군 수: ${this.alliedViruses.length}`
+      `?? ${typeName}, ? ? ?? ${this.alliedViruses.length}`
     );
   }
 
-  // === 아군 사망 처리 ===
+  // TODO
   handleAllyDeath(v, idx) {
-    debugLog("AllyMovement", `아군 바이러스 사망: ${v.virusType}`);
+    debugLog("AllyMovement", `? ? ?: ${v.virusType}`);
 
-    // 특수 효과: 폭발 사망 (SWARM)
+    // TODO
     if (v.special === "explodeOnDeath" && v.explosionDamage > 0) {
       this.handleExplosion(
         v.x,
@@ -2198,7 +2266,7 @@ export class DefenseGame {
       );
     }
 
-    // 특수 효과: 자폭 (BOMBER) - 이미 자폭했으면 패스
+    // TODO
     if (v.attackType === "suicide" && !v.exploded) {
       this.handleExplosion(
         v.x,
@@ -2211,35 +2279,35 @@ export class DefenseGame {
 
     this.createExplosion(v.x, v.y, v.color, 8);
 
-    // 시너지 효과: 헌터 사망 시 SWARM 소환 (SWARM+HUNTER 시너지)
+    // TODO
     if (this.alliedConfig?.synergy?.effect === "hunterSwarmSpawn" && v.virusType === "HUNTER") {
       this.spawnSynergySwarm(v.x, v.y, 2);
     }
 
-    const deadAlly = { ...v }; // 정보 복사
+    const deadAlly = { ...v }; // TODO
     this.alliedViruses.splice(idx, 1);
 
-    // 리스폰 (타입별 리스폰 시간)
+    // TODO
     const respawnTime = (v.respawnTime || 2) * 1000;
     setTimeout(() => this.respawnOneAlly(deadAlly), respawnTime);
   }
 
-  // === 근접 타입 (SWARM, TANK) 업데이트 ===
+  // TODO
   updateMeleeAlly(v, dt) {
-    const searchRange = 350; // 사거리 증가
+    const searchRange = 350; // TODO
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
-    // 속도/가속도 초기화
+    // TODO
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
 
-    // 🛡️ 시너지: tankProtection - SWARM이 TANK 주변에서 활동
+    // TODO
     const hasTankProtectionSynergy = this.alliedConfig?.synergy?.effect === "tankProtection";
     let anchorTank = null;
-    
+
     if (hasTankProtectionSynergy && v.virusType === "SWARM") {
-      // 가장 가까운 TANK 찾기
+      // TODO
       let minTankDist = Infinity;
       for (const ally of this.alliedViruses) {
         if (ally.virusType === "TANK" && ally.hp > 0) {
@@ -2252,7 +2320,7 @@ export class DefenseGame {
       }
     }
 
-    // TANK 전용: 도발 스킬 (액티브)
+    // TODO
     if (v.virusType === "TANK" && v.special === "taunt") {
       v.tauntTimer = (v.tauntTimer || 0) + dt;
       const cooldown = v.tauntCooldown || 5;
@@ -2261,26 +2329,26 @@ export class DefenseGame {
         v.tauntTimer = 0;
         const tauntRadius = v.tauntRadius || 100;
 
-        // 범위 내 모든 적 도발
+        // TODO
         let tauntedCount = 0;
         for (const enemy of this.enemies) {
           const dist = Math.hypot(enemy.x - v.x, enemy.y - v.y);
           if (dist < tauntRadius) {
-            enemy.tauntedBy = v; // 이 탱커에게 도발당함
+            enemy.tauntedBy = v; // TODO
             tauntedCount++;
 
-            // 도발당한 적 끌어당기기 - 속도 기반 부드러운 당김
-            const pullSpeed = 150; // 속도로 변환 (부드러운 애니메이션)
+            // TODO
+            const pullSpeed = 150; // TODO
             const angle = Math.atan2(v.y - enemy.y, v.x - enemy.x);
             enemy.knockbackVx = (enemy.knockbackVx || 0) + Math.cos(angle) * pullSpeed;
             enemy.knockbackVy = (enemy.knockbackVy || 0) + Math.sin(angle) * pullSpeed;
           }
         }
 
-        // 도발 이펙트 (도발한 적이 있을 때만)
+        // TODO
         if (tauntedCount > 0) {
           this.createTauntEffect(v.x, v.y, tauntRadius, v.color);
-          // 도발 대사 (80% 확률)
+          // TODO
           this.tryVirusSpeech(v, 'taunt', 0.8);
         }
       }
@@ -2291,37 +2359,37 @@ export class DefenseGame {
       const collisionDist = v.radius + nearestEnemy.radius + 5;
 
       if (dist < collisionDist) {
-        // 충돌: 전투
+        // TODO
         const damage = v.damage || 10;
         nearestEnemy.hp -= damage;
-        
-        // 전투 대사 (5% 확률)
+
+        // TODO
         this.tryVirusSpeech(v, 'battle', 0.05);
 
-        // TANK 넉백 효과 (도발 후에도 밀어냄) - 속도 기반 부드러운 넉백
+        // TODO
         if (v.virusType === "TANK" && v.knockbackForce > 0) {
           const angle = Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x);
-          const knockbackSpeed = v.knockbackForce * 4; // 속도로 변환 (부드러운 애니메이션)
+          const knockbackSpeed = v.knockbackForce * 4; // TODO
           nearestEnemy.knockbackVx = (nearestEnemy.knockbackVx || 0) + Math.cos(angle) * knockbackSpeed;
           nearestEnemy.knockbackVy = (nearestEnemy.knockbackVy || 0) + Math.sin(angle) * knockbackSpeed;
         }
 
-        // 받는 데미지 계산
+        // TODO
         let receivedDamage = damage;
-        
-        // TANK는 기본 70% 데미지 감소
+
+        // TODO
         if (v.virusType === "TANK") {
           receivedDamage = Math.floor(damage * 0.3);
         }
-        
-        // 엄호 사격 시너지 (hunterCover): HUNTER가 TANK 뒤에 있으면 50% 감소
+
+        // TODO
         if (v.hasCover) {
           receivedDamage = Math.floor(receivedDamage * 0.5);
         }
-        
+
         v.hp -= receivedDamage;
-        
-        // 피격 대사 (10% 확률)
+
+        // TODO
         if (receivedDamage > 0) {
           this.tryVirusSpeech(v, 'hurt', 0.1);
         }
@@ -2333,72 +2401,72 @@ export class DefenseGame {
           5
         );
 
-        // 적 처치
+        // TODO
         if (nearestEnemy.hp <= 0) {
           this.killEnemy(nearestEnemy);
-          // 처치 대사 (20% 확률)
+          // TODO
           this.tryVirusSpeech(v, 'kill', 0.2);
         }
       } else {
-        // 🛡️ tankProtection 시너지: TANK 근처에서 적 공격
+        // TODO
         if (hasTankProtectionSynergy && anchorTank && v.virusType === "SWARM") {
           const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
-          const protectionRange = 100; // 보호 범위
-          
-          // TANK 범위 밖이면 TANK 쪽으로 이동하면서 적도 추적
+          const protectionRange = 100; // TODO
+
+          // TODO
           if (tankDist > protectionRange) {
-            // TANK와 적 사이 중간 지점으로 이동
+            // TODO
             const midX = (anchorTank.x + nearestEnemy.x) / 2;
             const midY = (anchorTank.y + nearestEnemy.y) / 2;
             this.smoothMoveToward(v, midX, midY, dt, 1.0);
           } else {
-            // TANK 범위 내: 적 추적
+            // TODO
             this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.2);
           }
         } else {
-          // 기본 행동: 부드러운 추적 이동
+          // TODO
           this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.2);
         }
       }
     } else {
-      // 적이 없을 때
+      // TODO
       if (hasTankProtectionSynergy && anchorTank && v.virusType === "SWARM") {
-        // 시너지: TANK 근처에서 대기
+        // TODO
         const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
         if (tankDist > 80) {
           this.smoothMoveToward(v, anchorTank.x, anchorTank.y, dt, 0.6);
         } else {
-          this.fluidPatrol(v, dt, 60); // TANK 근처에서 좁은 순찰
+          this.fluidPatrol(v, dt, 60); // TODO
         }
       } else {
-        // 유동적인 순찰
+        // TODO
         this.fluidPatrol(v, dt);
       }
     }
 
-    // 배리어 내부 진입 방지
+    // TODO
     this.keepOutsideBarrier(v);
   }
 
-  // === 원거리 타입 (HUNTER) 업데이트 ===
+  // TODO
   updateRangedAlly(v, dt) {
-    const searchRange = (v.range || 150) + 100; // 사거리 증가
+    const searchRange = (v.range || 150) + 100; // TODO
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
-    // 속도/가속도 초기화
+    // TODO
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
 
-    // 공격 타이머 업데이트
+    // TODO
     v.attackTimer = (v.attackTimer || 0) + dt;
 
-    // 🛡️ 시너지: hunterCover - TANK 근처에서 엄호받으며 공격
+    // TODO
     const hasHunterCoverSynergy = this.alliedConfig?.synergy?.effect === "hunterCover";
     let anchorTank = null;
-    
+
     if (hasHunterCoverSynergy) {
-      // 가장 가까운 TANK 찾기
+      // TODO
       let minTankDist = Infinity;
       for (const ally of this.alliedViruses) {
         if (ally.virusType === "TANK" && ally.hp > 0) {
@@ -2415,49 +2483,49 @@ export class DefenseGame {
       const dist = Math.hypot(nearestEnemy.x - v.x, nearestEnemy.y - v.y);
 
       if (dist < searchRange) {
-        // 사거리 내: 발사
+        // TODO
         const fireInterval = 1 / (v.fireRate || 1);
         if (v.attackTimer >= fireInterval) {
           this.fireAllyProjectile(v, nearestEnemy);
           v.attackTimer = 0;
         }
 
-        // 🛡️ hunterCover 시너지: TANK 뒤에서 공격
+        // TODO
         if (hasHunterCoverSynergy && anchorTank) {
           const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
-          const coverRange = 80; // 엄호 범위
-          
+          const coverRange = 80; // TODO
+
           if (tankDist > coverRange) {
-            // TANK 근처로 이동 (TANK 뒤쪽 위치 계산)
+            // TODO
             const enemyToTankAngle = Math.atan2(
               anchorTank.y - nearestEnemy.y,
               anchorTank.x - nearestEnemy.x
             );
-            // TANK 뒤쪽 (적 반대편) 위치
+            // TODO
             const behindX = anchorTank.x + Math.cos(enemyToTankAngle) * 40;
             const behindY = anchorTank.y + Math.sin(enemyToTankAngle) * 40;
             this.smoothMoveToward(v, behindX, behindY, dt, 1.0);
           } else {
-            // TANK 근처에서 측면 이동 (strafing)
+            // TODO
             const strafeAngle = Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x) + Math.PI / 2;
             const strafeX = v.x + Math.cos(strafeAngle) * 20;
             const strafeY = v.y + Math.sin(strafeAngle) * 20;
             this.smoothMoveToward(v, strafeX, strafeY, dt, 0.3);
           }
         } else {
-          // 기본 행동: 적정 거리 유지
+          // TODO
           const optimalDist = 100;
-          
+
           if (dist < optimalDist * 0.6) {
-            // 후퇴 (부드럽게)
+            // TODO
             const awayX = v.x + (v.x - nearestEnemy.x);
             const awayY = v.y + (v.y - nearestEnemy.y);
             this.smoothMoveToward(v, awayX, awayY, dt, 0.8);
           } else if (dist > optimalDist * 1.5) {
-            // 접근
+            // TODO
             this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 0.6);
           } else {
-            // 최적 거리: 측면 이동 (strafing)
+            // TODO
             const strafeAngle =
               Math.atan2(nearestEnemy.y - v.y, nearestEnemy.x - v.x) +
               Math.PI / 2;
@@ -2467,35 +2535,35 @@ export class DefenseGame {
           }
         }
       } else {
-        // 사거리 밖: 부드럽게 접근
+        // TODO
         this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 0.8);
       }
     } else {
-      // 적이 없을 때
+      // TODO
       if (hasHunterCoverSynergy && anchorTank) {
-        // 시너지: TANK 근처에서 대기
+        // TODO
         const tankDist = Math.hypot(anchorTank.x - v.x, anchorTank.y - v.y);
         if (tankDist > 60) {
           this.smoothMoveToward(v, anchorTank.x, anchorTank.y, dt, 0.5);
         } else {
-          this.fluidPatrol(v, dt, 40); // TANK 근처에서 좁은 순찰
+          this.fluidPatrol(v, dt, 40); // TODO
         }
       } else {
-        // 유동적인 순찰
+        // TODO
         this.fluidPatrol(v, dt);
       }
     }
 
-    // 배리어 내부 진입 방지
+    // TODO
     this.keepOutsideBarrier(v);
   }
 
-  // === 자폭 타입 (BOMBER) 업데이트 ===
+  // TODO
   updateSuicideAlly(v, dt) {
-    const searchRange = 400; // 넓은 탐색 범위
+    const searchRange = 400; // TODO
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
-    // 속도 초기화
+    // TODO
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
@@ -2505,13 +2573,13 @@ export class DefenseGame {
       const explosionRange = v.radius + nearestEnemy.radius + 10;
 
       if (dist < explosionRange) {
-        // 자폭!
+        // TODO
         v.exploded = true;
-        
-        // 폭발 대사 (100% 확률 - 자폭이므로)
+
+        // TODO
         this.tryVirusSpeech(v, 'explode', 1.0);
 
-        // 정밀 폭격 시너지: HUNTER+BOMBER = 폭발 범위 +30%
+        // TODO
         let explosionRadius = v.explosionRadius;
         if (this.alliedConfig?.synergy?.effect === "bomberRangeBoost") {
           explosionRadius = Math.floor(explosionRadius * 1.3);
@@ -2525,17 +2593,17 @@ export class DefenseGame {
           v.color
         );
 
-        // 연쇄 폭발 시너지: SWARM+BOMBER = 주변 SWARM도 폭발
+        // TODO
         if (this.alliedConfig?.synergy?.effect === "chainExplosion") {
           this.triggerChainExplosion(v.x, v.y, explosionRadius);
         }
 
-        v.hp = 0; // 사망 처리 트리거
+        v.hp = 0; // TODO
       } else {
-        // 적에게 부드럽게 돌진 (약간 불규칙하게)
+        // TODO
         this.smoothMoveToward(v, nearestEnemy.x, nearestEnemy.y, dt, 1.8);
 
-        // 약간의 지그재그 움직임
+        // TODO
         v.wobblePhase += dt * 8;
         const wobble = Math.sin(v.wobblePhase) * 15;
         const perpAngle =
@@ -2544,31 +2612,31 @@ export class DefenseGame {
         v.y += Math.sin(perpAngle) * wobble * dt;
       }
     } else {
-      // 유동적인 순찰
+      // TODO
       this.fluidPatrol(v, dt);
     }
 
-    // 배리어 내부 진입 방지
+    // TODO
     this.keepOutsideBarrier(v);
   }
 
-  // === 지원 타입 (HEALER) 업데이트 ===
+  // TODO
   updateSupportAlly(v, dt) {
-    // 속도 초기화
+    // TODO
     if (!v.vx) v.vx = 0;
     if (!v.vy) v.vy = 0;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
 
-    // 다른 아군 치유
+    // TODO
     const healRadius = v.healRadius || 80;
     const healAmount = (v.healAmount || 5) * dt;
 
-    // 🛡️ 시너지: tankHealBoost - TANK 우선 케어
+    // TODO
     const hasTankHealBoostSynergy = this.alliedConfig?.synergy?.effect === "tankHealBoost";
     let priorityTank = null;
-    
+
     if (hasTankHealBoostSynergy) {
-      // 가장 HP가 낮은 TANK 찾기
+      // TODO
       let lowestTankHpPercent = 1;
       for (const ally of this.alliedViruses) {
         if (ally.virusType === "TANK" && ally.hp > 0) {
@@ -2587,7 +2655,7 @@ export class DefenseGame {
       if (dist < healRadius && ally.hp < ally.maxHp) {
         ally.hp = Math.min(ally.maxHp, ally.hp + healAmount);
 
-        // 힐 이펙트 (가끔)
+        // TODO
         if (Math.random() < 0.05) {
           this.particles.push({
             x: ally.x,
@@ -2600,40 +2668,40 @@ export class DefenseGame {
             color: "#00ff88",
             size: 3,
           });
-          
-          // 힐 대사 (10% 확률)
+
+          // TODO
           this.tryVirusSpeech(v, 'heal', 0.1);
         }
       }
     });
 
-    // 시너지: TANK+HEALER = 탱크 힐 2배 (불멸의 방패)
+    // TODO
     if (hasTankHealBoostSynergy) {
       this.alliedViruses.forEach((ally) => {
         if (ally.virusType === "TANK") {
           const dist = Math.hypot(ally.x - v.x, ally.y - v.y);
           if (dist < healRadius && ally.hp < ally.maxHp) {
-            ally.hp = Math.min(ally.maxHp, ally.hp + healAmount); // 추가 힐
+            ally.hp = Math.min(ally.maxHp, ally.hp + healAmount); // TODO
           }
         }
       });
     }
 
-    // 이동 우선순위 결정
+    // TODO
     if (hasTankHealBoostSynergy && priorityTank) {
-      // 🛡️ 시너지: TANK 우선 따라다니기
+      // TODO
       const tankDist = Math.hypot(priorityTank.x - v.x, priorityTank.y - v.y);
       const tankHpPercent = priorityTank.hp / priorityTank.maxHp;
-      
+
       if (tankHpPercent < 0.8 || tankDist > healRadius) {
-        // TANK가 다치거나 범위 밖이면 TANK에게 이동
+        // TODO
         this.smoothMoveToward(v, priorityTank.x, priorityTank.y, dt, 0.7);
       } else {
-        // TANK 근처에서 대기
+        // TODO
         this.fluidPatrol(v, dt, 50);
       }
     } else {
-      // 기본 행동: 부상당한 아군 찾기 (가장 HP가 낮은)
+      // TODO
       let woundedAlly = null;
       let lowestHpPercent = 1;
       this.alliedViruses.forEach((ally) => {
@@ -2646,21 +2714,21 @@ export class DefenseGame {
       });
 
       if (woundedAlly) {
-        // 부상당한 아군에게 부드럽게 이동
+        // TODO
         this.smoothMoveToward(v, woundedAlly.x, woundedAlly.y, dt, 0.5);
       } else {
-        // 코어 근처에서 유동적 순찰 (좁은 범위)
+        // TODO
         this.fluidPatrol(v, dt, 75);
       }
     }
 
-    // 배리어 내부 진입 방지
+    // TODO
     this.keepOutsideBarrier(v);
   }
 
-  // === 연쇄 폭발 (SWARM+BOMBER 시너지) ===
+  // TODO
   triggerChainExplosion(x, y, triggerRadius) {
-    const chainRange = triggerRadius + 30; // 폭발 범위 + 여유
+    const chainRange = triggerRadius + 30; // TODO
     const swarms = this.alliedViruses.filter(
       (v) => v.virusType === "SWARM" && v.hp > 0 && !v.chainExploded
     );
@@ -2668,37 +2736,37 @@ export class DefenseGame {
     for (const swarm of swarms) {
       const dist = Math.hypot(swarm.x - x, swarm.y - y);
       if (dist < chainRange) {
-        // SWARM 연쇄 폭발
+        // TODO
         swarm.chainExploded = true;
-        swarm.hp = 0; // 사망 처리
+        swarm.hp = 0; // TODO
 
-        // 작은 폭발 효과
+        // TODO
         this.handleExplosion(
           swarm.x,
           swarm.y,
           swarm.explosionRadius || 25,
-          (swarm.explosionDamage || 5) * 2, // 연쇄 폭발은 2배 데미지
+          (swarm.explosionDamage || 5) * 2, // TODO
           swarm.color
         );
       }
     }
   }
 
-  // === 시너지 효과 적용 ===
+  // TODO
   applySynergyEffects(dt) {
     if (!this.alliedConfig?.synergy) return;
 
     const synergy = this.alliedConfig.synergy;
     const effect = synergy.effect;
 
-    // TANK 위치 캐싱 (여러 시너지에서 사용)
+    // TODO
     const tanks = this.alliedViruses.filter(
       (v) => v.virusType === "TANK" && v.hp > 0
     );
 
     switch (effect) {
       case "tankProtection":
-        // 철벽 군단: TANK 주변 100px 내 SWARM HP +50% (버프 상태 관리)
+        // TODO
         this.alliedViruses.forEach((v) => {
           if (v.virusType !== "SWARM") return;
 
@@ -2711,23 +2779,23 @@ export class DefenseGame {
             }
           }
 
-          // 버프 상태 관리 (체력 비율 유지)
+          // TODO
           if (nearTank && !v.tankProtectionBuff) {
             v.tankProtectionBuff = true;
-            const hpRatio = v.hp / v.maxHp; // 현재 체력 비율 저장
-            v.maxHp = Math.floor(v.baseMaxHp * 1.5); // HP 최대치 +50%
-            v.hp = Math.floor(v.maxHp * hpRatio); // 체력 비율 유지
+            const hpRatio = v.hp / v.maxHp; // TODO
+            v.maxHp = Math.floor(v.baseMaxHp * 1.5); // TODO
+            v.hp = Math.floor(v.maxHp * hpRatio); // TODO
           } else if (!nearTank && v.tankProtectionBuff) {
             v.tankProtectionBuff = false;
-            const hpRatio = v.hp / v.maxHp; // 현재 체력 비율 저장
+            const hpRatio = v.hp / v.maxHp; // TODO
             v.maxHp = v.baseMaxHp;
-            v.hp = Math.floor(v.maxHp * hpRatio); // 체력 비율 유지
+            v.hp = Math.floor(v.maxHp * hpRatio); // TODO
           }
         });
         break;
 
       case "hunterCover":
-        // 엄호 사격: HUNTER가 TANK 근처 80px 내에 있으면 받는 데미지 -50% (플래그 설정)
+        // TODO
         this.alliedViruses.forEach((v) => {
           if (v.virusType !== "HUNTER") return;
 
@@ -2739,15 +2807,15 @@ export class DefenseGame {
               break;
             }
           }
-          v.hasCover = nearTank; // 데미지 계산에서 사용
+          v.hasCover = nearTank; // TODO
         });
         break;
 
-      // chainExplosion, bomberRangeBoost는 폭발/생성 시 적용
+      // TODO
     }
   }
 
-  // === 유틸리티 함수들 ===
+  // TODO
   findNearestEnemy(v, range) {
     let nearestEnemy = null;
     let minDist = Infinity;
@@ -2763,7 +2831,7 @@ export class DefenseGame {
     return nearestEnemy;
   }
 
-  // 부드러운 이동 (가속도 기반)
+  // TODO
   smoothMoveToward(v, targetX, targetY, dt, speedMultiplier = 1.0) {
     const dx = targetX - v.x;
     const dy = targetY - v.y;
@@ -2772,17 +2840,17 @@ export class DefenseGame {
     if (dist < 1) return;
 
     const baseSpeed = (v.speed || 80) * speedMultiplier;
-    const acceleration = baseSpeed * 3; // 가속도
-    const friction = 0.92; // 마찰
+    const acceleration = baseSpeed * 3; // TODO
+    const friction = 0.92; // TODO
 
-    // 목표 방향으로 가속
+    // TODO
     const ax = (dx / dist) * acceleration * dt;
     const ay = (dy / dist) * acceleration * dt;
 
     v.vx = (v.vx + ax) * friction;
     v.vy = (v.vy + ay) * friction;
 
-    // 최대 속도 제한
+    // TODO
     const currentSpeed = Math.hypot(v.vx, v.vy);
     const maxSpeed = baseSpeed * 1.5;
     if (currentSpeed > maxSpeed) {
@@ -2790,14 +2858,14 @@ export class DefenseGame {
       v.vy = (v.vy / currentSpeed) * maxSpeed;
     }
 
-    // 위치 업데이트
+    // TODO
     v.x += v.vx * dt;
     v.y += v.vy * dt;
   }
 
-  // 유동적인 순찰 (물결치듯)
+  // TODO
   fluidPatrol(v, dt, baseRadius = 95) {
-    // Safe Zone에서는 자유롭게 돌아다님
+    // TODO
     if (this.isSafeZone) {
       if (!this._safeZoneLogOnce) {
         debugLog("Enemy", "fluidPatrol -> safeZoneWander (isSafeZone:", this.isSafeZone, ")");
@@ -2806,180 +2874,180 @@ export class DefenseGame {
       this.safeZoneWander(v, dt);
       return;
     }
-    
-    // 초기화
+
+    // TODO
     if (!v.patrolAngle) v.patrolAngle = v.angle || Math.random() * Math.PI * 2;
     if (!v.wobblePhase) v.wobblePhase = Math.random() * Math.PI * 2;
     if (!v.radiusOffset) v.radiusOffset = (Math.random() - 0.5) * 20;
 
-    // 부드러운 각도 변화
+    // TODO
     const baseAngularSpeed = 0.3 + Math.sin(v.wobblePhase * 0.5) * 0.15;
     v.patrolAngle += dt * baseAngularSpeed;
     v.wobblePhase += dt * 2;
 
-    // 물결치는 반경 (안팎으로 움직임)
+    // TODO
     const wobbleRadius = Math.sin(v.wobblePhase) * 15;
     const patrolRadius = baseRadius + v.radiusOffset + wobbleRadius;
 
-    // 목표 위치 계산
+    // TODO
     const targetX = this.core.x + Math.cos(v.patrolAngle) * patrolRadius;
     const targetY = this.core.y + Math.sin(v.patrolAngle) * patrolRadius;
 
-    // 부드럽게 이동
+    // TODO
     this.smoothMoveToward(v, targetX, targetY, dt, 0.4);
 
-    // 약간의 랜덤 움직임 (자연스러움)
+    // TODO
     v.x += (Math.random() - 0.5) * 0.5;
     v.y += (Math.random() - 0.5) * 0.5;
   }
-  
-  // Safe Zone 전용: 홈 기반 자유로운 돌아다니기
+
+  // TODO
   safeZoneWander(v, dt) {
     const screenW = this.canvas.width;
     const screenH = this.canvas.height;
     const margin = 40;
-    
-    // 코어 안쪽 영역 (배리어)
+
+    // TODO
     const barrierRadius = (this.core.shieldRadius || 70) + 20;
-    
-    // 홈이 없으면 화면 전체에서 랜덤 위치를 홈으로 (코어 제외)
+
+    // TODO
     if (!v.homeX) {
-      // 화면 전체에서 랜덤 위치 생성 (코어 안쪽 제외)
+      // TODO
       let homeX, homeY, distFromCore;
       do {
         homeX = margin + Math.random() * (screenW - margin * 2);
         homeY = margin + Math.random() * (screenH - margin * 2);
         distFromCore = Math.hypot(homeX - this.core.x, homeY - this.core.y);
-      } while (distFromCore < barrierRadius); // 코어 안쪽이면 다시 생성
-      
+      } while (distFromCore < barrierRadius); // TODO
+
       v.homeX = homeX;
       v.homeY = homeY;
-      v.homeRadius = 60 + Math.random() * 80; // 홈 반경도 좀 더 넓게
+      v.homeRadius = 60 + Math.random() * 80; // TODO
     }
-    
-    // 홈 근처 랜덤 위치
+
+    // TODO
     const getNearHomePos = () => {
       const angle = Math.random() * Math.PI * 2;
       const dist = Math.random() * v.homeRadius;
       let x = v.homeX + Math.cos(angle) * dist;
       let y = v.homeY + Math.sin(angle) * dist;
-      // 화면 경계 체크
+      // TODO
       x = Math.max(margin, Math.min(screenW - margin, x));
       y = Math.max(margin, Math.min(screenH - margin, y));
       return { x, y };
     };
-    
-    // 초기화
+
+    // TODO
     if (v.safeState === undefined) {
       v.safeState = 'wander';
       v.stateTimer = 0;
       v.stateDuration = 3 + Math.random() * 4;
       v.chatPartner = null;
       v.chatOffsetAngle = Math.random() * Math.PI * 2;
-      
-      // 초기 목표: 홈 근처
+
+      // TODO
       const pos = getNearHomePos();
       v.wanderTargetX = pos.x;
       v.wanderTargetY = pos.y;
     }
-    
+
     v.stateTimer += dt;
-    
-    // 상태별 행동
+
+    // TODO
     switch (v.safeState) {
       case 'wander':
-        // 홈 근처에서 돌아다니기
+        // TODO
         if (v.stateTimer >= v.stateDuration) {
           v.stateTimer = 0;
-          
+
           const roll = Math.random();
-          
+
           if (roll < 0.5 && this.alliedViruses.length > 1) {
-            // 50%: 근처에 있는 친구에게 다가가기 (홈에서 200px 이내)
-            const nearbyFriends = this.alliedViruses.filter(a => 
-              a !== v && 
+            // TODO
+            const nearbyFriends = this.alliedViruses.filter(a =>
+              a !== v &&
               a.safeState !== 'approaching' &&
               Math.hypot(a.x - v.homeX, a.y - v.homeY) < 250
             );
-            
+
             if (nearbyFriends.length > 0) {
               v.chatPartner = nearbyFriends[Math.floor(Math.random() * nearbyFriends.length)];
               v.safeState = 'approaching';
               v.stateDuration = 4 + Math.random() * 3;
             } else {
-              // 근처에 친구 없으면 홈에서 놀기
+              // TODO
               const pos = getNearHomePos();
               v.wanderTargetX = pos.x;
               v.wanderTargetY = pos.y;
               v.stateDuration = 3 + Math.random() * 3;
             }
           } else if (roll < 0.65) {
-            // 15%: 멀리 있는 친구 방문하기 (모험!)
-            const farFriends = this.alliedViruses.filter(a => 
-              a !== v && 
+            // TODO
+            const farFriends = this.alliedViruses.filter(a =>
+              a !== v &&
               Math.hypot(a.homeX - v.homeX, a.homeY - v.homeY) > 150
             );
-            
+
             if (farFriends.length > 0) {
               v.chatPartner = farFriends[Math.floor(Math.random() * farFriends.length)];
               v.safeState = 'approaching';
-              v.stateDuration = 6 + Math.random() * 4; // 멀리 가니까 시간 더 줌
+              v.stateDuration = 6 + Math.random() * 4; // TODO
             }
           } else {
-            // 35%: 홈 근처에서 산책
+            // TODO
             const pos = getNearHomePos();
             v.wanderTargetX = pos.x;
             v.wanderTargetY = pos.y;
             v.stateDuration = 2 + Math.random() * 4;
           }
         }
-        
-        // 목표로 이동
+
+        // TODO
         this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
         break;
-        
+
       case 'approaching':
-        // 대화 상대에게 다가가기
+        // TODO
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
           break;
         }
-        
+
         const distToPartner = Math.hypot(v.chatPartner.x - v.x, v.chatPartner.y - v.y);
-        
+
         if (distToPartner < 25) {
-          // 충분히 가까움 - 대화 시작!
+          // TODO
           v.safeState = 'chatting';
           v.stateTimer = 0;
-          v.stateDuration = 4 + Math.random() * 6; // 4~10초 대화
+          v.stateDuration = 4 + Math.random() * 6; // TODO
           v.chatOffsetAngle = Math.atan2(v.y - v.chatPartner.y, v.x - v.chatPartner.x);
         } else if (v.stateTimer >= v.stateDuration) {
-          // 시간 초과 - 포기
+          // TODO
           v.safeState = 'wander';
           v.chatPartner = null;
         } else {
-          // 상대방에게 이동
+          // TODO
           this.smoothMoveToward(v, v.chatPartner.x, v.chatPartner.y, dt, 0.5);
         }
         break;
-        
+
       case 'chatting':
-        // 대화 중 - 상대방 옆에 붙어있기
+        // TODO
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
           break;
         }
-        
+
         if (v.stateTimer >= v.stateDuration) {
-          // 대화 끝 - 60% 확률로 같이 걷기
+          // TODO
           if (Math.random() < 0.6) {
             v.safeState = 'walkingTogether';
             v.stateTimer = 0;
-            v.stateDuration = 4 + Math.random() * 4; // 4~8초 같이 걷기
-            
-            // 함께 갈 목표: 둘 중 하나의 홈 방향 (자연스럽게 헤어지기)
+            v.stateDuration = 4 + Math.random() * 4; // TODO
+
+            // TODO
             const targetHome = Math.random() < 0.5 ? v : v.chatPartner;
             if (targetHome && targetHome.homeX) {
               const angle = Math.random() * Math.PI * 2;
@@ -2995,45 +3063,45 @@ export class DefenseGame {
             v.chatPartner = null;
           }
         } else {
-          // 상대방 옆에 붙어있기
+          // TODO
           const stickDist = 18;
           const targetX = v.chatPartner.x + Math.cos(v.chatOffsetAngle) * stickDist;
           const targetY = v.chatPartner.y + Math.sin(v.chatOffsetAngle) * stickDist;
-          
+
           v.x += (targetX - v.x) * 0.1;
           v.y += (targetY - v.y) * 0.1;
-          
-          // 미세한 떨림 (살아있는 느낌)
+
+          // TODO
           v.x += (Math.random() - 0.5) * 0.3;
           v.y += (Math.random() - 0.5) * 0.3;
         }
         break;
-        
+
       case 'walkingTogether':
-        // 함께 걷기 - 상대방과 같이 이동
+        // TODO
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
           break;
         }
-        
+
         if (v.stateTimer >= v.stateDuration) {
           v.safeState = 'wander';
           v.chatPartner = null;
         } else {
-          // 목표 위치로 함께 이동
+          // TODO
           this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
-          
-          // 상대방도 같은 목표로 유도 (부드럽게)
+
+          // TODO
           if (v.chatPartner.safeState === 'chatting' || v.chatPartner.safeState === 'walkingTogether') {
             v.chatPartner.wanderTargetX = v.wanderTargetX + (Math.random() - 0.5) * 30;
             v.chatPartner.wanderTargetY = v.wanderTargetY + (Math.random() - 0.5) * 30;
           }
-          
-          // 상대방과 가까이 유지
+
+          // TODO
           const distToPartner2 = Math.hypot(v.chatPartner.x - v.x, v.chatPartner.y - v.y);
           if (distToPartner2 > 40) {
-            // 너무 멀어지면 기다리기
+            // TODO
             const pullX = (v.chatPartner.x - v.x) * 0.02;
             const pullY = (v.chatPartner.y - v.y) * 0.02;
             v.x += pullX;
@@ -3042,65 +3110,65 @@ export class DefenseGame {
         }
         break;
     }
-    
-    // 코어에서 밀어내는 힘 (가까울수록 강하게)
+
+    // TODO
     const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
-    const pushStartDist = 100; // 100px 이내면 밀어내기 시작
-    
+    const pushStartDist = 100; // TODO
+
     if (distFromCore < pushStartDist && distFromCore > 0) {
-      const pushStrength = (1 - distFromCore / pushStartDist) * 2.0; // 0~2.0 강도
+      const pushStrength = (1 - distFromCore / pushStartDist) * 2.0; // TODO
       const pushAngle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
-      
-      // 밖으로 밀어내기
+
+      // TODO
       v.x += Math.cos(pushAngle) * pushStrength;
       v.y += Math.sin(pushAngle) * pushStrength;
     }
-    
-    // 화면 경계 체크
+
+    // TODO
     v.x = Math.max(margin, Math.min(screenW - margin, v.x));
     v.y = Math.max(margin, Math.min(screenH - margin, v.y));
     v.wanderTargetX = Math.max(margin, Math.min(screenW - margin, v.wanderTargetX || v.x));
     v.wanderTargetY = Math.max(margin, Math.min(screenH - margin, v.wanderTargetY || v.y));
   }
 
-  // 배리어 내부 진입 방지 + 최대 거리 제한
+  // TODO
   keepOutsideBarrier(v) {
-    // 🔍 디버그 로그 (1초에 1번만)
+    // TODO
     if (!this._debugLogTimer) this._debugLogTimer = 0;
-    this._debugLogTimer += 0.016; // 약 60fps 기준
-    const shouldLog = this._debugLogTimer > 1 && v === this.alliedViruses[0]; // 첫 번째 바이러스만
+    this._debugLogTimer += 0.016; // TODO
+    const shouldLog = this._debugLogTimer > 1 && v === this.alliedViruses[0]; // TODO
     if (shouldLog) this._debugLogTimer = 0;
-    
-    // Safe Zone에서는 자유롭게! (거리 제한 없음)
+
+    // TODO
     if (this.isSafeZone) {
-      // 배리어 내부만 막기 (코어 안으로는 못 들어감)
+      // TODO
       const barrierRadius = this.core.shieldRadius || 70;
       const minDistance = barrierRadius + v.radius + 5;
       const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
-      
+
       if (shouldLog) {
         const margin = 30;
         debugLog("AllyMovement", `[Safe Zone]
-  📱 화면: ${this.canvas.width} x ${this.canvas.height}
-  🎯 코어: (${Math.round(this.core.x)}, ${Math.round(this.core.y)})
-  📐 이동가능 영역: X(${margin} ~ ${this.canvas.width - margin}), Y(${margin} ~ ${this.canvas.height - margin})
-  🚫 코어 근처 금지: ${Math.round(minDistance)}px 이내
-  🦠 현재 위치: (${Math.round(v.x)}, ${Math.round(v.y)}) / 코어거리: ${Math.round(distFromCore)}px`);
+  ? ?: ${this.canvas.width} x ${this.canvas.height}
+  ? : (${Math.round(this.core.x)}, ${Math.round(this.core.y)})
+  ? ????: X(${margin} ~ ${this.canvas.width - margin}), Y(${margin} ~ ${this.canvas.height - margin})
+  ?    ?: ${Math.round(minDistance)}px ?
+  ? ? ?: (${Math.round(v.x)}, ${Math.round(v.y)}) / : ${Math.round(distFromCore)}px`);
       }
-      
+
       if (distFromCore < minDistance) {
         const angle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
         v.x = this.core.x + Math.cos(angle) * minDistance;
         v.y = this.core.y + Math.sin(angle) * minDistance;
       }
-      return; // Safe Zone에서는 여기서 끝!
+      return; // TODO
     }
-    
+
     const barrierRadius = this.core.shieldRadius || 70;
     const minDistance = barrierRadius + v.radius + 5;
-    const margin = 30; // 화면 가장자리 여유
-    
-    // 화면 경계 (원형 제한 대신 사각형 경계 사용)
+    const margin = 30; // TODO
+
+    // TODO
     const minX = margin;
     const maxX = this.canvas.width - margin;
     const minY = margin;
@@ -3111,19 +3179,19 @@ export class DefenseGame {
 
     if (shouldLog) {
       debugLog("AllyMovement", `[Battle]
-  📱 화면: ${this.canvas.width} x ${this.canvas.height}
-  🎯 코어: (${Math.round(this.core.x)}, ${Math.round(this.core.y)})
-  📐 이동가능 영역: X(${minX} ~ ${maxX}), Y(${minY} ~ ${maxY})
-  🚫 코어 근처 금지: ${Math.round(minDistance)}px 이내
-  🦠 현재 위치: (${Math.round(v.x)}, ${Math.round(v.y)}) / 코어거리: ${Math.round(distFromCore)}px`);
+  ? ?: ${this.canvas.width} x ${this.canvas.height}
+  ? : (${Math.round(this.core.x)}, ${Math.round(this.core.y)})
+  ? ????: X(${minX} ~ ${maxX}), Y(${minY} ~ ${maxY})
+  ?    ?: ${Math.round(minDistance)}px ?
+  ? ? ?: (${Math.round(v.x)}, ${Math.round(v.y)}) / : ${Math.round(distFromCore)}px`);
     }
 
-    // 너무 가까우면 밀어내기 (코어 보호)
+    // TODO
     if (distFromCore < minDistance) {
       v.x = this.core.x + Math.cos(angle) * minDistance;
       v.y = this.core.y + Math.sin(angle) * minDistance;
 
-      // 속도도 바깥으로 반사
+      // TODO
       if (v.vx !== undefined) {
         const dot = v.vx * Math.cos(angle) + v.vy * Math.sin(angle);
         if (dot < 0) {
@@ -3133,67 +3201,67 @@ export class DefenseGame {
       }
     }
 
-    // 화면 경계 체크 (원형 제한 대신 사각형 경계)
+    // TODO
     let wasOutside = false;
     if (v.x < minX) { v.x = minX; wasOutside = true; }
     if (v.x > maxX) { v.x = maxX; wasOutside = true; }
     if (v.y < minY) { v.y = minY; wasOutside = true; }
     if (v.y > maxY) { v.y = maxY; wasOutside = true; }
-    
-    // 경계에 닿으면 속도 감소
+
+    // TODO
     if (wasOutside && v.vx !== undefined) {
       v.vx *= 0.5;
       v.vy *= 0.5;
     }
   }
 
-  // 레거시 호환용 (기존 코드에서 호출하는 경우)
+  // TODO
   moveTowardTarget(v, target, dt) {
     this.smoothMoveToward(v, target.x, target.y, dt, 1.0);
   }
 
-  // 레거시 호환용
+  // TODO
   patrolAlly(v, dt) {
     this.fluidPatrol(v, dt);
   }
 
-  // 모든 바이러스 분리 (겹침 방지)
+  // TODO
   separateAllViruses() {
     const allEntities = [];
-    
-    // 아군 바이러스 수집
+
+    // TODO
     this.alliedViruses.forEach(v => {
       allEntities.push({ entity: v, type: 'ally' });
     });
-    
-    // 적군 바이러스 수집
+
+    // TODO
     this.enemies.forEach(e => {
       allEntities.push({ entity: e, type: 'enemy' });
     });
-    
-    // 수집 바이러스 (아이템 가져가는 애들)
+
+    // TODO
     this.collectorViruses.forEach(c => {
       allEntities.push({ entity: c, type: 'collector' });
     });
-    
-    // 모든 쌍에 대해 분리
+
+    // TODO
     for (let i = 0; i < allEntities.length; i++) {
       for (let j = i + 1; j < allEntities.length; j++) {
         const a = allEntities[i].entity;
         const b = allEntities[j].entity;
-        
+
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const dist = Math.hypot(dx, dy);
-        const minDist = (a.radius || 8) + (b.radius || 8) + 2; // 약간의 여유
-        
+        const minDist = (a.radius || 8) + (b.radius || 8) + 2; // TODO
+
         if (dist < minDist && dist > 0) {
-          // 겹침! 서로 밀어내기
+          // TODO
           const overlap = minDist - dist;
           const pushX = (dx / dist) * overlap * 0.5;
           const pushY = (dy / dist) * overlap * 0.5;
-          
-          // 양쪽 다 밀어내기
+
+          // TODO
           a.x -= pushX;
           a.y -= pushY;
           b.x += pushX;
@@ -3213,18 +3281,18 @@ export class DefenseGame {
       this.currentData += gain;
       this.updateResourceDisplay(this.currentData);
       if (this.onResourceGained) this.onResourceGained(gain);
-      
-      // 아이템 드롭 콜백 호출 (적 위치 전달)
+
+      // TODO
       if (this.onEnemyKilled) {
         this.onEnemyKilled(enemy.x, enemy.y);
       }
-      
-      // 보스전: 적 처치 카운터
+
+      // TODO
       if (this.isBossFight) {
         this.frameEnemiesKilled++;
       }
-      
-      // 아이템 효과: 쉴드 회복 (lifesteal)
+
+      // TODO
       const effects = this.getItemEffects();
       if (effects.lifesteal > 0 && this.core.shieldHp < this.core.shieldMaxHp) {
         this.core.shieldHp = Math.min(this.core.shieldMaxHp, this.core.shieldHp + effects.lifesteal);
@@ -3232,7 +3300,7 @@ export class DefenseGame {
     }
   }
 
-  // 아군 바이러스 탄환 발사
+  // TODO
   fireAllyProjectile(v, target) {
     const angle = Math.atan2(target.y - v.y, target.x - v.x);
 
@@ -3244,16 +3312,16 @@ export class DefenseGame {
       damage: v.damage,
       radius: 3,
       color: v.color,
-      fromAlly: true, // 아군 발사체 표시
+      fromAlly: true, // TODO
       lifetime: 2,
       age: 0,
     });
 
-    // 발사 이펙트
+    // TODO
     this.createExplosion(v.x, v.y, v.color, 3);
   }
 
-  // 시너지: 헌터 사망 시 SWARM 소환
+  // TODO
   spawnSynergySwarm(x, y, count) {
     if (!this.alliedConfig) return;
 
@@ -3262,8 +3330,8 @@ export class DefenseGame {
       config.mainType === "SWARM"
         ? config.mainTypeData
         : config.subType === "SWARM"
-        ? config.subTypeData
-        : null;
+          ? config.subTypeData
+          : null;
 
     if (!swarmData) return;
 
@@ -3285,115 +3353,113 @@ export class DefenseGame {
     }
   }
 
-  // 점령 시각화 렌더링 (깃발 + 별 모양 방어막)
+  // TODO
   renderConqueredVisuals() {
     const ctx = this.ctx;
     const x = this.core.x;
     const y = this.core.y;
-    const size = 80; // 방어막 크기
+    const size = 80; // TODO
 
-    // 점령 시작 시간 기준 상대적 시간 (없으면 현재 시간 사용)
+    // TODO
     if (!this.conqueredStartTime) {
       this.conqueredStartTime = Date.now() / 1000;
       debugLog(
         "ConqueredVisuals",
-        "conqueredStartTime 초기화:",
+        "conqueredStartTime ??",
         this.conqueredStartTime
       );
     }
     const elapsed = Date.now() / 1000 - this.conqueredStartTime;
 
-    // 철컥철컥 회전 패턴: 90° 이동 → 0.5초 쉼 → 90° 이동 → 0.5초 쉼 → 180° 이동 → 0.5초 쉼
-    // 회전은 부드럽게, 그 후 정지
-    const ROTATION_TIME = 0.8; // 회전 시간 (느리게)
-    const PAUSE_TIME = 0.5; // 쉼 시간
-    const CYCLE_DURATION = ROTATION_TIME * 3 + PAUSE_TIME * 3; // 총 사이클 시간
+    // TODO
+    const ROTATION_TIME = 0.8; // TODO
+    const PAUSE_TIME = 0.5; // TODO
+    const CYCLE_DURATION = ROTATION_TIME * 3 + PAUSE_TIME * 3; // TODO
 
     const cycleTime = elapsed % CYCLE_DURATION;
-    const fullCycles = Math.floor(elapsed / CYCLE_DURATION); // 완료된 사이클 수
-
-    // 각 단계별 목표 각도
-    // Easing 함수: 부드러운 가속/감속
+    const fullCycles = Math.floor(elapsed / CYCLE_DURATION); // TODO
+    // TODO
+    // TODO
     const easeInOut = (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
 
     let targetAngle;
-    let currentStep = 0; // 현재 단계 (0=1단계 회전 중, 1=1단계 쉼, 2=2단계 회전 중, ...)
+    let currentStep = 0; // TODO
 
     if (cycleTime < ROTATION_TIME) {
-      // 첫 번째 회전: 0° → 90° (부드럽게 회전)
+      // TODO
       const progress = easeInOut(cycleTime / ROTATION_TIME);
       targetAngle = progress * (Math.PI / 2);
       currentStep = 0;
     } else if (cycleTime < ROTATION_TIME + PAUSE_TIME) {
-      // 첫 번째 쉼: 90° (정지) - 1단계 완료
+      // TODO
       targetAngle = Math.PI / 2;
       currentStep = 1;
     } else if (cycleTime < ROTATION_TIME * 2 + PAUSE_TIME) {
-      // 두 번째 회전: 90° → 180° (부드럽게 회전)
+      // TODO
       const localTime = cycleTime - (ROTATION_TIME + PAUSE_TIME);
       const progress = easeInOut(localTime / ROTATION_TIME);
       targetAngle = Math.PI / 2 + progress * (Math.PI / 2);
       currentStep = 2;
     } else if (cycleTime < ROTATION_TIME * 2 + PAUSE_TIME * 2) {
-      // 두 번째 쉼: 180° (정지) - 2단계 완료
+      // TODO
       targetAngle = Math.PI;
       currentStep = 3;
     } else if (cycleTime < ROTATION_TIME * 3 + PAUSE_TIME * 2) {
-      // 세 번째 회전: 180° → 360° (부드럽게 회전)
+      // TODO
       const localTime = cycleTime - (ROTATION_TIME * 2 + PAUSE_TIME * 2);
       const progress = easeInOut(localTime / ROTATION_TIME);
       targetAngle = Math.PI + progress * Math.PI;
       currentStep = 4;
     } else {
-      // 세 번째 쉼: 360° (정지, 다음 사이클 시작) - 3단계 완료
+      // TODO
       targetAngle = Math.PI * 2;
       currentStep = 5;
     }
 
-    // 회전 단계 변경 시 파동 발사
+    // TODO
     const globalStep = fullCycles * 6 + currentStep;
     if (
       this.lastRotationStep !== undefined &&
       this.lastRotationStep !== globalStep
     ) {
-      // 쉼 단계 진입 시 (1, 3, 5) 파동 발사
+      // TODO
       if (currentStep === 1) {
-        // 1단계 완료: 초록색 파동 (넉백 + 슬로우)
+        // TODO
         this.emitRotationWave("green");
       } else if (currentStep === 3) {
-        // 2단계 완료: 파란색 파동 (넉백 + 슬로우)
+        // TODO
         this.emitRotationWave("blue");
       } else if (currentStep === 5) {
-        // 3단계 완료: 혼합색 파동 (데미지)
+        // TODO
         this.emitRotationWave("mixed");
       }
     }
     this.lastRotationStep = globalStep;
 
-    // 누적 각도 (계속 돌아감)
+    // TODO
     const baseAngle = fullCycles * Math.PI * 2;
     const rotationAngle = baseAngle + targetAngle;
 
-    // 디버그 로그 (매 60프레임마다, 약 1초마다)
+    // TODO
     if (!this.conqueredDebugFrame) this.conqueredDebugFrame = 0;
     this.conqueredDebugFrame++;
     if (this.conqueredDebugFrame % 60 === 0) {
       debugLog(
         "ConqueredVisuals",
         `elapsed: ${elapsed.toFixed(2)}s, ` +
-          `cycleTime: ${cycleTime.toFixed(2)}s, ` +
-          `fullCycles: ${fullCycles}, ` +
-          `targetAngle: ${((targetAngle * 180) / Math.PI).toFixed(1)}°, ` +
-          `baseAngle: ${((baseAngle * 180) / Math.PI).toFixed(1)}°, ` +
-          `rotationAngle: ${((rotationAngle * 180) / Math.PI).toFixed(1)}°`
+        `cycleTime: ${cycleTime.toFixed(2)}s, ` +
+        `fullCycles: ${fullCycles}, ` +
+        `targetAngle: ${((targetAngle * 180) / Math.PI).toFixed(1)}, ` +
+        `baseAngle: ${((baseAngle * 180) / Math.PI).toFixed(1)}, ` +
+        `rotationAngle: ${((rotationAngle * 180) / Math.PI).toFixed(1)}`
       );
     }
 
-    // 1. 별 모양 방어막 (두 사각형이 반대 방향으로 회전)
+    // TODO
     ctx.save();
     ctx.translate(x, y);
 
-    // 사각형 1: 시계방향 회전
+    // TODO
     ctx.save();
     ctx.rotate(rotationAngle);
     ctx.strokeStyle = `rgba(0, 255, 100, 0.6)`;
@@ -3401,31 +3467,31 @@ export class DefenseGame {
     ctx.strokeRect(-size / 2, -size / 2, size, size);
     ctx.restore();
 
-    // 사각형 2: 반시계방향 회전 + 45도 기본 오프셋 (별 모양)
+    // TODO
     ctx.save();
-    const reverseAngle = Math.PI / 4 - rotationAngle; // 역방향
+    const reverseAngle = Math.PI / 4 - rotationAngle; // TODO
     ctx.rotate(reverseAngle);
     ctx.strokeStyle = `rgba(0, 200, 255, 0.6)`;
     ctx.lineWidth = 2;
     ctx.strokeRect(-size / 2, -size / 2, size, size);
     ctx.restore();
 
-    // 디버그: 회전 각도 확인 (매 프레임마다, 하지만 로그는 60프레임마다)
+    // TODO
     if (this.conqueredDebugFrame % 60 === 0) {
       debugLog(
         "ConqueredVisuals",
-        `사각형1 회전: ${((rotationAngle * 180) / Math.PI).toFixed(1)}°, ` +
-          `사각형2 회전: ${((reverseAngle * 180) / Math.PI).toFixed(1)}°`
+        `??? ?: ${((rotationAngle * 180) / Math.PI).toFixed(1)}, ` +
+        `??? ?: ${((reverseAngle * 180) / Math.PI).toFixed(1)}`
       );
     }
 
     ctx.restore();
 
-    // 2. 깃발 (중앙 위)
+    // TODO
     ctx.save();
     ctx.translate(x, y - 25);
 
-    // 깃대
+    // TODO
     ctx.strokeStyle = "#888";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -3433,7 +3499,7 @@ export class DefenseGame {
     ctx.lineTo(0, -40);
     ctx.stroke();
 
-    // 깃발 (펄럭이는 효과)
+    // TODO
     ctx.fillStyle = "#00ff00";
     ctx.beginPath();
     ctx.moveTo(0, -40);
@@ -3443,7 +3509,7 @@ export class DefenseGame {
     ctx.closePath();
     ctx.fill();
 
-    // 깃발 테두리
+    // TODO
     ctx.strokeStyle = "#00aa00";
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -3451,10 +3517,10 @@ export class DefenseGame {
     ctx.restore();
   }
 
-  // ===== 아이템 드롭/수집 시스템 =====
-  
+  // TODO
+
   /**
-   * 바닥에 아이템 생성 (GameManager에서 호출)
+   * ?????? (GameManager? ?)
    */
   spawnDroppedItem(x, y, item) {
     this.droppedItems.push({
@@ -3465,64 +3531,64 @@ export class DefenseGame {
       collected: false,
       pulsePhase: Math.random() * Math.PI * 2
     });
-    
-    // 수집 바이러스 생성
+
+    // TODO
     this.spawnCollectorVirus(x, y);
   }
-  
+
   /**
-   * 코어에서 수집 바이러스 생성
+   * ? ? ? ?
    */
   spawnCollectorVirus(targetX, targetY) {
     const angle = Math.random() * Math.PI * 2;
     const spawnDist = 30;
-    
+
     this.collectorViruses.push({
       x: this.core.x + Math.cos(angle) * spawnDist,
       y: this.core.y + Math.sin(angle) * spawnDist,
-      vx: 0, // 속도 기반 이동용
+      vx: 0, // TODO
       vy: 0,
       targetX,
       targetY,
-      speed: 120, // 약간 느리게
-      state: "toItem", // toItem -> returning
+      speed: 120, // TODO
+      state: "toItem", // TODO
       carriedItem: null,
       spawnTime: performance.now(),
-      wobblePhase: Math.random() * Math.PI * 2, // 흔들림용
-      wobbleSpeed: 5 + Math.random() * 3, // 개별 흔들림 속도
-      pathOffset: (Math.random() - 0.5) * 40 // 경로 오프셋
+      wobblePhase: Math.random() * Math.PI * 2, // TODO
+      wobbleSpeed: 5 + Math.random() * 3, // TODO
+      pathOffset: (Math.random() - 0.5) * 40 // TODO
     });
   }
-  
+
   /**
-   * 수집 바이러스 업데이트 (자연스러운 움직임)
+   * ? ? ?? (?????)
    */
   updateCollectorViruses(dt) {
     for (let i = this.collectorViruses.length - 1; i >= 0; i--) {
       const v = this.collectorViruses[i];
-      
-      // 흔들림 업데이트
+
+      // TODO
       v.wobblePhase += dt * v.wobbleSpeed;
-      
+
       let targetX, targetY;
-      
+
       if (v.state === "toItem") {
         targetX = v.targetX;
         targetY = v.targetY;
-        
+
         const dist = Math.hypot(targetX - v.x, targetY - v.y);
-        
+
         if (dist < 15) {
-          // 아이템 도착 - 픽업
+          // TODO
           const droppedItem = this.droppedItems.find(
             d => !d.collected && Math.hypot(d.x - v.x, d.y - v.y) < 25
           );
-          
+
           if (droppedItem) {
             droppedItem.collected = true;
             v.carriedItem = droppedItem.item;
             v.state = "returning";
-            // 복귀 시 속도 증가 (신나서 빨리 돌아옴)
+            // TODO
             v.speed = 180;
           } else {
             v.state = "returning";
@@ -3532,15 +3598,15 @@ export class DefenseGame {
       } else if (v.state === "returning") {
         targetX = this.core.x;
         targetY = this.core.y;
-        
+
         const dist = Math.hypot(targetX - v.x, targetY - v.y);
-        
+
         if (dist < 25) {
-          // 코어 도착 - 아이템 전달
+          // TODO
           if (v.carriedItem && this.onItemCollected) {
             this.onItemCollected(v.carriedItem);
           }
-          // 도착 이펙트
+          // TODO
           this.createExplosion(v.x, v.y, "#00ff88", 5);
           this.collectorViruses.splice(i, 1);
           continue;
@@ -3548,156 +3614,155 @@ export class DefenseGame {
       } else {
         continue;
       }
-      
-      // 부드러운 가속도 기반 이동 (smoothMoveToward와 유사)
+
+      // TODO
       const dx = targetX - v.x;
       const dy = targetY - v.y;
       const dist = Math.hypot(dx, dy);
-      
+
       if (dist > 1) {
-        // 목표 방향 속도
+        // TODO
         const targetVx = (dx / dist) * v.speed;
         const targetVy = (dy / dist) * v.speed;
-        
-        // 부드러운 가속 (관성)
+
+        // TODO
         const accel = 8;
         v.vx += (targetVx - v.vx) * accel * dt;
         v.vy += (targetVy - v.vy) * accel * dt;
-        
-        // 지그재그 흔들림 (수직 방향으로)
+
+        // TODO
         const wobbleAmount = Math.sin(v.wobblePhase) * 25;
         const perpAngle = Math.atan2(dy, dx) + Math.PI / 2;
         const wobbleX = Math.cos(perpAngle) * wobbleAmount * dt;
         const wobbleY = Math.sin(perpAngle) * wobbleAmount * dt;
-        
-        // 위치 업데이트
+
+        // TODO
         v.x += v.vx * dt + wobbleX;
         v.y += v.vy * dt + wobbleY;
       }
     }
-    
-    // 수집된 아이템 정리
+
+    // TODO
     this.droppedItems = this.droppedItems.filter(d => !d.collected);
   }
-  
+
   /**
-   * 바닥 아이템 렌더링
-   */
+   * ?????    */
   renderDroppedItems() {
     const ctx = this.ctx;
     const now = performance.now();
-    
+
     this.droppedItems.forEach(d => {
       if (d.collected) return;
-      
+
       const age = (now - d.spawnTime) / 1000;
       const pulse = 1 + Math.sin(d.pulsePhase + age * 4) * 0.15;
       const size = 12 * pulse;
-      
-      // 등급별 색상
+
+      // TODO
       const colors = {
         common: "#ffffff",
         rare: "#00aaff",
         legendary: "#ffaa00"
       };
       const color = colors[d.item.rarity] || "#ffffff";
-      
-      // 글로우 효과
+
+      // TODO
       ctx.save();
       ctx.shadowColor = color;
       ctx.shadowBlur = 15;
-      
-      // 아이콘 배경
+
+      // TODO
       ctx.fillStyle = `rgba(0, 0, 0, 0.7)`;
       ctx.beginPath();
       ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
       ctx.fill();
-      
-      // 테두리
+
+      // TODO
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.stroke();
-      
-      // 아이콘
+
+      // TODO
       ctx.fillStyle = "#ffffff";
       ctx.font = `${size}px Arial`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(d.item.icon, d.x, d.y);
-      
+
       ctx.restore();
     });
   }
-  
+
   /**
-   * 수집 바이러스 렌더링 (자연스러운 시각 효과)
+   * ? ? ??(????? ?)
    */
   renderCollectorViruses() {
     const ctx = this.ctx;
     const time = performance.now() / 1000;
-    
+
     this.collectorViruses.forEach(v => {
       const baseSize = 6;
-      
+
       ctx.save();
-      
-      // 떨림/숨쉬기 효과
+
+      // TODO
       const wobble = Math.sin(time * 5 + v.wobblePhase) * 1.5;
       const breathe = 1 + Math.sin(time * 3 + v.wobblePhase * 2) * 0.1;
       const size = baseSize * breathe;
-      
-      // 위치 오프셋 (살아있는 느낌)
+
+      // TODO
       const offsetX = wobble * 0.4;
       const offsetY = Math.cos(time * 4 + v.wobblePhase) * 0.8;
-      
+
       const drawX = v.x + offsetX;
       const drawY = v.y + offsetY;
-      
-      // 이동 방향에 따른 기울임
+
+      // TODO
       const moveAngle = Math.atan2(v.vy || 0, v.vx || 0);
       const speed = Math.hypot(v.vx || 0, v.vy || 0);
       const tilt = (speed / v.speed) * 0.2;
-      
+
       ctx.translate(drawX, drawY);
       ctx.rotate(tilt * Math.sin(moveAngle));
-      
-      // 그림자 (깊이감)
+
+      // TODO
       ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
       ctx.beginPath();
       ctx.ellipse(2, 3, size * 0.8, size * 0.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      
-      // 몸체 - 아이템 들고있으면 더 밝게
+
+      // TODO
       const bodyColor = v.carriedItem ? "#00ff88" : "#88ffcc";
       ctx.fillStyle = bodyColor;
       ctx.beginPath();
       ctx.arc(0, 0, size, 0, Math.PI * 2);
       ctx.fill();
-      
-      // 테두리
+
+      // TODO
       ctx.strokeStyle = v.carriedItem ? "#00aa55" : "#55aa88";
       ctx.lineWidth = 1;
       ctx.stroke();
-      
-      // 눈 (단순 검은 점)
+
+      // TODO
       ctx.fillStyle = "#000";
       ctx.beginPath();
       ctx.arc(-2, -1, 1.5, 0, Math.PI * 2);
       ctx.arc(2, -1, 1.5, 0, Math.PI * 2);
       ctx.fill();
-      
+
       ctx.restore();
-      
-      // 아이템 들고있으면 머리 위에 표시 (별도 렌더링)
+
+      // TODO
       if (v.carriedItem) {
         ctx.save();
         const floatY = Math.sin(time * 6) * 2;
-        
-        // 아이템 글로우
+
+        // TODO
         const itemColor = this.getItemRarityColor(v.carriedItem.rarity);
         ctx.shadowColor = itemColor;
         ctx.shadowBlur = 8;
-        
+
         ctx.font = "10px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -3707,64 +3772,65 @@ export class DefenseGame {
       }
     });
   }
-  
+
   /**
-   * 아이템 등급별 색상 반환
+   * ?????? 
    */
   getItemRarityColor(rarity) {
     const colors = {
       common: "#ffffff",
-      rare: "#00aaff", 
+      rare: "#00aaff",
       legendary: "#ffaa00"
     };
     return colors[rarity] || "#ffffff";
   }
 
   render() {
-    // 디버그: 모드 전환 후 처음 3프레임만 로그 출력
+    // TODO
     if (!this.renderDebugFrameCount) this.renderDebugFrameCount = 0;
 
-    // 일반 모드 또는 미니 모드 둘 다 로그
+    // TODO
     const shouldLog = this.renderDebugFrameCount < 3;
     if (shouldLog) {
       this.renderDebugFrameCount++;
-      const mode = this.isMiniDisplay ? "미니" : "일반";
-      debugLog("Canvas", `=== render() 호출 [${mode} 모드] (프레임 ${this.renderDebugFrameCount}) ===`);
+      const mode = this.isMiniDisplay ? "" : "?";
+      debugLog("Canvas", `=== render() ? [${mode} ] (???${this.renderDebugFrameCount}) ===`);
       debugLog("Canvas", "canvas.id:", this.canvas.id);
       debugLog("Canvas", "canvas size:", this.canvas.width, "x", this.canvas.height);
       debugLog("Canvas", "canvas.style.display:", this.canvas.style.display);
       debugLog("Canvas", "isMiniDisplay:", this.isMiniDisplay);
       debugLog("Canvas", "gameScale:", this.gameScale);
-      debugLog("Canvas", "아군:", this.alliedViruses.length, "적:", this.enemies.length);
-      debugLog("Canvas", "코어 위치:", this.core.x, this.core.y);
-      debugLog("Canvas", "코어 반지름:", this.core.radius);
+      debugLog("Canvas", "?:", this.alliedViruses.length, "??", this.enemies.length);
+      debugLog("Canvas", " ?:", this.core.x, this.core.y);
+      debugLog("Canvas", " ??", this.core.radius);
     }
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // 줌 아웃 효과 적용 (중심 기준 스케일링)
+    // TODO
     this.ctx.save();
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2;
     this.ctx.translate(centerX, centerY);
     this.ctx.scale(this.gameScale, this.gameScale);
     this.ctx.translate(-centerX, -centerY);
+    this.ctx.translate(-this.camera.x + centerX, -this.camera.y + centerY);
 
     const time = Date.now() / 1000;
     const isMobile = this.isMobile;
 
-    // 채굴 시스템 렌더링 (가장 뒤 레이어)
+    // TODO
     if (this.miningManager) {
       this.miningManager.render(this.ctx, time, isMobile);
     }
 
-    // 점령 상태 시각화 (깃발 + 별 모양 방어막)
+    // TODO
     if (this.isConquered) {
-      // 디버그: 점령 상태 확인 (처음 한 번만)
+      // TODO
       if (!this.conqueredRenderLogged) {
         debugLog(
           "DefenseGame",
-          "점령 상태 렌더링 시작, isConquered:",
+          "? ? ???, isConquered:",
           this.isConquered,
           "conqueredStartTime:",
           this.conqueredStartTime
@@ -3773,11 +3839,11 @@ export class DefenseGame {
       }
       this.renderConqueredVisuals();
     } else {
-      // 점령 상태가 아니면 로그 플래그 리셋
+      // TODO
       this.conqueredRenderLogged = false;
     }
 
-    // 0. 배리어 그리기 (부드러운 전환 효과) - 점령 상태가 아닐 때만
+    // TODO
     if (!this.isConquered) {
       const shieldRadius = Math.max(0, this.core.shieldRadius);
       const cx = this.core.x;
@@ -3785,23 +3851,23 @@ export class DefenseGame {
       const sv = this.shieldVisual;
       const state = this.core.shieldState;
 
-      // 실드 HP 비율에 따른 색상 계산 (100%=파란색, 0%=빨간색)
+      // TODO
       const hpRatio = this.core.shieldHp / this.core.shieldMaxHp;
-      // 파란색 (0, 200, 255) → 빨간색 (255, 50, 50)
+      // TODO
       const r = Math.floor(255 * (1 - hpRatio));
       const g = Math.floor(200 * hpRatio + 50 * (1 - hpRatio));
       const b = Math.floor(255 * hpRatio + 50 * (1 - hpRatio));
 
-      // BROKEN/RECHARGING: 철컥철컥 회전 (별도 처리)
+      // TODO
       let dashOffset = sv.rotation;
       if (state === "BROKEN" || state === "RECHARGING") {
-        const stepDuration = 500; // 0.5초마다 한 스텝
+        const stepDuration = 500; // TODO
         const stepSize = 20;
         const currentStep = Math.floor(Date.now() / stepDuration);
         dashOffset = currentStep * stepSize;
       }
 
-      // 채우기 (ACTIVE일 때만 보임) - shieldRadius가 0보다 클 때만
+      // TODO
       if (sv.fillAlpha > 0.01 && shieldRadius > 0) {
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
@@ -3809,33 +3875,33 @@ export class DefenseGame {
         this.ctx.fill();
       }
 
-      // 테두리 (점선/실선 보간) - shieldRadius가 0보다 클 때만
+      // TODO
       if (shieldRadius <= 0) {
-        // shieldRadius가 0 이하면 테두리 그리기 스킵
+        // TODO
         this.ctx.setLineDash([]);
       } else {
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
 
         if (sv.dashGap > 0.5) {
-          // 점선 모드
+          // TODO
           const dashLength = Math.max(3, 10 - sv.dashGap * 0.3);
           this.ctx.setLineDash([dashLength, sv.dashGap]);
           this.ctx.lineDashOffset = -dashOffset;
         } else {
-          // 실선 모드
+          // TODO
           this.ctx.setLineDash([]);
         }
 
         this.ctx.lineWidth = sv.lineWidth;
 
-        // ACTIVE일 때 펄스 효과
+        // TODO
         let alpha = sv.alpha;
         if (state === "ACTIVE") {
           alpha = sv.alpha + Math.sin(Date.now() / 200) * 0.15;
         }
 
-        // BROKEN일 때 회색, 그 외에는 HP 기반 색상
+        // TODO
         if (state === "BROKEN" || state === "RECHARGING") {
           this.ctx.strokeStyle = `rgba(100, 100, 100, ${alpha})`;
         } else {
@@ -3844,19 +3910,19 @@ export class DefenseGame {
 
         this.ctx.stroke();
         this.ctx.setLineDash([]);
-      } // else (shieldRadius > 0) 닫기
+      } // TODO
     }
 
-    // 아군 바이러스 그리기 (타입별 모양 + 생동감) - 배리어 밖
+    // TODO
     this.alliedViruses.forEach((v) => {
       this.ctx.save();
 
-      // 모바일: 효과 간소화 / PC: 풀 효과
+      // TODO
       if (isMobile) {
-        // 모바일: 떨림/숨쉬기 효과 생략, 위치만 적용
+        // TODO
         this.ctx.translate(v.x, v.y);
       } else {
-        // PC: 약간의 떨림 효과 (살아있는 느낌)
+        // TODO
         const wobble = Math.sin(time * 5 + (v.wobblePhase || 0)) * 1.5;
         const breathe =
           1 + Math.sin(time * 3 + (v.wobblePhase || 0) * 2) * 0.08;
@@ -3864,15 +3930,15 @@ export class DefenseGame {
         this.ctx.translate(v.x + wobble * 0.3, v.y + wobble * 0.2);
         this.ctx.scale(breathe, breathe);
 
-        // 글로우 효과 (PC만)
+        // TODO
         this.ctx.shadowColor = v.color;
         this.ctx.shadowBlur = 8;
       }
 
-      // 타입별 모양
+      // TODO
       switch (v.virusType) {
         case "TANK":
-          // 육각형 (탱커)
+          // TODO
           this.ctx.fillStyle = v.color;
           this.ctx.beginPath();
           for (let i = 0; i < 6; i++) {
@@ -3884,14 +3950,14 @@ export class DefenseGame {
           }
           this.ctx.closePath();
           this.ctx.fill();
-          // 테두리
+          // TODO
           this.ctx.strokeStyle = "#ffffff44";
           this.ctx.lineWidth = 2;
           this.ctx.stroke();
           break;
 
         case "HUNTER":
-          // 삼각형 (사냥꾼) - 이동 방향으로 회전
+          // TODO
           const moveAngle = Math.atan2(v.vy || 0, v.vx || 0);
           this.ctx.rotate(moveAngle);
           this.ctx.fillStyle = v.color;
@@ -3904,7 +3970,7 @@ export class DefenseGame {
           break;
 
         case "BOMBER":
-          // 원 + 점멸 (폭탄)
+          // TODO
           if (!isMobile) {
             const blink = Math.sin(time * 10) > 0 ? 1 : 0.6;
             this.ctx.globalAlpha = blink;
@@ -3913,7 +3979,7 @@ export class DefenseGame {
           this.ctx.beginPath();
           this.ctx.arc(0, 0, v.radius, 0, Math.PI * 2);
           this.ctx.fill();
-          // 내부 원
+          // TODO
           this.ctx.fillStyle = "#ffff00";
           this.ctx.beginPath();
           this.ctx.arc(0, 0, v.radius * 0.4, 0, Math.PI * 2);
@@ -3921,15 +3987,15 @@ export class DefenseGame {
           break;
 
         case "HEALER":
-          // 십자가 (힐러)
+          // TODO
           this.ctx.fillStyle = v.color;
           const armWidth = v.radius * 0.4;
           const armLength = v.radius;
-          // 가로
+          // TODO
           this.ctx.fillRect(-armLength, -armWidth / 2, armLength * 2, armWidth);
-          // 세로
+          // TODO
           this.ctx.fillRect(-armWidth / 2, -armLength, armWidth, armLength * 2);
-          // 중앙 원
+          // TODO
           this.ctx.beginPath();
           this.ctx.arc(0, 0, armWidth * 0.8, 0, Math.PI * 2);
           this.ctx.fill();
@@ -3937,40 +4003,40 @@ export class DefenseGame {
 
         case "SWARM":
         default:
-          // 기본 원 (작고 많음)
+          // TODO
           this.ctx.fillStyle = v.color;
           this.ctx.beginPath();
           this.ctx.arc(0, 0, v.radius, 0, Math.PI * 2);
           this.ctx.fill();
           break;
       }
-      
-      // 눈 그리기 (모든 타입 공통) - 단순 검은 점
+
+      // TODO
       const eyeSize = v.radius * 0.2;
-      
+
       this.ctx.fillStyle = "#000";
       this.ctx.beginPath();
       this.ctx.arc(-v.radius * 0.3, -v.radius * 0.1, eyeSize, 0, Math.PI * 2);
       this.ctx.arc(v.radius * 0.3, -v.radius * 0.1, eyeSize, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // HP 바 (데미지 입으면 표시)
+      // TODO
       if (v.hp < v.maxHp) {
-        if (!isMobile) this.ctx.shadowBlur = 0; // PC에서만 리셋
+        if (!isMobile) this.ctx.shadowBlur = 0; // TODO
         const barWidth = v.radius * 2;
         const barHeight = 2;
         const hpPercent = v.hp / v.maxHp;
 
-        // 배경
+        // TODO
         this.ctx.fillStyle = "#333";
         this.ctx.fillRect(-barWidth / 2, -v.radius - 6, barWidth, barHeight);
-        // HP
+        // TODO
         this.ctx.fillStyle =
           hpPercent > 0.5
             ? "#00ff00"
             : hpPercent > 0.25
-            ? "#ffff00"
-            : "#ff0000";
+              ? "#ffff00"
+              : "#ff0000";
         this.ctx.fillRect(
           -barWidth / 2,
           -v.radius - 6,
@@ -3982,92 +4048,90 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // 채굴 시스템 렌더링은 아군보다 뒤에 배치됨
-
-    // 조력자(Helper) 그리기 - 배리어 내부 (0w0 얼굴!)
+    // TODO
+    // TODO
     if (this.helper && this.helper.x !== 0) {
       const h = this.helper;
       const mode = this.getCurrentWeaponMode();
 
-      // 조력자 몸체 (무기 모드 색상)
+      // TODO
       this.ctx.fillStyle = h.color;
       this.ctx.beginPath();
       this.ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // 조력자 테두리
+      // TODO
       this.ctx.strokeStyle = "#ffffff";
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
 
-      // 0w0 얼굴 그리기 (12시 고정 + 발사 시에만 살짝 움직임)
+      // TODO
       this.ctx.save();
       this.ctx.translate(h.x, h.y);
-      
-      // 발사 후 시간 경과에 따른 얼굴 오프셋 계산 (faceLook 전용 속성 사용)
+
+      // TODO
       const now = performance.now();
       const lastFire = h.faceLookTime || 0;
       const timeSinceFire = now - lastFire;
-      const lookDuration = 200; // 200ms 동안 바라봄
-      const returnDuration = 300; // 300ms 동안 복귀
-      
+      const lookDuration = 200; // TODO
+      const returnDuration = 300; // TODO
+
       let lookIntensity = 0;
       if (timeSinceFire < lookDuration) {
-        // 발사 직후 - 최대 강도
+        // TODO
         lookIntensity = 1;
       } else if (timeSinceFire < lookDuration + returnDuration) {
-        // 복귀 중 - 서서히 감소
+        // TODO
         lookIntensity = 1 - (timeSinceFire - lookDuration) / returnDuration;
       }
-      // else: 0 (12시 고정)
-      
-      const lookStrength = h.radius * 0.2 * lookIntensity; // 발사 시 20% 이동
+      // TODO
+
+      const lookStrength = h.radius * 0.2 * lookIntensity; // TODO
       const fireAngle = h.faceLookAngle || 0;
       const lookX = Math.cos(fireAngle) * lookStrength;
       const lookY = Math.sin(fireAngle) * lookStrength;
-      
-      // 기본 위치 (12시 방향) + 발사 방향 오프셋
+
+      // TODO
       const faceOffsetX = lookX;
-      const faceOffsetY = -h.radius * 0.25 + lookY * 0.5; // Y는 절반만
-      
-      // 눈 (0 0) - 작은 검은 동그라미
+      const faceOffsetY = -h.radius * 0.25 + lookY * 0.5; // TODO
+      // TODO
       const eyeRadius = h.radius * 0.12;
       const eyeY = faceOffsetY - h.radius * 0.1;
       const eyeSpacing = h.radius * 0.3;
-      
-      // 왼쪽 눈 - 검은색으로 꽉 채움
+
+      // TODO
       this.ctx.fillStyle = "#000";
       this.ctx.beginPath();
       this.ctx.arc(faceOffsetX - eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
       this.ctx.fill();
-      
-      // 오른쪽 눈 - 검은색으로 꽉 채움
+
+      // TODO
       this.ctx.fillStyle = "#000";
       this.ctx.beginPath();
       this.ctx.arc(faceOffsetX + eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
       this.ctx.fill();
-      
-      // 입 (w) - 귀여운 고양이 입
+
+      // TODO
       const mouthY = faceOffsetY + h.radius * 0.2;
       const mouthWidth = h.radius * 0.4;
-      
+
       this.ctx.strokeStyle = "#000";
       this.ctx.lineWidth = 1.2;
       this.ctx.beginPath();
-      // w 모양 그리기 (faceOffsetX 적용)
+      // TODO
       this.ctx.moveTo(faceOffsetX - mouthWidth, mouthY);
       this.ctx.quadraticCurveTo(faceOffsetX - mouthWidth * 0.5, mouthY + h.radius * 0.15, faceOffsetX, mouthY);
       this.ctx.quadraticCurveTo(faceOffsetX + mouthWidth * 0.5, mouthY + h.radius * 0.15, faceOffsetX + mouthWidth, mouthY);
       this.ctx.stroke();
-      
+
       this.ctx.restore();
 
-      // ===== 재장전 시각 효과 =====
+      // TODO
       if (h.isReloading && mode.hasReload) {
         const reloadRadius = h.radius + 8;
         const progress = h.reloadProgress;
 
-        // 1. 원형 프로그레스 바 (arc)
+        // TODO
         this.ctx.beginPath();
         this.ctx.arc(
           h.x,
@@ -4082,14 +4146,14 @@ export class DefenseGame {
         this.ctx.stroke();
         this.ctx.lineCap = "butt";
 
-        // 배경 원 (진행률 표시용)
+        // TODO
         this.ctx.beginPath();
         this.ctx.arc(h.x, h.y, reloadRadius, 0, Math.PI * 2);
         this.ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
 
-        // 2. 글리치 "RELOAD!" 텍스트
+        // TODO
         const glitchTime = Date.now();
         const glitchX = (Math.random() - 0.5) * 4;
         const glitchY = (Math.random() - 0.5) * 2;
@@ -4099,7 +4163,7 @@ export class DefenseGame {
         this.ctx.textAlign = "center";
         this.ctx.textBaseline = "middle";
 
-        // RGB 분리 효과
+        // TODO
         if (glitchTime % 100 < 50) {
           this.ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
           this.ctx.fillText(
@@ -4115,7 +4179,7 @@ export class DefenseGame {
           );
         }
 
-        // 메인 텍스트 (깜빡임 효과)
+        // TODO
         if (glitchTime % 200 < 150) {
           this.ctx.fillStyle = h.color;
           this.ctx.shadowColor = h.color;
@@ -4128,7 +4192,7 @@ export class DefenseGame {
           this.ctx.shadowBlur = 0;
         }
 
-        // 퍼센트 표시
+        // TODO
         this.ctx.fillStyle = "#ffffff";
         this.ctx.font = "bold 8px monospace";
         this.ctx.fillText(
@@ -4140,7 +4204,7 @@ export class DefenseGame {
         this.ctx.restore();
       }
 
-      // 탄약 표시 (재장전 무기만)
+      // TODO
       if (mode.hasReload && !h.isReloading) {
         this.ctx.save();
         this.ctx.font = "bold 8px monospace";
@@ -4156,12 +4220,12 @@ export class DefenseGame {
       }
     }
 
-    // 1. 발사체 (랜덤 아스키 문자)
+    // TODO
     this.ctx.font = "bold 12px monospace";
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
     this.projectiles.forEach((p) => {
-      // 조력자 발사체는 노란색, 코어 발사체는 초록색
+      // TODO
       const color = p.fromHelper ? "#ffff00" : "#00ff00";
       this.ctx.fillStyle = color;
       this.ctx.shadowColor = color;
@@ -4170,29 +4234,29 @@ export class DefenseGame {
     });
     this.ctx.shadowBlur = 0;
 
-    // 2. 적
+    // TODO
     this.enemies.forEach((e) => {
       this.ctx.fillStyle = "#ff3333";
       this.ctx.beginPath();
       this.ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
       this.ctx.fill();
 
-      const hpPct = Math.max(0, Math.min(1, e.hp / e.maxHp)); // 0~1 클램핑
+      const hpPct = Math.max(0, Math.min(1, e.hp / e.maxHp)); // TODO
       this.ctx.fillStyle = "#550000";
       this.ctx.fillRect(e.x - 10, e.y - 20, 20, 4);
       this.ctx.fillStyle = "#ff0000";
       this.ctx.fillRect(e.x - 10, e.y - 20, 20 * hpPct, 4);
     });
 
-    // 코어 스케일 적용 (원근감 효과 + 탈출 애니메이션)
+    // TODO
     const coreScale = this.core.scale || 1;
     const scaledRadius = this.core.radius * coreScale;
 
-    // 코어 시각적 위치 (발사 시 움직임 효과 포함)
+    // TODO
     const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
     const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
 
-    // 3. 코어 및 포탑 (포탑 발사대 삭제) - 시각적 오프셋 적용
+    // TODO
     this.ctx.save();
     this.ctx.translate(coreVisualX, coreVisualY);
     this.ctx.rotate(this.turret.angle);
@@ -4206,11 +4270,11 @@ export class DefenseGame {
     this.ctx.strokeStyle = "#ffffff";
     this.ctx.stroke();
 
-    // 코어 체력 퍼센트 표시 (탈출 중에는 숨김)
+    // TODO
     if (this.showCoreHP !== false && !this.isOutroPlaying) {
       const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
 
-      // 글리치 오프셋
+      // TODO
       const offsetX = this.glitchText ? this.glitchOffset?.x || 0 : 0;
       const offsetY = this.glitchText ? this.glitchOffset?.y || 0 : 0;
 
@@ -4218,16 +4282,16 @@ export class DefenseGame {
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
 
-      // 글리치 효과: 색상 분리
+      // TODO
       if (this.glitchText) {
-        // 빨간색 오프셋
+        // TODO
         this.ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
         this.ctx.fillText(
           `${hpPercent}%`,
           coreVisualX + offsetX - 2,
           coreVisualY + scaledRadius + 20 + offsetY
         );
-        // 파란색 오프셋
+        // TODO
         this.ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
         this.ctx.fillText(
           `${hpPercent}%`,
@@ -4236,7 +4300,7 @@ export class DefenseGame {
         );
       }
 
-      // 메인 텍스트
+      // TODO
       this.ctx.fillStyle = hpPercent > 30 ? "#00ff00" : "#ff3333";
       this.ctx.fillText(
         `${hpPercent}%`,
@@ -4245,31 +4309,31 @@ export class DefenseGame {
       );
     }
 
-    // 4. 파티클 (글리치 스타일)
+    // TODO
     this.ctx.font = "bold 10px monospace";
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
 
     this.particles.forEach((p) => {
-      // 글리치 떨림 효과
+      // TODO
       const glitchX = p.char ? (Math.random() - 0.5) * 3 : 0;
       const glitchY = p.char ? (Math.random() - 0.5) * 3 : 0;
 
-      // 깜빡임 효과 (30% 확률로 안 그림)
+      // TODO
       if (p.char && Math.random() < 0.3 && p.life < p.maxLife * 0.5) {
-        return; // 깜빡임
+        return; // TODO
       }
 
       this.ctx.globalAlpha = p.alpha;
       this.ctx.fillStyle = p.color;
 
       if (p.char) {
-        // 글리치 문자 파티클
+        // TODO
         this.ctx.font = `bold ${p.size}px monospace`;
         this.ctx.shadowColor = p.color;
         this.ctx.shadowBlur = 3;
 
-        // RGB 분리 효과 (수명이 적을 때)
+        // TODO
         if (p.life < p.maxLife * 0.4) {
           this.ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
           this.ctx.fillText(p.char, p.x + glitchX - 1, p.y + glitchY);
@@ -4281,7 +4345,7 @@ export class DefenseGame {
         this.ctx.fillText(p.char, p.x + glitchX, p.y + glitchY);
         this.ctx.shadowBlur = 0;
       } else {
-        // 기존 원형 파티클 (호환성)
+        // TODO
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         this.ctx.fill();
@@ -4290,7 +4354,7 @@ export class DefenseGame {
       this.ctx.globalAlpha = 1.0;
     });
 
-    // 5. 파동 효과 렌더링
+    // TODO
     this.shockwaves.forEach((wave) => {
       const safeRadius = Math.max(0, wave.radius);
       this.ctx.beginPath();
@@ -4300,7 +4364,7 @@ export class DefenseGame {
       this.ctx.globalAlpha = wave.alpha;
       this.ctx.stroke();
 
-      // 내부 잔상 링
+      // TODO
       if (safeRadius > 50) {
         this.ctx.beginPath();
         this.ctx.arc(wave.x, wave.y, safeRadius * 0.7, 0, Math.PI * 2);
@@ -4312,39 +4376,39 @@ export class DefenseGame {
       this.ctx.globalAlpha = 1.0;
     });
 
-    // 6. 스태틱 시각 효과
+    // TODO
     this.renderStaticEffects();
-    
-    // 7. 드롭 아이템 및 수집 바이러스
+
+    // TODO
     this.renderDroppedItems();
     this.renderCollectorViruses();
-    
-    // 말풍선 렌더링
+
+    // TODO
     this.renderSpeechBubbles();
-    
-    // 줌 아웃 스케일 복원
+
+    // TODO
     this.ctx.restore();
 
-    // 8. 보스전 UI (보스 HP바 + 침투 게이지) - 스케일 밖에서 절대좌표로 그리기
+    // TODO
     if (this.isBossFight && this.bossManager) {
       this.renderBossUI();
     }
 
-    // === 미니 디스플레이 복사 (중앙 영역만) ===
+    // TODO
     if (this.isMiniDisplay && this.miniCanvas) {
       const miniCtx = this.miniCanvas.getContext("2d");
       const miniW = this.miniCanvas.width || 400;
       const miniH = this.miniCanvas.height || 150;
 
-      // 디버그: 캔버스 정보
+      // TODO
       if (this.renderDebugFrameCount < 3) {
-        debugLog("Canvas", "=== 미니 디스플레이 복사 디버그 ===");
-        debugLog("Canvas", "1. 미니 캔버스 크기: miniW =", miniW, "miniH =", miniH);
-        debugLog("Canvas", "2. 원본 캔버스 크기: canvas.width =", this.canvas.width, "canvas.height =", this.canvas.height);
+        debugLog("Canvas", "===  ???? ??===");
+        debugLog("Canvas", "1.  ???: miniW =", miniW, "miniH =", miniH);
+        debugLog("Canvas", "2. ? ???: canvas.width =", this.canvas.width, "canvas.height =", this.canvas.height);
         debugLog("Canvas", "3. isMobile =", this.isMobile);
       }
 
-      // 전체 캔버스를 미니 캔버스에 비율 유지하여 중앙 복사
+      // TODO
       const srcW = this.canvas.width;
       const srcH = this.canvas.height;
       const contentRatio = srcW / srcH;
@@ -4372,44 +4436,44 @@ export class DefenseGame {
         destX, destY, destW, destH
       );
 
-      // 보스 HP 업데이트
+      // TODO
       if (this.isBossFight && this.bossManager) {
         const hpSpan = document.getElementById("conquest-core-hp");
-        if (hpSpan) hpSpan.innerText = "♥ " + Math.ceil(this.bossManager.bossHP) + "%";
+        if (hpSpan) hpSpan.innerText = "??" + Math.ceil(this.bossManager.bossHP) + "%";
       }
     }
   }
-  
+
   /**
-   * 보스전 UI 렌더링 (좌측: 보스 HP바 / 우측: 침투 게이지)
-   * 모바일 대응: 세로 바 형태로 화면 양쪽에 배치
+   * ??UI ??(:  HP?/ ?:  )
+   * ????? ? ???? ???
    */
   renderBossUI() {
     const status = this.bossManager.getStatus();
     const ctx = this.ctx;
     const canvasWidth = this.canvas.width;
     const canvasHeight = this.canvas.height;
-    
-    // 반응형: 모바일 여부 판단
+
+    // TODO
     const isMobile = canvasWidth < 500;
     const barWidth = isMobile ? 16 : 24;
     const barHeight = Math.min(canvasHeight * 0.5, 300);
     const margin = isMobile ? 10 : 20;
     const barY = (canvasHeight - barHeight) / 2;
-    
-    // === 왼쪽: 보스 HP 바 (세로) ===
+
+    // TODO
     const hpBarX = margin;
-    
-    // 배경 패널
+
+    // TODO
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(hpBarX - 4, barY - 30, barWidth + 8, barHeight + 60);
-    
-    // HP 바 테두리
+
+    // TODO
     ctx.strokeStyle = '#ff0000';
     ctx.lineWidth = 2;
     ctx.strokeRect(hpBarX, barY, barWidth, barHeight);
-    
-    // HP 바 채우기 (아래에서 위로, 빨간색→주황색 그라데이션)
+
+    // TODO
     const hpRatio = status.bossHP / status.maxBossHP;
     const hpFillHeight = barHeight * hpRatio;
     const hpGradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY + barHeight - hpFillHeight);
@@ -4417,8 +4481,8 @@ export class DefenseGame {
     hpGradient.addColorStop(1, '#ff6600');
     ctx.fillStyle = hpGradient;
     ctx.fillRect(hpBarX, barY + barHeight - hpFillHeight, barWidth, hpFillHeight);
-    
-    // 최소 HP 표시선 (페이즈 전환 지점)
+
+    // TODO
     if (status.minBossHP > 0) {
       const minHPY = barY + barHeight - (status.minBossHP / status.maxBossHP) * barHeight;
       ctx.strokeStyle = '#ffff00';
@@ -4430,8 +4494,8 @@ export class DefenseGame {
       ctx.stroke();
       ctx.setLineDash([]);
     }
-    
-    // HP 텍스트 (상단)
+
+    // TODO
     ctx.save();
     ctx.fillStyle = '#ff6600';
     ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
@@ -4439,27 +4503,27 @@ export class DefenseGame {
     ctx.fillText('BOSS', hpBarX + barWidth / 2, barY - 15);
     ctx.fillStyle = '#ffffff';
     ctx.fillText(`${Math.ceil(status.bossHP)}%`, hpBarX + barWidth / 2, barY - 3);
-    
-    // 페이즈 표시 (하단)
+
+    // TODO
     ctx.fillStyle = '#ffff00';
     ctx.font = `${isMobile ? 8 : 10}px monospace`;
     ctx.fillText(`P${status.currentPhase}`, hpBarX + barWidth / 2, barY + barHeight + 15);
     ctx.restore();
-    
-    // === 오른쪽: 침투 게이지 (세로) ===
+
+    // TODO
     const breachBarX = canvasWidth - margin - barWidth;
-    
-    // 배경 패널
+
+    // TODO
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(breachBarX - 4, barY - 30, barWidth + 8, barHeight + 60);
-    
-    // 침투 게이지 테두리
+
+    // TODO
     const breachColor = status.isBreachReady ? '#00ff00' : '#00aaff';
     ctx.strokeStyle = breachColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(breachBarX, barY, barWidth, barHeight);
-    
-    // 침투 게이지 채우기 (아래에서 위로)
+
+    // TODO
     const breachRatio = status.breachGauge / status.maxBreachGauge;
     const breachFillHeight = barHeight * breachRatio;
     const breachGradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY + barHeight - breachFillHeight);
@@ -4467,12 +4531,12 @@ export class DefenseGame {
     breachGradient.addColorStop(1, status.isBreachReady ? '#00ff00' : '#00aaff');
     ctx.fillStyle = breachGradient;
     ctx.fillRect(breachBarX, barY + barHeight - breachFillHeight, barWidth, breachFillHeight);
-    
-    // 침투 상태 텍스트 (상단)
+
+    // TODO
     ctx.save();
     ctx.textAlign = 'center';
     if (status.isBreachReady) {
-      // 깜빡임 효과
+      // TODO
       const blink = Math.floor(Date.now() / 300) % 2 === 0;
       ctx.fillStyle = blink ? '#00ff00' : '#ffffff';
       ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
@@ -4485,8 +4549,8 @@ export class DefenseGame {
       ctx.fillStyle = '#ffffff';
       ctx.fillText(`${Math.ceil(status.breachPercent)}%`, breachBarX + barWidth / 2, barY - 3);
     }
-    
-    // 남은 시간 (하단)
+
+    // TODO
     if (!status.isBreachReady) {
       ctx.fillStyle = '#00aaff';
       ctx.font = `${isMobile ? 8 : 10}px monospace`;
@@ -4496,16 +4560,15 @@ export class DefenseGame {
   }
 
   /**
-   * 스태틱 시각 효과 렌더링
-   */
+   * ???? ? ??   */
   renderStaticEffects() {
     const ss = this.staticSystem;
     const se = this.staticEffects;
     const chargeRatio = ss.currentCharge / ss.maxCharge;
 
-    // 1. 원형 충전 게이지 제거 (텍스트만 표시)
+    // TODO
 
-    // 1.5. 정적 체인 진행률 (코어 위)
+    // TODO
     const pct = Math.max(0, Math.min(100, Math.round(chargeRatio * 100)));
     const textY = this.core.y - this.core.radius - 18;
     const barW = 56;
@@ -4527,7 +4590,7 @@ export class DefenseGame {
     this.ctx.fillRect(barX, barY, barW * (pct / 100), barH);
     this.ctx.restore();
 
-    // 2. 스파크 파티클
+    // TODO
     se.sparks.forEach((spark) => {
       this.ctx.save();
       this.ctx.globalAlpha = spark.alpha;
@@ -4540,7 +4603,7 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // 3. 체인 라이트닝 라인
+    // TODO
     se.chains.forEach((chain) => {
       this.ctx.save();
       this.ctx.globalAlpha = chain.alpha;
@@ -4549,7 +4612,7 @@ export class DefenseGame {
       this.ctx.shadowColor = "#ffff00";
       this.ctx.shadowBlur = 15;
 
-      // 지그재그 번개 효과
+      // TODO
       this.ctx.beginPath();
       this.ctx.moveTo(chain.x1, chain.y1);
 
@@ -4571,21 +4634,21 @@ export class DefenseGame {
       this.ctx.restore();
     });
 
-    // 4. 충전 완료 임박 글로우 제거
+    // TODO
   }
 
   /**
-   * 테트리스 줄 클리어 시 파동 효과 적용
+   * ? ??????? ? ?
    * @param {string} effectType - "knockback_slow", "knockback_damage", "knockback_damage_x3"
    */
   applyWaveEffect(effectType) {
-    debugLog("Defense", "파동 효과:", effectType);
+    debugLog("Defense", "? ?:", effectType);
 
-    const knockbackDist = 50; // 넉백 거리
-    const slowDuration = 2000; // 슬로우 2초
-    const damage = 10; // 기본 데미지
+    const knockbackDist = 50; // TODO
+    const slowDuration = 2000; // TODO
+    const damage = 10; // TODO
 
-    // 파동 시각 효과 추가
+    // TODO
     let waveColor = "#0f0";
     if (effectType === "knockback_damage") waveColor = "#ff0";
     if (effectType === "knockback_damage_x3") waveColor = "#f00";
@@ -4602,27 +4665,27 @@ export class DefenseGame {
       damageDealt: false,
     });
 
-    // 모든 적에게 효과 적용 (부드러운 넉백)
+    // TODO
     this.enemies.forEach((enemy) => {
-      // 효과 타입별 넉백 및 추가 효과
+      // TODO
       if (effectType === "knockback_slow") {
-        // 넉백 + 슬로우
+        // TODO
         this.applyKnockback(enemy, 300, 0.3, 2);
       } else if (effectType === "knockback_damage") {
-        // 넉백 + 데미지
+        // TODO
         this.applyKnockback(enemy, 300);
         enemy.hp -= damage;
       } else if (effectType === "knockback_damage_x3") {
-        // 넉백 + 데미지 3회
+        // TODO
         this.applyKnockback(enemy, 350);
         enemy.hp -= damage * 3;
 
-        // 추가 시각 효과: 적 위치에 폭발
+        // TODO
         this.createExplosion(enemy.x, enemy.y, "#ff4400", 10);
       }
     });
 
-    // 죽은 적 제거
+    // TODO
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       if (this.enemies[i].hp <= 0) {
         this.createExplosion(
@@ -4637,39 +4700,39 @@ export class DefenseGame {
   }
 
   spawnEnemy() {
-    // Safe Zone 또는 점령 완료 상태에서는 적 소환 안함
+    // TODO
     if (this.isSafeZone || this.isConquered) {
       debugLog("Enemy", "spawnEnemy blocked - isSafeZone:", this.isSafeZone, "isConquered:", this.isConquered);
       return;
     }
     debugLog("Enemy", "spawnEnemy called - isSafeZone:", this.isSafeZone);
-    
+
     const angle = Math.random() * Math.PI * 2;
     const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 50;
 
     const ex = this.core.x + Math.cos(angle) * distance;
     const ey = this.core.y + Math.sin(angle) * distance;
 
-    // 난이도 스케일 계산 (스테이지 기반 동적 계산)
+    // TODO
     let difficultyScale;
 
-    // 기본 스탯
-    const baseSpeed = 60 + Math.random() * 40; // 60~100
-    const baseHp = 10; // 35 → 10 (스폰 수 3배 증가에 맞춰 체력 감소)
+    // TODO
+    const baseSpeed = 60 + Math.random() * 40; // TODO
+    const baseHp = 10; // TODO
 
     if (this.isReinforcementMode) {
-      // 강화 페이지: 스테이지 기반 + 페이지별 증가
-      // 스테이지 기본 난이도 + 강화 페이지 보너스
+      // TODO
+      // TODO
       const stageBase = this.calculateStageBaseDifficulty();
-      const reinforcementBonus = 0.5 + (this.reinforcementPage - 1) * 0.3; // 0.5, 0.8, 1.1
+      const reinforcementBonus = 0.5 + (this.reinforcementPage - 1) * 0.3; // TODO
       difficultyScale = stageBase + reinforcementBonus;
     } else {
-      // 일반 페이지: 스테이지 기본 난이도 + 페이지별 증가
+      // TODO
       const stageBase = this.calculateStageBaseDifficulty();
-      const pageProgress = (this.currentPage - 1) / (this.stageMaxPages - 1); // 0~1 (첫 페이지부터 마지막 페이지까지)
-      // stageDifficultyScale: 페이지당 난이도 증가폭 (예: 1.5 = 페이지가 진행될수록 1.5배씩 증가)
+      const pageProgress = (this.currentPage - 1) / (this.stageMaxPages - 1); // TODO
+      // TODO
       const pageMultiplier =
-        pageProgress * (this.stageDifficultyScale * stageBase * 0.5); // 스테이지별 증가폭 적용
+        pageProgress * (this.stageDifficultyScale * stageBase * 0.5); // TODO
       difficultyScale = stageBase + pageMultiplier;
     }
 
@@ -4684,18 +4747,18 @@ export class DefenseGame {
     });
   }
 
-  // Safe Zone 전용: 아군 바이러스 미리 배치
+  // TODO
   spawnSafeZoneAllies() {
     debugLog("Enemy", "spawnSafeZoneAllies called - isSafeZone:", this.isSafeZone);
     if (!this.isSafeZone) {
       debugLog("Enemy", "spawnSafeZoneAllies aborted - not Safe Zone");
       return;
     }
-    
-    // 기존 아군 제거
+
+    // TODO
     this.alliedViruses = [];
-    
-    // 바이러스 타입 정의 (Safe Zone용)
+
+    // TODO
     const virusTypes = {
       SWARM: { color: "#88ff88", baseHp: 8, baseDamage: 5, baseSpeed: 180, radius: 6, attackType: "melee" },
       TANK: { color: "#ff8800", baseHp: 60, baseDamage: 8, baseSpeed: 80, radius: 12, attackType: "melee", tauntRadius: 150, aggroRadius: 180 },
@@ -4703,55 +4766,55 @@ export class DefenseGame {
       BOMBER: { color: "#ff4444", baseHp: 15, baseDamage: 0, baseSpeed: 150, radius: 9, attackType: "suicide", explosionDamage: 40, explosionRadius: 60 },
       HEALER: { color: "#00ff88", baseHp: 40, baseDamage: 0, baseSpeed: 90, radius: 8, attackType: "support", healAmount: 5, healRadius: 80 }
     };
-    
-    // 다양한 타입의 아군 배치 (12~18마리로 증가)
+
+    // TODO
     const types = ["SWARM", "SWARM", "SWARM", "TANK", "HUNTER", "HUNTER", "BOMBER", "HEALER", "SWARM", "HUNTER", "SWARM", "BOMBER"];
-    const count = 12 + Math.floor(Math.random() * 7); // 12~18마리
-    
+    const count = 12 + Math.floor(Math.random() * 7); // TODO
+
     for (let i = 0; i < count; i++) {
       const type = types[i % types.length];
       const typeData = virusTypes[type];
-      
+
       if (!typeData) continue;
-      
-      // 코어에서 멀리! 화면 가장자리에 홈 배치
+
+      // TODO
       const margin = 40;
       const screenW = this.canvas.width;
       const screenH = this.canvas.height;
       const coreX = this.core.x;
       const coreY = this.core.y;
-      
-      // 화면을 4구역으로 나눠서 골고루 배치
-      const zone = i % 4; // 0: 좌상, 1: 우상, 2: 좌하, 3: 우하
+
+      // TODO
+      const zone = i % 4; // TODO
       let spawnX, spawnY;
-      
+
       switch (zone) {
-        case 0: // 좌상단
+        case 0: // TODO
           spawnX = margin + Math.random() * (screenW * 0.35 - margin);
           spawnY = margin + Math.random() * (screenH * 0.35 - margin);
           break;
-        case 1: // 우상단
+        case 1: // TODO
           spawnX = screenW * 0.65 + Math.random() * (screenW * 0.35 - margin);
           spawnY = margin + Math.random() * (screenH * 0.35 - margin);
           break;
-        case 2: // 좌하단
+        case 2: // TODO
           spawnX = margin + Math.random() * (screenW * 0.35 - margin);
           spawnY = screenH * 0.65 + Math.random() * (screenH * 0.35 - margin);
           break;
-        case 3: // 우하단
+        case 3: // TODO
           spawnX = screenW * 0.65 + Math.random() * (screenW * 0.35 - margin);
           spawnY = screenH * 0.65 + Math.random() * (screenH * 0.35 - margin);
           break;
       }
-      
-      // 혹시 코어 근처(150px)면 더 밀어내기
+
+      // TODO
       const distFromCore = Math.hypot(spawnX - coreX, spawnY - coreY);
       if (distFromCore < 150) {
         const pushAngle = Math.atan2(spawnY - coreY, spawnX - coreX);
         spawnX = coreX + Math.cos(pushAngle) * 180;
         spawnY = coreY + Math.sin(pushAngle) * 180;
       }
-      
+
       const ally = {
         x: spawnX,
         y: spawnY,
@@ -4761,39 +4824,39 @@ export class DefenseGame {
         maxHp: typeData.baseHp || 20,
         baseMaxHp: typeData.baseHp || 20,
         damage: typeData.baseDamage || 10,
-        virusType: type, // 렌더링에서 모양 결정에 사용
+        virusType: type, // TODO
         color: typeData.color || "#88ff88",
         attackType: typeData.attackType || "melee",
-        // 홈 영역 (소프트 앵커) - 스폰 위치가 홈
+        // TODO
         homeX: spawnX,
         homeY: spawnY,
-        homeRadius: 80 + Math.random() * 60, // 홈 근처 반경 (80~140px)
-        // 움직임 관련
+        homeRadius: 80 + Math.random() * 60, // TODO
+        // TODO
         vx: 0,
         vy: 0,
-        wobblePhase: Math.random() * Math.PI * 2, // 떨림 효과용
+        wobblePhase: Math.random() * Math.PI * 2, // TODO
         wanderTargetX: null,
         wanderTargetY: null,
         wanderTimer: 0,
         wanderDuration: 2 + Math.random() * 4,
-        isIdle: Math.random() < 0.2, // 20%만 쉬기
-        // 타입별 특수 속성
-        ...(type === "TANK" && { 
-          tauntCooldown: 0, 
+        isIdle: Math.random() < 0.2, // TODO
+        // TODO
+        ...(type === "TANK" && {
+          tauntCooldown: 0,
           tauntRadius: typeData.tauntRadius || 150,
           aggroRadius: typeData.aggroRadius || 180
         }),
-        ...(type === "HUNTER" && { 
-          fireRate: typeData.fireRate || 1.5, 
+        ...(type === "HUNTER" && {
+          fireRate: typeData.fireRate || 1.5,
           fireCooldown: 0,
           range: typeData.range || 150,
           projectileSpeed: typeData.projectileSpeed || 200
         }),
-        ...(type === "BOMBER" && { 
+        ...(type === "BOMBER" && {
           explosionDamage: typeData.explosionDamage || 40,
           explosionRadius: typeData.explosionRadius || 60
         }),
-        ...(type === "HEALER" && { 
+        ...(type === "HEALER" && {
           healAmount: typeData.healAmount || 5,
           healRadius: typeData.healRadius || 80
         }),
@@ -4802,57 +4865,56 @@ export class DefenseGame {
           explosionRadius: 20
         })
       };
-      
+
       this.alliedViruses.push(ally);
     }
-    
+
     debugLog("SafeZone", `Spawned ${this.alliedViruses.length} allied viruses`);
   }
 
-  // 스테이지 기본 난이도 계산 (스테이지 ID + difficultyScale 기반)
+  // TODO
   calculateStageBaseDifficulty() {
-    // 스테이지 ID가 높을수록 기본 난이도 증가
-    // Safe Zone (0): 0.5
-    // 초반 스테이지 (1-2): 1.0
-    // 중반 스테이지 (3-4): 1.5
-    // 후반 스테이지 (5-6): 2.0
+    // TODO
+    // TODO
+    // TODO
+    // TODO
+    // TODO
 
     let baseDifficulty;
     if (this.currentStageId === 0) {
-      baseDifficulty = 0.5; // Safe Zone
+      baseDifficulty = 0.5; // TODO
     } else if (this.currentStageId <= 2) {
-      baseDifficulty = 1.0; // 초반
+      baseDifficulty = 1.0; // TODO
     } else if (this.currentStageId <= 4) {
-      baseDifficulty = 1.5; // 중반
+      baseDifficulty = 1.5; // TODO
     } else {
-      baseDifficulty = 2.0; // 후반 (Boss 포함)
+      baseDifficulty = 2.0; // TODO
     }
 
-    // StageManager의 difficultyScale 적용 (페이지당 증가폭 조정)
-    // difficultyScale이 높을수록 페이지 진행에 따른 난이도 증가가 빠름
-    // 하지만 기본 난이도는 스테이지 ID 기반으로 유지
+    // TODO
+    // TODO
+    // TODO
     return baseDifficulty;
   }
 
-  // 조력자(Helper) 업데이트 로직 - 자동 공격 + 회피
+  // TODO
   updateHelper(dt, now) {
     const helper = this.helper;
-    const shieldRadius = this.core.shieldRadius - 15; // 배리어 내부 여유
-    const minDistFromCore = 45; // 코어와 최소 거리 (25 → 45로 증가)
+    const shieldRadius = this.core.shieldRadius - 15; // TODO
+    const minDistFromCore = 45; // TODO
 
-    // 조력자 초기 위치 설정 (첫 프레임)
+    // TODO
     if (helper.x === 0 && helper.y === 0) {
-      helper.x = this.core.x + 50; // 코어 오른쪽에서 시작 (35 → 50)
+      helper.x = this.core.x + 50; // TODO
       helper.y = this.core.y;
       helper.targetX = helper.x;
       helper.targetY = helper.y;
     }
 
-    // 1. 가장 가까운 적 찾기
+    // TODO
     let nearestEnemy = null;
     let minDist = Infinity;
-    let enemyInsideShield = null; // 배리어 내부에 들어온 적
-
+    let enemyInsideShield = null; // TODO
     this.enemies.forEach((enemy) => {
       const distToCore = Math.hypot(
         enemy.x - this.core.x,
@@ -4860,39 +4922,39 @@ export class DefenseGame {
       );
       const distToHelper = Math.hypot(enemy.x - helper.x, enemy.y - helper.y);
 
-      // 배리어 내부에 들어온 적 확인
+      // TODO
       if (distToCore < this.core.shieldRadius) {
         if (
           !enemyInsideShield ||
           distToHelper <
-            Math.hypot(
-              enemyInsideShield.x - helper.x,
-              enemyInsideShield.y - helper.y
-            )
+          Math.hypot(
+            enemyInsideShield.x - helper.x,
+            enemyInsideShield.y - helper.y
+          )
         ) {
           enemyInsideShield = enemy;
         }
       }
 
-      // 사거리 내 가장 가까운 적
+      // TODO
       if (distToHelper < helper.range && distToHelper < minDist) {
         minDist = distToHelper;
         nearestEnemy = enemy;
       }
     });
 
-    // 2. 회피 로직 - 적이 배리어 내부에 있으면 회피
+    // TODO
     if (enemyInsideShield) {
       const dx = helper.x - enemyInsideShield.x;
       const dy = helper.y - enemyInsideShield.y;
       const dist = Math.hypot(dx, dy);
 
       if (dist < helper.evadeDistance && dist > 0) {
-        // 적 반대 방향으로 회피
+        // TODO
         const evadeX = helper.x + (dx / dist) * 40;
         const evadeY = helper.y + (dy / dist) * 40;
 
-        // 배리어 내부 범위 제한 (코어와 거리 유지)
+        // TODO
         const evadeDistToCore = Math.hypot(
           evadeX - this.core.x,
           evadeY - this.core.y
@@ -4904,14 +4966,14 @@ export class DefenseGame {
           helper.targetX = evadeX;
           helper.targetY = evadeY;
         } else if (evadeDistToCore <= minDistFromCore) {
-          // 코어와 너무 가까우면 바깥쪽으로
+          // TODO
           const angle = Math.atan2(evadeY - this.core.y, evadeX - this.core.x);
           helper.targetX =
             this.core.x + Math.cos(angle) * (minDistFromCore + 10);
           helper.targetY =
             this.core.y + Math.sin(angle) * (minDistFromCore + 10);
         } else {
-          // 배리어 밖이면 안쪽으로
+          // TODO
           const angle = Math.atan2(
             helper.y - this.core.y,
             helper.x - this.core.x
@@ -4921,7 +4983,7 @@ export class DefenseGame {
         }
       }
     } else if (nearestEnemy) {
-      // 적이 있으면 적 방향으로 살짝 이동 (하지만 배리어 내부에 머무름)
+      // TODO
       const angleToEnemy = Math.atan2(
         nearestEnemy.y - this.core.y,
         nearestEnemy.x - this.core.x
@@ -4930,27 +4992,27 @@ export class DefenseGame {
       helper.targetX = this.core.x + Math.cos(angleToEnemy) * targetDist;
       helper.targetY = this.core.y + Math.sin(angleToEnemy) * targetDist;
     } else {
-      // 적이 없으면 코어 주변에서 부드럽게 순찰 (회전)
+      // TODO
       if (!helper.patrolAngle) helper.patrolAngle = 0;
-      helper.patrolAngle += dt * 0.3; // 느리게 회전
+      helper.patrolAngle += dt * 0.3; // TODO
       const patrolDist = minDistFromCore + 10;
       helper.targetX = this.core.x + Math.cos(helper.patrolAngle) * patrolDist;
       helper.targetY = this.core.y + Math.sin(helper.patrolAngle) * patrolDist;
     }
 
-    // 3. 목표 위치로 부드럽게 이동 (lerp 방식 - 아군 바이러스와 동일)
-    const lerpSpeed = enemyInsideShield ? 3.5 : 1.5; // 회피 시 더 빠르게
+    // TODO
+    const lerpSpeed = enemyInsideShield ? 3.5 : 1.5; // TODO
     helper.x += (helper.targetX - helper.x) * dt * lerpSpeed;
     helper.y += (helper.targetY - helper.y) * dt * lerpSpeed;
 
-    // 배리어 내부 범위 제한 + 코어와 최소 거리 유지 (부드럽게)
+    // TODO
     const distToCore = Math.hypot(
       helper.x - this.core.x,
       helper.y - this.core.y
     );
     const angle = Math.atan2(helper.y - this.core.y, helper.x - this.core.x);
 
-    // 배리어 밖으로 나가면 안쪽으로 (부드럽게)
+    // TODO
     if (distToCore > shieldRadius) {
       const clampedX = this.core.x + Math.cos(angle) * shieldRadius;
       const clampedY = this.core.y + Math.sin(angle) * shieldRadius;
@@ -4958,7 +5020,7 @@ export class DefenseGame {
       helper.y += (clampedY - helper.y) * dt * 5;
     }
 
-    // 코어와 너무 가까우면 바깥쪽으로 (부드럽게)
+    // TODO
     if (distToCore < minDistFromCore) {
       const pushX = this.core.x + Math.cos(angle) * minDistFromCore;
       const pushY = this.core.y + Math.sin(angle) * minDistFromCore;
@@ -4966,23 +5028,23 @@ export class DefenseGame {
       helper.y += (pushY - helper.y) * dt * 5;
     }
 
-    // 4. 자동 발사 (적이 있으면 항상 발사)
+    // TODO
     if (nearestEnemy) {
-      // 적을 향해 바라보기
+      // TODO
       helper.angle = Math.atan2(
         nearestEnemy.y - helper.y,
         nearestEnemy.x - helper.x
       );
 
-      // 발사 간격 체크
+      // TODO
       const fireInterval = 1 / helper.fireRate;
       const timeSinceLastFire = now - helper.lastFireTime;
 
       if (timeSinceLastFire >= fireInterval) {
         debugLog(
           "Helper",
-          "발사!",
-          "타겟:",
+          "!",
+          "??",
           nearestEnemy.x.toFixed(0),
           nearestEnemy.y.toFixed(0)
         );
@@ -4990,7 +5052,7 @@ export class DefenseGame {
         helper.lastFireTime = now;
       }
     } else if (this.enemies.length > 0) {
-      // 적이 있는데 타겟이 없음 - 사거리 밖 (디버그용)
+      // TODO
       if (!this._helperNoTargetLogged) {
         const firstEnemy = this.enemies[0];
         const dist = Math.hypot(
@@ -4999,10 +5061,10 @@ export class DefenseGame {
         );
         debugLog(
           "Helper",
-          "사거리 밖!",
-          "거리:",
+          "???",
+          ":",
           dist.toFixed(0),
-          "사거리:",
+          "??",
           helper.range
         );
         this._helperNoTargetLogged = true;
@@ -5013,7 +5075,7 @@ export class DefenseGame {
     }
   }
 
-  // 무기 모드 변경
+  // TODO
   setWeaponMode(modeName) {
     const mode = this.weaponModes[modeName];
     if (!mode) {
@@ -5024,13 +5086,13 @@ export class DefenseGame {
     this.helper.weaponMode = modeName;
     this.helper.color = mode.color;
 
-    // 기본 스탯 적용 (업그레이드 보너스는 별도 적용)
+    // TODO
     this.helper.damage = mode.baseDamage;
     this.helper.fireRate = mode.baseFireRate;
     this.helper.range = mode.baseRange;
     this.helper.projectileSpeed = mode.baseProjectileSpeed;
 
-    // 재장전 시스템 초기화 (모든 무기 탄창 있음)
+    // TODO
     const magazineBonus = this.helper.magazineBonus || 0;
     this.helper.currentAmmo = mode.magazineSize + magazineBonus;
     this.helper.isReloading = false;
@@ -5045,12 +5107,12 @@ export class DefenseGame {
     );
   }
 
-  // 현재 무기 모드 정보 반환
+  // TODO
   getCurrentWeaponMode() {
     return this.weaponModes[this.helper.weaponMode] || this.weaponModes.NORMAL;
   }
 
-  // 업그레이드 보너스 적용 (무기 모드 기본값 + 보너스)
+  // TODO
   applyUpgradeBonus(
     bonusDamage,
     bonusFireRate,
@@ -5064,8 +5126,7 @@ export class DefenseGame {
     this.helper.fireRate = mode.baseFireRate + bonusFireRate;
     this.helper.range = mode.baseRange + bonusRange;
     this.helper.projectileSpeed = mode.baseProjectileSpeed + bonusBulletSpeed;
-    this.helper.magazineBonus = bonusMagazine; // 탄창 보너스 저장
-
+    this.helper.magazineBonus = bonusMagazine; // TODO
     debugLog("Defense", "Upgrade bonus applied:", {
       damage: this.helper.damage,
       fireRate: this.helper.fireRate,
@@ -5075,16 +5136,16 @@ export class DefenseGame {
     });
   }
 
-  // 조력자 발사체 생성 (무기 모드별 발사 패턴)
+  // TODO
   fireHelperProjectile(target) {
     const mode = this.getCurrentWeaponMode();
     const asciiChars =
       "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-    // 재장전 시스템 체크
+    // TODO
     if (mode.hasReload) {
       if (this.helper.isReloading) {
-        return; // 재장전 중이면 발사 안 함
+        return; // TODO
       }
       if (this.helper.currentAmmo <= 0) {
         this.startReload();
@@ -5097,8 +5158,8 @@ export class DefenseGame {
     const dy = target.y - this.helper.y;
     const dist = Math.hypot(dx, dy);
     const baseAngle = Math.atan2(dy, dx);
-    
-    // 발사 각도 저장 (얼굴 움직임용) - faceLook 전용 속성
+
+    // TODO
     this.helper.faceLookAngle = baseAngle;
     this.helper.faceLookTime = performance.now();
     debugLog("Helper", "angle:", baseAngle.toFixed(2), "time:", this.helper.faceLookTime);
@@ -5107,18 +5168,18 @@ export class DefenseGame {
     const projectileCount = mode.projectileCount || 1;
     const spreadAngle = mode.spreadAngle || 0;
 
-    // 발사체 생성 (발사 패턴별)
+    // TODO
     for (let i = 0; i < projectileCount; i++) {
       let angle = baseAngle;
 
-      // 산탄 패턴 (여러 발)
+      // TODO
       if (projectileCount > 1) {
         const spreadOffset =
           (i - (projectileCount - 1) / 2) *
           (spreadAngle / (projectileCount - 1));
         angle = baseAngle + spreadOffset;
       }
-      // 탄퍼짐 (단발에도 적용 가능)
+      // TODO
       else if (spreadAngle > 0) {
         angle += (Math.random() - 0.5) * spreadAngle;
       }
@@ -5137,21 +5198,21 @@ export class DefenseGame {
         char: randomChar,
         color: mode.color,
         fromHelper: true,
-        // 폭발 속성
+        // TODO
         explosive: mode.explosive || false,
         explosionRadius: mode.explosionRadius || 0,
-        // 관통 속성
+        // TODO
         piercing: mode.piercing || false,
       });
     }
 
-    // 탄약 부족 시 자동 재장전
+    // TODO
     if (mode.hasReload && this.helper.currentAmmo <= 0) {
       this.startReload();
     }
   }
 
-  // 재장전 시작
+  // TODO
   startReload() {
     const mode = this.getCurrentWeaponMode();
     if (!mode.hasReload || this.helper.isReloading) return;
@@ -5163,7 +5224,7 @@ export class DefenseGame {
     debugLog("Defense", "Reload started:", mode.name);
   }
 
-  // 재장전 업데이트 (update 루프에서 호출)
+  // TODO
   updateReload(dt) {
     if (!this.helper.isReloading) return;
 
@@ -5173,11 +5234,11 @@ export class DefenseGame {
       return;
     }
 
-    // Fire Rate가 재장전 속도에 영향 (공식: 실제 시간 = 기본 시간 / (1 + RATE * 0.1))
+    // TODO
     const reloadSpeedMultiplier = 1 + this.helper.fireRate * 0.1;
     const calculatedReloadTime = mode.reloadTime / reloadSpeedMultiplier;
 
-    // 무기별 최소 재장전 시간 (SNIPER, LAUNCHER는 1.2초, 나머지 1.0초)
+    // TODO
     const minReloadTime =
       mode.name === "SNIPER" || mode.name === "LAUNCHER" ? 1.2 : 1.0;
     const actualReloadTime = Math.max(minReloadTime, calculatedReloadTime);
@@ -5186,7 +5247,7 @@ export class DefenseGame {
     this.helper.reloadProgress = Math.min(elapsed / actualReloadTime, 1);
 
     if (this.helper.reloadProgress >= 1) {
-      // 재장전 완료 - 탄창 크기 보너스 적용
+      // TODO
       const magazineBonus = this.helper.magazineBonus || 0;
       this.helper.currentAmmo = mode.magazineSize + magazineBonus;
       this.helper.isReloading = false;
@@ -5201,12 +5262,12 @@ export class DefenseGame {
     }
   }
 
-  // 폭발 처리 (LAUNCHER용) - 범위 내 모든 적에게 데미지
+  // TODO
   handleExplosion(x, y, radius, damage, color) {
-    // 시각 효과: 큰 폭발 파티클
+    // TODO
     this.createExplosion(x, y, color || "#ff4400", 25);
 
-    // 파동 효과
+    // TODO
     this.shockwaves.push({
       x: x,
       y: y,
@@ -5219,25 +5280,25 @@ export class DefenseGame {
       damageDealt: false,
     });
 
-    // 범위 내 모든 적에게 데미지 + 넉백
+    // TODO
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
       const dist = Math.hypot(enemy.x - x, enemy.y - y);
 
       if (dist <= radius) {
-        // 거리에 따른 데미지 감소 (중심: 100%, 가장자리: 50%)
+        // TODO
         const damageMultiplier = 1 - (dist / radius) * 0.5;
         const actualDamage = Math.floor(damage * damageMultiplier);
 
         enemy.hp -= actualDamage;
 
-        // 넉백 적용
+        // TODO
         this.applyKnockback(enemy, 150, 0.5, 1);
 
-        // 피격 이펙트
+        // TODO
         this.createExplosion(enemy.x, enemy.y, "#ff8800", 3);
 
-        // 적 처치
+        // TODO
         if (enemy.hp <= 0) {
           this.enemies.splice(i, 1);
           this.createExplosion(enemy.x, enemy.y, "#ff0000", 15);
@@ -5263,14 +5324,14 @@ export class DefenseGame {
   }
 
   fireProjectile(target) {
-    // 랜덤 아스키 문자 (33~126: 출력 가능한 ASCII)
+    // TODO
     const asciiChars =
       "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     const randomChar =
       asciiChars[Math.floor(Math.random() * asciiChars.length)];
 
-    // 코어가 발사 방향으로 움찔하는 효과
-    const recoilDist = 8; // 반동 거리
+    // TODO
+    const recoilDist = 8; // TODO
     this.core.targetOffsetX = Math.cos(this.turret.angle) * recoilDist;
     this.core.targetOffsetY = Math.sin(this.turret.angle) * recoilDist;
 
@@ -5279,11 +5340,11 @@ export class DefenseGame {
       y: this.core.y,
       target: target,
       angle: this.turret.angle,
-      speed: 400, // 탄속 증가
+      speed: 400, // TODO
       damage: this.turret.damage,
       radius: 4,
       life: 2.0,
-      char: randomChar, // 랜덤 아스키 문자
+      char: randomChar, // TODO
     });
 
     this.createExplosion(
@@ -5294,14 +5355,14 @@ export class DefenseGame {
     );
   }
 
-  // 방향 지정 발사 (터치/클릭용)
+  // TODO
   fireProjectileToward(angle) {
     const asciiChars =
       "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     const randomChar =
       asciiChars[Math.floor(Math.random() * asciiChars.length)];
 
-    // 코어가 발사 방향으로 움찔하는 효과
+    // TODO
     const recoilDist = 8;
     this.core.targetOffsetX = Math.cos(angle) * recoilDist;
     this.core.targetOffsetY = Math.sin(angle) * recoilDist;
@@ -5309,7 +5370,7 @@ export class DefenseGame {
     this.projectiles.push({
       x: this.core.x,
       y: this.core.y,
-      target: null, // 타겟 없이 방향으로 발사
+      target: null, // TODO
       angle: angle,
       speed: 400,
       damage: this.turret.damage,
@@ -5326,25 +5387,24 @@ export class DefenseGame {
     );
   }
 
-  // 화면 클릭 핸들러
+  // TODO
   handleCanvasClick(e) {
-    // 게임이 활성화되어 있지 않으면 무시하지만, 디펜스 모드면 허용
+    // TODO
     if (this.isPaused) return;
 
-    // 실드 버튼 클릭은 무시
+    // TODO
     if (e.target === this.shieldBtn) return;
 
     const rect = this.canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    // gameScale 보정
-    const centerX = this.canvas.width / 2;
-    const centerY = this.canvas.height / 2;
-    const scaledClickX = (clickX - centerX) / this.gameScale + centerX;
-    const scaledClickY = (clickY - centerY) / this.gameScale + centerY;
+    // TODO
+    const worldPos = this.screenToWorld(clickX, clickY);
+    const scaledClickX = worldPos.x;
+    const scaledClickY = worldPos.y;
 
-    // 세이프존: 수납장 터치 우선
+    // TODO
     if (this.isSafeZone && this.miningManager) {
       const result = this.miningManager.handleCabinetTap(scaledClickX, scaledClickY);
       if (result.collected) {
@@ -5360,37 +5420,36 @@ export class DefenseGame {
       }
     }
 
-    this.fireAtPosition(clickX, clickY);
+    this.fireAtPosition(scaledClickX, scaledClickY);
   }
 
-  // 화면 터치 핸들러
+  // TODO
   handleCanvasTouch(e) {
     if (this.isPaused) return;
 
-    // 터치-클릭 중복 방지
+    // TODO
     e.preventDefault();
 
-    // 터치 이벤트에서 좌표 추출 (멀티터치 지원)
+    // TODO
     for (let i = 0; i < e.touches.length; i++) {
       const touch = e.touches[i];
       const rect = this.canvas.getBoundingClientRect();
       const touchX = touch.clientX - rect.left;
       const touchY = touch.clientY - rect.top;
 
-      // 터치가 캔버스 내부인지 확인
+      // TODO
       if (
         touchX >= 0 &&
         touchX <= rect.width &&
         touchY >= 0 &&
         touchY <= rect.height
       ) {
-        // gameScale 보정
-        const centerX = this.canvas.width / 2;
-        const centerY = this.canvas.height / 2;
-        const scaledTouchX = (touchX - centerX) / this.gameScale + centerX;
-        const scaledTouchY = (touchY - centerY) / this.gameScale + centerY;
+        // TODO
+        const worldPos = this.screenToWorld(touchX, touchY);
+        const scaledTouchX = worldPos.x;
+        const scaledTouchY = worldPos.y;
 
-        // 세이프존: 수납장 터치 우선
+        // TODO
         if (this.isSafeZone && this.miningManager) {
           const result = this.miningManager.handleCabinetTap(scaledTouchX, scaledTouchY);
           if (result.collected) {
@@ -5406,24 +5465,44 @@ export class DefenseGame {
           }
         }
 
-        this.fireAtPosition(touchX, touchY);
+        this.fireAtPosition(scaledTouchX, scaledTouchY);
       }
     }
   }
 
-  // 키보드 핸들러 (스페이스바 발사)
+  // TODO
   handleKeyDown(e) {
     if (this.isPaused) return;
 
+    if (e.code === "KeyW") this.keyState.up = true;
+    if (e.code === "KeyS") this.keyState.down = true;
+    if (e.code === "KeyA") this.keyState.left = true;
+    if (e.code === "KeyD") this.keyState.right = true;
+
     if (e.code === "Space" || e.key === " ") {
-      e.preventDefault(); // 스크롤 방지
-      this.fireAtPosition(0, 0); // 위치는 상관없음, fireAtPosition에서 처리
+      e.preventDefault(); // TODO
+      this.fireAtPosition(0, 0); // TODO
     }
   }
 
-  // 위치 기반 발사 로직
+  handleKeyUp(e) {
+    if (e.code === "KeyW") this.keyState.up = false;
+    if (e.code === "KeyS") this.keyState.down = false;
+    if (e.code === "KeyA") this.keyState.left = false;
+    if (e.code === "KeyD") this.keyState.right = false;
+  }
+
+  screenToWorld(screenX, screenY) {
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2;
+    const worldX = (screenX - centerX) / this.gameScale + this.camera.x;
+    const worldY = (screenY - centerY) / this.gameScale + this.camera.y;
+    return { x: worldX, y: worldY };
+  }
+
+  // TODO
   fireAtPosition(x, y) {
-    // 적이 있으면 가장 가까운 적 방향으로 발사
+    // TODO
     if (this.enemies.length > 0) {
       let closestEnemy = null;
       let closestDist = Infinity;
@@ -5443,44 +5522,44 @@ export class DefenseGame {
           closestEnemy.y - this.core.y,
           closestEnemy.x - this.core.x
         );
-        this.turret.angle = angle; // 포탑 방향도 업데이트
+        this.turret.angle = angle; // TODO
         this.fireProjectileToward(angle);
       }
     } else {
-      // 적이 없으면 현재 포탑 방향으로 발사
+      // TODO
       this.fireProjectileToward(this.turret.angle);
     }
   }
 
   createExplosion(x, y, color, count = 10) {
-    // 모바일 최적화: 파티클 수 감소
+    // TODO
     const actualCount = Math.ceil(count * this.particleMultiplier);
 
-    // 파티클 수 제한 체크
+    // TODO
     if (this.particles.length >= this.maxParticles) {
-      // 오래된 파티클 제거
+      // TODO
       this.particles.splice(0, actualCount);
     }
 
-    // 글리치 스타일 아스키 문자들
-    const glitchChars = "!@#$%^&*?/<>[]{}|\\~`░▒▓█▀▄■□";
+    // TODO
+    const glitchChars = "!@#$%^&*?/<>[]{}|\\~`??????";
 
     for (let i = 0; i < actualCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 120; // 약간 더 빠르게
-      const life = 0.2 + Math.random() * 0.4; // 수명
+      const speed = Math.random() * 120; // TODO
+      const life = 0.2 + Math.random() * 0.4; // TODO
 
-      // 글리치 색상 (주 색상 + 랜덤 노이즈)
+      // TODO
       let particleColor = color;
       const colorRoll = Math.random();
       if (colorRoll < 0.15) {
-        particleColor = "#ff0000"; // 빨간 노이즈
-      } else if (colorRoll < 0.25) {
-        particleColor = "#ffffff"; // 흰색 노이즈
+        particleColor = "#ff0000"; // TODO
+      } else if (colorRoll < 0.25) { // TODO
+        particleColor = "#ffffff"; // TODO
       }
 
       this.particles.push({
-        x: x + (Math.random() - 0.5) * 10, // 약간 흩어진 시작점
+        x: x + (Math.random() - 0.5) * 10, // TODO
         y: y + (Math.random() - 0.5) * 10,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
@@ -5488,17 +5567,17 @@ export class DefenseGame {
         maxLife: life,
         alpha: 1,
         color: particleColor,
-        size: 10 + Math.random() * 4, // 폰트 크기
-        char: glitchChars[Math.floor(Math.random() * glitchChars.length)], // 랜덤 문자
-        glitchOffset: { x: 0, y: 0 }, // 글리치 떨림용
-        flickerTimer: Math.random() * 0.1, // 깜빡임 타이머
+        size: 10 + Math.random() * 4, // TODO
+        char: glitchChars[Math.floor(Math.random() * glitchChars.length)], // TODO
+        glitchOffset: { x: 0, y: 0 }, // TODO
+        flickerTimer: Math.random() * 0.1, // TODO
       });
     }
   }
 
-  // 도발 이펙트 (깔끔한 원형 파동)
+  // TODO
   createTauntEffect(x, y, radius, color) {
-    // 파동 링 효과 (shockwave 사용)
+    // TODO
     this.shockwaves.push({
       x: x,
       y: y,
@@ -5508,10 +5587,10 @@ export class DefenseGame {
       alpha: 0.8,
       color: color,
       lineWidth: 3,
-      isTaunt: true, // 도발 전용
+      isTaunt: true, // TODO
     });
 
-    // 두 번째 파동 (약간 지연)
+    // TODO
     setTimeout(() => {
       if (!this.isRunning) return;
       this.shockwaves.push({
@@ -5527,7 +5606,7 @@ export class DefenseGame {
       });
     }, 100);
 
-    // 모바일 아니면 추가 이펙트: 작은 파티클들
+    // TODO
     if (!this.isMobile) {
       const particleCount = 6;
       for (let i = 0; i < particleCount; i++) {
@@ -5542,7 +5621,7 @@ export class DefenseGame {
           alpha: 0.8,
           color: color,
           size: 4,
-          char: "●",
+          char: "??",
         });
       }
     }
@@ -5558,22 +5637,22 @@ export class DefenseGame {
   }
 
   /**
-   * 스테이지 진입 연출 (극적인 원근법 + 글리치)
+   * ???  ? (????+ )
    */
   playIntroAnimation() {
     return new Promise((resolve) => {
-      // 중앙 좌표 저장
-      const centerX = this.canvas.width / 2;
-      const centerY = this.canvas.height / 2;
+      // TODO
+      const centerX = this.coreHome.x || this.canvas.width / 2;
+      const centerY = this.coreHome.y || this.canvas.height / 2;
 
-      // 1. 초기화 (모든 요소 완전히 제거)
+      // TODO
       this.enemies = [];
       this.projectiles = [];
       this.particles = [];
-      
+
       debugLog("Defense", "playIntroAnimation - isSafeZone:", this.isSafeZone, "alliedViruses before:", this.alliedViruses.length);
 
-      // Safe Zone에서는 아군 유지 (이미 놀고 있어야 함)
+      // TODO
       if (!this.isSafeZone) {
         debugLog("Defense", "playIntroAnimation - CLEARING alliedViruses (not Safe Zone)");
         this.alliedViruses = [];
@@ -5582,20 +5661,20 @@ export class DefenseGame {
       }
 
       debugLog("Defense", "playIntroAnimation - alliedViruses after:", this.alliedViruses.length);
-      
+
       this.droppedItems = [];
       this.collectorViruses = [];
       this.core.shieldRadius = 0;
       this.core.x = centerX;
       this.core.y = centerY;
 
-      // 체력 표시 숨김 (착지 후 글리치로 나타남)
+      // TODO
       this.showCoreHP = false;
 
-      // 원근법: 모바일에서는 스케일 제한 (성능 최적화)
+      // TODO
       const isMobile = window.innerWidth <= 768;
-      const startScale = isMobile ? 20.0 : 50.0; // 모바일: 20x, PC: 50x
-      const duration = isMobile ? 250 : 300; // 모바일: 더 빠르게
+      const startScale = isMobile ? 20.0 : 50.0; // TODO
+      const duration = isMobile ? 250 : 300; // TODO
       const startTime = performance.now();
 
       this.core.scale = startScale;
@@ -5610,26 +5689,26 @@ export class DefenseGame {
           const elapsed = now - startTime;
           const progress = Math.min(elapsed / duration, 1);
 
-          // ease-in quint (더 급격하게)
+          // TODO
           const easeInQuint = (t) => t * t * t * t * t;
 
-          // 스케일: Nx → 1x (급격히)
+          // TODO
           this.core.scale =
             startScale - (startScale - 1) * easeInQuint(progress);
 
           if (progress < 1) {
             requestAnimationFrame(animateDrop);
           } else {
-            // 착지!
+            // TODO
             this.core.scale = 1;
 
-            // 착지 효과
+            // TODO
             this.impactEffect();
 
-            // 글리치 효과로 체력 표시 (예외 처리 추가)
+            // TODO
             this.glitchShowHP()
               .then(() => {
-                // Safe Zone에서는 이미 아군이 놀고 있으므로 스폰 스킵
+                // TODO
                 if (this.isSafeZone) {
                   debugLog("Defense", "playIntroAnimation - SKIPPING spawnAlliesSequentially (Safe Zone)");
                   return Promise.resolve();
@@ -5640,7 +5719,7 @@ export class DefenseGame {
               .then(resolve)
               .catch((err) => {
                 console.error("IntroAnimation error:", err);
-                resolve(); // 에러 발생해도 진행
+                resolve(); // TODO
               });
           }
         } catch (err) {
@@ -5655,24 +5734,24 @@ export class DefenseGame {
   }
 
   /**
-   * 스테이지 이탈 연출 (카메라 뒤로 지나감)
-   * 귀환 시 사용 - 스케일만 커지면서 카메라를 스쳐 지나감
+   * ??? ? ? (??? ?)
+   * ????? - ??? ? ?? ? ?
    */
   playOutroAnimation() {
     return new Promise((resolve) => {
-      debugLog("Defense", "애니메이션 시작");
-      
+      debugLog("Defense", "????");
+
       const isMobile = window.innerWidth <= 768;
       const duration = isMobile ? 400 : 500;
       const startTime = performance.now();
       const startScale = 1;
       const endScale = isMobile ? 30.0 : 50.0;
 
-      // 연출 중에는 적 생성 중지 + HP 표시 숨김
+      // TODO
       this.enemySpawnTimer = 99999;
       this.isOutroPlaying = true;
-      
-      // 화면 덮는 검은 오버레이 (페이드인용)
+
+      // TODO
       const overlay = document.createElement("div");
       overlay.id = "outro-overlay";
       overlay.style.cssText = `
@@ -5691,38 +5770,38 @@ export class DefenseGame {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // ease-in quint (점점 빨라지며 카메라를 뚫고 지나감)
+        // TODO
         const easeInQuint = (t) => t * t * t * t * t;
         const easedProgress = easeInQuint(progress);
 
-        // 스케일만 커짐 - 코어가 화면을 가득 채우며 지나감
+        // TODO
         this.core.scale = startScale + (endScale - startScale) * easedProgress;
-        
-        // 마지막 30%에서 페이드 투 블랙
+
+        // TODO
         if (progress > 0.7) {
           const fadeProgress = (progress - 0.7) / 0.3;
           overlay.style.opacity = fadeProgress.toString();
         }
-        
+
         debugLog("Defense", "progress:", progress.toFixed(2), "scale:", this.core.scale.toFixed(1));
-        
-        // 강제 렌더링 (메인 루프가 안 돌아도 보이게)
+
+        // TODO
         this.render();
 
         if (progress < 1) {
           requestAnimationFrame(animateAscend);
         } else {
-          debugLog("Defense", "애니메이션 완료 - 화면 검정");
-          // 완료 - 화면은 검정 상태로 유지
+          debugLog("Defense", "???? - ? ??");
+          // TODO
           overlay.style.opacity = "1";
 
-          // 0.5초 후 오버레이 제거 (moveToStage가 처리)
+          // TODO
           setTimeout(() => {
             overlay.remove();
-            debugLog("Defense", "오버레이 제거");
+            debugLog("Defense", "?? ?");
           }, 500);
-          
-          // 스케일 리셋 (화면이 검정이라 안 보임)
+
+          // TODO
           this.core.scale = 1;
           this.isOutroPlaying = false;
           resolve();
@@ -5733,12 +5812,12 @@ export class DefenseGame {
     });
   }
 
-  // 착지 충격 효과 (화면 번쩍 + 흔들림 + 충격파 + 사운드)
+  // TODO
   impactEffect() {
-    // 0. 착지 사운드 (쾅!)
+    // TODO
     this.playImpactSound();
-    
-    // 1. 화면 번쩍 (흰색 플래시)
+
+    // TODO
     const flash = document.createElement("div");
     flash.style.cssText = `
       position: fixed;
@@ -5757,25 +5836,25 @@ export class DefenseGame {
       setTimeout(() => flash.remove(), 200);
     }, 50);
 
-    // 2. 화면 흔들림
+    // TODO
     this.shakeScreen();
 
-    // 3. 충격파 파티클
+    // TODO
     this.spawnShockwave();
-    
-    // 4. Safe Zone이면 글리치 텍스트 표시
+
+    // TODO
     if (this.isSafeZone) {
       setTimeout(() => this.showSafeZoneText(), 300);
     }
   }
-  
-  // 착지 사운드 재생 (Web Audio API) - 묵직한 쿵! 소리
+
+  // TODO
   playImpactSound() {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const now = audioCtx.currentTime;
-      
-      // 1. 저주파 베이스 (쿵하는 묵직한 소리)
+
+      // TODO
       const bass = audioCtx.createOscillator();
       const bassGain = audioCtx.createGain();
       bass.type = 'sine';
@@ -5787,8 +5866,8 @@ export class DefenseGame {
       bassGain.connect(audioCtx.destination);
       bass.start(now);
       bass.stop(now + 0.4);
-      
-      // 2. 중저주파 펀치 (타격감)
+
+      // TODO
       const punch = audioCtx.createOscillator();
       const punchGain = audioCtx.createGain();
       punch.type = 'triangle';
@@ -5800,22 +5879,22 @@ export class DefenseGame {
       punchGain.connect(audioCtx.destination);
       punch.start(now);
       punch.stop(now + 0.15);
-      
-      // 3. 짧은 노이즈 버스트 (충격파 느낌)
+
+      // TODO
       const bufferSize = audioCtx.sampleRate * 0.08;
       const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const noiseData = noiseBuffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
-        // 빠르게 감쇠하는 노이즈
+        // TODO
         noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
       }
-      
+
       const noise = audioCtx.createBufferSource();
       const noiseGain = audioCtx.createGain();
       const lowpass = audioCtx.createBiquadFilter();
       lowpass.type = 'lowpass';
-      lowpass.frequency.value = 400; // 저역만 통과 (묵직함)
-      
+      lowpass.frequency.value = 400; // TODO
+
       noise.buffer = noiseBuffer;
       noise.connect(lowpass);
       lowpass.connect(noiseGain);
@@ -5826,13 +5905,13 @@ export class DefenseGame {
       debugLog("Defense", "Audio not supported:", e);
     }
   }
-  
-  // Safe Zone 글리치 텍스트 표시
+
+  // TODO
   showSafeZoneText() {
     const isMobile = window.innerWidth <= 768;
     const fontSize = isMobile ? 28 : 48;
-    
-    // 글리치 컨테이너 생성
+
+    // TODO
     const container = document.createElement("div");
     container.id = "safezone-text";
     container.style.cssText = `
@@ -5852,23 +5931,23 @@ export class DefenseGame {
     `;
     container.textContent = "SAFE ZONE";
     document.body.appendChild(container);
-    
-    // 글리치 애니메이션
+
+    // TODO
     let glitchCount = 0;
     const maxGlitches = 12;
-    
+
     const glitchInterval = setInterval(() => {
       glitchCount++;
-      
-      // 글리치 효과: 위치 떨림 + 색상 분리 + 깜빡임
+
+      // TODO
       const offsetX = (Math.random() - 0.5) * 20;
       const offsetY = (Math.random() - 0.5) * 10;
       const skewX = (Math.random() - 0.5) * 5;
-      
+
       container.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) skewX(${skewX}deg)`;
       container.style.opacity = Math.random() > 0.3 ? "1" : "0.5";
-      
-      // 색상 분리 효과 (치직 느낌)
+
+      // TODO
       if (Math.random() > 0.5) {
         container.style.textShadow = `
           ${Math.random() * 5}px 0 #ff0000,
@@ -5879,19 +5958,19 @@ export class DefenseGame {
       } else {
         container.style.textShadow = "0 0 10px #00ff00, 0 0 20px #00ff00";
       }
-      
-      // 글리치 사운드 (치직)
+
+      // TODO
       if (glitchCount <= 6 && Math.random() > 0.5) {
         this.playGlitchSound();
       }
-      
+
       if (glitchCount >= maxGlitches) {
         clearInterval(glitchInterval);
-        // 안정화 후 페이드아웃
+        // TODO
         container.style.transform = "translate(-50%, -50%)";
         container.style.textShadow = "0 0 10px #00ff00, 0 0 20px #00ff00";
         container.style.opacity = "1";
-        
+
         setTimeout(() => {
           container.style.transition = "opacity 0.5s";
           container.style.opacity = "0";
@@ -5900,43 +5979,43 @@ export class DefenseGame {
       }
     }, 80);
   }
-  
-  // 글리치 사운드 (치직)
+
+  // TODO
   playGlitchSound() {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      
-      // 노이즈 버퍼
+
+      // TODO
       const bufferSize = audioCtx.sampleRate * 0.05;
       const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const noiseData = noiseBuffer.getChannelData(0);
-      
+
       for (let i = 0; i < bufferSize; i++) {
         noiseData[i] = (Math.random() * 2 - 1) * 0.5;
       }
-      
+
       const noiseSource = audioCtx.createBufferSource();
       const gainNode = audioCtx.createGain();
       const filter = audioCtx.createBiquadFilter();
-      
+
       filter.type = 'highpass';
       filter.frequency.value = 2000;
-      
+
       noiseSource.buffer = noiseBuffer;
       noiseSource.connect(filter);
       filter.connect(gainNode);
       gainNode.connect(audioCtx.destination);
-      
+
       gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-      
+
       noiseSource.start(audioCtx.currentTime);
     } catch (e) {
-      // Audio not supported
+      // TODO
     }
   }
 
-  // 글리치 효과로 HP 표시
+  // TODO
   glitchShowHP() {
     return new Promise((resolve) => {
       let glitchCount = 0;
@@ -5950,7 +6029,7 @@ export class DefenseGame {
           return;
         }
 
-        // 랜덤하게 표시/숨김 (치지직)
+        // TODO
         this.showCoreHP = Math.random() > 0.3;
         this.glitchText = true;
         this.glitchOffset = {
@@ -5966,7 +6045,7 @@ export class DefenseGame {
     });
   }
 
-  // 화면 흔들림 효과
+  // TODO
   shakeScreen() {
     const container = document.getElementById("game-container");
     if (!container) return;
@@ -5974,8 +6053,7 @@ export class DefenseGame {
     container.style.transition = "none";
     let shakeCount = 0;
     const maxShakes = 8;
-    const shakeIntensity = 15; // 더 강하게
-
+    const shakeIntensity = 15; // TODO
     const doShake = () => {
       if (shakeCount >= maxShakes) {
         container.style.transform = "translate(0, 0)";
@@ -5994,7 +6072,7 @@ export class DefenseGame {
     doShake();
   }
 
-  // 화면 플래시 효과
+  // TODO
   flashScreen(color = "#ffffff", duration = 0.2) {
     const flash = document.createElement("div");
     flash.style.cssText = `
@@ -6008,7 +6086,7 @@ export class DefenseGame {
     `;
     document.body.appendChild(flash);
 
-    // 페이드 아웃
+    // TODO
     const startTime = performance.now();
     const animate = (now) => {
       const elapsed = now - startTime;
@@ -6024,7 +6102,7 @@ export class DefenseGame {
     requestAnimationFrame(animate);
   }
 
-  // 착지 충격 파티클
+  // TODO
   spawnImpactParticles(intensity) {
     for (let i = 0; i < intensity * 3; i++) {
       this.particles.push({
@@ -6042,7 +6120,7 @@ export class DefenseGame {
   }
 
   spawnShockwave() {
-    // 충격파 파티클 생성 (모바일 최적화)
+    // TODO
     const count = this.isMobile ? 8 : 20;
     for (let i = 0; i < count; i++) {
       this.particles.push({
@@ -6060,13 +6138,13 @@ export class DefenseGame {
   }
 
   async spawnAlliesSequentially() {
-    // 새로운 슬롯 시스템 사용
+    // TODO
     if (this.alliedConfig) {
       await this.spawnAlliesWithConfig();
       return;
     }
 
-    // 레거시 시스템 (호환용)
+    // TODO
     const count = this.alliedInfo.count;
     debugLog("Defense", "spawnAllies Starting (legacy), count:", count);
 
@@ -6075,18 +6153,18 @@ export class DefenseGame {
       return;
     }
 
-    // 확실한 초기화
+    // TODO
     this.alliedViruses = [];
 
-    const delay = 250; // 0.25초 간격
-    const targetRadius = 95; // 최종 위치 (배리어 70 밖: 95)
+    const delay = 250; // TODO
+    const targetRadius = 95; // TODO
 
     for (let i = 0; i < count; i++) {
-      const angle = ((Math.PI * 2) / count) * i; // 시계 방향
+      const angle = ((Math.PI * 2) / count) * i; // TODO
 
-      // 아군 바이러스 추가 (코어 중앙에서 시작)
+      // TODO
       const ally = {
-        x: this.core.x, // 코어 중앙에서 시작
+        x: this.core.x, // TODO
         y: this.core.y,
         targetX: this.core.x + Math.cos(angle) * targetRadius,
         targetY: this.core.y + Math.sin(angle) * targetRadius,
@@ -6098,21 +6176,21 @@ export class DefenseGame {
         color: this.alliedInfo.color || "#00aaff",
         target: null,
         attackTimer: 0,
-        // 튀어나오기 애니메이션용
+        // TODO
         spawning: true,
         spawnProgress: 0,
-        // 레거시: 기본 근접 타입
+        // TODO
         virusType: "SWARM",
         attackType: "melee",
       };
 
       this.alliedViruses.push(ally);
-      debugLog("Defense", "spawnAllies 푝! Ally", i + 1, "of", count);
+      debugLog("Defense", "spawnAllies ?? Ally", i + 1, "of", count);
 
-      // 튀어나오기 애니메이션 (비동기로 실행)
+      // TODO
       this.animateAllySpawn(ally, targetRadius, angle);
 
-      // 다음 아군까지 대기
+      // TODO
       await new Promise((r) => setTimeout(r, delay));
     }
 
@@ -6124,7 +6202,7 @@ export class DefenseGame {
   }
 
   /**
-   * 새로운 슬롯 시스템으로 아군 생성
+   * ???? ???? ?
    */
   async spawnAlliesWithConfig() {
     const config = this.alliedConfig;
@@ -6140,10 +6218,10 @@ export class DefenseGame {
 
     this.alliedViruses = [];
 
-    const delay = 200; // 0.2초 간격
+    const delay = 200; // TODO
     const targetRadius = 95;
 
-    // 메인 타입 바이러스 생성
+    // TODO
     for (let i = 0; i < config.mainCount; i++) {
       const angle = ((Math.PI * 2) / totalCount) * i;
       const ally = this.createVirusFromType(
@@ -6159,7 +6237,7 @@ export class DefenseGame {
       await new Promise((r) => setTimeout(r, delay));
     }
 
-    // 서브 타입 바이러스 생성
+    // TODO
     if (config.subType && config.subCount > 0) {
       for (let i = 0; i < config.subCount; i++) {
         const angle = ((Math.PI * 2) / totalCount) * (config.mainCount + i);
@@ -6185,13 +6263,13 @@ export class DefenseGame {
   }
 
   /**
-   * 타입 데이터로 바이러스 객체 생성
+   * ????? ?  ?
    */
   createVirusFromType(typeName, typeData, angle, targetRadius, config) {
-    // 순수 특화 보너스 적용
+    // TODO
     const pureBonus = config.isPureSpecialization ? config.pureBonus : 1.0;
 
-    // 업그레이드 배율 적용
+    // TODO
     const hp = Math.floor(typeData.baseHp * config.hpMultiplier * pureBonus);
     const damage = Math.floor(
       typeData.baseDamage * config.damageMultiplier * pureBonus
@@ -6205,7 +6283,7 @@ export class DefenseGame {
       targetY: this.core.y + Math.sin(angle) * targetRadius,
       hp: hp,
       maxHp: hp,
-      baseMaxHp: hp, // 시너지용 기본 HP
+      baseMaxHp: hp, // TODO
       damage: damage,
       speed: speed,
       angle: angle,
@@ -6216,11 +6294,11 @@ export class DefenseGame {
       spawning: true,
       spawnProgress: 0,
 
-      // 타입 정보
+      // TODO
       virusType: typeName,
       attackType: typeData.attackType,
 
-      // 타입별 특수 속성
+      // TODO
       special: typeData.special || null,
       range: typeData.range || 0,
       fireRate: typeData.fireRate || 0,
@@ -6231,42 +6309,42 @@ export class DefenseGame {
       healAmount: typeData.healAmount || 0,
       healRadius: typeData.healRadius || 0,
 
-      // TANK 도발 속성
+      // TODO
       tauntRadius: typeData.tauntRadius || 0,
       tauntCooldown: typeData.tauntCooldown || 0,
       aggroRadius: typeData.aggroRadius || 0,
 
-      // 리스폰 시간 (config에서)
+      // TODO
       respawnTime: config.respawnTime,
 
-      // 시너지 정보
+      // TODO
       synergy: config.synergy,
     };
   }
 
-  // 아군 튀어나오기 애니메이션
+  // TODO
   animateAllySpawn(ally, targetRadius, angle) {
-    const duration = 300; // 0.3초
+    const duration = 300; // TODO
     const startTime = performance.now();
-    const overshoot = 1.3; // 목표보다 30% 더 나갔다가 되돌아옴
+    const overshoot = 1.3; // TODO
 
     const animate = (now) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
-      // elastic ease-out (튀어나갔다가 되돌아옴)
+      // TODO
       const elasticOut = (t) => {
         if (t === 0 || t === 1) return t;
         return (
           Math.pow(2, -10 * t) *
-            Math.sin(((t * 10 - 0.75) * (2 * Math.PI)) / 3) +
+          Math.sin(((t * 10 - 0.75) * (2 * Math.PI)) / 3) +
           1
         );
       };
 
       const eased = elasticOut(progress);
 
-      // 현재 반지름 계산 (overshoot 적용)
+      // TODO
       const currentRadius = targetRadius * eased;
 
       ally.x = this.core.x + Math.cos(angle) * currentRadius;
@@ -6279,7 +6357,7 @@ export class DefenseGame {
         ally.x = this.core.x + Math.cos(angle) * targetRadius;
         ally.y = this.core.y + Math.sin(angle) * targetRadius;
 
-        // 착지 파티클 (모바일에선 줄임)
+        // TODO
         const particleCount = this.isMobile ? 3 : 6;
         for (let p = 0; p < particleCount; p++) {
           const pAngle = ((Math.PI * 2) / particleCount) * p;
@@ -6298,7 +6376,7 @@ export class DefenseGame {
       }
     };
 
-    // 시작 파티클 (코어에서 푝!) - 모바일에선 줄임
+    // TODO
     const startParticles = this.isMobile ? 2 : 4;
     for (let p = 0; p < startParticles; p++) {
       this.particles.push({
@@ -6320,21 +6398,21 @@ export class DefenseGame {
   expandShield() {
     return new Promise((resolve) => {
       const targetRadius = 70;
-      const duration = 300; // 0.3초 (더 빠르게)
+      const duration = 300; // TODO
       const start = performance.now();
 
       const animateShield = (now) => {
         const elapsed = now - start;
         const progress = Math.min(elapsed / duration, 1);
 
-        // ease-out elastic 효과
+        // TODO
         const elastic = (x) =>
           x === 0
             ? 0
             : x === 1
-            ? 1
-            : Math.pow(2, -10 * x) *
-                Math.sin(((x * 10 - 0.75) * (2 * Math.PI)) / 3) +
+              ? 1
+              : Math.pow(2, -10 * x) *
+              Math.sin(((x * 10 - 0.75) * (2 * Math.PI)) / 3) +
               1;
 
         this.core.shieldRadius = targetRadius * elastic(progress);
@@ -6349,11 +6427,11 @@ export class DefenseGame {
       requestAnimationFrame(animateShield);
     });
   }
-  
-  // === 대사 시스템 ===
-  
+
+  // TODO
+
   /**
-   * 대사 JSON 로드
+   * ???JSON 
    */
   async loadVirusDialogues() {
     try {
@@ -6365,10 +6443,9 @@ export class DefenseGame {
       this.virusDialogues = { battle: [], idle: [], hurt: [], kill: [] };
     }
   }
-  
+
   /**
-   * 랜덤 대사 가져오기
-   * @param {string} category 대사 카테고리 (battle, idle, hurt, kill, spawn, etc.)
+   * ? ?????  * @param {string} category ??? (battle, idle, hurt, kill, spawn, etc.)
    */
   getRandomDialogue(category) {
     if (!this.virusDialogues || !this.virusDialogues[category]) return null;
@@ -6376,20 +6453,19 @@ export class DefenseGame {
     if (dialogues.length === 0) return null;
     return dialogues[Math.floor(Math.random() * dialogues.length)];
   }
-  
+
   /**
-   * 말풍선 생성
-   * @param {object} virus 바이러스 객체
-   * @param {string} text 대사 텍스트
-   * @param {number} duration 표시 시간 (ms)
+   * ???
+   * @param {object} virus ? 
+   * @param {string} text ??????  * @param {number} duration ? ? (ms)
    */
   createSpeechBubble(virus, text, duration = 1500) {
     if (!text) return;
-    
-    // 이미 말하고 있으면 스킵
+
+    // TODO
     if (virus.isSpeaking) return;
     virus.isSpeaking = true;
-    
+
     const bubble = {
       virus: virus,
       text: text,
@@ -6397,20 +6473,19 @@ export class DefenseGame {
       duration: duration,
       opacity: 1
     };
-    
+
     this.activeSpeechBubbles.push(bubble);
-    
-    // 일정 시간 후 말하기 가능
+
+    // TODO
     setTimeout(() => {
       virus.isSpeaking = false;
     }, duration + 500);
   }
-  
+
   /**
-   * 아군 바이러스가 특정 상황에서 대사
-   * @param {object} virus 바이러스 객체
-   * @param {string} situation 상황 (battle, hurt, kill, idle, spawn)
-   * @param {number} chance 확률 (0~1)
+   * ? ? ? ?? ???  * @param {object} virus ? 
+   * @param {string} situation ? (battle, hurt, kill, idle, spawn)
+   * @param {number} chance ? (0~1)
    */
   tryVirusSpeech(virus, situation, chance = 0.1) {
     if (Math.random() > chance) return;
@@ -6419,84 +6494,82 @@ export class DefenseGame {
       this.createSpeechBubble(virus, text);
     }
   }
-  
+
   /**
-   * 말풍선 업데이트
+   * ????
    */
   updateSpeechBubbles() {
     const now = performance.now();
-    
-    // 만료된 말풍선 제거
+
+    // TODO
     this.activeSpeechBubbles = this.activeSpeechBubbles.filter(bubble => {
       const elapsed = now - bubble.startTime;
       if (elapsed > bubble.duration) {
         return false;
       }
-      // 페이드아웃
+      // TODO
       if (elapsed > bubble.duration - 300) {
         bubble.opacity = 1 - (elapsed - (bubble.duration - 300)) / 300;
       }
       return true;
     });
   }
-  
+
   /**
-   * 말풍선 렌더링
-   */
+   * ????  */
   renderSpeechBubbles() {
     const ctx = this.ctx;
-    
+
     this.activeSpeechBubbles.forEach(bubble => {
       const v = bubble.virus;
       if (!v) return;
-      
+
       ctx.save();
       ctx.globalAlpha = bubble.opacity;
-      
-      // 터미널 스타일 텍스트 (배경 없이 글자만)
+
+      // TODO
       const textY = v.y - v.radius - 15;
-      
-      // 폰트 크기 키움
+
+      // TODO
       ctx.font = "bold 13px 'VT323', 'Courier New', monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      
-      // 외곽선 효과 (가독성 - 배경 대신)
+
+      // TODO
       ctx.strokeStyle = "#000";
       ctx.lineWidth = 3;
       ctx.strokeText(bubble.text, v.x, textY);
-      
-      // 초록색 터미널 텍스트
+
+      // TODO
       ctx.fillStyle = "#00ff41";
       ctx.fillText(bubble.text, v.x, textY);
-      
+
       ctx.restore();
     });
   }
 
-  // ============================================
-  // === BGM WRAPPER (BGMManager 사용) ===
-  // ============================================
+  // TODO
+  // TODO
+  // TODO
 
   /**
-   * BGM 트랙 재생
-   * @param {string} trackName - 트랙 이름 (SAFE_ZONE, DEFENSE, FINAL)
+   * BGM ? ?
+   * @param {string} trackName - ? ? (SAFE_ZONE, DEFENSE, FINAL)
    */
   playBGMTrack(trackName) {
-    if (this.currentBGMTrack === trackName) return; // 이미 재생 중
-    
+    if (this.currentBGMTrack === trackName) return; // TODO
     this.currentBGMTrack = trackName;
     this.bgmManager.play(trackName);
   }
 
   /**
-   * BGM 뮤트 토글
-   * @returns {boolean} - 뮤트 해제 상태면 true (ON)
+   * BGM  ??
+   * @returns {boolean} -  ? ??true (ON)
    */
   toggleBGM() {
     const isOn = this.bgmManager.toggleMute();
-    
-    // 뮤트 해제 시 현재 상태에 맞는 트랙 재생
+
+    // TODO
     if (isOn && this.isRunning) {
       if (this.isSafeZone) {
         this.playBGMTrack('SAFE_ZONE');
@@ -6506,7 +6579,130 @@ export class DefenseGame {
         this.playBGMTrack('DEFENSE');
       }
     }
-    
+
     return isOn;
+  }
+
+  updateMoveInput() {
+    let x = 0;
+    let y = 0;
+
+    if (this.isMobile && this.joystick.active) {
+      x = this.joystick.inputX;
+      y = this.joystick.inputY;
+    } else {
+      if (this.keyState.left) x -= 1;
+      if (this.keyState.right) x += 1;
+      if (this.keyState.up) y -= 1;
+      if (this.keyState.down) y += 1;
+      const len = Math.hypot(x, y);
+      if (len > 0) {
+        x /= len;
+        y /= len;
+      }
+    }
+
+    this.moveInput.x = x;
+    this.moveInput.y = y;
+  }
+
+  updateCoreMovement(dt) {
+    // TODO
+    if (this.core.shieldActive || this.core.shieldState !== "OFF") {
+      this.moveInput.x = 0;
+      this.moveInput.y = 0;
+      return;
+    }
+
+    const speed = this.coreMoveSpeed;
+    this.core.x += this.moveInput.x * speed * dt;
+    this.core.y += this.moveInput.y * speed * dt;
+
+    // TODO
+    this.core.x = Math.min(Math.max(this.core.x, 0), this.worldWidth);
+    this.core.y = Math.min(Math.max(this.core.y, 0), this.worldHeight);
+  }
+
+  updateCoreReturn(dt) {
+    const dx = this.coreHome.x - this.core.x;
+    const dy = this.coreHome.y - this.core.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 2) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      this.core.x += nx * this.coreReturnSpeed * dt;
+      this.core.y += ny * this.coreReturnSpeed * dt;
+    } else {
+      this.core.x = this.coreHome.x;
+      this.core.y = this.coreHome.y;
+      this.coreReturnAtHome = true;
+    }
+
+    if (this.coreReturnAtHome) {
+      this.coreReturnTimer -= dt;
+      if (this.coreReturnTimer <= 0) {
+        this.core.shieldState = "CHARGING";
+        this.core.shieldTimer = 2.0;
+        this.updateShieldBtnUI("CHARGING...", "#ffff00");
+      }
+    }
+  }
+
+  updateCamera() {
+    const viewW = this.canvas.width;
+    const viewH = this.canvas.height;
+    const halfW = viewW / 2;
+    const halfH = viewH / 2;
+
+    let cx = this.core.x;
+    let cy = this.core.y;
+
+    cx = Math.min(Math.max(cx, halfW), this.worldWidth - halfW);
+    cy = Math.min(Math.max(cy, halfH), this.worldHeight - halfH);
+
+    this.camera.x = cx;
+    this.camera.y = cy;
+  }
+
+  startJoystick(e) {
+    if (!this.isMobile) return;
+    this.joystick.active = true;
+    this.joystick.pointerId = e.pointerId;
+    this.updateJoystickInput(e);
+  }
+
+  moveJoystick(e) {
+    if (!this.joystick.active || e.pointerId !== this.joystick.pointerId) return;
+    this.updateJoystickInput(e);
+  }
+
+  endJoystick(e) {
+    if (!this.joystick.active || e.pointerId !== this.joystick.pointerId) return;
+    this.joystick.active = false;
+    this.joystick.pointerId = null;
+    this.joystick.inputX = 0;
+    this.joystick.inputY = 0;
+    this.joystickThumb.style.transform = "translate(-50%, -50%)";
+  }
+
+  updateJoystickInput(e) {
+    const rect = this.joystickBase.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const max = rect.width / 2;
+
+    const dist = Math.min(Math.hypot(dx, dy), max);
+    const nx = dist > 0 ? dx / max : 0;
+    const ny = dist > 0 ? dy / max : 0;
+
+    this.joystick.inputX = nx;
+    this.joystick.inputY = ny;
+
+    const thumbX = nx * (max - 20);
+    const thumbY = ny * (max - 20);
+    this.joystickThumb.style.transform = `translate(calc(-50% + ${thumbX}px), calc(-50% + ${thumbY}px))`;
   }
 }
