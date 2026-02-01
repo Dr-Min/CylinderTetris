@@ -1237,7 +1237,9 @@ export class DefenseGame {
       this.miningManager.update(
         dt, this.core, this.canvas, this.isSafeZone,
         (x, y, color, count) => this.createExplosion(x, y, color, count),
-        this.isConquered
+        this.isConquered,
+        this.camera,
+        this.gameScale
       );
       this.miningManager.resolveCabinetCollisions(this.alliedViruses, 3);
     }
@@ -2801,7 +2803,9 @@ export class DefenseGame {
     if (shouldLog) this._debugLogTimer = 0;
 
     if (this.isSafeZone) {
-      const barrierRadius = this.core.shieldRadius || 70;
+      const barrierRadius = this.core.shieldActive
+        ? (this.core.shieldRadius || 70)
+        : this.core.radius;
       const minDistance = barrierRadius + v.radius + 5;
       const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
 
@@ -2818,14 +2822,18 @@ export class DefenseGame {
       return;
     }
 
-    const barrierRadius = this.core.shieldRadius || 70;
+    const barrierRadius = this.core.shieldActive
+      ? (this.core.shieldRadius || 70)
+      : this.core.radius;
     const minDistance = barrierRadius + v.radius + 5;
     const margin = 30;
+    const worldW = this.core.worldWidth || this.canvas.width;
+    const worldH = this.core.worldHeight || this.canvas.height;
 
     const minX = margin;
-    const maxX = this.canvas.width - margin;
+    const maxX = worldW - margin;
     const minY = margin;
-    const maxY = this.canvas.height - margin;
+    const maxY = worldH - margin;
 
     const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
     const angle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
