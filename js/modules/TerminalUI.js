@@ -73,71 +73,11 @@ export class TerminalUI {
 
     // 엔터키 리스너 (showChoices나 waitForEnter에서 사용)
     this.cmdInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        const text = this.cmdInput.value.trim();
-        
-        // 글로벌 명령어 체크 (어떤 상황에서든 동작)
-        if (this.handleGlobalCommand(text)) {
-          this.cmdInput.value = "";
-          return;
-        }
-        
-        // 일반 핸들러
-        if (this.onInputEnter) {
-          this.onInputEnter(text);
-          this.cmdInput.value = "";
-        }
+      if (e.key === "Enter" && this.onInputEnter) {
+        this.onInputEnter(this.cmdInput.value.trim());
+        this.cmdInput.value = ""; // 입력 후 초기화
       }
     });
-  }
-
-  // 글로벌 명령어 처리 (/debug 등)
-  handleGlobalCommand(text) {
-    const cmd = text.toLowerCase();
-    
-    if (cmd === "/debug") {
-      this.toggleDebugPanel();
-      return true;
-    }
-    
-    if (cmd === "/setting" || cmd === "/settings") {
-      this.toggleSettingPanel();
-      return true;
-    }
-    
-    if (cmd === "/help") {
-      this.printSystemMessage("=== 글로벌 명령어 ===");
-      this.printSystemMessage("/debug - 디버그 패널 열기/닫기");
-      this.printSystemMessage("/setting - 설정 패널 열기/닫기");
-      this.printSystemMessage("/help - 도움말 표시");
-      return true;
-    }
-    
-    return false;
-  }
-
-  // 디버그 패널 토글
-  toggleDebugPanel() {
-    const debugPanel = document.getElementById("debug-panel");
-    if (debugPanel) {
-      const isHidden = debugPanel.style.display === "none";
-      debugPanel.style.display = isHidden ? "block" : "none";
-      this.printSystemMessage(`[DEBUG] Panel ${isHidden ? "OPENED" : "CLOSED"}`);
-    } else {
-      this.printSystemMessage("[ERROR] Debug panel not initialized");
-    }
-  }
-  
-  // 설정 패널 토글
-  toggleSettingPanel() {
-    const settingPanel = document.getElementById("setting-panel");
-    if (settingPanel) {
-      const isHidden = settingPanel.style.display === "none";
-      settingPanel.style.display = isHidden ? "block" : "none";
-      this.printSystemMessage(`[SETTING] Panel ${isHidden ? "OPENED" : "CLOSED"}`);
-    } else {
-      this.printSystemMessage("[ERROR] Setting panel not initialized");
-    }
   }
 
   // 데이터 마이닝 완료 연출
@@ -746,16 +686,6 @@ export class TerminalUI {
           `;
         }
         
-        // 위험 스타일 (어두운 빨간색, 작은 폰트)
-        if (choice.style === "danger") {
-          btn.style.cssText = `
-            color: #aa3333 !important;
-            border-color: #663333 !important;
-            font-size: 0.9em !important;
-            opacity: 0.7 !important;
-          `;
-        }
-        
         const displayIndex = index + 1;
         const fullText = `[${displayIndex}] ${choice.text}`;
         btn.textContent = ""; // 빈 상태로 시작
@@ -943,19 +873,19 @@ export class TerminalUI {
   }
 
   hide() {
-    debugLog("TerminalUI", "hide() 호출됨");
+    console.log("[DEBUG TerminalUI] hide() 호출됨");
     this.terminalLayer.style.display = "none";
   }
 
   show() {
-    debugLog("TerminalUI", "show() 호출됨");
-    debugLog("TerminalUI", "terminalLayer before:", this.terminalLayer?.style?.display);
+    console.log("[DEBUG TerminalUI] show() 호출됨");
+    console.log("[DEBUG TerminalUI] terminalLayer before:", this.terminalLayer?.style?.display);
     this.terminalLayer.style.display = "block";
-    debugLog("TerminalUI", "terminalLayer after:", this.terminalLayer?.style?.display);
+    console.log("[DEBUG TerminalUI] terminalLayer after:", this.terminalLayer?.style?.display);
   }
 
   setTransparentMode(enabled) {
-    debugLog("TerminalUI", "setTransparentMode(" + enabled + ") 호출됨");
+    console.log("[DEBUG TerminalUI] setTransparentMode(" + enabled + ") 호출됨");
     if (enabled) {
       this.terminalLayer.style.background = "rgba(0,0,0,0)";
       this.terminalLayer.style.pointerEvents = "none";
@@ -971,12 +901,12 @@ export class TerminalUI {
       this.terminalLayer.style.pointerEvents = "auto";
       this.terminalLayer.style.textShadow = "0 0 5px var(--term-color)";
     }
-    debugLog("TerminalUI", "background after:", this.terminalLayer?.style?.background);
+    console.log("[DEBUG TerminalUI] background after:", this.terminalLayer?.style?.background);
   }
 
   // 디펜스 모드용 (배경은 투명하게, 하지만 UI 클릭은 가능하게)
   setDefenseMode(enabled) {
-    debugLog("TerminalUI", "setDefenseMode(" + enabled + ") 호출됨");
+    console.log("[DEBUG TerminalUI] setDefenseMode(" + enabled + ") 호출됨");
     if (enabled) {
         this.terminalLayer.style.background = "rgba(0, 0, 0, 0)"; // 완전 투명
         this.terminalLayer.style.pointerEvents = "none"; // 배경은 클릭 통과 (캔버스 터치 가능)
@@ -986,7 +916,7 @@ export class TerminalUI {
         // 비활성화 시 기본 터미널 모드로 복귀
         this.setTransparentMode(false);
     }
-    debugLog("TerminalUI", "after setDefenseMode - background:", this.terminalLayer?.style?.background);
-    debugLog("TerminalUI", "after setDefenseMode - pointerEvents:", this.terminalLayer?.style?.pointerEvents);
+    console.log("[DEBUG TerminalUI] after setDefenseMode - background:", this.terminalLayer?.style?.background);
+    console.log("[DEBUG TerminalUI] after setDefenseMode - pointerEvents:", this.terminalLayer?.style?.pointerEvents);
   }
 }
