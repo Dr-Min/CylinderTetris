@@ -1,5 +1,5 @@
-// v2.1.13 - Refactor: 마이너를 alliedViruses에서 완전 분리, 자체 배열 관리
-const CACHE_NAME = "hacker-tetris-v2.1.13";
+// v2.1.16 - Fix: Sync mining scene after load to spawn miners
+const CACHE_NAME = "hacker-tetris-v2.1.16";
 const ASSETS = [
   "./",
   "./index.html",

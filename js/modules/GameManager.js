@@ -57,18 +57,18 @@ window.debugError = function (tag, ...args) {
 };
 
 // 디버그 토글 헬퍼 함수들 (콘솔에서 사용)
-window.enableDebug = function() {
+window.enableDebug = function () {
   window.DEBUG_LOG_ENABLED = true;
   console.log("✅ 디버그 로그 활성화됨");
   console.log("현재 활성화된 카테고리:", Object.keys(window.DEBUG_CATEGORIES).filter(k => window.DEBUG_CATEGORIES[k]));
 };
 
-window.disableDebug = function() {
+window.disableDebug = function () {
   window.DEBUG_LOG_ENABLED = false;
   console.log("❌ 디버그 로그 비활성화됨");
 };
 
-window.toggleDebugCategory = function(category, enabled) {
+window.toggleDebugCategory = function (category, enabled) {
   if (window.DEBUG_CATEGORIES.hasOwnProperty(category)) {
     window.DEBUG_CATEGORIES[category] = enabled;
     console.log(`${enabled ? '✅' : '❌'} [${category}] 디버그 로그 ${enabled ? '활성화' : '비활성화'}`);
@@ -77,7 +77,7 @@ window.toggleDebugCategory = function(category, enabled) {
   }
 };
 
-window.showDebugCategories = function() {
+window.showDebugCategories = function () {
   console.log("=== 디버그 카테고리 목록 ===");
   console.log("전체 디버그:", window.DEBUG_LOG_ENABLED ? "✅ ON" : "❌ OFF");
   console.log("\n카테고리별 상태:");
@@ -107,16 +107,16 @@ export class GameManager {
     this.miningManager = new MiningManager(); // 채굴 매니저
     this.defenseGame.miningManager = this.miningManager;
     this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
-    
+
     // 해금 진행률 (Decryption Progress)
     // 바이러스: TANK, HUNTER, BOMBER, HEALER (SWARM만 기본 해금)
     // 무기: SHOTGUN, SNIPER, RAPID, LAUNCHER (NORMAL만 기본 해금)
     this.decryptionProgress = {}; // { TANK: 45, SNIPER: 10 ... }
-    
+
     // 해금 대상 분류 (기본 해금 제외)
     this.virusUnlockTargets = ["TANK", "HUNTER", "BOMBER", "HEALER"]; // SWARM 제외
     this.weaponUnlockTargets = ["SHOTGUN", "SNIPER", "RAPID", "LAUNCHER"]; // NORMAL 제외
-    
+
     // 스테이지별 해금 타겟 (배열 지원 - 한 스테이지에서 여러 개 해금 가능)
     this.stageUnlockTargets = {
       1: ["TANK", "SNIPER"],           // Alpha - 탱커 + 스나이퍼
@@ -125,7 +125,7 @@ export class GameManager {
       5: ["RAPID"],                     // Delta - 래피드
       6: ["HEALER", "LAUNCHER"]         // Boss - 힐러 + 런처
     };
-    
+
     // 디버그용 아이템 드롭률 (null이면 기본값 사용, 0~1 범위)
     this.debugItemDropRate = null;
     this.debugBlueprintDropRate = null; // 블루프린트 드롭률 (null이면 기본값 사용)
@@ -154,13 +154,13 @@ export class GameManager {
     // PAGE 업데이트 연결 (터미널에 표시)
     this.defenseGame.onPageUpdate = (text, color) =>
       this.terminal.updatePage(text, color);
-    
+
     // 적 처치 시 아이템 드롭 콜백
     this.defenseGame.onEnemyKilled = (x, y) => this.tryItemDrop(x, y, "defense");
-    
+
     // 아이템 수집 완료 콜백 (수집 바이러스가 코어에 도착했을 때)
     this.defenseGame.onItemCollected = (item) => this.handleItemCollected(item);
-    
+
     // 아이템 효과 getter 연결
     this.defenseGame.getItemEffects = () => this.inventoryManager.getEquippedEffects();
 
@@ -463,7 +463,7 @@ export class GameManager {
 
     // 디버그 모드 초기화
     this.initDebugSystem();
-    
+
     // 설정 패널 초기화
     this.initSettingPanel();
   }
@@ -514,10 +514,10 @@ export class GameManager {
       background: rgba(50, 0, 0, 0.5);
       text-align: center;
     `;
-    
+
     const godModeLabel = document.createElement("label");
     godModeLabel.style.cssText = "color: #ff0000; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;";
-    
+
     const godModeCheckbox = document.createElement("input");
     godModeCheckbox.type = "checkbox";
     godModeCheckbox.id = "dbg-god-mode";
@@ -532,7 +532,7 @@ export class GameManager {
       godModeContainer.style.borderColor = enabled ? "#00ff00" : "#ff0000";
       this.terminal.printSystemMessage(`[DEBUG] GOD MODE: ${enabled ? "ON - 무적 활성화!" : "OFF"}`);
     };
-    
+
     godModeLabel.appendChild(godModeCheckbox);
     godModeLabel.appendChild(document.createTextNode("🛡️ GOD MODE (무적)"));
     godModeContainer.appendChild(godModeLabel);
@@ -604,15 +604,15 @@ export class GameManager {
       border: 1px solid #ffaa00;
       background: rgba(50, 30, 0, 0.5);
     `;
-    
+
     const dropRateTitle = document.createElement("div");
     dropRateTitle.style.cssText = "color: #ffaa00; margin-bottom: 8px; font-weight: bold;";
     dropRateTitle.innerText = "📦 ITEM DROP RATE";
     dropRateContainer.appendChild(dropRateTitle);
-    
+
     const dropRateRow = document.createElement("div");
     dropRateRow.style.cssText = "display: flex; align-items: center; gap: 10px;";
-    
+
     const dropRateSlider = document.createElement("input");
     dropRateSlider.type = "range";
     dropRateSlider.id = "dbg-drop-rate";
@@ -620,27 +620,27 @@ export class GameManager {
     dropRateSlider.max = "100";
     dropRateSlider.value = "5"; // 기본 5%
     dropRateSlider.style.cssText = "flex: 1; accent-color: #ffaa00;";
-    
+
     const dropRateValue = document.createElement("span");
     dropRateValue.id = "dbg-drop-rate-value";
     dropRateValue.style.cssText = "color: #ffaa00; min-width: 45px; text-align: right;";
     dropRateValue.innerText = "5%";
-    
+
     dropRateSlider.oninput = (e) => {
       const val = parseInt(e.target.value);
       dropRateValue.innerText = `${val}%`;
       this.debugItemDropRate = val / 100;
       this.terminal.printSystemMessage(`[DEBUG] Item Drop Rate: ${val}%`);
     };
-    
+
     dropRateRow.appendChild(dropRateSlider);
     dropRateRow.appendChild(dropRateValue);
     dropRateContainer.appendChild(dropRateRow);
-    
+
     // 100% 드롭 버튼
     const dropTestBtns = document.createElement("div");
     dropTestBtns.style.cssText = "display: flex; gap: 5px; margin-top: 8px;";
-    
+
     const btn100 = document.createElement("button");
     btn100.innerText = "100%";
     btn100.style.cssText = "flex:1; background:#553300; color:#ffaa00; border:1px solid #ffaa00; cursor:pointer; padding:3px;";
@@ -650,7 +650,7 @@ export class GameManager {
       this.debugItemDropRate = 1.0;
       this.terminal.printSystemMessage("[DEBUG] Item Drop Rate: 100%");
     };
-    
+
     const btn50 = document.createElement("button");
     btn50.innerText = "50%";
     btn50.style.cssText = "flex:1; background:#553300; color:#ffaa00; border:1px solid #ffaa00; cursor:pointer; padding:3px;";
@@ -660,7 +660,7 @@ export class GameManager {
       this.debugItemDropRate = 0.5;
       this.terminal.printSystemMessage("[DEBUG] Item Drop Rate: 50%");
     };
-    
+
     const btnReset = document.createElement("button");
     btnReset.innerText = "기본값";
     btnReset.style.cssText = "flex:1; background:#333; color:#0f0; border:1px solid #0f0; cursor:pointer; padding:3px;";
@@ -670,12 +670,12 @@ export class GameManager {
       this.debugItemDropRate = null; // null = 기본값 사용
       this.terminal.printSystemMessage("[DEBUG] Item Drop Rate: DEFAULT (5%)");
     };
-    
+
     dropTestBtns.appendChild(btn100);
     dropTestBtns.appendChild(btn50);
     dropTestBtns.appendChild(btnReset);
     dropRateContainer.appendChild(dropTestBtns);
-    
+
     debugPanel.appendChild(dropRateContainer);
 
     // 4. 블루프린트(해금) 드롭률 조절
@@ -686,83 +686,83 @@ export class GameManager {
       border: 1px solid #00ffff;
       background: rgba(0, 30, 50, 0.5);
     `;
-    
+
     const blueprintTitle = document.createElement("div");
     blueprintTitle.style.cssText = "color: #00ffff; margin-bottom: 8px; font-weight: bold;";
     blueprintTitle.innerText = "🔓 BLUEPRINT DROP";
     blueprintContainer.appendChild(blueprintTitle);
-    
+
     // 블루프린트 드롭률 슬라이더
     const bpDropRow = document.createElement("div");
     bpDropRow.style.cssText = "display: flex; align-items: center; gap: 10px; margin-bottom: 8px;";
-    
+
     const bpDropLabel = document.createElement("span");
     bpDropLabel.style.cssText = "color: #aaa; font-size: 11px; min-width: 60px;";
     bpDropLabel.innerText = "드롭률:";
-    
+
     const bpDropSlider = document.createElement("input");
     bpDropSlider.type = "range";
     bpDropSlider.min = "0";
     bpDropSlider.max = "100";
     bpDropSlider.value = "10";
     bpDropSlider.style.cssText = "flex: 1; accent-color: #00ffff;";
-    
+
     const bpDropValue = document.createElement("span");
     bpDropValue.style.cssText = "color: #00ffff; min-width: 45px; text-align: right;";
     bpDropValue.innerText = "10%";
-    
+
     // 디버그용 블루프린트 드롭률 변수 초기화
     this.debugBlueprintDropRate = null;
-    
+
     bpDropSlider.oninput = (e) => {
       const val = parseInt(e.target.value);
       bpDropValue.innerText = `${val}%`;
       this.debugBlueprintDropRate = val / 100;
       this.terminal.printSystemMessage(`[DEBUG] Blueprint Drop Rate: ${val}%`);
     };
-    
+
     bpDropRow.appendChild(bpDropLabel);
     bpDropRow.appendChild(bpDropSlider);
     bpDropRow.appendChild(bpDropValue);
     blueprintContainer.appendChild(bpDropRow);
-    
+
     // 진행률 증가량 슬라이더
     const bpAmountRow = document.createElement("div");
     bpAmountRow.style.cssText = "display: flex; align-items: center; gap: 10px; margin-bottom: 8px;";
-    
+
     const bpAmountLabel = document.createElement("span");
     bpAmountLabel.style.cssText = "color: #aaa; font-size: 11px; min-width: 60px;";
     bpAmountLabel.innerText = "증가량:";
-    
+
     const bpAmountSlider = document.createElement("input");
     bpAmountSlider.type = "range";
     bpAmountSlider.min = "1";
     bpAmountSlider.max = "50";
     bpAmountSlider.value = "3";
     bpAmountSlider.style.cssText = "flex: 1; accent-color: #00ffff;";
-    
+
     const bpAmountValue = document.createElement("span");
     bpAmountValue.style.cssText = "color: #00ffff; min-width: 45px; text-align: right;";
     bpAmountValue.innerText = "+3%";
-    
+
     this.debugBlueprintAmount = null;
-    
+
     bpAmountSlider.oninput = (e) => {
       const val = parseInt(e.target.value);
       bpAmountValue.innerText = `+${val}%`;
       this.debugBlueprintAmount = val;
       this.terminal.printSystemMessage(`[DEBUG] Blueprint Amount: +${val}%`);
     };
-    
+
     bpAmountRow.appendChild(bpAmountLabel);
     bpAmountRow.appendChild(bpAmountSlider);
     bpAmountRow.appendChild(bpAmountValue);
     blueprintContainer.appendChild(bpAmountRow);
-    
+
     // 퀵 버튼들
     const bpBtns = document.createElement("div");
     bpBtns.style.cssText = "display: flex; gap: 5px;";
-    
+
     const bpBtn100 = document.createElement("button");
     bpBtn100.innerText = "100%/+50";
     bpBtn100.style.cssText = "flex:1; background:#003344; color:#00ffff; border:1px solid #00ffff; cursor:pointer; padding:3px; font-size:10px;";
@@ -775,7 +775,7 @@ export class GameManager {
       this.debugBlueprintAmount = 50;
       this.terminal.printSystemMessage("[DEBUG] Blueprint: 100% drop, +50% per drop");
     };
-    
+
     const bpBtnReset = document.createElement("button");
     bpBtnReset.innerText = "기본값";
     bpBtnReset.style.cssText = "flex:1; background:#333; color:#0f0; border:1px solid #0f0; cursor:pointer; padding:3px; font-size:10px;";
@@ -788,18 +788,18 @@ export class GameManager {
       this.debugBlueprintAmount = null;
       this.terminal.printSystemMessage("[DEBUG] Blueprint: DEFAULT (10%, +1~10%)");
     };
-    
+
     bpBtns.appendChild(bpBtn100);
     bpBtns.appendChild(bpBtnReset);
     blueprintContainer.appendChild(bpBtns);
-    
+
     // 현재 진행률 표시
     const progressDisplay = document.createElement("div");
     progressDisplay.id = "dbg-blueprint-progress";
     progressDisplay.style.cssText = "margin-top: 10px; font-size: 10px; color: #888; max-height: 80px; overflow-y: auto;";
     progressDisplay.innerHTML = "<div>진행률: (게임 시작 후 표시)</div>";
     blueprintContainer.appendChild(progressDisplay);
-    
+
     // 진행률 갱신 버튼
     const refreshBtn = document.createElement("button");
     refreshBtn.innerText = "🔄 진행률 확인";
@@ -817,7 +817,7 @@ export class GameManager {
       progressDisplay.innerHTML = html || "<div>없음</div>";
     };
     blueprintContainer.appendChild(refreshBtn);
-    
+
     debugPanel.appendChild(blueprintContainer);
 
     // ===== 콘솔 로그 시스템 =====
@@ -1263,7 +1263,7 @@ export class GameManager {
 
     bgmBtn.addEventListener("click", () => {
       const isOn = this.defenseGame.toggleBGM();
-      
+
       if (isOn) {
         bgmBtn.innerHTML = "BGM<br/>ON";
         bgmBtn.style.color = "#33ff00";
@@ -1321,22 +1321,22 @@ export class GameManager {
       const alliedInfo = this.conquestManager.getAlliedInfo();
       this.defenseGame.updateAlliedInfo(alliedInfo);
       this.defenseGame.updateAlliedConfig(this.getAllyConfiguration());
-      
+
       // 4. 기존 아군 제거 후 게임 시작
       this.defenseGame.alliedViruses = [];
-      
-    // Safe Zone이면 아군 바이러스 미리 배치
-    debugLog("GameManager", "switchMode defense - isSafeZone:", this.defenseGame.isSafeZone);
-    if (this.defenseGame.isSafeZone) {
-      debugLog("GameManager", "Calling spawnSafeZoneAllies from switchMode");
-      this.defenseGame.spawnSafeZoneAllies();
-    }
-    
-    this.defenseGame.start(); // start()로 게임 시작!
-      
+
+      // Safe Zone이면 아군 바이러스 미리 배치
+      debugLog("GameManager", "switchMode defense - isSafeZone:", this.defenseGame.isSafeZone);
+      if (this.defenseGame.isSafeZone) {
+        debugLog("GameManager", "Calling spawnSafeZoneAllies from switchMode");
+        this.defenseGame.spawnSafeZoneAllies();
+      }
+
+      this.defenseGame.start(); // start()로 게임 시작!
+
       // 5. 코어 드랍 연출
       await this.defenseGame.playIntroAnimation();
-      
+
       // [추가] 자원 UI 동기화
       this.defenseGame.updateResourceDisplay(this.currentMoney);
 
@@ -1392,13 +1392,13 @@ export class GameManager {
         style: "conquer", // 특별 스타일
       });
     }
-    
+
     // 안전지역이 아닐 때 귀환 옵션 추가
     if (this.defenseGame && !this.defenseGame.isSafeZone) {
       const shieldHp = this.defenseGame.core?.shieldHp || 0;
       const canRecall = shieldHp > 0;
       choices.push({
-        text: canRecall 
+        text: canRecall
           ? `/recall (Return to Safe Zone) [Shield: ${shieldHp}]`
           : `/recall (UNAVAILABLE - No Shield)`,
         value: "recall",
@@ -1422,14 +1422,14 @@ export class GameManager {
       await this.handleRecall();
     }
   }
-  
+
   /**
    * 귀환 기능 - Safe Zone으로 복귀
    * 조건: 실드 > 0, 5초 캐스팅 (피격 시 취소)
    */
   async handleRecall() {
     const shieldHp = this.defenseGame.core?.shieldHp || 0;
-    
+
     // 실드 체크
     if (shieldHp <= 0) {
       await this.terminal.printSystemMessage("⚠️ RECALL FAILED: Shield required!");
@@ -1437,13 +1437,13 @@ export class GameManager {
       await this.showCommandMenu();
       return;
     }
-    
+
     await this.terminal.printSystemMessage("🏃 INITIATING RECALL...");
     await this.terminal.printSystemMessage("Stay alive for 5 seconds!");
-    
+
     // 캐스팅 시작
     const recallSuccess = await this.startRecallCasting(5000);
-    
+
     if (recallSuccess) {
       debugLog("Recall", "1. 탈출 애니메이션 시작");
 
@@ -1476,7 +1476,7 @@ export class GameManager {
       await this.showCommandMenu();
     }
   }
-  
+
   /**
    * 귀환 캐스팅 - 5초 동안 피격 감지 (테두리 효과 UI)
    * @param {number} duration 캐스팅 시간 (ms)
@@ -1487,7 +1487,7 @@ export class GameManager {
       const startTime = Date.now();
       const startShieldHp = this.defenseGame.core?.shieldHp || 0;
       const startCoreHp = this.defenseGame.core?.hp || 0;
-      
+
       // 테두리 효과 컨테이너
       const borderContainer = document.createElement("div");
       borderContainer.id = "recall-border-effect";
@@ -1498,7 +1498,7 @@ export class GameManager {
         pointer-events: none;
         z-index: 99998;
       `;
-      
+
       // 4개의 테두리 (상, 하, 좌, 우)
       const borders = {
         top: document.createElement("div"),
@@ -1506,10 +1506,10 @@ export class GameManager {
         left: document.createElement("div"),
         right: document.createElement("div")
       };
-      
+
       const borderThickness = 8;
       const glowColor = "0, 170, 255"; // 기본 파란색
-      
+
       borders.top.style.cssText = `
         position: absolute; top: 0; left: 0; right: 0;
         height: ${borderThickness}px;
@@ -1519,7 +1519,7 @@ export class GameManager {
         transform-origin: left;
         transition: transform 0.1s linear;
       `;
-      
+
       borders.bottom.style.cssText = `
         position: absolute; bottom: 0; left: 0; right: 0;
         height: ${borderThickness}px;
@@ -1529,7 +1529,7 @@ export class GameManager {
         transform-origin: right;
         transition: transform 0.1s linear;
       `;
-      
+
       borders.left.style.cssText = `
         position: absolute; top: 0; left: 0; bottom: 0;
         width: ${borderThickness}px;
@@ -1539,7 +1539,7 @@ export class GameManager {
         transform-origin: bottom;
         transition: transform 0.1s linear;
       `;
-      
+
       borders.right.style.cssText = `
         position: absolute; top: 0; right: 0; bottom: 0;
         width: ${borderThickness}px;
@@ -1549,9 +1549,9 @@ export class GameManager {
         transform-origin: top;
         transition: transform 0.1s linear;
       `;
-      
+
       Object.values(borders).forEach(b => borderContainer.appendChild(b));
-      
+
       // 코어 위에 정보 표시 (두 줄 레이아웃)
       const infoBar = document.createElement("div");
       infoBar.style.cssText = `
@@ -1577,35 +1577,35 @@ export class GameManager {
         </div>
         <div style="color: #ff6666; font-size: 11px; margin-top: 4px;">⚠️ 피격 시 취소</div>
       `;
-      
+
       borderContainer.appendChild(infoBar);
       document.body.appendChild(borderContainer);
-      
+
       const timeDisplay = infoBar.querySelector("#recall-time");
-      
+
       // 캐스팅 업데이트 인터벌
       const updateInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
         const remaining = Math.max(0, duration - elapsed);
         const progress = Math.min(1, elapsed / duration);
-        
+
         // 테두리 점점 채우기 (4방향 동시에)
         borders.top.style.transform = `scaleX(${progress})`;
         borders.bottom.style.transform = `scaleX(${progress})`;
         borders.left.style.transform = `scaleY(${progress})`;
         borders.right.style.transform = `scaleY(${progress})`;
-        
+
         // 시간 표시 업데이트
         timeDisplay.textContent = `${(remaining / 1000).toFixed(1)}s`;
-        
+
         // 피격 감지 (실드 또는 코어 HP 감소)
         const currentShieldHp = this.defenseGame.core?.shieldHp || 0;
         const currentCoreHp = this.defenseGame.core?.hp || 0;
-        
+
         if (currentShieldHp < startShieldHp || currentCoreHp < startCoreHp) {
           // 피격됨 - 캐스팅 취소
           clearInterval(updateInterval);
-          
+
           // 빨간색으로 변경
           const redGlow = "255, 68, 68";
           Object.values(borders).forEach(b => {
@@ -1618,18 +1618,18 @@ export class GameManager {
             <div style="color: #ff4444; font-size: 20px;">❌ INTERRUPTED!</div>
             <div style="color: #ff6666; font-size: 12px; margin-top: 5px;">피격으로 귀환 취소됨</div>
           `;
-          
+
           setTimeout(() => {
             borderContainer.remove();
             resolve(false);
           }, 800);
           return;
         }
-        
+
         // 캐스팅 완료
         if (elapsed >= duration) {
           clearInterval(updateInterval);
-          
+
           // 초록색으로 변경
           const greenGlow = "0, 255, 0";
           Object.values(borders).forEach(b => {
@@ -1642,7 +1642,7 @@ export class GameManager {
             <div style="color: #00ff00; font-size: 20px;">✅ RECALL COMPLETE!</div>
             <div style="color: #88ff88; font-size: 12px; margin-top: 5px;">안전지역으로 이동 중...</div>
           `;
-          
+
           setTimeout(() => {
             borderContainer.remove();
             resolve(true);
@@ -1651,7 +1651,7 @@ export class GameManager {
       }, 100);
     });
   }
-  
+
   /**
    * 특정 스테이지로 이동
    * @param {number} stageId 스테이지 ID
@@ -1662,7 +1662,7 @@ export class GameManager {
       console.error(`Stage ${stageId} not found!`);
       return;
     }
-    
+
     // 스테이지 이동 (StageManager에서 현재 스테이지 업데이트)
     this.stageManager.currentStageId = stageId;
     this.stageManager.saveState();
@@ -1698,6 +1698,7 @@ export class GameManager {
     // 채굴 시스템: 씬 전환 알림 (마이너 스폰)
     if (stage.conquered && stage.type === "conquest") {
       this.miningManager.registerTerritory(stageId);
+      this.saveMiningData();
     }
     this.miningManager.onSceneChange(
       stageId,
@@ -1707,10 +1708,10 @@ export class GameManager {
     );
 
     this.defenseGame.resume();
-    
+
     // 드랍 연출과 함께 시작 (await으로 완료 대기)
     await this.defenseGame.playIntroAnimation();
-    
+
     await this.terminal.printSystemMessage(`Arrived at: ${stage.name}`);
     await this.showCommandMenu();
   }
@@ -2094,7 +2095,7 @@ export class GameManager {
   handlePuzzleLineCleared(lineNum) {
     // 테트리스에서 줄 클리어 시 아이템 드롭 (줄 수에 비례한 확률)
     this.tryTetrisItemDrop(lineNum);
-    
+
     if (!this.isConquestMode || !this.defenseGame) return;
 
     debugLog("GameManager", `퍼즐 라인 클리어: ${lineNum}줄`);
@@ -2125,33 +2126,33 @@ export class GameManager {
   }
 
   // ===== 아이템 시스템 =====
-  
+
   /**
    * 테트리스 줄 클리어 시 아이템 드롭 (시각적 드롭 없이 바로 인벤토리에 추가)
    * @param {number} lineNum - 클리어한 줄 수
    */
   tryTetrisItemDrop(lineNum) {
     // 디버그 드롭률이 설정되어 있으면 사용, 아니면 줄당 10%
-    let dropChance = this.debugItemDropRate !== null 
-      ? this.debugItemDropRate 
+    let dropChance = this.debugItemDropRate !== null
+      ? this.debugItemDropRate
       : 0.10 * lineNum;
-    
+
     // 장착 아이템 효과로 드롭률 증가 (디버그 모드가 아닐 때만)
     if (this.debugItemDropRate === null) {
       const effects = this.inventoryManager.getEquippedEffects();
       dropChance += effects.dropRate;
     }
-    
+
     // 확률 체크
     if (Math.random() > dropChance) return;
-    
+
     // 아이템 생성
     const item = this.itemDatabase.generateRandomItem();
-    
+
     debugLog("GameManager", `테트리스 아이템 드롭! ${item.name}`);
-    
+
     // 현재 스테이지 획득 목록에 추가
-    
+
     // 해금 조각(fragment)은 별도 처리
     if (item.type === "fragment") {
       this.processDecryption(item);
@@ -2161,17 +2162,17 @@ export class GameManager {
 
     // 일반 아이템만 획득 목록에 추가
     this.collectedItemsThisStage.push(item);
-    
+
     // 인벤토리에 바로 추가
     const result = this.inventoryManager.addToInventory(item);
-    
+
     if (result.success) {
       this.showItemDropNotification(item);
     } else {
       this.showItemDropNotification(item, true);
     }
   }
-  
+
   /**
    * 아이템 드롭 시도 (디펜스 모드 - 적 위치에 시각적 드롭)
    * @param {number} x - 드롭 위치 X
@@ -2182,26 +2183,26 @@ export class GameManager {
     // === 1. 일반 아이템 드롭 ===
     // 디버그 드롭률이 설정되어 있으면 사용, 아니면 기본값 5%
     let dropChance = this.debugItemDropRate !== null ? this.debugItemDropRate : 0.05;
-    
+
     // 장착 아이템 효과로 드롭률 증가 (디버그 모드가 아닐 때만)
     if (this.debugItemDropRate === null) {
       const effects = this.inventoryManager.getEquippedEffects();
       dropChance += effects.dropRate;
     }
-    
+
     // 일반 아이템 드롭 확률 체크
     if (Math.random() <= dropChance) {
       const item = this.itemDatabase.generateRandomItem();
       debugLog("GameManager", `아이템 드롭! ${item.name} at (${x}, ${y})`);
-      
+
       if (this.defenseGame && this.activeMode === "defense") {
         this.defenseGame.spawnDroppedItem(x, y, item);
       }
     }
-    
+
     // === 2. 블루프린트 드롭 (별도 확률) ===
     const bpDropChance = this.debugBlueprintDropRate !== null ? this.debugBlueprintDropRate : 0.10;
-    
+
     if (Math.random() <= bpDropChance) {
       // 해금 대상이 남아있는지 확인
       const allTargets = [...this.virusUnlockTargets, ...this.weaponUnlockTargets];
@@ -2210,34 +2211,34 @@ export class GameManager {
         if (this.weaponUnlockTargets.includes(t)) return !this.isWeaponUnlocked(t);
         return false;
       });
-      
+
       if (lockedTargets.length === 0) return; // 모두 해금됨
-      
+
       // 블루프린트 아이템 생성 (디버그 증가량 적용)
       const blueprintItem = this.itemDatabase.generateBlueprintItem(this.debugBlueprintAmount);
-      
+
       debugLog("GameManager", `블루프린트 드롭! ${blueprintItem.name} (+${blueprintItem.effect.value}%) at (${x}, ${y})`);
-      
+
       // 일반 아이템과 동일하게 바닥에 드롭 (아군이 수집)
       if (this.defenseGame && this.activeMode === "defense") {
         this.defenseGame.spawnDroppedItem(x, y, blueprintItem);
       }
     }
   }
-  
+
   /**
    * 블루프린트 드롭 이펙트 표시
    */
   showBlueprintDropEffect(x, y, amount) {
     if (!this.defenseGame || !this.defenseGame.canvas) return;
-    
+
     const canvas = this.defenseGame.canvas;
     const rect = canvas.getBoundingClientRect();
-    
+
     // 캔버스 좌표를 화면 좌표로 변환
     const screenX = rect.left + (x / this.defenseGame.width) * rect.width;
     const screenY = rect.top + (y / this.defenseGame.height) * rect.height;
-    
+
     const effect = document.createElement("div");
     effect.style.cssText = `
       position: fixed;
@@ -2253,7 +2254,7 @@ export class GameManager {
       animation: blueprintFloat 1s ease-out forwards;
     `;
     effect.innerText = `🔓+${amount}%`;
-    
+
     // 애니메이션 스타일 추가 (한 번만)
     if (!document.getElementById("blueprint-effect-style")) {
       const style = document.createElement("style");
@@ -2266,16 +2267,16 @@ export class GameManager {
       `;
       document.head.appendChild(style);
     }
-    
+
     document.body.appendChild(effect);
     setTimeout(() => effect.remove(), 1000);
   }
-  
+
   /**
    * 아이템 수집 완료 처리 (수집 바이러스가 코어에 도착했을 때)
    * 인벤토리에 바로 넣지 않고, 스테이지 끝날 때 선택하도록 저장만 함
    */
-  
+
   /**
    * 데이터 조각 처리 (해금 진행률 증가)
    * - 모든 스테이지에서 모든 해금 대상 드랍 가능
@@ -2284,7 +2285,7 @@ export class GameManager {
   processDecryption(item) {
     // 모든 해금 대상 (바이러스 + 무기)
     const allTargets = [...this.virusUnlockTargets, ...this.weaponUnlockTargets];
-    
+
     // 아직 해금되지 않은 타겟만 필터링
     const lockedTargets = allTargets.filter(t => {
       const isVirus = this.virusUnlockTargets.includes(t);
@@ -2293,7 +2294,7 @@ export class GameManager {
       if (isWeapon) return !this.isWeaponUnlocked(t);
       return false;
     });
-    
+
     if (lockedTargets.length === 0) {
       // 모두 해금됨 - 자원으로 변환
       const dataAmount = (item.effect.value || 1) * 10;
@@ -2303,12 +2304,12 @@ export class GameManager {
       debugLog("Item", `All targets unlocked, converted to ${dataAmount} DATA`);
       return null; // 타겟 없음 (DATA로 변환됨)
     }
-    
+
     // 현재 스테이지의 보너스 타겟 확인
     const stageId = this.defenseGame.currentStageId || 0;
     const bonusTargets = this.stageUnlockTargets[stageId] || [];
     const lockedBonusTargets = bonusTargets.filter(t => lockedTargets.includes(t));
-    
+
     // 타겟 선택: 70% 스테이지 보너스 타겟, 30% 전체 랜덤
     let target;
     if (lockedBonusTargets.length > 0 && Math.random() < 0.7) {
@@ -2318,14 +2319,14 @@ export class GameManager {
       // 전체 잠긴 타겟 중 랜덤
       target = lockedTargets[Math.floor(Math.random() * lockedTargets.length)];
     }
-    
+
     // 진행률 증가
     const amount = item.effect.value || 1;
     if (!this.decryptionProgress[target]) this.decryptionProgress[target] = 0;
-    
+
     const oldProgress = this.decryptionProgress[target];
     this.decryptionProgress[target] = Math.min(100, oldProgress + amount);
-    
+
     this.saveDecryptionProgress();
 
     debugLog("Item", `${target}: ${oldProgress}% -> ${this.decryptionProgress[target]}% (Stage ${stageId} bonus: ${bonusTargets.join(', ')})`);
@@ -2335,28 +2336,28 @@ export class GameManager {
       this.terminal.printSystemMessage(`ACCESS GRANTED: ${target} BLUEPRINT DECRYPTED!`);
       this.showNotification(`🔓 ${target} UNLOCKED!`, "#00ff00");
     }
-    
+
     // 적용된 타겟 반환
     return target;
   }
 
   handleItemCollected(item) {
     debugLog("GameManager", `아이템 수집됨: ${item.name}`);
-    
+
     // 블루프린트 아이템인 경우 별도 처리 (즉시 해금 진행률 반영)
     if (item.effect && item.effect.type === "blueprint") {
       const target = this.processDecryption(item);
       this.showBlueprintCollectedNotification(item, target);
       return; // 인벤토리에 추가하지 않음
     }
-    
+
     // 일반 아이템: 현재 스테이지 획득 목록에 추가 (인벤토리에 바로 안 넣음)
     this.collectedItemsThisStage.push(item);
-    
+
     // 획득 알림 표시 (수집됨 표시)
     this.showItemDropNotification(item);
   }
-  
+
   /**
    * 블루프린트 수집 알림 표시 (상단에 표시)
    * @param {object} item - 블루프린트 아이템
@@ -2365,7 +2366,7 @@ export class GameManager {
   showBlueprintCollectedNotification(item, target) {
     const existing = document.getElementById("blueprint-notification");
     if (existing) existing.remove();
-    
+
     const notification = document.createElement("div");
     notification.id = "blueprint-notification";
     notification.style.cssText = `
@@ -2384,7 +2385,7 @@ export class GameManager {
       text-shadow: 0 0 10px #00ffff;
       animation: blueprintNotifAnim 2.5s ease-out forwards;
     `;
-    
+
     // 모든 해금 완료 시 (target이 null)
     if (!target) {
       const dataAmount = (item.effect.value || 1) * 10;
@@ -2403,7 +2404,7 @@ export class GameManager {
       const isVirus = this.virusUnlockTargets.includes(target);
       const typeLabel = isVirus ? "🦠" : "🔫";
       const currentProgress = this.decryptionProgress[target] || 0;
-      
+
       notification.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 18px;">${item.icon}</span>
@@ -2416,7 +2417,7 @@ export class GameManager {
         </div>
       `;
     }
-    
+
     // 애니메이션 스타일 추가 (한 번만)
     if (!document.getElementById("blueprint-notif-style")) {
       const style = document.createElement("style");
@@ -2431,11 +2432,11 @@ export class GameManager {
       `;
       document.head.appendChild(style);
     }
-    
+
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 2500);
   }
-  
+
   /**
    * 아이템 획득 알림 표시
    */
@@ -2443,9 +2444,9 @@ export class GameManager {
     // 기존 알림 제거
     const existing = document.getElementById("item-drop-notification");
     if (existing) existing.remove();
-    
+
     const color = this.itemDatabase.getRarityColor(item.rarity);
-    
+
     const notification = document.createElement("div");
     notification.id = "item-drop-notification";
     notification.style.cssText = `
@@ -2462,7 +2463,7 @@ export class GameManager {
       animation: itemPopIn 0.3s ease-out;
       box-shadow: 0 0 20px ${color}40;
     `;
-    
+
     notification.innerHTML = `
       <div style="font-size: 24px; margin-bottom: 5px;">${item.icon}</div>
       <div style="color: ${color}; font-weight: bold; font-size: 14px;">${item.name}</div>
@@ -2470,7 +2471,7 @@ export class GameManager {
         ${inventoryFull ? "⚠️ 인벤토리 가득참!" : item.description}
       </div>
     `;
-    
+
     // 애니메이션 스타일 추가
     if (!document.getElementById("item-notification-style")) {
       const style = document.createElement("style");
@@ -2488,16 +2489,16 @@ export class GameManager {
       `;
       document.head.appendChild(style);
     }
-    
+
     document.body.appendChild(notification);
-    
+
     // 2초 후 페이드아웃
     setTimeout(() => {
       notification.style.animation = "itemFadeOut 0.3s ease-in forwards";
       setTimeout(() => notification.remove(), 300);
     }, 2000);
   }
-  
+
   /**
    * 스테이지 클리어 시 아이템 선택 화면
    * 획득한 아이템 중 인벤토리에 넣을 것을 선택
@@ -2506,26 +2507,26 @@ export class GameManager {
   async showLootSummary() {
     // 획득한 아이템이 없으면 스킵
     if (this.collectedItemsThisStage.length === 0) return;
-    
+
     // 선택 화면으로 이동 (완료될 때까지 대기)
     await this.showLootSelectionScreen();
   }
-  
+
   /**
    * 아이템 선택 화면 (인벤토리에 넣을 아이템 선택)
    * @returns {Promise} 선택 완료 시 resolve
    */
   showLootSelectionScreen() {
     return new Promise((resolve) => {
-    const lootItems = [...this.collectedItemsThisStage]; // 복사본
-    const inventoryData = this.inventoryManager.getData();
-    
-    // Promise resolve를 저장 (버튼 클릭 시 호출)
-    this._lootSelectionResolve = resolve;
-    
-    const overlay = document.createElement("div");
-    overlay.id = "loot-selection-overlay";
-    overlay.style.cssText = `
+      const lootItems = [...this.collectedItemsThisStage]; // 복사본
+      const inventoryData = this.inventoryManager.getData();
+
+      // Promise resolve를 저장 (버튼 클릭 시 호출)
+      this._lootSelectionResolve = resolve;
+
+      const overlay = document.createElement("div");
+      overlay.id = "loot-selection-overlay";
+      overlay.style.cssText = `
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -2539,15 +2540,15 @@ export class GameManager {
       overflow-y: auto;
       font-family: var(--term-font);
     `;
-    
-    // 선택 상태 추적
-    let selectedLootIndex = null;
-    
-    const render = () => {
-      const invData = this.inventoryManager.getData();
-      const emptySlots = invData.inventory.filter(s => s === null).length;
-      
-      overlay.innerHTML = `
+
+      // 선택 상태 추적
+      let selectedLootIndex = null;
+
+      const render = () => {
+        const invData = this.inventoryManager.getData();
+        const emptySlots = invData.inventory.filter(s => s === null).length;
+
+        overlay.innerHTML = `
         <div style="color: #ffaa00; font-size: 20px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 0 10px #ffaa00;">
           📦 LOOT ACQUIRED (${lootItems.length}개)
         </div>
@@ -2599,15 +2600,15 @@ export class GameManager {
           cursor: pointer;
         ">[ CONFIRM ]</button>
       `;
-      
-      // 획득 아이템 렌더링
-      const lootContainer = overlay.querySelector("#loot-items-container");
-      lootItems.forEach((item, idx) => {
-        const color = this.itemDatabase.getRarityColor(item.rarity);
-        const dataValue = this.itemDatabase.getItemDataValue(item);
-        
-        const itemEl = document.createElement("div");
-        itemEl.style.cssText = `
+
+        // 획득 아이템 렌더링
+        const lootContainer = overlay.querySelector("#loot-items-container");
+        lootItems.forEach((item, idx) => {
+          const color = this.itemDatabase.getRarityColor(item.rarity);
+          const dataValue = this.itemDatabase.getItemDataValue(item);
+
+          const itemEl = document.createElement("div");
+          itemEl.style.cssText = `
           width: 45px;
           height: 55px;
           border: 2px solid ${color};
@@ -2621,41 +2622,41 @@ export class GameManager {
           border-radius: 5px;
           ${selectedLootIndex === idx ? 'box-shadow: 0 0 15px ' + color + '; transform: scale(1.1);' : ''}
         `;
-        itemEl.innerHTML = `
+          itemEl.innerHTML = `
           <div style="font-size: 18px;">${item.icon}</div>
           <div style="font-size: 6px; color: ${color}; text-align: center;">${item.name.split(' ')[0]}</div>
           <div style="font-size: 7px; color: #888;">+${dataValue}</div>
         `;
-        
-        itemEl.onclick = () => {
-          // 인벤토리에 빈 공간이 있으면 바로 추가
-          const result = this.inventoryManager.addToInventory(item);
-          if (result.success) {
-            lootItems.splice(idx, 1);
-            this.showNotification(`${item.name} 추가됨!`, color);
-            render();
-          } else {
-            // 빈 공간 없으면 선택 상태로
-            selectedLootIndex = idx;
-            this.showNotification("인벤토리에서 교체할 아이템 선택", "#ffaa00");
-            render();
-          }
-        };
-        
-        lootContainer.appendChild(itemEl);
-      });
-      
-      if (lootItems.length === 0) {
-        lootContainer.innerHTML = '<div style="color: #666;">모든 아이템을 인벤토리에 추가했습니다</div>';
-      }
-      
-      // 인벤토리 렌더링
-      const invGrid = overlay.querySelector("#inventory-grid");
-      invData.inventory.forEach((item, idx) => {
-        const slot = document.createElement("div");
-        const color = item ? this.itemDatabase.getRarityColor(item.rarity) : "#333";
-        
-        slot.style.cssText = `
+
+          itemEl.onclick = () => {
+            // 인벤토리에 빈 공간이 있으면 바로 추가
+            const result = this.inventoryManager.addToInventory(item);
+            if (result.success) {
+              lootItems.splice(idx, 1);
+              this.showNotification(`${item.name} 추가됨!`, color);
+              render();
+            } else {
+              // 빈 공간 없으면 선택 상태로
+              selectedLootIndex = idx;
+              this.showNotification("인벤토리에서 교체할 아이템 선택", "#ffaa00");
+              render();
+            }
+          };
+
+          lootContainer.appendChild(itemEl);
+        });
+
+        if (lootItems.length === 0) {
+          lootContainer.innerHTML = '<div style="color: #666;">모든 아이템을 인벤토리에 추가했습니다</div>';
+        }
+
+        // 인벤토리 렌더링
+        const invGrid = overlay.querySelector("#inventory-grid");
+        invData.inventory.forEach((item, idx) => {
+          const slot = document.createElement("div");
+          const color = item ? this.itemDatabase.getRarityColor(item.rarity) : "#333";
+
+          slot.style.cssText = `
           width: 40px;
           height: 40px;
           border: 1px solid ${color};
@@ -2668,79 +2669,79 @@ export class GameManager {
           transition: all 0.2s;
           border-radius: 3px;
         `;
-        
-        if (item) {
-          slot.innerHTML = `
+
+          if (item) {
+            slot.innerHTML = `
             <div style="font-size: 14px;">${item.icon}</div>
             <div style="font-size: 5px; color: ${color};">${item.name.split(' ')[0]}</div>
           `;
-          
-          slot.onclick = () => {
-            if (selectedLootIndex !== null) {
-              // 선택된 루트 아이템과 교체
-              const lootItem = lootItems[selectedLootIndex];
-              const oldItem = this.inventoryManager.inventory[idx];
-              
-              // 교체
-              this.inventoryManager.inventory[idx] = lootItem;
-              this.inventoryManager.saveState();
-              
-              // 기존 아이템은 루트 목록으로
-              lootItems.splice(selectedLootIndex, 1, oldItem);
-              
-              selectedLootIndex = null;
-              this.showNotification(`${lootItem.name} ↔ ${oldItem.name} 교체!`, "#00ff00");
-              render();
-            }
-          };
-        }
-        
-        invGrid.appendChild(slot);
-      });
-      
-      // DATA 변환 정보 표시
-      if (lootItems.length > 0) {
-        let totalData = 0;
-        lootItems.forEach(item => {
-          totalData += this.itemDatabase.getItemDataValue(item);
+
+            slot.onclick = () => {
+              if (selectedLootIndex !== null) {
+                // 선택된 루트 아이템과 교체
+                const lootItem = lootItems[selectedLootIndex];
+                const oldItem = this.inventoryManager.inventory[idx];
+
+                // 교체
+                this.inventoryManager.inventory[idx] = lootItem;
+                this.inventoryManager.saveState();
+
+                // 기존 아이템은 루트 목록으로
+                lootItems.splice(selectedLootIndex, 1, oldItem);
+
+                selectedLootIndex = null;
+                this.showNotification(`${lootItem.name} ↔ ${oldItem.name} 교체!`, "#00ff00");
+                render();
+              }
+            };
+          }
+
+          invGrid.appendChild(slot);
         });
-        
-        const infoEl = overlay.querySelector("#data-conversion-info");
-        infoEl.innerHTML = `⚠️ 남은 ${lootItems.length}개 아이템은 <span style="color: #ffaa00;">${totalData} DATA</span>로 자동 변환됩니다`;
-      }
-      
-      // 확인 버튼
-      overlay.querySelector("#confirm-loot-btn").onclick = () => {
-        this.finalizeLootSelection(lootItems, overlay);
+
+        // DATA 변환 정보 표시
+        if (lootItems.length > 0) {
+          let totalData = 0;
+          lootItems.forEach(item => {
+            totalData += this.itemDatabase.getItemDataValue(item);
+          });
+
+          const infoEl = overlay.querySelector("#data-conversion-info");
+          infoEl.innerHTML = `⚠️ 남은 ${lootItems.length}개 아이템은 <span style="color: #ffaa00;">${totalData} DATA</span>로 자동 변환됩니다`;
+        }
+
+        // 확인 버튼
+        overlay.querySelector("#confirm-loot-btn").onclick = () => {
+          this.finalizeLootSelection(lootItems, overlay);
+        };
       };
-    };
-    
-    document.body.appendChild(overlay);
-    render();
+
+      document.body.appendChild(overlay);
+      render();
     }); // Promise 닫기
   }
-  
+
   /**
    * 루트 선택 완료 - 남은 아이템 DATA로 변환
    */
   finalizeLootSelection(remainingItems, overlay) {
     let totalData = 0;
-    
+
     remainingItems.forEach(item => {
       totalData += this.itemDatabase.getItemDataValue(item);
     });
-    
+
     if (totalData > 0) {
       this.currentMoney += totalData;
       this.saveMoney();
       this.terminal.updateData(this.currentMoney);
-      
+
       this.showNotification(`${remainingItems.length}개 아이템 → ${totalData} DATA 변환!`, "#ffaa00");
     }
-    
+
     // 획득 목록 초기화
     this.collectedItemsThisStage = [];
-    
+
     // 오버레이 제거
     overlay.style.animation = "fadeOut 0.3s ease-in forwards";
     setTimeout(() => {
@@ -2872,7 +2873,7 @@ export class GameManager {
       this.stageManager.setConquered(currentStage.id, true);
       // 채굴 등록
       console.log("[GameManager] Registering territory for mining:", currentStage.id);
-      this.miningManager.registerTerritory(currentStage.id);
+      this.miningManager.registerTerritory(String(currentStage.id));
       this.saveMiningData();
       console.log("[GameManager] Mining data saved");
     }
@@ -2882,8 +2883,9 @@ export class GameManager {
     this.defenseGame.setConqueredState(true);
 
     // 채굴 마이너 스폰
+    console.log("[GameManager] Spawning miners for conquered stage:", currentStage.id);
     this.miningManager.onSceneChange(
-      currentStage.id,
+      String(currentStage.id),
       false,
       this.defenseGame.canvas,
       this.defenseGame.core
@@ -3105,9 +3107,8 @@ export class GameManager {
       const lockedMarker = isLocked ? " 🔒" : "";
 
       btn.innerHTML = `
-        <div style="font-weight:bold;">${currentMarker}${
-        stage.name
-      }${conqueredMarker}${lockedMarker}</div>
+        <div style="font-weight:bold;">${currentMarker}${stage.name
+        }${conqueredMarker}${lockedMarker}</div>
         <div style="font-size:9px;margin-top:3px;">${stage.type.toUpperCase()}</div>
       `;
 
@@ -3223,7 +3224,7 @@ export class GameManager {
 
       // 2. 스테이지 설정 적용
       this.applyStageSettings(result.stage);
-      
+
       // 2.5. 보스전 모드 설정
       if (result.stage.type === "boss") {
         this.startBossFight();
@@ -3238,13 +3239,13 @@ export class GameManager {
 
       // 4. 기존 아군 제거 (겹침 방지) 후 게임 시작
       this.defenseGame.alliedViruses = [];
-      
+
       // Safe Zone이면 아군 바이러스 미리 배치 (제거 후에 해야 함!)
       if (result.stage.type === "safe") {
         debugLog("GameManager", "Calling spawnSafeZoneAllies from handleMapStageClick");
         this.defenseGame.spawnSafeZoneAllies();
       }
-      
+
       this.defenseGame.resume();
 
       // 5. 코어 강림 연출 (Canvas 내에서 처리)
@@ -3349,7 +3350,7 @@ export class GameManager {
   applyStageSettings(stage) {
     // 스테이지 시작 시 획득 아이템 목록 초기화
     this.collectedItemsThisStage = [];
-    
+
     // 안전영역 여부
     this.defenseGame.isSafeZone = stage.type === "safe";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate;
@@ -3365,7 +3366,7 @@ export class GameManager {
     this.defenseGame.reinforcementPage = 0;
     this.defenseGame.reinforcementComplete = false;
     this.defenseGame.conquerReady = false;
-    
+
     // Safe Zone 아군 배치는 alliedViruses = [] 이후에 해야 하므로
     // 여기서는 설정만 하고, 실제 spawn은 호출하는 쪽에서 처리
     debugLog("GameManager", "applyStageSettings - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
@@ -3472,10 +3473,10 @@ export class GameManager {
         isUnlocked,
         false // 클릭 가능
       );
-      
+
       // 슬롯 클릭 이벤트 (해금되지 않은 슬롯은 해금, 해금된 슬롯은 해제)
       slot.onclick = () => this.handleEquipSlotClick(idx, data, overlay);
-      
+
       equipSection.appendChild(slot);
     }
     overlay.appendChild(equipSection);
@@ -3505,12 +3506,12 @@ export class GameManager {
 
     data.inventory.forEach((item, idx) => {
       const slot = this.createInventorySlotElement(item, idx);
-      
+
       // 인벤토리 아이템 클릭 = 장착 시도
       if (item) {
         slot.onclick = () => this.handleInventoryItemClick(idx, overlay);
       }
-      
+
       invGrid.appendChild(slot);
     });
     overlay.appendChild(invGrid);
@@ -3751,12 +3752,12 @@ export class GameManager {
       const unlockStage = this.getUnlockStageName(modeName);
 
       const tab = document.createElement("button");
-      
+
       if (isLocked) {
         // 잠긴 무기 스타일 (진행률에 따라 아이콘이 왼→오로 채워짐)
         const progress = Math.min(100, unlockProgress);
         const clipRight = 100 - progress;
-        
+
         tab.style.cssText = `
           padding: 8px 12px;
           font-family: var(--term-font);
@@ -3792,10 +3793,9 @@ export class GameManager {
           font-size: 12px;
           cursor: pointer;
           border: 2px solid ${isActive ? mode.color : "#555"};
-          background: ${
-            isActive
-              ? `rgba(${this.hexToRgb(mode.color)}, 0.3)`
-              : "rgba(0, 0, 0, 0.5)"
+          background: ${isActive
+            ? `rgba(${this.hexToRgb(mode.color)}, 0.3)`
+            : "rgba(0, 0, 0, 0.5)"
           };
           color: ${isActive ? mode.color : "#888"};
           transition: all 0.2s;
@@ -3998,15 +3998,13 @@ export class GameManager {
       const canAfford = this.currentMoney >= upgrade.cost && !isMaxLevel;
 
       btn.style.cssText = `
-        background: ${
-          isMaxLevel
-            ? "rgba(0, 100, 100, 0.4)"
-            : canAfford
+        background: ${isMaxLevel
+          ? "rgba(0, 100, 100, 0.4)"
+          : canAfford
             ? "rgba(50, 80, 0, 0.6)"
             : "rgba(50, 50, 50, 0.5)"
         };
-        border: 1px solid ${
-          isMaxLevel ? "#00ffff" : canAfford ? modeColor : "#555"
+        border: 1px solid ${isMaxLevel ? "#00ffff" : canAfford ? modeColor : "#555"
         };
         color: ${isMaxLevel ? "#00ffff" : canAfford ? modeColor : "#666"};
         padding: 10px 12px;
@@ -4186,24 +4184,22 @@ export class GameManager {
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #ccc;">
         <div>DMG: <span style="color: #fff;">${helper.damage.toFixed(
-          1
-        )}</span></div>
+      1
+    )}</span></div>
         <div>RATE: <span style="color: #fff;">${helper.fireRate.toFixed(
-          1
-        )}/s</span></div>
+      1
+    )}/s</span></div>
         <div>RNG: <span style="color: #fff;">${helper.range}</span></div>
-        <div>BULLET: <span style="color: #fff;">${
-          helper.projectileSpeed
-        }</span></div>
+        <div>BULLET: <span style="color: #fff;">${helper.projectileSpeed
+      }</span></div>
         <div>MAG: <span style="color: #fff;">${totalMagazine}</span></div>
         <div>RELOAD: <span style="color: #fff;">${mode.reloadTime.toFixed(
-          1
-        )}s</span></div>
+        1
+      )}s</span></div>
       </div>
-      ${
-        specialDisplay
-          ? `<div style="margin-top: 8px; border-top: 1px solid #555; padding-top: 5px;">${specialDisplay}</div>`
-          : ""
+      ${specialDisplay
+        ? `<div style="margin-top: 8px; border-top: 1px solid #555; padding-top: 5px;">${specialDisplay}</div>`
+        : ""
       }
     `;
   }
@@ -4434,24 +4430,20 @@ export class GameManager {
         ─── Current Stats ───
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #ccc;">
-        <div>HP: <span style="color: #fff;">${core.hp}/${
-      core.maxHp
-    }</span></div>
+        <div>HP: <span style="color: #fff;">${core.hp}/${core.maxHp
+      }</span></div>
         <div>T.DMG: <span style="color: #fff;">${turret.damage}</span></div>
         <div>T.RNG: <span style="color: #fff;">${turret.range}</span></div>
-        <div>T.SPD: <span style="color: #fff;">${
-          turret.projectileSpeed
-        }</span></div>
+        <div>T.SPD: <span style="color: #fff;">${turret.projectileSpeed
+      }</span></div>
       </div>
       <div style="margin-top: 8px; border-top: 1px solid #555; padding-top: 5px; color: #ffff00;">
-        <div>⚡ Static: <span style="color: #fff;">${
-          staticSystem.damage
-        } DMG</span> | <span style="color: #fff;">${
-      staticSystem.chainCount
-    } chains</span></div>
+        <div>⚡ Static: <span style="color: #fff;">${staticSystem.damage
+      } DMG</span> | <span style="color: #fff;">${staticSystem.chainCount
+      } chains</span></div>
         <div>⚡ Charge: <span style="color: #fff;">${Math.floor(
-          staticSystem.currentCharge
-        )}/${staticSystem.maxCharge}</span></div>
+        staticSystem.currentCharge
+      )}/${staticSystem.maxCharge}</span></div>
       </div>
     `;
   }
@@ -4467,8 +4459,7 @@ export class GameManager {
 
       const btn = document.createElement("button");
       btn.style.cssText = `
-        background: ${
-          isMaxLevel ? "rgba(0, 255, 255, 0.2)" : "rgba(0, 50, 50, 0.8)"
+        background: ${isMaxLevel ? "rgba(0, 255, 255, 0.2)" : "rgba(0, 50, 50, 0.8)"
         };
         border: 2px solid ${isMaxLevel ? "#00ffff" : "#00aaaa"};
         color: ${isMaxLevel ? "#00ffff" : "#00ffff"};
@@ -4487,9 +4478,8 @@ export class GameManager {
 
       btn.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>${upgrade.name} <span style="color: #88ff88;">${
-        upgrade.increment
-      }</span></span>
+          <span>${upgrade.name} <span style="color: #88ff88;">${upgrade.increment
+        }</span></span>
           <span style="font-size: 11px;">${levelDisplay}</span>
         </div>
         <div style="font-size: 10px; color: #888; margin-top: 3px;">
@@ -4729,7 +4719,7 @@ export class GameManager {
       overflow-y: auto;
       padding-right: 5px;
     `;
-    
+
     // 터미널 스타일 스크롤바 CSS 추가 (한 번만)
     if (!document.getElementById("terminal-scrollbar-style")) {
       const scrollStyle = document.createElement("style");
@@ -4898,13 +4888,10 @@ export class GameManager {
         <span style="color: #fff;">${usedSlots} / ${totalSlots}</span>
       </div>
       <div style="background: #333; height: 8px; border-radius: 4px; overflow: hidden;">
-        <div style="background: linear-gradient(90deg, #00ff88 0%, #00ff88 ${
-          (mainSlots / totalSlots) * 100
-        }%, #ffaa00 ${(mainSlots / totalSlots) * 100}%, #ffaa00 ${
-      (usedSlots / totalSlots) * 100
-    }%, #333 ${
-      (usedSlots / totalSlots) * 100
-    }%); height: 100%; width: 100%;"></div>
+        <div style="background: linear-gradient(90deg, #00ff88 0%, #00ff88 ${(mainSlots / totalSlots) * 100
+      }%, #ffaa00 ${(mainSlots / totalSlots) * 100}%, #ffaa00 ${(usedSlots / totalSlots) * 100
+      }%, #333 ${(usedSlots / totalSlots) * 100
+      }%); height: 100%; width: 100%;"></div>
       </div>
       <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px;">
         <span style="color: #00ff88;">● Main: ${mainCount}마리 (${mainSlots}슬롯)</span>
@@ -5005,10 +4992,10 @@ export class GameManager {
   isVirusUnlocked(virusType) {
     // SWARM만 기본 해금
     if (virusType === "SWARM") return true;
-    
+
     // virusUnlockTargets에 있는 타입은 해금 필요
     if (!this.virusUnlockTargets.includes(virusType)) return true;
-    
+
     // 해금 진행률 100% 이상이면 해금
     return (this.decryptionProgress[virusType] || 0) >= 100;
   }
@@ -5021,10 +5008,10 @@ export class GameManager {
   isWeaponUnlocked(weaponMode) {
     // NORMAL만 기본 해금
     if (weaponMode === "NORMAL") return true;
-    
+
     // weaponUnlockTargets에 있는 타입은 해금 필요
     if (!this.weaponUnlockTargets.includes(weaponMode)) return true;
-    
+
     // 해금 진행률 100% 이상이면 해금
     return (this.decryptionProgress[weaponMode] || 0) >= 100;
   }
@@ -5042,7 +5029,7 @@ export class GameManager {
       5: "DELTA",
       6: "BOSS"
     };
-    
+
     for (const [stageId, targets] of Object.entries(this.stageUnlockTargets)) {
       if (Array.isArray(targets) && targets.includes(target)) {
         return stageNames[stageId] || `STAGE ${stageId}`;
@@ -5109,7 +5096,7 @@ export class GameManager {
       if (isLocked) {
         const progress = Math.min(100, unlockProgress);
         const clipRight = 100 - progress; // 오른쪽에서 얼마나 자를지
-        
+
         btn.style.cssText = `
           ${btnBaseStyle}
           background: rgba(20, 20, 20, 0.9);
@@ -5299,15 +5286,13 @@ export class GameManager {
 
       const btn = document.createElement("button");
       btn.style.cssText = `
-        background: ${
-          isMaxLevel
-            ? "rgba(0, 100, 100, 0.4)"
-            : canAfford
+        background: ${isMaxLevel
+          ? "rgba(0, 100, 100, 0.4)"
+          : canAfford
             ? "rgba(0, 80, 80, 0.6)"
             : "rgba(50, 50, 50, 0.5)"
         };
-        border: 1px solid ${
-          isMaxLevel ? "#00ffff" : canAfford ? "#00aaff" : "#555"
+        border: 1px solid ${isMaxLevel ? "#00ffff" : canAfford ? "#00aaff" : "#555"
         };
         color: ${isMaxLevel ? "#00ffff" : canAfford ? "#00aaff" : "#666"};
         padding: 8px 10px;
@@ -5501,8 +5486,7 @@ export class GameManager {
       const canAfford = this.currentMoney >= upgrade.cost;
 
       btn.style.cssText = `
-        background: ${
-          canAfford ? "rgba(0, 100, 50, 0.5)" : "rgba(50, 50, 50, 0.5)"
+        background: ${canAfford ? "rgba(0, 100, 50, 0.5)" : "rgba(50, 50, 50, 0.5)"
         };
         border: 1px solid ${canAfford ? "#00ff00" : "#555"};
         color: ${canAfford ? "#00ff00" : "#666"};
@@ -5578,8 +5562,8 @@ export class GameManager {
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
         <div>Damage: <span style="color: #ffff00;">${helper.damage}</span></div>
         <div>Fire Rate: <span style="color: #ffff00;">${helper.fireRate.toFixed(
-          1
-        )}/s</span></div>
+      1
+    )}/s</span></div>
         <div>Range: <span style="color: #ffff00;">${helper.range}</span></div>
         <div>Speed: <span style="color: #ffff00;">${helper.speed}</span></div>
       </div>
@@ -5591,12 +5575,12 @@ export class GameManager {
    */
   createEquipSlotElement(item, index, isUnlocked, readOnly = false) {
     const slot = document.createElement("div");
-    
-    const bgColor = !isUnlocked ? "rgba(50, 50, 50, 0.5)" 
-                  : item ? "rgba(0, 100, 50, 0.5)" 
-                  : "rgba(0, 0, 0, 0.3)";
+
+    const bgColor = !isUnlocked ? "rgba(50, 50, 50, 0.5)"
+      : item ? "rgba(0, 100, 50, 0.5)"
+        : "rgba(0, 0, 0, 0.3)";
     const borderColor = !isUnlocked ? "#333" : item ? "#00ff00" : "#555";
-    
+
     slot.style.cssText = `
       width: 55px;
       height: 55px;
@@ -5620,7 +5604,7 @@ export class GameManager {
       lockIcon.style.cssText = "font-size: 16px; color: #555;";
       lockIcon.innerText = "🔒";
       slot.appendChild(lockIcon);
-      
+
       const cost = this.inventoryManager.slotUnlockCosts[index - 1];
       if (cost) {
         const costLabel = document.createElement("div");
@@ -5631,12 +5615,12 @@ export class GameManager {
     } else if (item) {
       // 아이템 있음
       const color = this.itemDatabase.getRarityColor(item.rarity);
-      
+
       const icon = document.createElement("div");
       icon.style.cssText = `font-size: 18px;`;
       icon.innerText = item.icon;
       slot.appendChild(icon);
-      
+
       const name = document.createElement("div");
       name.style.cssText = `font-size: 6px; color: ${color}; text-align: center; margin-top: 2px;`;
       name.innerText = item.name.split(" ")[0]; // 첫 단어만
@@ -5668,10 +5652,10 @@ export class GameManager {
    */
   createInventorySlotElement(item, index) {
     const slot = document.createElement("div");
-    
+
     const bgColor = item ? "rgba(0, 80, 50, 0.5)" : "rgba(0, 0, 0, 0.3)";
     const borderColor = item ? this.itemDatabase.getRarityColor(item.rarity) : "#333";
-    
+
     slot.style.cssText = `
       width: 50px;
       height: 50px;
@@ -5689,17 +5673,17 @@ export class GameManager {
 
     if (item) {
       const color = this.itemDatabase.getRarityColor(item.rarity);
-      
+
       const icon = document.createElement("div");
       icon.style.cssText = `font-size: 16px;`;
       icon.innerText = item.icon;
       slot.appendChild(icon);
-      
+
       const name = document.createElement("div");
       name.style.cssText = `font-size: 5px; color: ${color}; text-align: center;`;
       name.innerText = item.name.split(" ").slice(0, 2).join(" ");
       slot.appendChild(name);
-      
+
       slot.onmouseenter = () => {
         slot.style.boxShadow = `0 0 8px ${color}`;
         slot.style.transform = "scale(1.05)";
@@ -5720,7 +5704,7 @@ export class GameManager {
    */
   handleEquipSlotClick(slotIdx, data, overlay) {
     const isUnlocked = slotIdx < data.unlockedSlots;
-    
+
     if (!isUnlocked) {
       // 슬롯 해금 시도
       const result = this.inventoryManager.unlockSlot(this.currentMoney, (cost) => {
@@ -5728,7 +5712,7 @@ export class GameManager {
         this.saveMoney();
         this.terminal.updateData(this.currentMoney);
       });
-      
+
       if (result.success) {
         this.showNotification(result.message, "#00ff00");
         this.refreshInventoryUI(overlay);
@@ -5752,7 +5736,7 @@ export class GameManager {
    */
   handleInventoryItemClick(invIdx, overlay) {
     const data = this.inventoryManager.getData();
-    
+
     // 첫 번째 빈 해금 슬롯 찾기
     let targetSlot = -1;
     for (let i = 0; i < data.unlockedSlots; i++) {
@@ -5761,12 +5745,12 @@ export class GameManager {
         break;
       }
     }
-    
+
     if (targetSlot === -1) {
       this.showNotification("모든 슬롯이 사용 중!", "#ff0000");
       return;
     }
-    
+
     const result = this.inventoryManager.equip(invIdx, targetSlot);
     if (result.success) {
       this.showNotification(result.message, "#00ff00");
@@ -5790,7 +5774,7 @@ export class GameManager {
   showNotification(message, color = "#00ff00") {
     const existing = document.getElementById("simple-notification");
     if (existing) existing.remove();
-    
+
     const notif = document.createElement("div");
     notif.id = "simple-notification";
     notif.style.cssText = `
@@ -5809,7 +5793,7 @@ export class GameManager {
     `;
     notif.innerText = message;
     document.body.appendChild(notif);
-    
+
     setTimeout(() => notif.remove(), 2000);
   }
 
@@ -6367,7 +6351,7 @@ export class GameManager {
     }
 
     await this.terminal.waitForEnter();
-    
+
     // 획득 아이템 요약 표시
     this.showLootSummary();
 
@@ -6609,18 +6593,18 @@ export class GameManager {
   /**
    * 자원을 localStorage에 저장
    */
-  
+
   saveDecryptionProgress() {
     try {
       localStorage.setItem("cylinderTetris_decryption", JSON.stringify(this.decryptionProgress));
-    } catch(e) {}
+    } catch (e) { }
   }
 
   loadDecryptionProgress() {
     try {
       const saved = localStorage.getItem("cylinderTetris_decryption");
       if (saved) this.decryptionProgress = JSON.parse(saved);
-    } catch(e) {}
+    } catch (e) { }
   }
 
   saveMoney() {
@@ -6703,7 +6687,7 @@ export class GameManager {
     );
     return this.currentMoney;
   }
-  
+
   // ============ 채굴 데이터 저장/로드 ============
 
   saveMiningData() {
@@ -6723,9 +6707,52 @@ export class GameManager {
       if (saved) {
         this.miningManager.loadData(JSON.parse(saved));
       }
+      const added = this.reconcileMiningTerritories();
+      if (added > 0) {
+        this.saveMiningData();
+      }
+      this.deferMiningSceneSync();
     } catch (e) {
       console.warn("Failed to load mining data:", e);
     }
+  }
+
+  deferMiningSceneSync(retries = 10) {
+    if (!this.miningManager || !this.stageManager || !this.defenseGame) return;
+    const core = this.defenseGame.core;
+    const canvas = this.defenseGame.canvas;
+    if (!core || typeof core.x !== "number" || !canvas) {
+      if (retries > 0) {
+        setTimeout(() => this.deferMiningSceneSync(retries - 1), 100);
+      }
+      return;
+    }
+    const stage = this.stageManager.getCurrentStage?.();
+    if (!stage) return;
+    const isSafe = stage.type === "safe";
+    if (isSafe || (stage.type === "conquest" && stage.conquered)) {
+      this.miningManager.onSceneChange(
+        String(stage.id),
+        isSafe,
+        canvas,
+        core
+      );
+    }
+  }
+
+  reconcileMiningTerritories() {
+    if (!this.stageManager || !this.miningManager) return 0;
+    let added = 0;
+    for (const stage of this.stageManager.stages || []) {
+      if (stage?.type === "conquest" && stage?.conquered) {
+        const id = String(stage.id);
+        if (!this.miningManager.territories[id]) {
+          this.miningManager.registerTerritory(id);
+          added += 1;
+        }
+      }
+    }
+    return added;
   }
 
   // ============ 보스전 시스템 ============
@@ -6738,24 +6765,24 @@ export class GameManager {
 
     // BossManager 시작
     this.bossManager.start();
-    
+
     // DefenseGame에 보스전 모드 설정
     this.defenseGame.isBossFight = true;
     this.defenseGame.bossManager = this.bossManager;
     this.defenseGame.breachReadyShown = false;
-    
+
     // 콜백 설정: BREACH READY
     this.defenseGame.onBreachReady = () => this.handleBreachReady();
-    
+
     // 콜백 설정: 보스 처치
     this.bossManager.onBossDefeated = () => this.handleBossDefeated();
-    
+
     // 콜백 설정: 페이즈 전환
     this.bossManager.onPhaseChange = (phase, config) => {
       this.terminal.printSystemMessage(`>>> ${config.description} <<<`);
     };
   }
-  
+
   /**
    * 보스전 종료
    */
@@ -6770,7 +6797,7 @@ export class GameManager {
     this.defenseGame.onBreachReady = null;
     this.tetrisGame.endBossFight();
   }
-  
+
   /**
    * BREACH READY 처리 (침투 게이지 100%)
    */
@@ -6780,17 +6807,17 @@ export class GameManager {
     // 선택지 표시
     await this.terminal.printSystemMessage('>>> BREACH READY <<<');
     await this.terminal.printSystemMessage('Core firewall vulnerable. Initiate breach?');
-    
+
     const choice = await this.terminal.showChoices([
       { text: '>>> BREACH NOW <<<', value: 'breach', style: 'danger' },
       { text: 'Continue defense', value: 'continue' },
     ]);
-    
+
     if (choice === 'breach') {
       await this.startBossBreach();
     }
   }
-  
+
   /**
    * 보스 침투 시작 (테트리스 모드 진입)
    */
@@ -6799,33 +6826,33 @@ export class GameManager {
 
     // 테트리스 모드로 전환
     this.defenseGame.pause();
-    
+
     // 테트리스에 보스전 모드 설정
     this.tetrisGame.startBossFight(this.bossManager);
-    
+
     // 방해 콜백 설정
     this.bossManager.onInterference = (type) => {
       this.tetrisGame.applyBossInterference(type);
     };
-    
+
     // 방해 타이머 리셋
     this.bossManager.resetInterferenceTimers();
-    
+
     // 테트리스 시작
     await this.terminal.printSystemMessage('BREACH INITIATED - Clear 3 lines to damage core!');
-    
+
     // 테트리스 콜백 설정
     this.tetrisGame.onStageClear = () => this.handleBossBreachSuccess();
     this.tetrisGame.onGameOver = () => this.handleBossBreachFail();
-    
+
     this.switchToTetrisMode();
     // 테트리스 게임 시작 (3줄 목표, 기본 속도)
     this.tetrisGame.startGame(3, 800);
-    
+
     // 방해 업데이트 루프 시작
     this.startBossInterferenceLoop();
   }
-  
+
   /**
    * 보스 방해 업데이트 루프
    */
@@ -6833,18 +6860,18 @@ export class GameManager {
     if (this.bossInterferenceInterval) {
       clearInterval(this.bossInterferenceInterval);
     }
-    
+
     this.bossInterferenceInterval = setInterval(() => {
       if (!this.tetrisGame.state.isPlaying || !this.tetrisGame.state.isBossFight) {
         clearInterval(this.bossInterferenceInterval);
         return;
       }
-      
+
       const now = performance.now();
       this.bossManager.updateInterference(now);
     }, 1000); // 1초마다 체크
   }
-  
+
   /**
    * 보스 침투 성공 (테트리스 3줄 클리어)
    */
@@ -6855,33 +6882,33 @@ export class GameManager {
     if (this.bossInterferenceInterval) {
       clearInterval(this.bossInterferenceInterval);
     }
-    
+
     // 보스에게 데미지
     const defeated = this.bossManager.dealDamage(20);
-    
+
     if (defeated) {
       // 보스 처치 - handleBossDefeated에서 처리
       return;
     }
-    
+
     // 테트리스 종료, 디펜스로 복귀
     this.tetrisGame.state.isPlaying = false;
     this.tetrisGame.endBossFight();
-    
+
     await this.terminal.printSystemMessage(`BREACH SUCCESS! Core damaged: ${this.bossManager.bossHP}% remaining`);
-    
+
     // 침투 게이지 리셋
     this.defenseGame.breachReadyShown = false;
     this.bossManager.breachGauge = 0;
     this.bossManager.isBreachReady = false;
-    
+
     // 디펜스 모드로 복귀
     this.switchToDefenseMode();
     this.defenseGame.resume();
-    
+
     await this.showCommandMenu();
   }
-  
+
   /**
    * 보스 침투 실패 (테트리스 게임오버)
    */
@@ -6892,27 +6919,27 @@ export class GameManager {
     if (this.bossInterferenceInterval) {
       clearInterval(this.bossInterferenceInterval);
     }
-    
+
     // BossManager에 실패 알림
     this.bossManager.onBreachFailed();
-    
+
     // 테트리스 종료
     this.tetrisGame.state.isPlaying = false;
     this.tetrisGame.endBossFight();
-    
+
     await this.terminal.printSystemMessage('BREACH FAILED! Core firewall restored.');
     await this.terminal.printSystemMessage('Breach gauge reset. Continue defense.');
-    
+
     // 침투 게이지 리셋
     this.defenseGame.breachReadyShown = false;
-    
+
     // 디펜스 모드로 복귀
     this.switchToDefenseMode();
     this.defenseGame.resume();
-    
+
     await this.showCommandMenu();
   }
-  
+
   /**
    * 보스 처치 처리
    */
@@ -6923,20 +6950,20 @@ export class GameManager {
     if (this.bossInterferenceInterval) {
       clearInterval(this.bossInterferenceInterval);
     }
-    
+
     // 테트리스 종료
     this.tetrisGame.state.isPlaying = false;
     this.tetrisGame.endBossFight();
-    
+
     // 보스전 종료
     this.endBossFight();
-    
+
     // 스테이지 점령
     const currentStage = this.stageManager.getCurrentStage();
     if (currentStage) {
       this.stageManager.conquerStage(currentStage.id);
     }
-    
+
     // 승리 연출
     await this.terminal.printSystemMessage('');
     await this.terminal.printSystemMessage('████████████████████████████████');
@@ -6947,21 +6974,21 @@ export class GameManager {
     await this.terminal.printSystemMessage('█                              █');
     await this.terminal.printSystemMessage('████████████████████████████████');
     await this.terminal.printSystemMessage('');
-    
+
     // 보상 지급
     const reward = 10000;
     this.currentMoney += reward;
     this.saveMoney();
     await this.terminal.printSystemMessage(`REWARD: +${reward} DATA`);
-    
+
     // 디펜스 모드로 복귀
     this.switchToDefenseMode();
     this.defenseGame.setConquered(true);
     this.defenseGame.resume();
-    
+
     await this.showCommandMenu();
   }
-  
+
   /**
    * 테트리스 모드로 전환 (보스 침투용)
    */
@@ -6970,24 +6997,24 @@ export class GameManager {
 
     // 1. 터미널 투명 모드 (테트리스 배경으로)
     this.terminal.setTransparentMode(true);
-    
+
     // 2. Three.js 캔버스 표시
     document.getElementById('game-container').style.display = 'block';
     document.getElementById('game-container').style.opacity = '1';
-    
+
     // 3. 게임 UI 표시 (NEXT 블록, 점수 등)
     document.getElementById('game-ui').style.display = 'block';
-    
+
     // 4. 디펜스 게임을 미니맵 모드로 전환 (상단에 작게 표시)
     if (this.defenseGame) {
       this.defenseGame.originalCanvas.style.display = "none";
       this.createMiniDefensePanel();
     }
-    
+
     // 5. 모드 상태 업데이트
     this.activeMode = 'tetris';
   }
-  
+
   /**
    * 디펜스 모드로 전환 (보스 침투 후 복귀)
    */
@@ -6998,17 +7025,17 @@ export class GameManager {
     this.tetrisGame.state.isPlaying = false;
     document.getElementById('game-ui').style.display = 'none';
     document.getElementById('game-container').style.display = 'none';
-    
+
     // 2. 디펜스 게임을 전체 화면 모드로 복원
     if (this.defenseGame) {
       this.removeMiniDefensePanel();
       this.defenseGame.originalCanvas.style.display = "block";
     }
-    
+
     // 3. 터미널 디펜스 모드로 복원
     this.terminal.setDefenseMode(true);
     this.terminal.show();
-    
+
     // 4. 모드 상태 업데이트
     this.activeMode = 'defense';
   }

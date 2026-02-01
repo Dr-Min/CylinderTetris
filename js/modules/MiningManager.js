@@ -29,27 +29,43 @@ export class MiningManager {
 
   // === 점령지 등록 ===
   registerTerritory(stageId) {
-    if (this.territories[stageId]) return;
-    this.territories[stageId] = {
+    const id = String(stageId); // Normalize to string
+    if (this.territories[id]) {
+      console.log(`[Mining] ⚠️ Territory ${id} already registered. Skipping.`);
+      return;
+    }
+    this.territories[id] = {
       minerCount: this.minerCount,
       tripTimer: 0,
     };
-    console.log(`[Mining] ✅ Territory ${stageId} registered`);
+    console.log(`[Mining] ✅ Territory ${id} registered successfully.`);
   }
 
   // === 씬 전환 시 호출 ===
   onSceneChange(stageId, isSafeZone, canvas, core) {
-    this._currentSceneStageId = stageId;
+    this._currentSceneStageId = String(stageId);
     this._currentSceneIsSafe = isSafeZone;
     this.miners = [];
+
+    console.log(`[Mining] onSceneChange: stageId=${stageId} (type:${typeof stageId}), isSafeZone=${isSafeZone}`);
 
     if (isSafeZone) {
       this.initCabinet(canvas);
       this._spawnSafeZoneMiners(canvas);
       console.log(`[Mining] Safe zone entered - spawned ${this.miners.length} deposit miners`);
-    } else if (this.territories[stageId]) {
-      this._spawnTerritoryMiners(core);
-      console.log(`[Mining] Territory ${stageId} entered - spawned ${this.miners.length} miners`);
+    } else {
+      // Check if this territory is registered
+      const id = String(stageId);
+      if (this.territories[id]) {
+        if (!core || typeof core.x !== 'number') {
+           console.error("[Mining] ❌ Core is invalid or missing coordinates! Cannot spawn miners.");
+           return;
+        }
+        this._spawnTerritoryMiners(core);
+        console.log(`[Mining] Territory ${id} entered - spawned ${this.miners.length} miners`);
+      } else {
+        console.warn(`[Mining] ⚠️ Stage ${id} is NOT registered as a territory. No miners spawned. Known territories:`, Object.keys(this.territories));
+      }
     }
   }
 

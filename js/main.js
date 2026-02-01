@@ -146,7 +146,7 @@ class MobileOptimizer {
             // 모바일 메타 태그 강화
             const viewport = document.querySelector('meta[name="viewport"]');
             if (viewport) {
-                viewport.setAttribute("content", 
+                viewport.setAttribute("content",
                     "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
                 );
             }
@@ -171,7 +171,7 @@ class MobileOptimizer {
 document.addEventListener("DOMContentLoaded", () => {
     // 버전 표시
     const verEl = document.getElementById("app-version");
-    if (verEl) verEl.innerText = "PROTOCOL v2.1";
+    if (verEl) verEl.innerText = "PROTOCOL v2.1.14";
 
     // 업데이트 관리자 초기화
     const updateManager = new UpdateManager();
@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 게임 매니저 초기화
     const gameManager = new GameManager();
     window.gameManager = gameManager; // 콘솔에서 접근용
-    
+
     gameManager.init().catch((err) => {
         console.error("Initialization failed:", err);
     });
