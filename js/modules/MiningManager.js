@@ -195,6 +195,8 @@ export class MiningManager {
         color: "#ffcc00",
         speed: this.minerSpeed,
         wobblePhase: Math.random() * Math.PI * 2,
+        wobbleSpeed: 5 + Math.random() * 3,
+        pathOffset: (Math.random() - 0.5) * 40,
         minerState: "APPROACH_CORE",
         stateTimer: 0,
         dataCarrying: 0,
@@ -223,6 +225,8 @@ export class MiningManager {
         color: "#ffcc00",
         speed: this.minerSpeed,
         wobblePhase: Math.random() * Math.PI * 2,
+        wobbleSpeed: 5 + Math.random() * 3,
+        pathOffset: (Math.random() - 0.5) * 40,
         minerState: "ENTER_SAFE",
         stateTimer: 0,
         dataCarrying: carry,
@@ -610,17 +614,29 @@ export class MiningManager {
   }
 
   _moveToward(m, tx, ty, dt) {
-    const dx = tx - m.x, dy = ty - m.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const dx = tx - m.x;
+    const dy = ty - m.y;
+    const dist = Math.hypot(dx, dy);
     if (dist < 2) { m.x = tx; m.y = ty; return; }
-    const desiredX = dx / dist;
-    const desiredY = dy / dist;
-    const accel = 0.18;
-    m.vx = (m.vx || 0) * (1 - accel) + desiredX * accel;
-    m.vy = (m.vy || 0) * (1 - accel) + desiredY * accel;
-    const r = Math.min(m.speed * dt, dist);
-    m.x += m.vx * r;
-    m.y += m.vy * r;
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const targetVx = nx * m.speed;
+    const targetVy = ny * m.speed;
+    const accel = 8;
+    m.vx = (m.vx || 0) + (targetVx - (m.vx || 0)) * accel * dt;
+    m.vy = (m.vy || 0) + (targetVy - (m.vy || 0)) * accel * dt;
+    if (m.wobblePhase !== undefined) {
+      m.wobblePhase += dt * (m.wobbleSpeed || 5);
+      const wobbleAmount = Math.sin(m.wobblePhase) * 25;
+      const perpAngle = Math.atan2(dy, dx) + Math.PI / 2;
+      const wobbleX = Math.cos(perpAngle) * wobbleAmount * dt;
+      const wobbleY = Math.sin(perpAngle) * wobbleAmount * dt;
+      m.x += m.vx * dt + wobbleX;
+      m.y += m.vy * dt + wobbleY;
+      return;
+    }
+    m.x += m.vx * dt;
+    m.y += m.vy * dt;
   }
 
   _distanceTo(m, tx, ty) {
@@ -665,9 +681,11 @@ export class MiningManager {
   }
 
   _getSafeEntry(canvas) {
+    const w = this._worldW || canvas.width;
+    const h = this._worldH || canvas.height;
     return {
-      x: canvas.width + 20,
-      y: canvas.height * 0.2,
+      x: w + 20,
+      y: h * 0.2,
     };
   }
 
