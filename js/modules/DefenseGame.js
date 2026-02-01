@@ -211,6 +211,7 @@ export class DefenseGame {
     this.staticSystem = {
       currentCharge: 0,
       maxCharge: 100,
+      chargeRate: 6,
       hitChargeAmount: 15,
       killChargeAmount: 25,
       chainCount: 3,
@@ -551,6 +552,8 @@ export class DefenseGame {
     this.worldHeight = targetCanvas.height * this.worldScale;
     this.coreHome.x = this.worldWidth / 2;
     this.coreHome.y = this.worldHeight / 2;
+    this.core.worldWidth = this.worldWidth;
+    this.core.worldHeight = this.worldHeight;
 
     if (!this.hasInitializedCore) {
       this.core.x = this.coreHome.x;
@@ -871,9 +874,8 @@ export class DefenseGame {
   }
 
   updateShieldBtnUI(text, color, loadingProgress = null) {
-    const hpPct = Math.floor(
-      (this.core.shieldHp / this.core.shieldMaxHp) * 100
-    );
+    const maxHp = this.core.shieldMaxHp || 1;
+    const hpPct = Math.floor((this.core.shieldHp / maxHp) * 100);
 
     let topDisplay = `(${hpPct}%)`;
     if (loadingProgress !== null) {
@@ -923,7 +925,14 @@ export class DefenseGame {
     this.conquerReady = false;
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
-    this.updateShieldBtnUI("ACTIVE", "#fff");
+    if (this.isSafeZone) {
+      this.core.shieldActive = false;
+      this.core.shieldState = "OFF";
+      this.updateShieldBtnUI("OFFLINE", "#f00");
+    } else {
+      this.updateShieldBtnUI("ACTIVE", "#fff");
+    }
+    this.shieldBtn.style.display = this.isSafeZone ? "block" : "none";
 
     if (this.isSafeZone) {
       this.playBGMTrack('SAFE_ZONE');
@@ -1525,6 +1534,10 @@ export class DefenseGame {
   updateStaticSystem(dt) {
     const ss = this.staticSystem;
 
+    if (!Number.isFinite(ss.currentCharge)) ss.currentCharge = 0;
+    if (!Number.isFinite(ss.chargeRate)) ss.chargeRate = 0;
+    if (!Number.isFinite(ss.maxCharge) || ss.maxCharge <= 0) ss.maxCharge = 100;
+
     ss.currentCharge += ss.chargeRate * dt;
 
     if (ss.currentCharge > ss.maxCharge) {
@@ -1881,8 +1894,8 @@ export class DefenseGame {
     }
 
     this.shockwaves.push({
-      x: this.core.x,
-      y: this.core.y,
+      x: this.shieldAnchor.x,
+      y: this.shieldAnchor.y,
       radius: 0,
       maxRadius: Math.max(this.canvas.width, this.canvas.height) * 1.2,
       speed: 400,
@@ -2955,8 +2968,8 @@ export class DefenseGame {
 
   renderConqueredVisuals() {
     const ctx = this.ctx;
-    const x = this.core.x;
-    const y = this.core.y;
+    const x = this.shieldAnchor.x;
+    const y = this.shieldAnchor.y;
     const size = 80;
 
     if (!this.conqueredStartTime) {
@@ -3355,7 +3368,7 @@ export class DefenseGame {
     if (this.miningManager) {
       this.miningManager.render(this.ctx, time, isMobile);
     }
-    if (this.isSafeZone) {
+    if (!this.isSafeZone) {
       this.renderMiningEffect(this.ctx, time);
     }
 
@@ -3743,7 +3756,8 @@ export class DefenseGame {
     this.ctx.stroke();
 
     if (this.showCoreHP !== false && !this.isOutroPlaying) {
-      const hpPercent = Math.round((this.core.hp / this.core.maxHp) * 100);
+      const safeMaxHp = this.core.maxHp || 1;
+      const hpPercent = Math.round((this.core.hp / safeMaxHp) * 100);
 
       const offsetX = this.glitchText ? this.glitchOffset?.x || 0 : 0;
       const offsetY = this.glitchText ? this.glitchOffset?.y || 0 : 0;
@@ -3773,6 +3787,23 @@ export class DefenseGame {
         coreVisualX + offsetX,
         coreVisualY + scaledRadius + 20 + offsetY
       );
+
+      if (!this.core.shieldActive && this.core.shieldState === "OFF") {
+        const dx = this.core.x - this.shieldAnchor.x;
+        const dy = this.core.y - this.shieldAnchor.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= this.shieldReadyRadius) {
+          const progress = Math.min(1, this.shieldReadyTimer / this.shieldReadyDuration);
+          const barW = 50 * coreScale;
+          const barH = 6 * coreScale;
+          const barX = coreVisualX - barW / 2;
+          const barY = coreVisualY - scaledRadius - 14 * coreScale;
+          this.ctx.fillStyle = "rgba(255, 255, 0, 0.2)";
+          this.ctx.fillRect(barX, barY, barW, barH);
+          this.ctx.fillStyle = "#ffe800";
+          this.ctx.fillRect(barX, barY, barW * progress, barH);
+        }
+      }
     }
 
     this.ctx.font = "bold 10px monospace";
@@ -5818,7 +5849,7 @@ export class DefenseGame {
     this.core.x += this.moveInput.x * speed * dt;
     this.core.y += this.moveInput.y * speed * dt;
 
-    if (this.core.shieldActive) {
+    if (this.core.shieldActive && this.isSafeZone) {
       const maxDist = Math.max(0, this.core.shieldRadius - this.core.radius);
       const dx = this.core.x - this.shieldAnchor.x;
       const dy = this.core.y - this.shieldAnchor.y;

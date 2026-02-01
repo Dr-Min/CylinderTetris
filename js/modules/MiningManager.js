@@ -16,7 +16,8 @@ export class MiningManager {
     this.dataPerTrip = 5;
     this.miningDuration = 2.0;
     this.depositDuration = 1.0;
-    this.minerSpeed = 50;
+    this.baseMinerSpeed = 50;
+    this.minerSpeed = this.baseMinerSpeed;
     this.offScreenDelay = 3.0;
     this.minerCount = 5;
     this.travelBuffer = 4;
@@ -30,6 +31,8 @@ export class MiningManager {
     this._territoryExit = null;
     this._lastCanvas = null;
     this._lastCore = null;
+    this._worldW = 0;
+    this._worldH = 0;
   }
 
   registerTerritory(stageId) {
@@ -56,12 +59,16 @@ export class MiningManager {
     console.log(`[Mining] onSceneChange: stageId=${stageId} (type:${typeof stageId}), isSafeZone=${isSafeZone}`);
     this._lastCanvas = canvas || null;
     this._lastCore = core || null;
+    this._worldW = core?.worldWidth ?? canvas?.width ?? 0;
+    this._worldH = core?.worldHeight ?? canvas?.height ?? 0;
 
     if (isPrimarySafe) {
+      this.minerSpeed = this.baseMinerSpeed;
       this.initCabinet(canvas, core);
       this._spawnSafeZoneMiners(canvas);
       console.log(`[Mining] Safe zone entered - spawned ${this.miners.length} deposit miners`);
     } else {
+      this.minerSpeed = Math.round(this.baseMinerSpeed * 1.6);
       if (this._currentSceneIsConquered && this.territories[id]) {
         if (!core || typeof core.x !== 'number') {
            console.error("[Mining] Core is invalid or missing coordinates! Cannot spawn miners.");
@@ -120,7 +127,6 @@ export class MiningManager {
       this.initCabinet(this._lastCanvas, this._lastCore);
     }
     for (const miner of this.miners) {
-      if (this._isOffScreen(miner, ctx.canvas)) continue;
       this._renderMiner(ctx, miner, time, isMobile);
     }
 
@@ -192,8 +198,8 @@ export class MiningManager {
         minerState: "APPROACH_CORE",
         stateTimer: 0,
         dataCarrying: 0,
-        targetX: core.x,
-        targetY: core.y,
+        targetX: core?.shieldAnchor?.x ?? core.x,
+        targetY: core?.shieldAnchor?.y ?? core.y,
         miningProgress: 0,
         initialDelay: i * 0.8,
       });
@@ -272,13 +278,16 @@ export class MiningManager {
     miner.stateTimer += dt;
 
     switch (miner.minerState) {
-      case "APPROACH_CORE":
-        this._moveToward(miner, core.x, core.y, dt);
-        if (this._distanceTo(miner, core.x, core.y) < 25) {
+      case "APPROACH_CORE": {
+        const ax = core?.shieldAnchor?.x ?? core.x;
+        const ay = core?.shieldAnchor?.y ?? core.y;
+        this._moveToward(miner, ax, ay, dt);
+        if (this._distanceTo(miner, ax, ay) < 25) {
           this._changeState(miner, "MINING");
           miner.miningProgress = 0;
         }
         break;
+      }
 
       case "MINING":
         miner.miningProgress = Math.min(1, miner.stateTimer / this.miningDuration);
@@ -286,11 +295,9 @@ export class MiningManager {
         miner.y += Math.cos(miner.stateTimer * 12) * 0.2;
 
         if (Math.random() < 0.05 && createExplosion) {
-          createExplosion(
-            core.x + (Math.random() - 0.5) * 20,
-            core.y + (Math.random() - 0.5) * 20,
-            "#00ffaa", 2
-          );
+          const ax = core?.shieldAnchor?.x ?? core.x;
+          const ay = core?.shieldAnchor?.y ?? core.y;
+          createExplosion(ax + (Math.random() - 0.5) * 20, ay + (Math.random() - 0.5) * 20, "#00ffaa", 2);
         }
 
         if (miner.stateTimer >= this.miningDuration) {
@@ -316,8 +323,8 @@ export class MiningManager {
           const enterEdge = this._getTerritoryEntry(canvas);
           miner.x = enterEdge.x;
           miner.y = enterEdge.y;
-          miner.targetX = core.x;
-          miner.targetY = core.y;
+          miner.targetX = core?.shieldAnchor?.x ?? core.x;
+          miner.targetY = core?.shieldAnchor?.y ?? core.y;
           this._changeState(miner, "APPROACH_CORE");
         }
         break;
@@ -507,14 +514,16 @@ export class MiningManager {
   }
 
   initCabinet(canvas, core) {
-    const offsetX = Math.min(160, canvas.width * 0.18);
-    const offsetY = -Math.min(180, canvas.height * 0.22);
+    const offsetX = Math.min(260, canvas.width * 0.28);
+    const offsetY = -Math.min(260, canvas.height * 0.30);
     const cx = core?.shieldAnchor?.x ?? core?.x ?? canvas.width - 90;
     const cy = core?.shieldAnchor?.y ?? core?.y ?? canvas.height - 120;
+    const worldW = core?.worldWidth ?? canvas.width;
+    const worldH = core?.worldHeight ?? canvas.height;
     const rawX = cx + offsetX;
     const rawY = cy + offsetY;
-    const maxX = canvas.width - this.cabinet.width - 10;
-    const maxY = canvas.height - this.cabinet.height - 10;
+    const maxX = worldW - this.cabinet.width - 10;
+    const maxY = worldH - this.cabinet.height - 10;
     this.cabinet.x = Math.min(Math.max(10, rawX), maxX);
     this.cabinet.y = Math.min(Math.max(10, rawY), maxY);
   }
@@ -621,7 +630,9 @@ export class MiningManager {
   }
 
   _isOffScreen(m, canvas) {
-    return m.x < -15 || m.x > canvas.width + 15 || m.y < -15 || m.y > canvas.height + 15;
+    const w = this._worldW || canvas.width;
+    const h = this._worldH || canvas.height;
+    return m.x < -15 || m.x > w + 15 || m.y < -15 || m.y > h + 15;
   }
 }
 
