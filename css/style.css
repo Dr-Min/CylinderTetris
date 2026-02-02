@@ -789,8 +789,8 @@ body {
   }
 
   #defense-ui #shield-btn {
-    width: 170px;
-    height: 44px;
+    width: 130px;
+    height: 36px;
     bottom: 90px;
     font-size: 12px;
     display: flex;
@@ -891,8 +891,8 @@ body {
   }
 
   #defense-ui #shield-btn {
-    width: 140px;
-    height: 40px;
+    width: 110px;
+    height: 32px;
     font-size: 10px;
   }
 
