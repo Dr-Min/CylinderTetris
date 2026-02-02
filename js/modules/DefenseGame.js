@@ -1391,6 +1391,22 @@ export class DefenseGame {
         enemy.x += (dx / distToTarget) * enemy.speed * slowMult * dt;
         enemy.y += (dy / distToTarget) * enemy.speed * slowMult * dt;
       }
+
+      if (enemy.hp <= 0) {
+        debugLog(
+          "Enemy",
+          "force cleanup",
+          "hp",
+          enemy.hp,
+          "type",
+          enemy.type || enemy.id || "unknown",
+          "x",
+          Math.round(enemy.x),
+          "y",
+          Math.round(enemy.y)
+        );
+        this.enemies.splice(i, 1);
+      }
     }
 
     this.separateAllViruses();
