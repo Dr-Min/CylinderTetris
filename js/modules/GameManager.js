@@ -365,6 +365,8 @@ export class GameManager {
     this.loadAllyConfig(); // 아군 설정 복원
     this.loadDecryptionProgress(); // 해금 진행률 복원
     this.applyCoreUpgradeBonuses();
+    this.applyHelperUpgradeBonuses();
+    this.applyShieldUpgradeBonuses();
 
     // 점령 모드 상태
     this.isConquestMode = false;
@@ -1340,6 +1342,8 @@ export class GameManager {
 
       this.defenseGame.start(); // start()로 게임 시작!
       this.applyCoreUpgradeBonuses();
+      this.applyHelperUpgradeBonuses();
+      this.applyShieldUpgradeBonuses();
 
       // Safe Zone이면 아군 바이러스 배치
       if (this.defenseGame.isSafeZone) {
@@ -4698,6 +4702,30 @@ export class GameManager {
   }
 
   /**
+   * 실드 업그레이드 보너스 적용
+   */
+  applyShieldUpgradeBonuses() {
+    const levels = this.upgradeLevels.shield;
+
+    const baseShieldMaxHp = 100;
+    const bonusShieldHp = levels.hp * 20;
+    const nextShieldMaxHp = baseShieldMaxHp + bonusShieldHp;
+
+    const shieldDiff = nextShieldMaxHp - this.defenseGame.core.shieldMaxHp;
+    this.defenseGame.core.shieldMaxHp = nextShieldMaxHp;
+    if (shieldDiff > 0) this.defenseGame.core.shieldHp += shieldDiff;
+    this.defenseGame.core.shieldHp = Math.min(
+      this.defenseGame.core.shieldHp,
+      this.defenseGame.core.shieldMaxHp
+    );
+
+    debugLog("GameManager", "Shield upgrade bonus applied:", {
+      shieldMaxHp: this.defenseGame.core.shieldMaxHp,
+      shieldHp: this.defenseGame.core.shieldHp,
+    });
+  }
+
+  /**
    * 아군 바이러스 업그레이드 화면 (Depth 2) - 메인/서브 + 슬롯 시스템
    */
   showAllyUpgrades(overlay) {
@@ -5478,15 +5506,20 @@ export class GameManager {
       max-width: 350px;
     `;
 
+    const levels = this.upgradeLevels.shield;
+    const maxLevels = this.upgradeMaxLevels.shield;
     const upgrades = [
       {
         id: "shield_hp",
         name: "Shield HP +20",
         cost: 150,
-        desc: `현재: ${core.shieldMaxHp}`,
+        getLevel: () => this.upgradeLevels.shield.hp,
+        maxLevel: maxLevels.hp,
+        getDesc: () => `Shield HP: ${core.shieldMaxHp}`,
         effect: () => {
-          this.defenseGame.core.shieldMaxHp += 20;
-          this.defenseGame.core.shieldHp += 20;
+          if (levels.hp >= maxLevels.hp) return;
+          this.upgradeLevels.shield.hp += 1;
+          this.applyShieldUpgradeBonuses();
         },
       },
     ];
@@ -5520,15 +5553,34 @@ export class GameManager {
    * 업그레이드 버튼 렌더링 공통 함수
    */
   renderUpgradeButtons(container, upgrades, dataInfo, statsInfo, category) {
+    container.innerHTML = "";
     upgrades.forEach((upgrade) => {
+      const levelValue =
+        typeof upgrade.getLevel === "function" ? upgrade.getLevel() : upgrade.level;
+      const maxLevelValue =
+        Number.isFinite(upgrade.maxLevel) ? upgrade.maxLevel : null;
+      const hasLevelInfo =
+        Number.isFinite(levelValue) && Number.isFinite(maxLevelValue);
+      const isMaxLevel = hasLevelInfo && levelValue >= maxLevelValue;
       const btn = document.createElement("button");
-      const canAfford = this.currentMoney >= upgrade.cost;
+      const canAfford = this.currentMoney >= upgrade.cost && !isMaxLevel;
+      const descText =
+        typeof upgrade.getDesc === "function" ? upgrade.getDesc() : upgrade.desc;
+      const costLabel = isMaxLevel ? "-" : `${upgrade.cost} MB`;
+      const levelLabel = hasLevelInfo
+        ? isMaxLevel
+          ? "MAX"
+          : `Lv.${levelValue}/${maxLevelValue}`
+        : "";
 
       btn.style.cssText = `
-        background: ${canAfford ? "rgba(0, 100, 50, 0.5)" : "rgba(50, 50, 50, 0.5)"
-        };
-        border: 1px solid ${canAfford ? "#00ff00" : "#555"};
-        color: ${canAfford ? "#00ff00" : "#666"};
+        background: ${isMaxLevel
+          ? "rgba(0, 100, 100, 0.4)"
+          : canAfford
+            ? "rgba(0, 100, 50, 0.5)"
+            : "rgba(50, 50, 50, 0.5)"};
+        border: 1px solid ${isMaxLevel ? "#00ffff" : canAfford ? "#00ff00" : "#555"};
+        color: ${isMaxLevel ? "#00ffff" : canAfford ? "#00ff00" : "#666"};
         padding: 12px 15px;
         font-family: var(--term-font);
         font-size: 14px;
@@ -5539,9 +5591,12 @@ export class GameManager {
       btn.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>${upgrade.name}</span>
-          <span style="color: #ffcc00; font-size: 12px;">${upgrade.cost} MB</span>
+          <span style="color: ${isMaxLevel ? "#00ffff" : "#ffcc00"}; font-size: 12px;">${costLabel}</span>
         </div>
-        <div style="font-size: 11px; color: #888; margin-top: 3px;">${upgrade.desc}</div>
+        <div style="font-size: 11px; color: #888; margin-top: 3px; display: flex; justify-content: space-between; align-items: center;">
+          <span>${descText}</span>
+          ${levelLabel ? `<span style="color: ${isMaxLevel ? "#00ffff" : "#888"};">${levelLabel}</span>` : ""}
+        </div>
       `;
 
       btn.onclick = () => {
@@ -5570,19 +5625,7 @@ export class GameManager {
             `;
           }
 
-          // 모든 버튼 상태 업데이트
-          container.querySelectorAll("button").forEach((b) => {
-            const cost =
-              parseInt(b.querySelector('span[style*="ffcc00"]')?.textContent) ||
-              0;
-            const afford = this.currentMoney >= cost;
-            b.style.background = afford
-              ? "rgba(0, 100, 50, 0.5)"
-              : "rgba(50, 50, 50, 0.5)";
-            b.style.borderColor = afford ? "#00ff00" : "#555";
-            b.style.color = afford ? "#00ff00" : "#666";
-            b.style.cursor = afford ? "pointer" : "not-allowed";
-          });
+          this.renderUpgradeButtons(container, upgrades, dataInfo, statsInfo, category);
 
           this.terminal.printSystemMessage(`UPGRADED: ${upgrade.name}`);
         }

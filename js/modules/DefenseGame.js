@@ -195,7 +195,13 @@ export class DefenseGame {
       this.shieldBtn.style.transform = "none";
     }
 
-    this.shieldBtn.onclick = () => this.handleShieldButtonClick();
+    const handleShieldTap = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleShieldButtonClick();
+    };
+    this.shieldBtn.addEventListener("pointerdown", handleShieldTap);
+    this.shieldBtn.addEventListener("touchstart", handleShieldTap, { passive: false });
     this.uiLayer.appendChild(this.shieldBtn);
     this.updateShieldBtnUI("ACTIVE", "#00f0ff");
 
@@ -4573,12 +4579,30 @@ export class DefenseGame {
       HEALER: { color: "#00ff88", baseHp: 40, baseDamage: 0, baseSpeed: 90, radius: 8, attackType: "support", healAmount: 5, healRadius: 80 }
     };
 
+    const config = this.alliedConfig;
+    let spawnEntries = null;
+    if (config && config.mainTypeData) {
+      spawnEntries = [];
+      for (let i = 0; i < config.mainCount; i++) {
+        spawnEntries.push({ type: config.mainType, data: config.mainTypeData });
+      }
+      for (let i = 0; i < config.subCount; i++) {
+        if (config.subTypeData) {
+          spawnEntries.push({ type: config.subType, data: config.subTypeData });
+        }
+      }
+      if (spawnEntries.length === 0) {
+        spawnEntries = null;
+      }
+    }
+
     const types = ["SWARM", "SWARM", "SWARM", "TANK", "HUNTER", "HUNTER", "BOMBER", "HEALER", "SWARM", "HUNTER", "SWARM", "BOMBER"];
-    const count = 12 + Math.floor(Math.random() * 7);
+    const count = spawnEntries ? spawnEntries.length : 12 + Math.floor(Math.random() * 7);
 
     for (let i = 0; i < count; i++) {
-      const type = types[i % types.length];
-      const typeData = virusTypes[type];
+      const entry = spawnEntries ? spawnEntries[i] : null;
+      const type = entry ? entry.type : types[i % types.length];
+      const typeData = entry ? entry.data : virusTypes[type];
 
       if (!typeData) continue;
 
@@ -4617,15 +4641,27 @@ export class DefenseGame {
         spawnY = coreY + Math.sin(pushAngle) * 180;
       }
 
+      const useConfigBonuses = !!spawnEntries;
+      const pureBonus = useConfigBonuses && config?.isPureSpecialization ? config.pureBonus : 1.0;
+      const hpValue = useConfigBonuses
+        ? Math.floor(typeData.baseHp * config.hpMultiplier * pureBonus)
+        : (typeData.baseHp || 20);
+      const damageValue = useConfigBonuses
+        ? Math.floor(typeData.baseDamage * config.damageMultiplier * pureBonus)
+        : (typeData.baseDamage || 10);
+      const speedValue = useConfigBonuses
+        ? Math.floor(typeData.baseSpeed * config.speedMultiplier)
+        : (typeData.baseSpeed || 100);
+
       const ally = {
         x: spawnX,
         y: spawnY,
         radius: typeData.radius || 8,
-        speed: typeData.baseSpeed || 100,
-        hp: typeData.baseHp || 20,
-        maxHp: typeData.baseHp || 20,
-        baseMaxHp: typeData.baseHp || 20,
-        damage: typeData.baseDamage || 10,
+        speed: speedValue,
+        hp: hpValue,
+        maxHp: hpValue,
+        baseMaxHp: hpValue,
+        damage: damageValue,
         virusType: type,
         color: typeData.color || "#88ff88",
         attackType: typeData.attackType || "melee",
