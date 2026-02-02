@@ -1281,6 +1281,7 @@ export class DefenseGame {
 
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
+      const prevHp = enemy.hp;
 
       let targetX = this.core.x;
       let targetY = this.core.y;
@@ -1392,6 +1393,17 @@ export class DefenseGame {
         enemy.y += (dy / distToTarget) * enemy.speed * slowMult * dt;
       }
 
+      if (prevHp > 1 && enemy.hp <= 1) {
+        debugLog(
+          "Enemy",
+          "hp low",
+          "hp",
+          enemy.hp,
+          "type",
+          enemy.type || enemy.id || "unknown"
+        );
+      }
+
       if (enemy.hp <= 0) {
         debugLog(
           "Enemy",
@@ -1407,6 +1419,11 @@ export class DefenseGame {
         );
         this.enemies.splice(i, 1);
       }
+    }
+
+    const stuck = this.enemies.find(e => e.hp <= 0);
+    if (stuck) {
+      debugLog("Enemy", "stuck hp<=0", "hp", stuck.hp, "type", stuck.type || stuck.id || "unknown");
     }
 
     this.separateAllViruses();
