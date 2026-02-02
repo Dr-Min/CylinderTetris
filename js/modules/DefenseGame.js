@@ -161,19 +161,24 @@ export class DefenseGame {
     window.addEventListener("pointercancel", (e) => this.endJoystick(e));
     this.onPageUpdate = null;
 
+    const isSmallMobile = window.innerWidth <= 480;
+    const recallWidth = this.isMobile ? (isSmallMobile ? 110 : 130) : 150;
+    const recallHeight = this.isMobile ? (isSmallMobile ? 32 : 36) : 40;
+    const recallFontSize = this.isMobile ? (isSmallMobile ? 10 : 11) : 12;
+
     this.shieldBtn = document.createElement("button");
     this.shieldBtn.id = "shield-btn";
     this.shieldBtn.style.position = "absolute";
     this.shieldBtn.style.bottom = "100px";
     this.shieldBtn.style.left = "50%";
     this.shieldBtn.style.transform = "translateX(-50%)";
-    this.shieldBtn.style.width = "200px";
-    this.shieldBtn.style.height = "52px";
+    this.shieldBtn.style.width = this.isMobile ? `${recallWidth}px` : "200px";
+    this.shieldBtn.style.height = this.isMobile ? `${recallHeight}px` : "52px";
     this.shieldBtn.style.backgroundColor = "rgba(0, 50, 255, 0.3)";
     this.shieldBtn.style.border = "2px solid #00f0ff";
     this.shieldBtn.style.color = "#00f0ff";
     this.shieldBtn.style.fontFamily = "var(--term-font)";
-    this.shieldBtn.style.fontSize = "14px";
+    this.shieldBtn.style.fontSize = this.isMobile ? "12px" : "14px";
     this.shieldBtn.style.cursor = "pointer";
     this.shieldBtn.style.pointerEvents = "auto";
     this.shieldBtn.style.zIndex = "30";
@@ -215,10 +220,6 @@ export class DefenseGame {
     this.conquerBtn.onclick = () => this.handleConquerClick();
     this.uiLayer.appendChild(this.conquerBtn);
 
-    const isSmallMobile = window.innerWidth <= 480;
-    const recallWidth = this.isMobile ? (isSmallMobile ? 110 : 130) : 150;
-    const recallHeight = this.isMobile ? (isSmallMobile ? 32 : 36) : 40;
-    const recallFontSize = this.isMobile ? (isSmallMobile ? 10 : 11) : 12;
     this.isRecallCasting = false;
     this.onRecallRequest = null;
     this.recallBtn = document.createElement("button");
@@ -952,7 +953,19 @@ export class DefenseGame {
 
     let topDisplay = `HP ${hpPct}%`;
     if (loadingProgress !== null) {
-      topDisplay = `CHG ${Math.round(loadingProgress * 100)}%`;
+      const boxWidth = 48;
+      const boxHeight = 12;
+      const perimeter = 2 * (boxWidth + boxHeight);
+      const dashOffset = perimeter * (1 - loadingProgress);
+      topDisplay = `
+        <svg width="52" height="16" viewBox="0 0 52 16" style="vertical-align: middle;">
+          <rect x="2" y="2" width="48" height="12" rx="2" ry="2"
+            fill="none" stroke="#1b1b1b" stroke-width="2" />
+          <rect x="2" y="2" width="48" height="12" rx="2" ry="2"
+            fill="none" stroke="${color}" stroke-width="2"
+            stroke-dasharray="${perimeter}" stroke-dashoffset="${dashOffset}" />
+        </svg>
+      `;
     }
 
     const labelMap = {
@@ -967,7 +980,7 @@ export class DefenseGame {
     let displayText = labelMap[normalized] || normalized.split(" ")[0].slice(0, 6) || "SHIELD";
     let displayColor = color;
     if (this.shieldBtnMode === "RETURN") {
-      displayText = this.emergencyReturnCharges > 0 ? "RETURN" : "NO";
+      displayText = this.emergencyReturnCharges > 0 ? "RETURN" : "BLOCKED";
       displayColor = this.emergencyReturnCharges > 0 ? "#ff6600" : "#555";
       topDisplay = "";
     }
