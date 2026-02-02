@@ -793,11 +793,22 @@ body {
     height: 36px;
     bottom: 90px;
     font-size: 12px;
+    padding: 0;
+    min-height: unset;
+    min-width: unset;
+    box-sizing: border-box;
     display: flex;
     justify-content: center;
     align-items: center;
     position: absolute; /* absolute 유지 */
     overflow: visible; /* 체력 텍스트가 밖으로 나가도 보이게 */
+  }
+
+  #defense-ui #recall-btn {
+    padding: 0;
+    min-height: unset;
+    min-width: unset;
+    box-sizing: border-box;
   }
 
   #defense-ui #conquer-btn {
@@ -894,6 +905,17 @@ body {
     width: 110px;
     height: 32px;
     font-size: 10px;
+    padding: 0;
+    min-height: unset;
+    min-width: unset;
+    box-sizing: border-box;
+  }
+
+  #defense-ui #recall-btn {
+    padding: 0;
+    min-height: unset;
+    min-width: unset;
+    box-sizing: border-box;
   }
 
   #defense-ui #conquer-btn {
