@@ -959,15 +959,20 @@ export class DefenseGame {
     const recallWidth = isMobile ? (isSmallMobile ? 110 : 130) : 150;
     const recallHeight = isMobile ? (isSmallMobile ? 32 : 36) : 40;
     const recallFontSize = isMobile ? (isSmallMobile ? 10 : 11) : 12;
-    const sizeKey = `${recallWidth}x${recallHeight}:${recallFontSize}`;
-    if (this.shieldBtnSizeKey !== sizeKey) {
-      this.shieldBtnSizeKey = sizeKey;
-      this.shieldBtnWidth = recallWidth;
-      this.shieldBtnHeight = recallHeight;
-      this.shieldBtn.style.width = `${recallWidth}px`;
-      this.shieldBtn.style.height = `${recallHeight}px`;
-      this.shieldBtn.style.fontSize = `${recallFontSize}px`;
+    const desiredWidth = `${recallWidth}px`;
+    const desiredHeight = `${recallHeight}px`;
+    const desiredFont = `${recallFontSize}px`;
+    if (this.shieldBtn.style.width !== desiredWidth) {
+      this.shieldBtn.style.width = desiredWidth;
     }
+    if (this.shieldBtn.style.height !== desiredHeight) {
+      this.shieldBtn.style.height = desiredHeight;
+    }
+    if (this.shieldBtn.style.fontSize !== desiredFont) {
+      this.shieldBtn.style.fontSize = desiredFont;
+    }
+    this.shieldBtnWidth = recallWidth;
+    this.shieldBtnHeight = recallHeight;
 
     const progressOverlay = (() => {
       if (loadingProgress === null) return "";
