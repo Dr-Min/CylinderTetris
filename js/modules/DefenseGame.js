@@ -1073,7 +1073,7 @@ export class DefenseGame {
     const dyShield = this.core.y - this.shieldAnchor.y;
     const distShield = Math.hypot(dxShield, dyShield);
     const maxDistShield = Math.max(0, this.core.shieldRadius - this.core.radius);
-    const edgePadding = 12;
+    const edgePadding = 24;
     const insideShield = distShield <= Math.max(0, maxDistShield - edgePadding);
     this.isCoreInsideShield = insideShield;
     const nextMode = insideShield ? "SHIELD" : "RETURN";
