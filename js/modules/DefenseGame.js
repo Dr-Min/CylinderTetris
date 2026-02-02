@@ -57,7 +57,9 @@ export class DefenseGame {
     this.shieldReady = false;
     this.shieldReadyTimer = 0;
     this.shieldReadyDuration = 3.0;
-    this.shieldReadyRadius = 12;
+    this.shieldReadyRadius = this.baseShieldRadius;
+    this.shieldStepAngle = 0;
+    this.shieldStepTimer = 0;
     this.core.shieldAnchor = this.shieldAnchor;
 
     this.showCoreHP = true;
@@ -561,6 +563,7 @@ export class DefenseGame {
     const shieldScale = isMobile ? 0.5 : 1.0;
     this.core.radius = this.baseCoreRadius * (isMobile ? 0.7 : 1.0);
     this.core.shieldRadius = this.baseShieldRadius * shieldScale;
+    this.shieldReadyRadius = this.core.shieldRadius;
 
     this.worldWidth = targetCanvas.width * this.worldScale;
     this.worldHeight = targetCanvas.height * this.worldScale;
@@ -1070,7 +1073,7 @@ export class DefenseGame {
       const dx = this.core.x - this.shieldAnchor.x;
       const dy = this.core.y - this.shieldAnchor.y;
       const dist = Math.hypot(dx, dy);
-      if (dist <= this.shieldReadyRadius) {
+      if (dist <= this.core.shieldRadius) {
         this.shieldReadyTimer += dt;
         const progress = Math.min(1, this.shieldReadyTimer / this.shieldReadyDuration);
         if (progress >= 1) {
@@ -1131,6 +1134,18 @@ export class DefenseGame {
       (sv.targetRotationSpeed - sv.rotationSpeed) * lerpSpeed * dt;
 
     sv.rotation += sv.rotationSpeed * dt;
+    if (this.core.shieldState === "OFF" && sv.targetDashGap > 0) {
+      const stepInterval = 0.18;
+      const stepAngle = Math.PI / 10;
+      this.shieldStepTimer += dt;
+      if (this.shieldStepTimer >= stepInterval) {
+        this.shieldStepTimer = 0;
+        this.shieldStepAngle = (this.shieldStepAngle + stepAngle) % (Math.PI * 2);
+        sv.rotation = this.shieldStepAngle;
+      }
+    } else {
+      this.shieldStepTimer = 0;
+    }
 
 
     if (this.isReinforcementMode && !this.reinforcementComplete) {
@@ -3853,7 +3868,7 @@ export class DefenseGame {
         const dx = this.core.x - this.shieldAnchor.x;
         const dy = this.core.y - this.shieldAnchor.y;
         const dist = Math.hypot(dx, dy);
-        if (dist <= this.shieldReadyRadius) {
+        if (dist <= this.core.shieldRadius) {
           const progress = Math.min(1, this.shieldReadyTimer / this.shieldReadyDuration);
           const barW = 50 * coreScale;
           const barH = 6 * coreScale;
@@ -5993,7 +6008,8 @@ export class DefenseGame {
     this.core.x += this.moveInput.x * speed * dt;
     this.core.y += this.moveInput.y * speed * dt;
 
-    if (this.core.shieldActive && this.isSafeZone) {
+    const allowShieldPassThrough = this.isConquered && !this.isSafeZone;
+    if (this.core.shieldActive && !allowShieldPassThrough) {
       const maxDist = Math.max(0, this.core.shieldRadius - this.core.radius);
       const dx = this.core.x - this.shieldAnchor.x;
       const dy = this.core.y - this.shieldAnchor.y;
