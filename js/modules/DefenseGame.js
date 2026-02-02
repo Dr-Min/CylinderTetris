@@ -1073,12 +1073,17 @@ export class DefenseGame {
     const dyShield = this.core.y - this.shieldAnchor.y;
     const distShield = Math.hypot(dxShield, dyShield);
     const maxDistShield = Math.max(0, this.core.shieldRadius - this.core.radius);
-    const edgePadding = 24;
-    const insideShield = distShield <= Math.max(0, maxDistShield - edgePadding);
+    const insideThreshold = Math.max(0, maxDistShield - 6);
+    const outsideThreshold = Math.max(0, maxDistShield + 8);
+    const prevMode = this.shieldBtnMode;
+    if (this.shieldBtnMode === "SHIELD") {
+      if (distShield > outsideThreshold) this.shieldBtnMode = "RETURN";
+    } else {
+      if (distShield <= insideThreshold) this.shieldBtnMode = "SHIELD";
+    }
+    const insideShield = this.shieldBtnMode === "SHIELD";
     this.isCoreInsideShield = insideShield;
-    const nextMode = insideShield ? "SHIELD" : "RETURN";
-    if (this.shieldBtnMode !== nextMode) {
-      this.shieldBtnMode = nextMode;
+    if (this.shieldBtnMode !== prevMode) {
       this.updateShieldBtnUI(
         this.core.shieldActive ? "ACTIVE" : "OFFLINE",
         this.core.shieldActive ? "#00f0ff" : "#f00"
