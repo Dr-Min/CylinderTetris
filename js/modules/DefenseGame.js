@@ -66,6 +66,7 @@ export class DefenseGame {
     this.emergencyReturnCharges = this.emergencyReturnMax;
     this.shieldBtnMode = "SHIELD";
     this.isCoreInsideShield = true;
+    this.isIntroDrop = false;
     this.core.shieldAnchor = this.shieldAnchor;
 
     this.showCoreHP = true;
@@ -977,15 +978,20 @@ export class DefenseGame {
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
     this.emergencyReturnCharges = this.emergencyReturnMax;
+    this.shieldBtnMode = "SHIELD";
     if (this.isSafeZone) {
       this.core.shieldActive = false;
       this.core.shieldState = "OFF";
       this.updateShieldBtnUI("OFFLINE", "#f00");
     } else {
+      this.core.shieldActive = true;
+      this.core.shieldState = "ACTIVE";
       this.updateShieldBtnUI("ACTIVE", "#fff");
     }
     this.emergencyReturnCharges = this.emergencyReturnMax;
     this.shieldBtn.style.display = "block";
+    this.coreReturnTimer = 0;
+    this.coreReturnAtHome = false;
 
     if (this.isSafeZone) {
       this.playBGMTrack('SAFE_ZONE');
@@ -1756,8 +1762,9 @@ export class DefenseGame {
   }
 
   applyEmergencyReturnImpact() {
+    const radius = Math.max(this.core.shieldRadius, this.baseShieldRadius) * 3;
     this.impactEffect({
-      radius: this.core.shieldRadius * 3,
+      radius,
       damage: 20,
       knockbackSpeed: 320,
       slowMult: 0.45,
@@ -5274,6 +5281,9 @@ export class DefenseGame {
       this.enemies = [];
       this.projectiles = [];
       this.particles = [];
+      this.isIntroDrop = true;
+      this.emergencyReturnCharges = this.emergencyReturnMax;
+      this.shieldBtnMode = "SHIELD";
 
       debugLog("Defense", "playIntroAnimation - isSafeZone:", this.isSafeZone, "alliedViruses before:", this.alliedViruses.length);
 
@@ -5338,15 +5348,20 @@ export class DefenseGame {
                 return this.spawnAlliesSequentially();
               })
               .then(() => this.expandShield())
-              .then(resolve)
+              .then(() => {
+                this.isIntroDrop = false;
+                resolve();
+              })
               .catch((err) => {
                 console.error("IntroAnimation error:", err);
+                this.isIntroDrop = false;
                 resolve();
               });
           }
         } catch (err) {
           console.error("animateDrop error:", err);
           this.core.scale = 1;
+          this.isIntroDrop = false;
           resolve();
         }
       };
@@ -6171,7 +6186,7 @@ export class DefenseGame {
     this.core.x += this.moveInput.x * speed * dt;
     this.core.y += this.moveInput.y * speed * dt;
 
-    const allowShieldPassThrough = this.isConquered && !this.isSafeZone;
+    const allowShieldPassThrough = (this.isConquered && !this.isSafeZone) || this.isIntroDrop;
     if (this.core.shieldActive && !allowShieldPassThrough) {
       const maxDist = Math.max(0, this.core.shieldRadius - this.core.radius);
       const dx = this.core.x - this.shieldAnchor.x;
