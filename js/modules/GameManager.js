@@ -363,6 +363,7 @@ export class GameManager {
     this.loadUpgrades();   // 업그레이드 레벨 복원
     this.loadAllyConfig(); // 아군 설정 복원
     this.loadDecryptionProgress(); // 해금 진행률 복원
+    this.applyCoreUpgradeBonuses();
 
     // 점령 모드 상태
     this.isConquestMode = false;
@@ -1337,6 +1338,7 @@ export class GameManager {
       }
 
       this.defenseGame.start(); // start()로 게임 시작!
+      this.applyCoreUpgradeBonuses();
 
       // Safe Zone이면 아군 바이러스 배치
       if (this.defenseGame.isSafeZone) {
