@@ -368,6 +368,7 @@ export class DefenseGame {
     this.activeSpeechBubbles = [];
     this.loadVirusDialogues();
     this.slowFields = [];
+    this.nextWaveId = 1;
 
     this.waveTimer = 0;
     this.pageDurationBase = 12.5;
@@ -1654,6 +1655,27 @@ export class DefenseGame {
       wave.alpha = Math.max(0, 0.8 * (1 - wave.radius / wave.maxRadius));
       wave.lineWidth = Math.max(1, 6 * (1 - wave.radius / wave.maxRadius));
 
+      if (wave.effect && wave.effect.applyOnWave) {
+        this.enemies.forEach((enemy) => {
+          const dx = enemy.x - wave.x;
+          const dy = enemy.y - wave.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= wave.radius) {
+            if (!enemy._waveHits) enemy._waveHits = {};
+            if (enemy._waveHits[wave.id]) return;
+            enemy._waveHits[wave.id] = true;
+
+            this.applyKnockback(
+              enemy,
+              wave.effect.knockbackSpeed,
+              wave.effect.slowMult,
+              wave.effect.slowDuration
+            );
+            enemy.hp -= wave.effect.damage;
+          }
+        });
+      }
+
       if (wave.radius >= wave.maxRadius) {
         this.shockwaves.splice(i, 1);
       }
@@ -1666,6 +1688,7 @@ export class DefenseGame {
         this.slowFields.splice(i, 1);
       } else {
         field.alpha = field.life / field.maxLife;
+        field.phase += dt * 0.6;
       }
     }
 
@@ -4092,12 +4115,19 @@ export class DefenseGame {
       this.ctx.globalAlpha = field.alpha * 0.25;
       this.ctx.fill();
 
-      this.ctx.beginPath();
-      this.ctx.arc(field.x, field.y, field.radius, 0, Math.PI * 2);
-      this.ctx.strokeStyle = field.strokeColor;
-      this.ctx.lineWidth = 2;
-      this.ctx.globalAlpha = field.alpha * 0.7;
-      this.ctx.stroke();
+      const dotCount = 6;
+      for (let i = 0; i < dotCount; i++) {
+        const ang = field.phase + (i * Math.PI * 2) / dotCount;
+        const wobble = Math.sin(field.phase * 1.7 + i) * (field.radius * 0.04);
+        const r = field.radius * 0.45 + wobble;
+        const dx = Math.cos(ang) * r;
+        const dy = Math.sin(ang) * r;
+        this.ctx.beginPath();
+        this.ctx.arc(field.x + dx, field.y + dy, 2, 0, Math.PI * 2);
+        this.ctx.fillStyle = field.strokeColor;
+        this.ctx.globalAlpha = field.alpha * 0.5;
+        this.ctx.fill();
+      }
 
       this.ctx.globalAlpha = 1.0;
     });
@@ -5508,16 +5538,28 @@ export class DefenseGame {
         this.enemies.length
       );
 
+      const worldW = this.worldWidth || this.canvas.width;
+      const worldH = this.worldHeight || this.canvas.height;
+      const maxRadius = Math.hypot(worldW, worldH) * 1.2;
+      const waveId = this.nextWaveId++;
       this.shockwaves.push({
+        id: waveId,
         x: this.core.x,
         y: this.core.y,
         radius: 0,
-        maxRadius: radius,
-        speed: 700,
+        maxRadius: maxRadius,
+        speed: 220,
         alpha: 0.9,
         color: "#00f0ff",
         lineWidth: 6,
         damageDealt: false,
+        effect: {
+          applyOnWave: true,
+          knockbackSpeed: knockbackSpeed,
+          slowMult: slowMult,
+          slowDuration: slowDuration,
+          damage: damage
+        }
       });
 
       this.slowFields.push({
@@ -5528,30 +5570,9 @@ export class DefenseGame {
         maxLife: slowDuration,
         alpha: 1,
         fillColor: "rgba(0, 180, 255, 0.18)",
-        strokeColor: "rgba(0, 240, 255, 0.7)"
+        strokeColor: "rgba(0, 240, 255, 0.7)",
+        phase: Math.random() * Math.PI * 2
       });
-
-      this.enemies.forEach((enemy) => {
-        const dx = enemy.x - this.core.x;
-        const dy = enemy.y - this.core.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist <= radius) {
-          this.applyKnockback(enemy, knockbackSpeed, slowMult, slowDuration);
-          enemy.hp -= damage;
-        }
-      });
-
-      for (let i = this.enemies.length - 1; i >= 0; i--) {
-        if (this.enemies[i].hp <= 0) {
-          this.createExplosion(
-            this.enemies[i].x,
-            this.enemies[i].y,
-            "#ff0000",
-            15
-          );
-          this.enemies.splice(i, 1);
-        }
-      }
     }
 
     if (this.isSafeZone) {
