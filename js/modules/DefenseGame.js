@@ -249,7 +249,9 @@ export class DefenseGame {
     this.recallBtn.style.userSelect = "none";
     this.recallBtn.style.webkitTapHighlightColor = "transparent";
     this.recallBtn.innerHTML = "RECALL";
-    this.recallBtn.onclick = async () => {
+    const handleRecallTap = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       if (!this.onRecallRequest || this.isRecallCasting) return;
       this.isRecallCasting = true;
       this.recallBtn.style.pointerEvents = "none";
@@ -260,6 +262,8 @@ export class DefenseGame {
         this.recallBtn.style.pointerEvents = "auto";
       }
     };
+    this.recallBtn.addEventListener("pointerdown", handleRecallTap);
+    this.recallBtn.addEventListener("touchstart", handleRecallTap, { passive: false });
     this.uiLayer.appendChild(this.recallBtn);
 
 
@@ -1135,6 +1139,7 @@ export class DefenseGame {
       debugLog("Canvas", "TODO");
     }
     debugLog("Canvas", "canvas after set:", this.canvas.style.display);
+    this.updateRecallBtnVisibility();
   }
 
   update(deltaTime) {
