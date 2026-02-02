@@ -165,6 +165,8 @@ export class DefenseGame {
     const recallWidth = this.isMobile ? (isSmallMobile ? 110 : 130) : 150;
     const recallHeight = this.isMobile ? (isSmallMobile ? 32 : 36) : 40;
     const recallFontSize = this.isMobile ? (isSmallMobile ? 10 : 11) : 12;
+    this.shieldBtnWidth = recallWidth;
+    this.shieldBtnHeight = recallHeight;
 
     this.shieldBtn = document.createElement("button");
     this.shieldBtn.id = "shield-btn";
@@ -172,13 +174,13 @@ export class DefenseGame {
     this.shieldBtn.style.bottom = "100px";
     this.shieldBtn.style.left = "50%";
     this.shieldBtn.style.transform = "translateX(-50%)";
-    this.shieldBtn.style.width = this.isMobile ? `${recallWidth}px` : "200px";
-    this.shieldBtn.style.height = this.isMobile ? `${recallHeight}px` : "52px";
+    this.shieldBtn.style.width = `${recallWidth}px`;
+    this.shieldBtn.style.height = `${recallHeight}px`;
     this.shieldBtn.style.backgroundColor = "rgba(0, 50, 255, 0.3)";
     this.shieldBtn.style.border = "2px solid #00f0ff";
     this.shieldBtn.style.color = "#00f0ff";
     this.shieldBtn.style.fontFamily = "var(--term-font)";
-    this.shieldBtn.style.fontSize = this.isMobile ? "12px" : "14px";
+    this.shieldBtn.style.fontSize = `${recallFontSize}px`;
     this.shieldBtn.style.cursor = "pointer";
     this.shieldBtn.style.pointerEvents = "auto";
     this.shieldBtn.style.zIndex = "30";
@@ -948,25 +950,24 @@ export class DefenseGame {
   }
 
   updateShieldBtnUI(text, color, loadingProgress = null) {
-    const maxHp = this.core.shieldMaxHp || 1;
-    const hpPct = Math.floor((this.core.shieldHp / maxHp) * 100);
-
-    let topDisplay = `HP ${hpPct}%`;
-    if (loadingProgress !== null) {
-      const boxWidth = 48;
-      const boxHeight = 12;
-      const perimeter = 2 * (boxWidth + boxHeight);
+    const progressOverlay = (() => {
+      if (loadingProgress === null) return "";
+      const borderWidth = this.shieldBtnWidth ?? 130;
+      const borderHeight = this.shieldBtnHeight ?? 36;
+      const strokeWidth = 2;
+      const rectWidth = Math.max(0, borderWidth - strokeWidth);
+      const rectHeight = Math.max(0, borderHeight - strokeWidth);
+      const perimeter = 2 * (rectWidth + rectHeight);
       const dashOffset = perimeter * (1 - loadingProgress);
-      topDisplay = `
-        <svg width="52" height="16" viewBox="0 0 52 16" style="vertical-align: middle;">
-          <rect x="2" y="2" width="48" height="12" rx="2" ry="2"
-            fill="none" stroke="#1b1b1b" stroke-width="2" />
-          <rect x="2" y="2" width="48" height="12" rx="2" ry="2"
-            fill="none" stroke="${color}" stroke-width="2"
+      return `
+        <svg width="${borderWidth}" height="${borderHeight}" viewBox="0 0 ${borderWidth} ${borderHeight}"
+          style="position:absolute; inset:0; pointer-events:none;">
+          <rect x="${strokeWidth / 2}" y="${strokeWidth / 2}" width="${rectWidth}" height="${rectHeight}" rx="3" ry="3"
+            fill="none" stroke="${color}" stroke-width="${strokeWidth}"
             stroke-dasharray="${perimeter}" stroke-dashoffset="${dashOffset}" />
         </svg>
       `;
-    }
+    })();
 
     const labelMap = {
       ACTIVE: "SHIELD",
@@ -982,7 +983,6 @@ export class DefenseGame {
     if (this.shieldBtnMode === "RETURN") {
       displayText = this.emergencyReturnCharges > 0 ? "RETURN" : "BLOCKED";
       displayColor = this.emergencyReturnCharges > 0 ? "#ff6600" : "#555";
-      topDisplay = "";
     }
 
     const charges = Math.max(0, this.emergencyReturnCharges ?? 0);
@@ -1005,8 +1005,10 @@ export class DefenseGame {
       `;
 
     this.shieldBtn.innerHTML = `
-          <div style='font-size: 12px; letter-spacing: 1px;'>${displayText}</div>
-          <div style='font-size: 10px; color: ${displayColor}; opacity: 0.9;'>${topDisplay}</div>
+          <div style='position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;'>
+            ${progressOverlay}
+            <div style='font-size: ${this.shieldBtn.style.fontSize}; letter-spacing: 1px;'>${displayText}</div>
+          </div>
           ${chargeBadge}
       `;
     this.shieldBtn.style.borderColor = displayColor;
