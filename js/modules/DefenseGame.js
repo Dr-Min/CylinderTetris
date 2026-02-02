@@ -56,10 +56,16 @@ export class DefenseGame {
     this.shieldAnchor = { x: 0, y: 0 };
     this.shieldReady = false;
     this.shieldReadyTimer = 0;
-    this.shieldReadyDuration = 3.0;
+    this.shieldReadyDurationBase = 2.0;
+    this.shieldChargeMultiplier = 1.0;
+    this.shieldReadyDuration = this.shieldReadyDurationBase;
     this.shieldReadyRadius = this.baseShieldRadius;
     this.shieldStepAngle = 0;
     this.shieldStepTimer = 0;
+    this.emergencyReturnMax = 2;
+    this.emergencyReturnCharges = this.emergencyReturnMax;
+    this.shieldBtnMode = "SHIELD";
+    this.isCoreInsideShield = true;
     this.core.shieldAnchor = this.shieldAnchor;
 
     this.showCoreHP = true;
@@ -172,7 +178,7 @@ export class DefenseGame {
     this.shieldBtn.style.userSelect = "none";
     this.shieldBtn.style.webkitTapHighlightColor = "transparent";
 
-    this.shieldBtn.onclick = () => this.toggleShield();
+    this.shieldBtn.onclick = () => this.handleShieldButtonClick();
     this.uiLayer.appendChild(this.shieldBtn);
     this.updateShieldBtnUI("ACTIVE", "#00f0ff");
 
@@ -909,23 +915,51 @@ export class DefenseGame {
           `;
     }
 
+    let displayText = text;
+    let displayColor = color;
+    if (this.shieldBtnMode === "RETURN") {
+      displayText = this.emergencyReturnCharges > 0 ? "EMERGENCY RETURN" : "NO RETURN";
+      displayColor = this.emergencyReturnCharges > 0 ? "#ff6600" : "#555";
+      topDisplay = "";
+    }
+
+    const charges = Math.max(0, this.emergencyReturnCharges ?? 0);
+    const chargeBadge = `
+          <div style='
+              position: absolute;
+              top: -10px;
+              right: -10px;
+              width: 24px;
+              height: 24px;
+              border-radius: 12px;
+              background: rgba(0, 0, 0, 0.6);
+              border: 1px solid ${displayColor};
+              color: ${displayColor};
+              font-size: 12px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+          '>${charges}</div>
+      `;
+
     this.shieldBtn.innerHTML = `
-          SHIELD: ${text}
+          SHIELD: ${displayText}
           <div style='
               position: absolute; 
               top: -30px; 
               left: 50%; 
               transform: translateX(-50%); 
               font-size: 14px; 
-              color: ${color}; 
-              text-shadow: 0 0 5px ${color};
+              color: ${displayColor}; 
+              text-shadow: 0 0 5px ${displayColor};
               white-space: nowrap;
           '>
               ${topDisplay}
           </div>
+          ${chargeBadge}
       `;
-    this.shieldBtn.style.borderColor = color;
-    this.shieldBtn.style.color = color;
+    this.shieldBtn.style.borderColor = displayColor;
+    this.shieldBtn.style.color = displayColor;
   }
 
   start() {
@@ -949,7 +983,8 @@ export class DefenseGame {
     } else {
       this.updateShieldBtnUI("ACTIVE", "#fff");
     }
-    this.shieldBtn.style.display = this.isSafeZone ? "block" : "none";
+    this.emergencyReturnCharges = this.emergencyReturnMax;
+    this.shieldBtn.style.display = "block";
 
     if (this.isSafeZone) {
       this.playBGMTrack('SAFE_ZONE');
@@ -1031,6 +1066,26 @@ export class DefenseGame {
     const canMove = this.core.shieldState !== "DISABLED";
     this.joystickContainer.style.display = (this.isMobile && canMove) ? "block" : "none";
 
+    const dxShield = this.core.x - this.shieldAnchor.x;
+    const dyShield = this.core.y - this.shieldAnchor.y;
+    const distShield = Math.hypot(dxShield, dyShield);
+    const maxDistShield = Math.max(0, this.core.shieldRadius - this.core.radius);
+    const insideShield = distShield <= maxDistShield;
+    this.isCoreInsideShield = insideShield;
+    const nextMode = insideShield ? "SHIELD" : "RETURN";
+    if (this.shieldBtnMode !== nextMode) {
+      this.shieldBtnMode = nextMode;
+      this.updateShieldBtnUI(
+        this.core.shieldActive ? "ACTIVE" : "OFFLINE",
+        this.core.shieldActive ? "#00f0ff" : "#f00"
+      );
+    }
+    if (this.shieldBtnMode === "RETURN" && this.emergencyReturnCharges <= 0) {
+      this.shieldBtn.style.pointerEvents = "none";
+    } else {
+      this.shieldBtn.style.pointerEvents = "auto";
+    }
+
     if (this.core.shieldState === "RETURNING") {
     } else if (this.core.shieldState === "CHARGING") {
       this.core.shieldTimer -= dt;
@@ -1069,15 +1124,20 @@ export class DefenseGame {
       }
     }
 
+    const shieldReadyDuration = this.shieldReadyDurationBase * this.shieldChargeMultiplier;
+    this.shieldReadyDuration = shieldReadyDuration;
+
     if (!this.core.shieldActive && this.core.shieldState === "OFF") {
       const dx = this.core.x - this.shieldAnchor.x;
       const dy = this.core.y - this.shieldAnchor.y;
       const dist = Math.hypot(dx, dy);
       if (dist <= this.core.shieldRadius) {
         this.shieldReadyTimer += dt;
-        const progress = Math.min(1, this.shieldReadyTimer / this.shieldReadyDuration);
+        const progress = Math.min(1, this.shieldReadyTimer / shieldReadyDuration);
         if (progress >= 1) {
           this.shieldReady = true;
+          this.shieldChargeMultiplier = 1.0;
+          this.shieldReadyDuration = this.shieldReadyDurationBase;
           this.updateShieldBtnUI("SHIELD READY", "#00ff88", 1);
         } else {
           this.shieldReady = false;
@@ -1085,12 +1145,12 @@ export class DefenseGame {
         }
       } else {
         this.shieldReady = false;
-        const decayRate = this.shieldReadyDuration * 0.8;
+        const decayRate = shieldReadyDuration * 0.8;
         this.shieldReadyTimer = Math.max(0, this.shieldReadyTimer - decayRate * dt);
         if (this.shieldReadyTimer <= 0) {
           this.updateShieldBtnUI("OFFLINE", "#f00");
         } else {
-          const progress = Math.min(1, this.shieldReadyTimer / this.shieldReadyDuration);
+          const progress = Math.min(1, this.shieldReadyTimer / shieldReadyDuration);
           this.updateShieldBtnUI("REARMING", "#00ff88", progress);
         }
       }
@@ -1100,6 +1160,8 @@ export class DefenseGame {
     }
 
     if (this.core.shieldActive) {
+      this.shieldChargeMultiplier = 1.0;
+      this.shieldReadyDuration = this.shieldReadyDurationBase;
     } else {
       if (
         this.core.shieldState === "OFF" &&
@@ -1645,6 +1707,63 @@ export class DefenseGame {
     this.updateAutoFire(dt);
   }
 
+  handleShieldButtonClick() {
+    if (this.shieldBtnMode === "RETURN") {
+      this.triggerEmergencyReturn();
+      return;
+    }
+    this.toggleShield();
+  }
+
+  triggerEmergencyReturn() {
+    if (this.emergencyReturnCharges <= 0) return;
+    this.emergencyReturnCharges = Math.max(0, this.emergencyReturnCharges - 1);
+    this.shieldChargeMultiplier = 0.5;
+    this.shieldReadyDuration = this.shieldReadyDurationBase * this.shieldChargeMultiplier;
+    this.core.x = this.shieldAnchor.x;
+    this.core.y = this.shieldAnchor.y;
+    this.updateCamera();
+    this.playEmergencyReturnAnimation().catch(() => {});
+  }
+
+  playEmergencyReturnAnimation() {
+    return new Promise((resolve) => {
+      const isMobile = window.innerWidth <= 768;
+      const startScale = isMobile ? 20.0 : 50.0;
+      const duration = isMobile ? 250 : 300;
+      const startTime = performance.now();
+
+      this.core.scale = startScale;
+      const animateDrop = (now) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeInQuint = (t) => t * t * t * t * t;
+
+        this.core.scale = startScale - (startScale - 1) * easeInQuint(progress);
+
+        if (progress < 1) {
+          requestAnimationFrame(animateDrop);
+        } else {
+          this.core.scale = 1;
+          this.applyEmergencyReturnImpact();
+          resolve();
+        }
+      };
+
+      requestAnimationFrame(animateDrop);
+    });
+  }
+
+  applyEmergencyReturnImpact() {
+    this.impactEffect({
+      radius: this.core.shieldRadius * 3,
+      damage: 20,
+      knockbackSpeed: 320,
+      slowMult: 0.45,
+      slowDuration: 2.2
+    });
+  }
+
   
   dischargeStatic() {
     const ss = this.staticSystem;
@@ -1952,6 +2071,7 @@ export class DefenseGame {
     if (slowMult < 1 && slowDuration > 0) {
       enemy.slowMultiplier = slowMult;
       enemy.slowTimer = slowDuration;
+      enemy.slowEndTime = performance.now() + slowDuration * 1000;
     }
   }
 
@@ -5200,7 +5320,13 @@ export class DefenseGame {
           } else {
             this.core.scale = 1;
 
-            this.impactEffect();
+            this.impactEffect({
+              radius: this.core.shieldRadius * 3,
+              damage: 20,
+              knockbackSpeed: 320,
+              slowMult: 0.45,
+              slowDuration: 2.2
+            });
 
             this.glitchShowHP()
               .then(() => {
@@ -5295,7 +5421,7 @@ export class DefenseGame {
     });
   }
 
-  impactEffect() {
+  impactEffect(options = null) {
     this.playImpactSound();
 
     const flash = document.createElement("div");
@@ -5319,6 +5445,36 @@ export class DefenseGame {
     this.shakeScreen();
 
     this.spawnShockwave();
+
+    if (options) {
+      const radius = options.radius ?? this.core.shieldRadius * 3;
+      const damage = options.damage ?? 20;
+      const knockbackSpeed = options.knockbackSpeed ?? 300;
+      const slowMult = options.slowMult ?? 0.5;
+      const slowDuration = options.slowDuration ?? 2;
+
+      this.enemies.forEach((enemy) => {
+        const dx = enemy.x - this.core.x;
+        const dy = enemy.y - this.core.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= radius) {
+          this.applyKnockback(enemy, knockbackSpeed, slowMult, slowDuration);
+          enemy.hp -= damage;
+        }
+      });
+
+      for (let i = this.enemies.length - 1; i >= 0; i--) {
+        if (this.enemies[i].hp <= 0) {
+          this.createExplosion(
+            this.enemies[i].x,
+            this.enemies[i].y,
+            "#ff0000",
+            15
+          );
+          this.enemies.splice(i, 1);
+        }
+      }
+    }
 
     if (this.isSafeZone) {
       setTimeout(() => this.showSafeZoneText(), 300);
