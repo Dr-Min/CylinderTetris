@@ -107,6 +107,7 @@ export class GameManager {
     this.bossManager = new BossManager(); // 보스 매니저 추가
     this.miningManager = new MiningManager(); // 채굴 매니저
     this.defenseGame.miningManager = this.miningManager;
+    this.defenseGame.onRecallRequest = () => this.handleRecall();
     this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
 
     // 해금 진행률 (Decryption Progress)
@@ -1407,14 +1408,10 @@ export class GameManager {
 
     // 안전지역이 아닐 때 귀환 옵션 추가
     if (this.defenseGame && !this.defenseGame.isSafeZone) {
-      const shieldHp = this.defenseGame.core?.shieldHp || 0;
-      const canRecall = shieldHp > 0;
       choices.push({
-        text: canRecall
-          ? `/recall (Return to Safe Zone) [Shield: ${shieldHp}]`
-          : `/recall (UNAVAILABLE - No Shield)`,
+        text: "/recall (Return to Safe Zone)",
         value: "recall",
-        style: canRecall ? "warning" : "disabled",
+        style: "warning",
       });
     }
 
@@ -1440,16 +1437,6 @@ export class GameManager {
    * 조건: 실드 > 0, 5초 캐스팅 (피격 시 취소)
    */
   async handleRecall() {
-    const shieldHp = this.defenseGame.core?.shieldHp || 0;
-
-    // 실드 체크
-    if (shieldHp <= 0) {
-      await this.terminal.printSystemMessage("⚠️ RECALL FAILED: Shield required!");
-      await this.terminal.printSystemMessage("You need at least 1 Shield HP to recall.");
-      await this.showCommandMenu();
-      return;
-    }
-
     await this.terminal.printSystemMessage("🏃 INITIATING RECALL...");
     await this.terminal.printSystemMessage("Stay alive for 5 seconds!");
 
@@ -1497,7 +1484,6 @@ export class GameManager {
   startRecallCasting(duration) {
     return new Promise((resolve) => {
       const startTime = Date.now();
-      const startShieldHp = this.defenseGame.core?.shieldHp || 0;
       const startCoreHp = this.defenseGame.core?.hp || 0;
 
       // 테두리 효과 컨테이너
@@ -1611,10 +1597,9 @@ export class GameManager {
         timeDisplay.textContent = `${(remaining / 1000).toFixed(1)}s`;
 
         // 피격 감지 (실드 또는 코어 HP 감소)
-        const currentShieldHp = this.defenseGame.core?.shieldHp || 0;
         const currentCoreHp = this.defenseGame.core?.hp || 0;
 
-        if (currentShieldHp < startShieldHp || currentCoreHp < startCoreHp) {
+        if (currentCoreHp < startCoreHp) {
           // 피격됨 - 캐스팅 취소
           clearInterval(updateInterval);
 
@@ -1687,6 +1672,9 @@ export class GameManager {
     // 디펜스 게임 설정 적용
     this.defenseGame.isSafeZone = stage.type === "safe";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate || 2;
+    if (this.defenseGame.updateRecallBtnVisibility) {
+      this.defenseGame.updateRecallBtnVisibility();
+    }
 
     // 보스전 모드 설정
     if (stage.type === "boss") {

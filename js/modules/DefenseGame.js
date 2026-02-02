@@ -112,12 +112,14 @@ export class DefenseGame {
     this.uiLayer.style.display = "none";
     document.body.appendChild(this.uiLayer);
 
+    const joystickLeft = this.isMobile ? 60 : 24;
+    const joystickBottom = this.isMobile ? 60 : 24;
     this.joystickContainer = document.createElement("div");
     this.joystickContainer.id = "move-joystick";
     this.joystickContainer.style.cssText = `
       position: absolute;
-      left: 24px;
-      bottom: 24px;
+      left: ${joystickLeft}px;
+      bottom: ${joystickBottom}px;
       width: 110px;
       height: 110px;
       pointer-events: auto;
@@ -165,19 +167,24 @@ export class DefenseGame {
     this.shieldBtn.style.bottom = "100px";
     this.shieldBtn.style.left = "50%";
     this.shieldBtn.style.transform = "translateX(-50%)";
-    this.shieldBtn.style.width = "220px";
-    this.shieldBtn.style.height = "60px";
+    this.shieldBtn.style.width = "200px";
+    this.shieldBtn.style.height = "52px";
     this.shieldBtn.style.backgroundColor = "rgba(0, 50, 255, 0.3)";
     this.shieldBtn.style.border = "2px solid #00f0ff";
     this.shieldBtn.style.color = "#00f0ff";
     this.shieldBtn.style.fontFamily = "var(--term-font)";
-    this.shieldBtn.style.fontSize = "16px";
+    this.shieldBtn.style.fontSize = "14px";
     this.shieldBtn.style.cursor = "pointer";
     this.shieldBtn.style.pointerEvents = "auto";
     this.shieldBtn.style.zIndex = "30";
     this.shieldBtn.style.touchAction = "manipulation";
     this.shieldBtn.style.userSelect = "none";
     this.shieldBtn.style.webkitTapHighlightColor = "transparent";
+    if (this.isMobile) {
+      this.shieldBtn.style.right = "10px";
+      this.shieldBtn.style.left = "auto";
+      this.shieldBtn.style.transform = "none";
+    }
 
     this.shieldBtn.onclick = () => this.handleShieldButtonClick();
     this.uiLayer.appendChild(this.shieldBtn);
@@ -207,6 +214,46 @@ export class DefenseGame {
     this.conquerBtn.innerHTML = "!!! CONQUER !!!";
     this.conquerBtn.onclick = () => this.handleConquerClick();
     this.uiLayer.appendChild(this.conquerBtn);
+
+    const isSmallMobile = window.innerWidth <= 480;
+    const recallWidth = this.isMobile ? (isSmallMobile ? 110 : 130) : 150;
+    const recallHeight = this.isMobile ? (isSmallMobile ? 32 : 36) : 40;
+    const recallFontSize = this.isMobile ? (isSmallMobile ? 10 : 11) : 12;
+    this.isRecallCasting = false;
+    this.onRecallRequest = null;
+    this.recallBtn = document.createElement("button");
+    this.recallBtn.id = "recall-btn";
+    this.recallBtn.style.position = "absolute";
+    this.recallBtn.style.bottom = "20px";
+    this.recallBtn.style.right = "10px";
+    this.recallBtn.style.width = `${recallWidth}px`;
+    this.recallBtn.style.height = `${recallHeight}px`;
+    this.recallBtn.style.backgroundColor = "rgba(0, 20, 40, 0.8)";
+    this.recallBtn.style.border = "2px solid #00aaff";
+    this.recallBtn.style.color = "#00aaff";
+    this.recallBtn.style.fontFamily = "var(--term-font)";
+    this.recallBtn.style.fontSize = `${recallFontSize}px`;
+    this.recallBtn.style.fontWeight = "bold";
+    this.recallBtn.style.cursor = "pointer";
+    this.recallBtn.style.display = "none";
+    this.recallBtn.style.zIndex = "40";
+    this.recallBtn.style.boxShadow = "0 0 15px rgba(0, 170, 255, 0.5)";
+    this.recallBtn.style.touchAction = "manipulation";
+    this.recallBtn.style.userSelect = "none";
+    this.recallBtn.style.webkitTapHighlightColor = "transparent";
+    this.recallBtn.innerHTML = "RECALL";
+    this.recallBtn.onclick = async () => {
+      if (!this.onRecallRequest || this.isRecallCasting) return;
+      this.isRecallCasting = true;
+      this.recallBtn.style.pointerEvents = "none";
+      try {
+        await this.onRecallRequest();
+      } finally {
+        this.isRecallCasting = false;
+        this.recallBtn.style.pointerEvents = "auto";
+      }
+    };
+    this.uiLayer.appendChild(this.recallBtn);
 
 
     this.isRunning = false;
@@ -903,25 +950,24 @@ export class DefenseGame {
     const maxHp = this.core.shieldMaxHp || 1;
     const hpPct = Math.floor((this.core.shieldHp / maxHp) * 100);
 
-    let topDisplay = `(${hpPct}%)`;
+    let topDisplay = `HP ${hpPct}%`;
     if (loadingProgress !== null) {
-      const circumference = 2 * Math.PI * 12;
-      const dashOffset = circumference * (1 - loadingProgress);
-      topDisplay = `
-              <svg width="30" height="30" style="vertical-align: middle;">
-                  <circle cx="15" cy="15" r="12" fill="none" stroke="#333" stroke-width="3"/>
-                  <circle cx="15" cy="15" r="12" fill="none" stroke="${color}" stroke-width="3"
-                      stroke-dasharray="${circumference}" 
-                      stroke-dashoffset="${dashOffset}"
-                      transform="rotate(-90 15 15)"/>
-              </svg>
-          `;
+      topDisplay = `CHG ${Math.round(loadingProgress * 100)}%`;
     }
 
-    let displayText = text;
+    const labelMap = {
+      ACTIVE: "SHIELD",
+      OFFLINE: "OFF",
+      "SHIELD READY": "READY",
+      REARMING: "REARM",
+      RECHARGING: "RECHG",
+    };
+
+    const normalized = String(text || "").toUpperCase();
+    let displayText = labelMap[normalized] || normalized.split(" ")[0].slice(0, 6) || "SHIELD";
     let displayColor = color;
     if (this.shieldBtnMode === "RETURN") {
-      displayText = this.emergencyReturnCharges > 0 ? "EMERGENCY RETURN" : "NO RETURN";
+      displayText = this.emergencyReturnCharges > 0 ? "RETURN" : "NO";
       displayColor = this.emergencyReturnCharges > 0 ? "#ff6600" : "#555";
       topDisplay = "";
     }
@@ -930,15 +976,15 @@ export class DefenseGame {
     const chargeBadge = `
           <div style='
               position: absolute;
-              top: -10px;
-              right: -10px;
-              width: 24px;
-              height: 24px;
-              border-radius: 12px;
+              top: -8px;
+              right: -8px;
+              width: 20px;
+              height: 20px;
+              border-radius: 10px;
               background: rgba(0, 0, 0, 0.6);
               border: 1px solid ${displayColor};
               color: ${displayColor};
-              font-size: 12px;
+              font-size: 10px;
               display: flex;
               align-items: center;
               justify-content: center;
@@ -946,23 +992,25 @@ export class DefenseGame {
       `;
 
     this.shieldBtn.innerHTML = `
-          SHIELD: ${displayText}
-          <div style='
-              position: absolute; 
-              top: -30px; 
-              left: 50%; 
-              transform: translateX(-50%); 
-              font-size: 14px; 
-              color: ${displayColor}; 
-              text-shadow: 0 0 5px ${displayColor};
-              white-space: nowrap;
-          '>
-              ${topDisplay}
-          </div>
+          <div style='font-size: 12px; letter-spacing: 1px;'>${displayText}</div>
+          <div style='font-size: 10px; color: ${displayColor}; opacity: 0.9;'>${topDisplay}</div>
           ${chargeBadge}
       `;
     this.shieldBtn.style.borderColor = displayColor;
     this.shieldBtn.style.color = displayColor;
+  }
+
+  updateRecallBtnVisibility() {
+    if (!this.recallBtn) return;
+    const shouldShow = this.isRunning && this.uiLayer?.style?.display !== "none";
+    this.recallBtn.style.display = shouldShow ? "block" : "none";
+    if (this.isSafeZone) {
+      this.recallBtn.style.opacity = "0.45";
+      this.recallBtn.style.pointerEvents = "none";
+    } else {
+      this.recallBtn.style.opacity = "1";
+      this.recallBtn.style.pointerEvents = "auto";
+    }
   }
 
   start() {
@@ -973,6 +1021,7 @@ export class DefenseGame {
 
     this.isSafeZone = (this.currentStageId === 0);
     this.isFarmingZone = (this.currentStageId === 3);
+    this.updateRecallBtnVisibility();
 
     this.currentPage = 1;
     this.pageTimer = 0;
@@ -1004,12 +1053,14 @@ export class DefenseGame {
     this.isRunning = false;
     this.canvas.style.display = "none";
     this.uiLayer.style.display = "none";
+    this.updateRecallBtnVisibility();
 
     this.bgmManager.stop();
   }
 
   pause() {
     this.isRunning = false;
+    this.updateRecallBtnVisibility();
 
     this.bgmManager.stop();
   }
