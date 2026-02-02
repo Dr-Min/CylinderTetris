@@ -1283,6 +1283,12 @@ export class DefenseGame {
       const enemy = this.enemies[i];
       const prevHp = enemy.hp;
 
+      if (!Number.isFinite(enemy.hp)) {
+        debugLog("Enemy", "hp NaN - removing", "type", enemy.type || enemy.id || "unknown");
+        this.enemies.splice(i, 1);
+        continue;
+      }
+
       let targetX = this.core.x;
       let targetY = this.core.y;
 
@@ -4228,13 +4234,14 @@ export class DefenseGame {
       difficultyScale = stageBase + pageMultiplier;
     }
 
+    const maxHp = Math.max(1, Math.floor(baseHp * difficultyScale));
     this.enemies.push({
       x: ex,
       y: ey,
       radius: 10,
       speed: baseSpeed * difficultyScale,
-      hp: Math.floor(baseHp * difficultyScale),
-      maxHp: Math.floor(baseHp * difficultyScale),
+      hp: maxHp,
+      maxHp,
       damage: 10,
     });
   }
