@@ -245,7 +245,6 @@ export class MiningManager {
     this._bgLogTimer += dt;
     if (this._bgLogTimer > 5) {
       if (keys.length > 0) {
-        console.log(`[Mining] bg tick - territories: ${keys.length}, cabinet: ${this.cabinet.storedData} MB, pending: ${this.pendingData} MB`);
       }
       this._bgLogTimer = 0;
     }
@@ -258,7 +257,6 @@ export class MiningManager {
         t.tripTimer -= tripCycle;
         const mined = this.dataPerTrip * t.minerCount;
         this.pendingData += mined;
-        console.log(`[Mining] bg mined ${mined} MB from territory ${id}, pending: ${this.pendingData}`);
       }
     }
   }
