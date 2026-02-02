@@ -976,6 +976,7 @@ export class DefenseGame {
     this.conquerReady = false;
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
+    this.emergencyReturnCharges = this.emergencyReturnMax;
     if (this.isSafeZone) {
       this.core.shieldActive = false;
       this.core.shieldState = "OFF";
