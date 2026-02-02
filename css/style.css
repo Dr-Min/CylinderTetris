@@ -789,10 +789,10 @@ body {
   }
 
   #defense-ui #shield-btn {
-    width: 220px;
-    height: 50px;
+    width: 170px;
+    height: 44px;
     bottom: 90px;
-    font-size: 16px; /* 폰트 조금 키움 */
+    font-size: 12px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -801,9 +801,9 @@ body {
   }
 
   #defense-ui #conquer-btn {
-    width: 180px;
-    padding: 10px;
-    font-size: 14px;
+    width: 140px;
+    padding: 8px;
+    font-size: 12px;
     top: 100px; /* 데이터/페이지 UI 아래로 내림 */
   }
 
@@ -891,9 +891,15 @@ body {
   }
 
   #defense-ui #shield-btn {
-    width: 160px;
-    height: 50px;
-    font-size: 10px; /* 쉴드 버튼 폰트 더 축소 */
+    width: 140px;
+    height: 40px;
+    font-size: 10px;
+  }
+
+  #defense-ui #conquer-btn {
+    width: 120px;
+    padding: 6px;
+    font-size: 10px;
   }
 
   #defense-ui #shield-btn span {
