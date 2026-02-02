@@ -954,6 +954,17 @@ export class DefenseGame {
   }
 
   updateShieldBtnUI(text, color, loadingProgress = null) {
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+    const recallWidth = isMobile ? (isSmallMobile ? 110 : 130) : 150;
+    const recallHeight = isMobile ? (isSmallMobile ? 32 : 36) : 40;
+    const recallFontSize = isMobile ? (isSmallMobile ? 10 : 11) : 12;
+    this.shieldBtnWidth = recallWidth;
+    this.shieldBtnHeight = recallHeight;
+    this.shieldBtn.style.width = `${recallWidth}px`;
+    this.shieldBtn.style.height = `${recallHeight}px`;
+    this.shieldBtn.style.fontSize = `${recallFontSize}px`;
+
     const progressOverlay = (() => {
       if (loadingProgress === null) return "";
       const borderWidth = this.shieldBtnWidth ?? 130;
