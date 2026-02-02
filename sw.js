@@ -1,5 +1,5 @@
-// v2.1.74
-const CACHE_NAME = "hacker-tetris-v2.1.74";
+// v2.1.75
+const CACHE_NAME = "hacker-tetris-v2.1.75";
 const ASSETS = [
   "./",
   "./index.html",

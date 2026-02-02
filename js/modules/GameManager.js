@@ -343,7 +343,7 @@ export class GameManager {
         turretDamage: 10,
         turretRange: 10,
         turretSpeed: 10,
-        fireRate: 10,
+        fireRate: 20,
         staticDamage: 10,
         staticChain: 10,
       },
@@ -4395,7 +4395,7 @@ export class GameManager {
       {
         id: "fireRate",
         name: "Fire Rate",
-        increment: "+0.5/s",
+        increment: "+0.6/s",
         cost: 140,
         level: levels.fireRate,
         maxLevel: maxLevels.fireRate,
@@ -4678,7 +4678,7 @@ export class GameManager {
     const bonusTurretDamage = levels.turretDamage * 3;
     const bonusTurretRange = levels.turretRange * 15;
     const bonusTurretSpeed = levels.turretSpeed * 30;
-    const bonusTurretFireRate = levels.fireRate * 0.5;
+    const bonusTurretFireRate = levels.fireRate * 0.6;
     const bonusStaticDamage = levels.staticDamage * 5;
     const bonusStaticChain = levels.staticChain * 1;
 
