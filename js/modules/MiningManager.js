@@ -158,7 +158,6 @@ export class MiningManager {
         maxLife: 1.5,
         alpha: 1,
       });
-      console.log(`[Mining] Cabinet collected: ${amount} MB`);
       return { collected: true, amount };
     }
     return { collected: false, amount: 0 };
