@@ -1085,8 +1085,14 @@ export class DefenseGame {
         }
       } else {
         this.shieldReady = false;
-        this.shieldReadyTimer = 0;
-        this.updateShieldBtnUI("OFFLINE", "#f00");
+        const decayRate = this.shieldReadyDuration * 0.8;
+        this.shieldReadyTimer = Math.max(0, this.shieldReadyTimer - decayRate * dt);
+        if (this.shieldReadyTimer <= 0) {
+          this.updateShieldBtnUI("OFFLINE", "#f00");
+        } else {
+          const progress = Math.min(1, this.shieldReadyTimer / this.shieldReadyDuration);
+          this.updateShieldBtnUI("REARMING", "#00ff88", progress);
+        }
       }
     } else if (this.core.shieldActive) {
       this.shieldReady = false;
