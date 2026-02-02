@@ -367,6 +367,7 @@ export class DefenseGame {
     this.virusDialogues = null;
     this.activeSpeechBubbles = [];
     this.loadVirusDialogues();
+    this.slowFields = [];
 
     this.waveTimer = 0;
     this.pageDurationBase = 12.5;
@@ -1658,6 +1659,16 @@ export class DefenseGame {
       }
     }
 
+    for (let i = this.slowFields.length - 1; i >= 0; i--) {
+      const field = this.slowFields[i];
+      field.life -= dt;
+      if (field.life <= 0) {
+        this.slowFields.splice(i, 1);
+      } else {
+        field.alpha = field.life / field.maxLife;
+      }
+    }
+
     const nowMs = performance.now();
     this.enemies.forEach((enemy) => {
       if (enemy.slowEndTime && nowMs >= enemy.slowEndTime) {
@@ -1766,7 +1777,7 @@ export class DefenseGame {
       damage: 20,
       knockbackSpeed: 320,
       slowMult: 0.45,
-      slowDuration: 2.2
+      slowDuration: 3.0
     });
   }
 
@@ -4000,7 +4011,8 @@ export class DefenseGame {
         const dx = this.core.x - this.shieldAnchor.x;
         const dy = this.core.y - this.shieldAnchor.y;
         const dist = Math.hypot(dx, dy);
-        if (dist <= this.core.shieldRadius) {
+        const chargeRadius = Math.max(0, this.core.shieldRadius - this.core.radius);
+        if (dist <= chargeRadius) {
           const progress = Math.min(1, this.shieldReadyTimer / this.shieldReadyDuration);
           const barW = 50 * coreScale;
           const barH = 6 * coreScale;
@@ -4069,6 +4081,23 @@ export class DefenseGame {
         this.ctx.globalAlpha = wave.alpha * 0.5;
         this.ctx.stroke();
       }
+
+      this.ctx.globalAlpha = 1.0;
+    });
+
+    this.slowFields.forEach((field) => {
+      this.ctx.beginPath();
+      this.ctx.arc(field.x, field.y, field.radius, 0, Math.PI * 2);
+      this.ctx.fillStyle = field.fillColor;
+      this.ctx.globalAlpha = field.alpha * 0.25;
+      this.ctx.fill();
+
+      this.ctx.beginPath();
+      this.ctx.arc(field.x, field.y, field.radius, 0, Math.PI * 2);
+      this.ctx.strokeStyle = field.strokeColor;
+      this.ctx.lineWidth = 2;
+      this.ctx.globalAlpha = field.alpha * 0.7;
+      this.ctx.stroke();
 
       this.ctx.globalAlpha = 1.0;
     });
@@ -5330,11 +5359,11 @@ export class DefenseGame {
             this.core.scale = 1;
 
             this.impactEffect({
-              radius: this.core.shieldRadius * 3,
+              radius: Math.max(this.core.shieldRadius, this.baseShieldRadius) * 3,
               damage: 20,
               knockbackSpeed: 320,
               slowMult: 0.45,
-              slowDuration: 2.2
+              slowDuration: 3.0
             });
 
             this.glitchShowHP()
@@ -5465,7 +5494,7 @@ export class DefenseGame {
       const damage = options.damage ?? 20;
       const knockbackSpeed = options.knockbackSpeed ?? 300;
       const slowMult = options.slowMult ?? 0.5;
-      const slowDuration = options.slowDuration ?? 2;
+      const slowDuration = options.slowDuration ?? 3;
       debugLog(
         "Defense",
         "ImpactEffect options",
@@ -5478,6 +5507,29 @@ export class DefenseGame {
         "enemies",
         this.enemies.length
       );
+
+      this.shockwaves.push({
+        x: this.core.x,
+        y: this.core.y,
+        radius: 0,
+        maxRadius: radius,
+        speed: 700,
+        alpha: 0.9,
+        color: "#00f0ff",
+        lineWidth: 6,
+        damageDealt: false,
+      });
+
+      this.slowFields.push({
+        x: this.core.x,
+        y: this.core.y,
+        radius: radius,
+        life: slowDuration,
+        maxLife: slowDuration,
+        alpha: 1,
+        fillColor: "rgba(0, 180, 255, 0.18)",
+        strokeColor: "rgba(0, 240, 255, 0.7)"
+      });
 
       this.enemies.forEach((enemy) => {
         const dx = enemy.x - this.core.x;
