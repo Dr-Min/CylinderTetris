@@ -979,15 +979,9 @@ export class DefenseGame {
     this.updateWaveDisplay();
     this.emergencyReturnCharges = this.emergencyReturnMax;
     this.shieldBtnMode = "SHIELD";
-    if (this.isSafeZone) {
-      this.core.shieldActive = false;
-      this.core.shieldState = "OFF";
-      this.updateShieldBtnUI("OFFLINE", "#f00");
-    } else {
-      this.core.shieldActive = true;
-      this.core.shieldState = "ACTIVE";
-      this.updateShieldBtnUI("ACTIVE", "#fff");
-    }
+    this.core.shieldActive = false;
+    this.core.shieldState = "OFF";
+    this.updateShieldBtnUI("OFFLINE", "#f00");
     this.emergencyReturnCharges = this.emergencyReturnMax;
     this.shieldBtn.style.display = "block";
     this.coreReturnTimer = 0;
@@ -1077,7 +1071,8 @@ export class DefenseGame {
     const dyShield = this.core.y - this.shieldAnchor.y;
     const distShield = Math.hypot(dxShield, dyShield);
     const maxDistShield = Math.max(0, this.core.shieldRadius - this.core.radius);
-    const insideShield = distShield <= maxDistShield;
+    const edgePadding = 4;
+    const insideShield = distShield <= Math.max(0, maxDistShield - edgePadding);
     this.isCoreInsideShield = insideShield;
     const nextMode = insideShield ? "SHIELD" : "RETURN";
     if (this.shieldBtnMode !== nextMode) {
@@ -1134,11 +1129,12 @@ export class DefenseGame {
     const shieldReadyDuration = this.shieldReadyDurationBase * this.shieldChargeMultiplier;
     this.shieldReadyDuration = shieldReadyDuration;
 
+    const chargeRadius = Math.max(0, this.core.shieldRadius - this.core.radius);
     if (!this.core.shieldActive && this.core.shieldState === "OFF") {
       const dx = this.core.x - this.shieldAnchor.x;
       const dy = this.core.y - this.shieldAnchor.y;
       const dist = Math.hypot(dx, dy);
-      if (dist <= this.core.shieldRadius) {
+      if (dist <= chargeRadius) {
         this.shieldReadyTimer += dt;
         const progress = Math.min(1, this.shieldReadyTimer / shieldReadyDuration);
         if (progress >= 1) {
@@ -1730,6 +1726,7 @@ export class DefenseGame {
     this.core.x = this.shieldAnchor.x;
     this.core.y = this.shieldAnchor.y;
     this.updateCamera();
+    debugLog("Defense", "EmergencyReturn triggered", "charges", this.emergencyReturnCharges);
     this.playEmergencyReturnAnimation().catch(() => {});
   }
 
@@ -1763,6 +1760,7 @@ export class DefenseGame {
 
   applyEmergencyReturnImpact() {
     const radius = Math.max(this.core.shieldRadius, this.baseShieldRadius) * 3;
+    debugLog("Defense", "EmergencyReturn impact", "radius", radius, "enemies", this.enemies.length);
     this.impactEffect({
       radius,
       damage: 20,
@@ -5468,6 +5466,18 @@ export class DefenseGame {
       const knockbackSpeed = options.knockbackSpeed ?? 300;
       const slowMult = options.slowMult ?? 0.5;
       const slowDuration = options.slowDuration ?? 2;
+      debugLog(
+        "Defense",
+        "ImpactEffect options",
+        "radius",
+        radius,
+        "damage",
+        damage,
+        "slow",
+        slowMult,
+        "enemies",
+        this.enemies.length
+      );
 
       this.enemies.forEach((enemy) => {
         const dx = enemy.x - this.core.x;
