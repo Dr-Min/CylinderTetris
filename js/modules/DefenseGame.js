@@ -181,6 +181,8 @@ export class DefenseGame {
     this.shieldBtn.style.color = "#00f0ff";
     this.shieldBtn.style.fontFamily = "var(--term-font)";
     this.shieldBtn.style.fontSize = `${recallFontSize}px`;
+    this.shieldBtn.style.padding = "0";
+    this.shieldBtn.style.boxSizing = "border-box";
     this.shieldBtn.style.cursor = "pointer";
     this.shieldBtn.style.pointerEvents = "auto";
     this.shieldBtn.style.zIndex = "30";
@@ -237,6 +239,8 @@ export class DefenseGame {
     this.recallBtn.style.fontFamily = "var(--term-font)";
     this.recallBtn.style.fontSize = `${recallFontSize}px`;
     this.recallBtn.style.fontWeight = "bold";
+    this.recallBtn.style.padding = "0";
+    this.recallBtn.style.boxSizing = "border-box";
     this.recallBtn.style.cursor = "pointer";
     this.recallBtn.style.display = "none";
     this.recallBtn.style.zIndex = "40";
@@ -1011,7 +1015,11 @@ export class DefenseGame {
           </div>
           ${chargeBadge}
       `;
-    this.shieldBtn.style.borderColor = displayColor;
+    if (loadingProgress === null) {
+      this.shieldBtn.style.borderColor = displayColor;
+    } else {
+      this.shieldBtn.style.borderColor = "#1b1b1b";
+    }
     this.shieldBtn.style.color = displayColor;
   }
 
