@@ -65,6 +65,7 @@ export class DefenseGame {
     this.emergencyReturnMax = 2;
     this.emergencyReturnCharges = this.emergencyReturnMax;
     this.lastEmergencyReturnTime = 0;
+    this.shieldPassThroughUntil = 0;
     this.shieldBtnMode = "SHIELD";
     this.isCoreInsideShield = true;
     this.isIntroDrop = false;
@@ -1253,6 +1254,7 @@ export class DefenseGame {
       if (this.core.shieldTimer <= 0) {
         this.core.shieldActive = true;
         this.core.shieldState = "ACTIVE";
+        this.shieldPassThroughUntil = performance.now() + 1000;
         this.updateShieldBtnUI("ACTIVE", "#fff");
       }
     } else if (this.core.shieldState === "DISCHARGING") {
@@ -6469,7 +6471,10 @@ export class DefenseGame {
     this.core.x += this.moveInput.x * speed * dt;
     this.core.y += this.moveInput.y * speed * dt;
 
-    const allowShieldPassThrough = (this.isConquered && !this.isSafeZone) || this.isIntroDrop;
+    const allowShieldPassThrough =
+      (this.isConquered && !this.isSafeZone) ||
+      this.isIntroDrop ||
+      performance.now() < this.shieldPassThroughUntil;
     if (this.core.shieldActive && !allowShieldPassThrough) {
       const maxDist = Math.max(0, this.core.shieldRadius - this.core.radius);
       const dx = this.core.x - this.shieldAnchor.x;
