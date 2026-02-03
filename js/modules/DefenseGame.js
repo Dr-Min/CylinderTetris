@@ -95,7 +95,10 @@ export class DefenseGame {
     this.coreReturnTimer = 0;
     this.coreReturnAtHome = false;
     this.moveInput = { x: 0, y: 0 };
-    this.keyState = { up: false, down: false, left: false, right: false };
+    this.keyState = { up: false, down: false, left: false, right: false, shift: false };
+    this.shiftAccel = 1.0;
+    this.shiftAccelRate = 1.6;
+    this.shiftMaxMultiplier = 1.6;
     this.joystick = { active: false, pointerId: null, inputX: 0, inputY: 0 };
     this.lastJoystickInputTime = 0;
     this.hasInitializedCore = false;
@@ -5355,6 +5358,7 @@ export class DefenseGame {
     this.fireAtPosition(0, 0);
   }
 
+
   handleCanvasMouseUp(e) {
     if (e.button !== 0) return;
     this.autoFireMouseActive = false;
@@ -5364,23 +5368,70 @@ export class DefenseGame {
 
   handleKeyDown(e) {
     if (this.isPaused) return;
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
+      return;
+    }
 
-    if (e.code === "KeyW") this.keyState.up = true;
-    if (e.code === "KeyS") this.keyState.down = true;
-    if (e.code === "KeyA") this.keyState.left = true;
-    if (e.code === "KeyD") this.keyState.right = true;
-
-    if (e.code === "Space" || e.key === " ") {
-      e.preventDefault();
-      this.fireAtPosition(0, 0);
+    switch (e.code) {
+      case "ArrowUp":
+      case "KeyW":
+        this.keyState.up = true;
+        e.preventDefault();
+        break;
+      case "ArrowDown":
+      case "KeyS":
+        this.keyState.down = true;
+        e.preventDefault();
+        break;
+      case "ArrowLeft":
+      case "KeyA":
+        this.keyState.left = true;
+        e.preventDefault();
+        break;
+      case "ArrowRight":
+      case "KeyD":
+        this.keyState.right = true;
+        e.preventDefault();
+        break;
+      case "ShiftLeft":
+      case "ShiftRight":
+        this.keyState.shift = true;
+        break;
+      case "Space":
+        e.preventDefault();
+        this.fireAtPosition(0, 0);
+        break;
+      default:
+        break;
     }
   }
 
   handleKeyUp(e) {
-    if (e.code === "KeyW") this.keyState.up = false;
-    if (e.code === "KeyS") this.keyState.down = false;
-    if (e.code === "KeyA") this.keyState.left = false;
-    if (e.code === "KeyD") this.keyState.right = false;
+    switch (e.code) {
+      case "ArrowUp":
+      case "KeyW":
+        this.keyState.up = false;
+        break;
+      case "ArrowDown":
+      case "KeyS":
+        this.keyState.down = false;
+        break;
+      case "ArrowLeft":
+      case "KeyA":
+        this.keyState.left = false;
+        break;
+      case "ArrowRight":
+      case "KeyD":
+        this.keyState.right = false;
+        break;
+      case "ShiftLeft":
+      case "ShiftRight":
+        this.keyState.shift = false;
+        break;
+      default:
+        break;
+    }
   }
 
   screenToWorld(screenX, screenY) {
@@ -6469,7 +6520,24 @@ export class DefenseGame {
       return;
     }
 
-    const speed = this.coreMoveSpeed;
+    let speedScale = 1.0;
+    const usingJoystick = this.isMobile && this.joystick.active;
+    const isMoving = this.moveInput.x !== 0 || this.moveInput.y !== 0;
+    if (!usingJoystick) {
+      if (this.keyState.shift && isMoving) {
+        this.shiftAccel = Math.min(
+          this.shiftMaxMultiplier,
+          this.shiftAccel + dt * this.shiftAccelRate
+        );
+      } else {
+        this.shiftAccel = 1.0;
+      }
+      speedScale = this.shiftAccel;
+    } else {
+      this.shiftAccel = 1.0;
+    }
+
+    const speed = this.coreMoveSpeed * speedScale;
     this.core.x += this.moveInput.x * speed * dt;
     this.core.y += this.moveInput.y * speed * dt;
 
