@@ -64,6 +64,7 @@ export class DefenseGame {
     this.shieldStepTimer = 0;
     this.emergencyReturnMax = 2;
     this.emergencyReturnCharges = this.emergencyReturnMax;
+    this.lastEmergencyReturnTime = 0;
     this.shieldBtnMode = "SHIELD";
     this.isCoreInsideShield = true;
     this.isIntroDrop = false;
@@ -93,6 +94,7 @@ export class DefenseGame {
     this.moveInput = { x: 0, y: 0 };
     this.keyState = { up: false, down: false, left: false, right: false };
     this.joystick = { active: false, pointerId: null, inputX: 0, inputY: 0 };
+    this.lastJoystickInputTime = 0;
     this.hasInitializedCore = false;
     this.autoFireActive = false;
     this.autoFireTimer = 0;
@@ -195,13 +197,27 @@ export class DefenseGame {
       this.shieldBtn.style.transform = "none";
     }
 
+    this.lastShieldTapTime = 0;
     const handleShieldTap = (e) => {
+      const now = performance.now();
+      if (
+        this.isMobile &&
+        this.joystick.active &&
+        e.pointerId === this.joystick.pointerId
+      ) {
+        return;
+      }
+      if (now - this.lastShieldTapTime < 250) return;
+      this.lastShieldTapTime = now;
       e.preventDefault();
       e.stopPropagation();
       this.handleShieldButtonClick();
     };
-    this.shieldBtn.addEventListener("pointerdown", handleShieldTap);
-    this.shieldBtn.addEventListener("touchstart", handleShieldTap, { passive: false });
+    if (window.PointerEvent) {
+      this.shieldBtn.addEventListener("pointerdown", handleShieldTap);
+    } else {
+      this.shieldBtn.addEventListener("touchstart", handleShieldTap, { passive: false });
+    }
     this.uiLayer.appendChild(this.shieldBtn);
     this.updateShieldBtnUI("ACTIVE", "#00f0ff");
 
@@ -1864,6 +1880,9 @@ export class DefenseGame {
 
   triggerEmergencyReturn() {
     if (this.emergencyReturnCharges <= 0) return;
+    const now = performance.now();
+    if (now - this.lastEmergencyReturnTime < 300) return;
+    this.lastEmergencyReturnTime = now;
     this.emergencyReturnCharges = Math.max(0, this.emergencyReturnCharges - 1);
     this.shieldChargeMultiplier = 0.5;
     this.shieldReadyDuration = this.shieldReadyDurationBase * this.shieldChargeMultiplier;
