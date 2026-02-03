@@ -1074,6 +1074,10 @@ export class TetrisGame {
       this.state.linesClearedTotal += linesCleared.length;
       this.state.linesClearedStage += linesCleared.length;
 
+      if (this.onLineCleared && this.state.isBossFight) {
+        this.onLineCleared(this.state.linesClearedStage);
+      }
+
       if (this.state.linesClearedStage >= this.state.targetLines) {
         this.stageClear();
         return;
@@ -1100,7 +1104,9 @@ export class TetrisGame {
     this.SoundManager.stopBGM();
     this.SoundManager.playTone({ start: 400, end: 800 }, "sine", 0.5, 0.3);
 
-    this.playClearEffect(); // 클리어 연출 시작
+    if (!this.state.isBossFight) {
+      this.playClearEffect(); // 클리어 연출 시작
+    }
 
     if (this.onStageClear) this.onStageClear(this.state.linesClearedStage);
   }
@@ -1658,6 +1664,14 @@ export class TetrisGame {
     debugLog("Tetris", "라인 체크 - 클리어된 줄:", linesCleared.length, "현재 총:", this.state.linesClearedStage, "목표:", this.state.puzzleLinesTarget);
     
     if (linesCleared.length > 0) {
+      debugLog("Tetris", "Puzzle lines cleared", {
+        count: linesCleared.length,
+        total: this.state.linesClearedStage,
+        target: this.state.puzzleLinesTarget,
+        isBossFight: this.state.isBossFight,
+        isPuzzleMode: this.state.isPuzzleMode,
+        onLineCleared: !!this.onLineCleared,
+      });
       // 라인 제거 연출
       linesCleared.forEach(y => this.createExplosion(y));
       
@@ -1689,6 +1703,7 @@ export class TetrisGame {
       } else {
         // 목표 미달성 시에만 라인 클리어 콜백 호출 (디펜스에 파동 효과)
         if (this.onLineCleared) {
+          debugLog("Tetris", "Calling onLineCleared", this.state.linesClearedStage);
           this.onLineCleared(this.state.linesClearedStage);
         }
       }

@@ -109,6 +109,7 @@ export class GameManager {
     this.defenseGame.miningManager = this.miningManager;
     this.defenseGame.onRecallRequest = () => this.handleRecall();
     this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
+    this.isBossBreachMode = false;
 
     // 해금 진행률 (Decryption Progress)
     // 바이러스: TANK, HUNTER, BOMBER, HEALER (SWARM만 기본 해금)
@@ -1862,6 +1863,11 @@ export class GameManager {
     // 현재 스테이지 난이도 기반으로 퍼즐 모드 시작
     const currentStage = this.stageManager.getCurrentStage();
     const difficulty = parseInt(currentStage.id) || 1;
+    this.tetrisGame.onLineCleared = (lineNum) => this.handlePuzzleLineCleared(lineNum);
+    debugLog("Conquest", "Tetris onLineCleared wired", {
+      hasCallback: !!this.tetrisGame.onLineCleared,
+      isConquestMode: this.isConquestMode,
+    });
     this.tetrisGame.startPuzzleMode(difficulty);
 
     // 미니 디펜스 렌더링 시작
@@ -2101,7 +2107,7 @@ export class GameManager {
     // 테트리스에서 줄 클리어 시 아이템 드롭 (줄 수에 비례한 확률)
     this.tryTetrisItemDrop(lineNum);
 
-    if (!this.isConquestMode || !this.defenseGame) return;
+    if ((!this.isConquestMode && !this.isBossBreachMode) || !this.defenseGame) return;
 
     debugLog("GameManager", `퍼즐 라인 클리어: ${lineNum}줄`);
 
@@ -6869,6 +6875,7 @@ export class GameManager {
     this.defenseGame.isBossFight = false;
     this.defenseGame.bossManager = null;
     this.defenseGame.onBreachReady = null;
+    this.isBossBreachMode = false;
     this.tetrisGame.endBossFight();
   }
 
@@ -6898,11 +6905,19 @@ export class GameManager {
   async startBossBreach() {
     debugLog("Boss", "Starting boss breach (Tetris)");
 
+    debugLog("Boss", "Boss breach UI before switch", {
+      defenseCanvas: this.defenseGame?.originalCanvas?.style?.display,
+      defenseUi: this.defenseGame?.uiLayer?.style?.display,
+      miniPanel: !!document.getElementById("mini-defense-panel"),
+      isMiniDisplay: this.defenseGame?.isMiniDisplay,
+    });
+
     // 테트리스 모드로 전환
-    this.defenseGame.pause();
+    
 
     // 테트리스에 보스전 모드 설정
     this.tetrisGame.startBossFight(this.bossManager);
+    this.isBossBreachMode = true;
 
     // 방해 콜백 설정
     this.bossManager.onInterference = (type) => {
@@ -6918,8 +6933,22 @@ export class GameManager {
     // 테트리스 콜백 설정
     this.tetrisGame.onStageClear = () => this.handleBossBreachSuccess();
     this.tetrisGame.onGameOver = () => this.handleBossBreachFail();
+    this.tetrisGame.onLineCleared = (lineNum) => this.handlePuzzleLineCleared(lineNum);
+    debugLog("Boss", "Boss breach callbacks wired", {
+      onLineCleared: !!this.tetrisGame.onLineCleared,
+      onStageClear: !!this.tetrisGame.onStageClear,
+      onGameOver: !!this.tetrisGame.onGameOver,
+      isBossBreachMode: this.isBossBreachMode,
+    });
 
     this.switchToTetrisMode();
+
+    debugLog("Boss", "Boss breach UI after switch", {
+      defenseCanvas: this.defenseGame?.originalCanvas?.style?.display,
+      defenseUi: this.defenseGame?.uiLayer?.style?.display,
+      miniPanel: !!document.getElementById("mini-defense-panel"),
+      isMiniDisplay: this.defenseGame?.isMiniDisplay,
+    });
     // 테트리스 게임 시작 (3줄 목표, 기본 속도)
     this.tetrisGame.startGame(3, 800);
 
@@ -6951,6 +6980,7 @@ export class GameManager {
    */
   async handleBossBreachSuccess() {
     debugLog("Boss", "Boss breach success!");
+    this.isBossBreachMode = false;
 
     // 방해 루프 중지
     if (this.bossInterferenceInterval) {
@@ -6969,16 +6999,18 @@ export class GameManager {
     this.tetrisGame.state.isPlaying = false;
     this.tetrisGame.endBossFight();
 
-    await this.terminal.printSystemMessage(`BREACH SUCCESS! Core damaged: ${this.bossManager.bossHP}% remaining`);
-
     // 침투 게이지 리셋
     this.defenseGame.breachReadyShown = false;
     this.bossManager.breachGauge = 0;
     this.bossManager.isBreachReady = false;
 
-    // 디펜스 모드로 복귀
+    // 디펜스 모드로 복귀 (즉시 화면 전환)
     this.switchToDefenseMode();
     this.defenseGame.resume();
+
+    await this.terminal.printSystemMessage(
+      `BREACH SUCCESS! Core damaged: ${this.bossManager.bossHP}% remaining`
+    );
 
     await this.showCommandMenu();
   }
@@ -6988,6 +7020,7 @@ export class GameManager {
    */
   async handleBossBreachFail() {
     debugLog("Boss", "Boss breach failed!");
+    this.isBossBreachMode = false;
 
     // 방해 루프 중지
     if (this.bossInterferenceInterval) {
@@ -7082,8 +7115,19 @@ export class GameManager {
     // 4. 디펜스 게임을 미니맵 모드로 전환 (상단에 작게 표시)
     if (this.defenseGame) {
       this.defenseGame.originalCanvas.style.display = "none";
+      this.defenseGame.uiLayer.style.display = "none";
+      if (this.defenseGame.updateRecallBtnVisibility) {
+        this.defenseGame.updateRecallBtnVisibility();
+      }
       this.createMiniDefensePanel();
     }
+
+    debugLog("Boss", "Boss breach mini panel ready", {
+      defenseCanvas: this.defenseGame?.originalCanvas?.style?.display,
+      defenseUi: this.defenseGame?.uiLayer?.style?.display,
+      miniPanel: !!document.getElementById("mini-defense-panel"),
+      isMiniDisplay: this.defenseGame?.isMiniDisplay,
+    });
 
     // 5. 모드 상태 업데이트
     this.activeMode = 'tetris';
@@ -7104,7 +7148,18 @@ export class GameManager {
     if (this.defenseGame) {
       this.removeMiniDefensePanel();
       this.defenseGame.originalCanvas.style.display = "block";
+      this.defenseGame.uiLayer.style.display = "block";
+      if (this.defenseGame.updateRecallBtnVisibility) {
+        this.defenseGame.updateRecallBtnVisibility();
+      }
     }
+
+    debugLog("Boss", "Boss breach restore UI", {
+      defenseCanvas: this.defenseGame?.originalCanvas?.style?.display,
+      defenseUi: this.defenseGame?.uiLayer?.style?.display,
+      miniPanel: !!document.getElementById("mini-defense-panel"),
+      isMiniDisplay: this.defenseGame?.isMiniDisplay,
+    });
 
     // 3. 터미널 디펜스 모드로 복원
     this.terminal.setDefenseMode(true);

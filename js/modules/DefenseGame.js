@@ -10,6 +10,8 @@ export class DefenseGame {
     this.ctx = this.canvas.getContext("2d");
     this.originalCanvas = this.canvas;
     this.isMiniDisplay = false;
+    this.miniCanvas = null;
+    this.miniCtx = null;
     this.canvas.style.display = "none";
     this.canvas.style.position = "fixed";
     this.canvas.style.top = "0";
@@ -106,6 +108,7 @@ export class DefenseGame {
     this.autoFireTimer = 0;
     this.autoFireTouchId = null;
     this.autoFireMouseActive = false;
+    this.autoFireKeyActive = false;
     this.autoFireStartTime = 0;
     this.rightFireZoneRatio = 0.55;
     this.uiLayer = document.createElement("div");
@@ -1153,6 +1156,7 @@ export class DefenseGame {
     debugLog("Canvas", "canvas before resume:", this.canvas.style.display);
     debugLog("Canvas", "canvas element:", this.canvas);
     debugLog("Canvas", "isMiniDisplay:", this.isMiniDisplay);
+    debugLog("Canvas", "uiLayer before resume:", this.uiLayer?.style?.display);
 
     if (!this.isRunning) {
       this.isRunning = true;
@@ -1172,10 +1176,47 @@ export class DefenseGame {
       this.uiLayer.style.display = "block";
       debugLog("Canvas", "Set canvas and uiLayer to block (? )");
     } else {
-      debugLog("Canvas", "TODO");
+      this.canvas.style.display = "none";
+      this.uiLayer.style.display = "none";
     }
     debugLog("Canvas", "canvas after set:", this.canvas.style.display);
     this.updateRecallBtnVisibility();
+  }
+
+  setMiniDisplay(targetId) {
+    if (!targetId) {
+      this.isMiniDisplay = false;
+      this.miniCanvas = null;
+      this.miniCtx = null;
+      debugLog("Canvas", "Mini display cleared");
+      if (this.isRunning) {
+        this.canvas.style.display = "block";
+        this.uiLayer.style.display = "block";
+      }
+      this.updateRecallBtnVisibility();
+      return;
+    }
+
+    const canvas = document.getElementById(targetId);
+    if (!canvas) {
+      debugWarn("Canvas", "Mini canvas not found", { targetId });
+      this.isMiniDisplay = false;
+      this.miniCanvas = null;
+      this.miniCtx = null;
+      return;
+    }
+
+    this.isMiniDisplay = true;
+    this.miniCanvas = canvas;
+    this.miniCtx = canvas.getContext("2d");
+    this.canvas.style.display = "none";
+    this.uiLayer.style.display = "none";
+    this.updateRecallBtnVisibility();
+    debugLog("Canvas", "Mini display set", {
+      targetId,
+      width: canvas.width,
+      height: canvas.height,
+    });
   }
 
   update(deltaTime) {
@@ -1185,6 +1226,11 @@ export class DefenseGame {
     const dt = clampedDeltaTime / 1000;
 
     this.validateGameState();
+
+    if (this.isMiniDisplay) {
+      this.canvas.style.display = "none";
+      this.uiLayer.style.display = "none";
+    }
 
     const core = this.core;
     core.visualOffsetX += (core.targetOffsetX - core.visualOffsetX) * dt * 15;
@@ -5321,9 +5367,11 @@ export class DefenseGame {
     for (let i = 0; i < e.changedTouches.length; i++) {
       const touch = e.changedTouches[i];
       if (touch.identifier === this.autoFireTouchId) {
-        this.autoFireActive = false;
         this.autoFireTouchId = null;
-        this.autoFireTimer = 0;
+        if (!this.autoFireMouseActive && !this.autoFireKeyActive) {
+          this.autoFireActive = false;
+          this.autoFireTimer = 0;
+        }
         break;
       }
     }
@@ -5362,14 +5410,28 @@ export class DefenseGame {
   handleCanvasMouseUp(e) {
     if (e.button !== 0) return;
     this.autoFireMouseActive = false;
-    this.autoFireActive = false;
-    this.autoFireTimer = 0;
+    if (!this.autoFireTouchId && !this.autoFireKeyActive) {
+      this.autoFireActive = false;
+      this.autoFireTimer = 0;
+    }
+  }
+
+  isTetrisActive() {
+    return !!(
+      window.gameManager &&
+      window.gameManager.tetrisGame &&
+      window.gameManager.tetrisGame.state &&
+      window.gameManager.tetrisGame.state.isPlaying
+    );
   }
 
   handleKeyDown(e) {
     if (this.isPaused) return;
     const activeEl = document.activeElement;
     if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
+      return;
+    }
+    if (this.isTetrisActive()) {
       return;
     }
 
@@ -5400,6 +5462,11 @@ export class DefenseGame {
         break;
       case "Space":
         e.preventDefault();
+        if (this.autoFireKeyActive) return;
+        this.autoFireKeyActive = true;
+        this.autoFireActive = true;
+        this.autoFireStartTime = performance.now();
+        this.autoFireTimer = this.getAutoFireInterval();
         this.fireAtPosition(0, 0);
         break;
       default:
@@ -5428,6 +5495,13 @@ export class DefenseGame {
       case "ShiftLeft":
       case "ShiftRight":
         this.keyState.shift = false;
+        break;
+      case "Space":
+        this.autoFireKeyActive = false;
+        if (!this.autoFireMouseActive && !this.autoFireTouchId) {
+          this.autoFireActive = false;
+          this.autoFireTimer = 0;
+        }
         break;
       default:
         break;
@@ -6490,6 +6564,17 @@ export class DefenseGame {
   updateMoveInput() {
     let x = 0;
     let y = 0;
+
+    if (this.isTetrisActive()) {
+      this.keyState.up = false;
+      this.keyState.down = false;
+      this.keyState.left = false;
+      this.keyState.right = false;
+      this.keyState.shift = false;
+      this.moveInput.x = 0;
+      this.moveInput.y = 0;
+      return;
+    }
 
     if (this.isMobile && this.joystick.active) {
       x = this.joystick.inputX;
