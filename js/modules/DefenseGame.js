@@ -5594,10 +5594,10 @@ export class DefenseGame {
 
             this.impactEffect({
               radius: Math.max(this.core.shieldRadius, this.baseShieldRadius) * 3,
-              damage: 20,
-              knockbackSpeed: 320,
-              slowMult: 0.45,
-              slowDuration: 3.0
+              damage: 0,
+              knockbackSpeed: 0,
+              slowMult: 1.0,
+              slowDuration: 0
             });
 
             this.glitchShowHP()
