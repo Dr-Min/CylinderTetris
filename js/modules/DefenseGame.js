@@ -1254,6 +1254,8 @@ export class DefenseGame {
       if (this.core.shieldTimer <= 0) {
         this.core.shieldActive = true;
         this.core.shieldState = "ACTIVE";
+        this.shieldAnchor.x = this.core.x;
+        this.shieldAnchor.y = this.core.y;
         this.shieldPassThroughUntil = performance.now() + 1000;
         this.updateShieldBtnUI("ACTIVE", "#fff");
       }
