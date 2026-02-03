@@ -2479,7 +2479,7 @@ export class DefenseGame {
   }
 
   updateMeleeAlly(v, dt) {
-    const searchRange = 350;
+    const searchRange = 700;
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
     if (!v.vx) v.vx = 0;
@@ -2608,7 +2608,7 @@ export class DefenseGame {
   }
 
   updateRangedAlly(v, dt) {
-    const searchRange = (v.range || 150) + 100;
+    const searchRange = ((v.range || 150) + 100) * 2;
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
     if (!v.vx) v.vx = 0;
@@ -2699,7 +2699,7 @@ export class DefenseGame {
   }
 
   updateSuicideAlly(v, dt) {
-    const searchRange = 400;
+    const searchRange = 800;
     let nearestEnemy = this.findNearestEnemy(v, searchRange);
 
     if (!v.vx) v.vx = 0;
@@ -4717,8 +4717,8 @@ export class DefenseGame {
         ? Math.floor(typeData.baseDamage * config.damageMultiplier * pureBonus)
         : (typeData.baseDamage || 10);
       const speedValue = useConfigBonuses
-        ? Math.floor(typeData.baseSpeed * config.speedMultiplier)
-        : (typeData.baseSpeed || 100);
+        ? Math.floor(typeData.baseSpeed * config.speedMultiplier * 2)
+        : (typeData.baseSpeed || 100) * 2;
 
       const ally = {
         x: spawnX,
