@@ -3378,21 +3378,12 @@ export class GameManager {
     debugLog("GameManager", "applyStageSettings - stage.type:", stage.type, "isSafeZone:", this.defenseGame.isSafeZone);
 
     // 실드 상태 복구 (스테이지 이동 시 리셋)
-    if (this.defenseGame.isSafeZone) {
-      this.defenseGame.core.shieldActive = false;
-      this.defenseGame.core.shieldState = "OFF";
-      this.defenseGame.core.shieldHp = this.defenseGame.core.shieldMaxHp;
-      this.defenseGame.core.shieldRadius = 70; // 기본 반경
-      this.defenseGame.core.shieldTimer = 0;
-      this.defenseGame.updateShieldBtnUI("OFFLINE", "#f00");
-    } else {
-      this.defenseGame.core.shieldActive = true;
-      this.defenseGame.core.shieldState = "ACTIVE";
-      this.defenseGame.core.shieldHp = this.defenseGame.core.shieldMaxHp;
-      this.defenseGame.core.shieldRadius = 70; // 기본 반경
-      this.defenseGame.core.shieldTimer = 0;
-      this.defenseGame.updateShieldBtnUI("ACTIVE", "#fff");
-    }
+    this.defenseGame.core.shieldActive = false;
+    this.defenseGame.core.shieldState = "OFF";
+    this.defenseGame.core.shieldHp = this.defenseGame.core.shieldMaxHp;
+    this.defenseGame.core.shieldRadius = 70; // 기본 반경
+    this.defenseGame.core.shieldTimer = 0;
+    this.defenseGame.updateShieldBtnUI("OFFLINE", "#f00");
     this.defenseGame.shieldBtn.style.pointerEvents = "auto";
 
     // 점령 상태 확인 및 적용
