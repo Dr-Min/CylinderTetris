@@ -68,6 +68,8 @@ export class DefenseGame {
     this.shieldBtnMode = "SHIELD";
     this.isCoreInsideShield = true;
     this.isIntroDrop = false;
+    this.prevShieldState = this.core.shieldState;
+    this.prevShieldBtnMode = this.shieldBtnMode;
     this.core.shieldAnchor = this.shieldAnchor;
 
     this.showCoreHP = true;
@@ -561,7 +563,17 @@ export class DefenseGame {
       this.core.y < 0 ||
       this.core.y > worldH
     ) {
-      debugWarn("Defense", "Core position invalid, resetting to center");
+      debugWarn("Defense", "Core position invalid, resetting to center", {
+        x: this.core.x,
+        y: this.core.y,
+        worldW,
+        worldH,
+        shieldState: this.core.shieldState,
+        shieldActive: this.core.shieldActive,
+        shieldBtnMode: this.shieldBtnMode,
+        anchorX: this.shieldAnchor.x,
+        anchorY: this.shieldAnchor.y,
+      });
       this.core.x = this.coreHome.x || worldW / 2;
       this.core.y = this.coreHome.y || worldH / 2;
     }
@@ -1200,6 +1212,17 @@ export class DefenseGame {
     } else {
       if (distShield <= insideThreshold) this.shieldBtnMode = "SHIELD";
     }
+    if (this.shieldBtnMode !== this.prevShieldBtnMode) {
+      debugLog("Defense", "Shield button mode changed", {
+        from: this.prevShieldBtnMode,
+        to: this.shieldBtnMode,
+        distShield,
+        insideThreshold,
+        outsideThreshold,
+        charges: this.emergencyReturnCharges,
+      });
+      this.prevShieldBtnMode = this.shieldBtnMode;
+    }
     const insideShield = this.shieldBtnMode === "SHIELD";
     this.isCoreInsideShield = insideShield;
     if (this.shieldBtnMode !== prevMode) {
@@ -1214,6 +1237,16 @@ export class DefenseGame {
       this.shieldBtn.style.pointerEvents = "auto";
     }
 
+    if (this.core.shieldState !== this.prevShieldState) {
+      debugLog("Defense", "Shield state changed", {
+        from: this.prevShieldState,
+        to: this.core.shieldState,
+        shieldActive: this.core.shieldActive,
+        shieldHp: this.core.shieldHp,
+        shieldMaxHp: this.core.shieldMaxHp,
+      });
+      this.prevShieldState = this.core.shieldState;
+    }
     if (this.core.shieldState === "RETURNING") {
     } else if (this.core.shieldState === "CHARGING") {
       this.core.shieldTimer -= dt;
@@ -1881,6 +1914,16 @@ export class DefenseGame {
     const now = performance.now();
     if (now - this.lastEmergencyReturnTime < 300) return;
     this.lastEmergencyReturnTime = now;
+    debugLog("Defense", "EmergencyReturn invoked", {
+      shieldBtnMode: this.shieldBtnMode,
+      charges: this.emergencyReturnCharges,
+      shieldState: this.core.shieldState,
+      shieldActive: this.core.shieldActive,
+      x: this.core.x,
+      y: this.core.y,
+      anchorX: this.shieldAnchor.x,
+      anchorY: this.shieldAnchor.y,
+    });
     this.emergencyReturnCharges = Math.max(0, this.emergencyReturnCharges - 1);
     this.shieldChargeMultiplier = 0.5;
     this.shieldReadyDuration = this.shieldReadyDurationBase * this.shieldChargeMultiplier;
