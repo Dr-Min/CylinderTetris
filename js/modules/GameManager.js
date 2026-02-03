@@ -40,9 +40,6 @@ window.debugLog = function (tag, ...args) {
   const categoryEnabled = window.DEBUG_CATEGORIES[tag] ?? false;
   if (categoryEnabled) {
     console.log(`[${tag}]`, ...args);
-    if (window.debugPanelAppend) {
-      window.debugPanelAppend(tag, "log", args);
-    }
   }
 };
 
@@ -52,33 +49,7 @@ window.debugWarn = function (tag, ...args) {
   const categoryEnabled = window.DEBUG_CATEGORIES[tag] ?? false;
   if (categoryEnabled) {
     console.warn(`[${tag}]`, ...args);
-    if (window.debugPanelAppend) {
-      window.debugPanelAppend(tag, "warn", args);
-    }
   }
-};
-
-window.debugPanelAppend = function (tag, level, args) {
-  const panel = document.getElementById("debug-panel-log");
-  if (!panel) return;
-  const time = new Date();
-  const timeStr = time.toLocaleTimeString("en-GB", { hour12: false });
-  const formatArg = (arg) => {
-    if (typeof arg === "string") return arg;
-    try {
-      return JSON.stringify(arg);
-    } catch (e) {
-      return String(arg);
-    }
-  };
-  const line = document.createElement("div");
-  line.style.color = level === "warn" ? "#ffcc00" : "#00ff00";
-  line.textContent = `[${timeStr}] [${tag}] ${args.map(formatArg).join(" ")}`;
-  panel.appendChild(line);
-  while (panel.children.length > 200) {
-    panel.removeChild(panel.firstChild);
-  }
-  panel.scrollTop = panel.scrollHeight;
 };
 
 // 에러는 항상 출력 (디버그 모드 상관없이)
@@ -885,7 +856,7 @@ export class GameManager {
 
     const logToggleLabel = document.createElement("label");
     logToggleLabel.htmlFor = "dbg-console-log";
-    logToggleLabel.innerText = "📋 Console Logs";
+    logToggleLabel.innerText = "📋 Console Logs (Browser Console)";
     logToggleLabel.style.cssText = "cursor:pointer; font-weight:bold;";
 
     mainToggleRow.appendChild(logToggleCheckbox);
@@ -980,41 +951,6 @@ export class GameManager {
 
     logSection.appendChild(categoryPanel);
     debugPanel.appendChild(logSection);
-
-    // Debug log output
-    const logOutput = document.createElement("div");
-    logOutput.id = "debug-panel-log";
-    logOutput.style.cssText = `
-      margin-top: 10px;
-      padding: 8px;
-      border: 1px solid #0f0;
-      background: rgba(0, 0, 0, 0.6);
-      font-size: 10px;
-      line-height: 1.3;
-      height: 120px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    `;
-    logOutput.innerText = "[DEBUG] Log output ready. Enable Console Logs + Defense category.";
-    debugPanel.appendChild(logOutput);
-
-    // Debug checklist
-    const checklist = document.createElement("div");
-    checklist.style.cssText = `
-      margin-top: 10px;
-      padding: 8px;
-      border: 1px dashed #0f0;
-      background: rgba(0, 20, 0, 0.5);
-      font-size: 11px;
-    `;
-    checklist.innerHTML = `
-      <div style="margin-bottom:6px; font-weight:bold;">AUTO RETURN CHECKLIST</div>
-      <label style="display:block; margin:3px 0;"><input type="checkbox" id="dbg-check-core-reset"> Core position reset log</label>
-      <label style="display:block; margin:3px 0;"><input type="checkbox" id="dbg-check-return-invoked"> EmergencyReturn invoked log</label>
-      <label style="display:block; margin:3px 0;"><input type="checkbox" id="dbg-check-shield-state"> Shield state changed log</label>
-      <label style="display:block; margin:3px 0;"><input type="checkbox" id="dbg-check-btn-mode"> Shield button mode changed log</label>
-    `;
-    debugPanel.appendChild(checklist);
 
     // Buttons Container
     const btnContainer = document.createElement("div");
