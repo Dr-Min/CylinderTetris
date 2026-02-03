@@ -554,10 +554,8 @@ export class DefenseGame {
     const worldW = this.worldWidth || this.canvas.width;
     const worldH = this.worldHeight || this.canvas.height;
     if (
-      !this.core.x ||
-      !this.core.y ||
-      isNaN(this.core.x) ||
-      isNaN(this.core.y) ||
+      !Number.isFinite(this.core.x) ||
+      !Number.isFinite(this.core.y) ||
       this.core.x < 0 ||
       this.core.x > worldW ||
       this.core.y < 0 ||
