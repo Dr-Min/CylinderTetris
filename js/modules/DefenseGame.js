@@ -97,8 +97,8 @@ export class DefenseGame {
     this.moveInput = { x: 0, y: 0 };
     this.keyState = { up: false, down: false, left: false, right: false, shift: false };
     this.shiftAccel = 1.0;
-    this.shiftAccelRate = 1.6;
-    this.shiftMaxMultiplier = 1.6;
+    this.shiftAccelRate = 3.0;
+    this.shiftMaxMultiplier = 2.4;
     this.joystick = { active: false, pointerId: null, inputX: 0, inputY: 0 };
     this.lastJoystickInputTime = 0;
     this.hasInitializedCore = false;
