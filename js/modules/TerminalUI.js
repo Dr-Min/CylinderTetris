@@ -79,17 +79,20 @@ export class TerminalUI {
     };
     this.pageDisplay.after(this.pageSkipBtn);
 
-    // Input lock toggle (default locked)
+    // Input lock icon toggle (default locked)
     this.inputLockBtn = document.createElement("button");
     this.inputLockBtn.id = "terminal-input-lock";
     this.inputLockBtn.style.cssText = `
-      margin-top: 6px;
-      padding: 4px 8px;
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      padding: 4px 6px;
       font-family: var(--term-font);
-      font-size: 11px;
+      font-size: 14px;
       color: #00f0ff;
       background: rgba(0, 20, 40, 0.6);
       border: 1px solid #00f0ff;
+      border-radius: 4px;
       cursor: pointer;
       pointer-events: auto;
     `;
@@ -97,7 +100,7 @@ export class TerminalUI {
       e.stopPropagation();
       this.setInputLocked(!this.inputLocked);
     };
-    this.pageSkipBtn.after(this.inputLockBtn);
+    this.terminalLayer.appendChild(this.inputLockBtn);
     this.setInputLocked(true);
 
     // 입력창 직접 클릭 시에만 포커스 (화면 터치로 키보드 올라오는 문제 방지)
@@ -129,11 +132,11 @@ export class TerminalUI {
     this.cmdInput.disabled = locked;
     if (locked) {
       this.cmdInput.blur();
-      this.inputLockBtn.innerText = "UNLOCK INPUT";
+      this.inputLockBtn.innerText = "F512";
       this.inputLine.style.opacity = "0.6";
     } else {
       this.cmdInput.disabled = false;
-      this.inputLockBtn.innerText = "LOCK INPUT";
+      this.inputLockBtn.innerText = "F513";
       this.inputLine.style.opacity = "1";
       this.cmdInput.focus();
     }
