@@ -22,6 +22,7 @@ export class TerminalUI {
 
     this.inputLine = inputLine;
     this.cmdInput = this.inputLine.querySelector("input");
+    this.inputLocked = true;
 
     // 커서 엘리먼트 제거됨 (사용하지 않음)
     this.cursor = null;
@@ -78,27 +79,64 @@ export class TerminalUI {
     };
     this.pageDisplay.after(this.pageSkipBtn);
 
+    // Input lock toggle (default locked)
+    this.inputLockBtn = document.createElement("button");
+    this.inputLockBtn.id = "terminal-input-lock";
+    this.inputLockBtn.style.cssText = `
+      margin-top: 6px;
+      padding: 4px 8px;
+      font-family: var(--term-font);
+      font-size: 11px;
+      color: #00f0ff;
+      background: rgba(0, 20, 40, 0.6);
+      border: 1px solid #00f0ff;
+      cursor: pointer;
+      pointer-events: auto;
+    `;
+    this.inputLockBtn.onclick = (e) => {
+      e.stopPropagation();
+      this.setInputLocked(!this.inputLocked);
+    };
+    this.pageSkipBtn.after(this.inputLockBtn);
+    this.setInputLocked(true);
+
     // 입력창 직접 클릭 시에만 포커스 (화면 터치로 키보드 올라오는 문제 방지)
     this.cmdInput.addEventListener("click", (e) => {
       e.stopPropagation(); // 이벤트 버블링 방지
-      this.cmdInput.focus();
+      if (!this.inputLocked) this.cmdInput.focus();
     });
     
     // inputLine 클릭 시에도 포커스
     this.inputLine.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (!this.inputLine.classList.contains("hidden")) {
+      if (!this.inputLine.classList.contains("hidden") && !this.inputLocked) {
         this.cmdInput.focus();
       }
     });
 
     // 엔터키 리스너 (showChoices나 waitForEnter에서 사용)
     this.cmdInput.addEventListener("keydown", (e) => {
+      if (this.inputLocked) return;
       if (e.key === "Enter" && this.onInputEnter) {
         this.onInputEnter(this.cmdInput.value.trim());
         this.cmdInput.value = ""; // 입력 후 초기화
       }
     });
+  }
+
+  setInputLocked(locked) {
+    this.inputLocked = locked;
+    this.cmdInput.disabled = locked;
+    if (locked) {
+      this.cmdInput.blur();
+      this.inputLockBtn.innerText = "UNLOCK INPUT";
+      this.inputLine.style.opacity = "0.6";
+    } else {
+      this.cmdInput.disabled = false;
+      this.inputLockBtn.innerText = "LOCK INPUT";
+      this.inputLine.style.opacity = "1";
+      this.cmdInput.focus();
+    }
   }
 
   // 데이터 마이닝 완료 연출
