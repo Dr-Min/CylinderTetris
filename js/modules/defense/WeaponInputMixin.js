@@ -196,7 +196,7 @@ export function applyWeaponInputMixin(DefenseGameClass) {
     return this.weaponModes[this.helper.weaponMode] || this.weaponModes.NORMAL;
   }
 
-  applyUpgradeBonus(
+  proto.applyUpgradeBonus = function(
     bonusDamage,
     bonusFireRate,
     bonusRange,
@@ -605,6 +605,12 @@ export function applyWeaponInputMixin(DefenseGameClass) {
     }
 
     switch (e.code) {
+      case "Enter":
+        if (this.conquerReady && !this.isSafeZone && !this.isConquered) {
+          e.preventDefault();
+          this.handleConquerClick();
+        }
+        break;
       case "ArrowUp":
       case "KeyW":
         this.keyState.up = true;
@@ -637,6 +643,20 @@ export function applyWeaponInputMixin(DefenseGameClass) {
         this.autoFireStartTime = performance.now();
         this.autoFireTimer = this.getAutoFireInterval();
         this.fireAtPosition(0, 0);
+        break;
+      case "KeyR":
+        e.preventDefault();
+        this.triggerEmergencyReturn();
+        break;
+      case "Backspace":
+        if (!this.isSafeZone && this.onRecallRequest && !this.isRecallCasting) {
+          e.preventDefault();
+          this.isRecallCasting = true;
+          Promise.resolve(this.onRecallRequest())
+            .finally(() => {
+              this.isRecallCasting = false;
+            });
+        }
         break;
       default:
         break;
