@@ -1125,11 +1125,3 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   }
 }
-
-// Apply mixin modules to DefenseGame prototype
-applyAllyAIMixin(DefenseGame);
-applyWeaponInputMixin(DefenseGame);
-applyEffectsMixin(DefenseGame);
-applyShieldMixin(DefenseGame);
-
-}
