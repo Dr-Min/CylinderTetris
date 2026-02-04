@@ -5,7 +5,7 @@
 export function applyPersistenceMixin(GameManagerClass) {
   const proto = GameManagerClass.prototype;
 
-  async handleResetProgress() {
+  proto.handleResetProgress = async function() {
     // 확인 메시지 표시
     await this.terminal.printSystemMessage(
       "⚠️ WARNING: This will reset ALL progress!"

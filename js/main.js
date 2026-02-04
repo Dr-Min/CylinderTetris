@@ -171,7 +171,7 @@ class MobileOptimizer {
 document.addEventListener("DOMContentLoaded", () => {
     // 버전 표시
     const verEl = document.getElementById("app-version");
-  if (verEl) verEl.innerText = "PROTOCOL v2.1.107";
+  if (verEl) verEl.innerText = "PROTOCOL v2.1.108";
 
     // 업데이트 관리자 초기화
     const updateManager = new UpdateManager();
