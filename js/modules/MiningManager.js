@@ -35,6 +35,12 @@ export class MiningManager {
     this._worldH = 0;
   }
 
+  getMiningYieldScale(stageId) {
+    const idx = Math.max(0, parseInt(stageId, 10) || 0);
+    if (idx <= 0) return 1;
+    return 1 + Math.min(1.2, idx * 0.04);
+  }
+
   registerTerritory(stageId) {
     const id = String(stageId);
     if (this.territories[id]) {
@@ -254,7 +260,8 @@ export class MiningManager {
       t.tripTimer += dt;
       if (t.tripTimer >= tripCycle) {
         t.tripTimer -= tripCycle;
-        const mined = this.dataPerTrip * t.minerCount;
+        const yieldScale = this.getMiningYieldScale(id);
+        const mined = this.dataPerTrip * yieldScale * t.minerCount;
         this.pendingData += mined;
       }
     }

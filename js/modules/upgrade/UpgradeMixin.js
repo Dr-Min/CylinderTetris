@@ -170,6 +170,19 @@ export function applyUpgradeMixin(GameManagerClass) {
     overlay.appendChild(closeBtn);
   };
 
+  proto.getUpgradeCost = function(baseCost, level) {
+    const tier = Math.floor(level / 10);
+    const scale = 1 + level * 0.08 + tier * 0.3;
+    const rawCost = baseCost * scale;
+    const rounded = Math.floor(rawCost / 5) * 5;
+    return Math.max(baseCost, rounded);
+  };
+
+  proto.getSoftCappedLevel = function(level, softCap = 20, tailFactor = 0.25) {
+    if (level <= softCap) return level;
+    return softCap + (level - softCap) * tailFactor;
+  };
+
   proto.showHelperUpgrades = function(overlay) {
     overlay.innerHTML = "";
 
@@ -349,7 +362,7 @@ export function applyUpgradeMixin(GameManagerClass) {
       max-width: 350px;
     `;
 
-    // 조력자 업그레이드 옵션들 (MAX Lv.10, Move Speed 제거됨)
+    // 조력자 업그레이드 옵션들 (MAX Lv.100, soft cap after Lv.20)
     const levels = this.upgradeLevels.helper;
     const maxLevels = this.upgradeMaxLevels.helper;
     const weaponMode = this.defenseGame.getCurrentWeaponMode();
@@ -361,7 +374,7 @@ export function applyUpgradeMixin(GameManagerClass) {
       {
         id: "damage",
         name: "Damage",
-        increment: "+2.5",
+        increment: "+1",
         cost: 150,
         level: levels.damage,
         maxLevel: maxLevels.damage,
@@ -448,7 +461,8 @@ export function applyUpgradeMixin(GameManagerClass) {
     upgrades.forEach((upgrade) => {
       const btn = document.createElement("button");
       const isMaxLevel = upgrade.level >= upgrade.maxLevel;
-      const canAfford = this.currentMoney >= upgrade.cost && !isMaxLevel;
+      const cost = this.getUpgradeCost(upgrade.cost, upgrade.level);
+      const canAfford = this.currentMoney >= cost && !isMaxLevel;
 
       btn.style.cssText = `
         background: ${isMaxLevel
@@ -476,7 +490,7 @@ export function applyUpgradeMixin(GameManagerClass) {
 
       const costDisplay = isMaxLevel
         ? `<span style="color: #00ffff; font-size: 12px;">-</span>`
-        : `<span style="color: #ffcc00; font-size: 12px;">${upgrade.cost} MB</span>`;
+        : `<span style="color: #ffcc00; font-size: 12px;">${cost} MB</span>`;
 
       btn.innerHTML = `
         <div>
@@ -491,8 +505,8 @@ export function applyUpgradeMixin(GameManagerClass) {
 
       btn.onclick = () => {
         if (isMaxLevel) return;
-        if (this.currentMoney >= upgrade.cost) {
-          this.currentMoney -= upgrade.cost;
+        if (this.currentMoney >= cost) {
+          this.currentMoney -= cost;
           this.saveMoney(); // 자동 저장
           upgrade.effect();
           this.saveUpgrades(); // 업그레이드 레벨 저장
@@ -532,7 +546,7 @@ export function applyUpgradeMixin(GameManagerClass) {
               {
                 id: "damage",
                 name: "Damage",
-                increment: "+2.5",
+                increment: "+1",
                 cost: 150,
                 level: levels.damage,
                 maxLevel: maxLevels.damage,
@@ -669,15 +683,21 @@ export function applyUpgradeMixin(GameManagerClass) {
     const levels = this.upgradeLevels.helper;
     const currentMode = this.defenseGame.getCurrentWeaponMode();
 
-    // 레벨당 증가량 (MAX Lv.10, 최종 보너스 동일)
-    const bonusDamage = levels.damage * 2.5; // Lv.10 = +25
-    const bonusFireRate = levels.fireRate * 0.6; // Lv.10 = +6/s
-    const bonusRange = levels.range * 20; // Lv.10 = +200
-    const bonusBulletSpeed = levels.projectileSpeed * 50; // Lv.10 = +500
+    // 레벨당 증가량 (soft cap after Lv.20)
+    const damageLevel = this.getSoftCappedLevel(levels.damage);
+    const fireRateLevel = this.getSoftCappedLevel(levels.fireRate);
+    const rangeLevel = this.getSoftCappedLevel(levels.range);
+    const bulletLevel = this.getSoftCappedLevel(levels.projectileSpeed);
+    const magLevel = this.getSoftCappedLevel(levels.magazineSize, 15, 0.2);
+
+    const bonusDamage = damageLevel * 1.0;
+    const bonusFireRate = fireRateLevel * 0.6;
+    const bonusRange = rangeLevel * 20;
+    const bonusBulletSpeed = bulletLevel * 50;
 
     // 탄창 보너스 (무기별 다름)
     const magIncrement = this.getMagazineIncrement(currentMode.name);
-    const bonusMagazine = levels.magazineSize * magIncrement;
+    const bonusMagazine = Math.floor(magLevel) * magIncrement;
 
     this.defenseGame.applyUpgradeBonus(
       bonusDamage,
@@ -755,7 +775,7 @@ export function applyUpgradeMixin(GameManagerClass) {
       max-width: 350px;
     `;
 
-    // 업그레이드 목록 (MAX Lv.10)
+    // 업그레이드 목록 (MAX Lv.100, soft cap after Lv.20)
     const levels = this.upgradeLevels.core;
     const maxLevels = this.upgradeMaxLevels.core;
     const staticSystem = this.defenseGame.staticSystem;
@@ -776,7 +796,7 @@ export function applyUpgradeMixin(GameManagerClass) {
       {
         id: "turretDamage",
         name: "Turret Damage",
-        increment: "+3",
+        increment: "+2",
         cost: 120,
         level: levels.turretDamage,
         maxLevel: maxLevels.turretDamage,
@@ -900,6 +920,7 @@ export function applyUpgradeMixin(GameManagerClass) {
 
     upgrades.forEach((upgrade) => {
       const isMaxLevel = upgrade.level >= upgrade.maxLevel;
+      const cost = this.getUpgradeCost(upgrade.cost, upgrade.level);
 
       const btn = document.createElement("button");
       btn.style.cssText = `
@@ -927,7 +948,7 @@ export function applyUpgradeMixin(GameManagerClass) {
           <span style="font-size: 11px;">${levelDisplay}</span>
         </div>
         <div style="font-size: 10px; color: #888; margin-top: 3px;">
-          ${isMaxLevel ? "최대 레벨 도달" : `Cost: ${upgrade.cost} DATA`}
+          ${isMaxLevel ? "최대 레벨 도달" : `Cost: ${cost} DATA`}
         </div>
       `;
 
@@ -942,8 +963,8 @@ export function applyUpgradeMixin(GameManagerClass) {
         };
 
         btn.onclick = () => {
-          if (this.currentMoney >= upgrade.cost) {
-            this.currentMoney -= upgrade.cost;
+          if (this.currentMoney >= cost) {
+            this.currentMoney -= cost;
             this.saveMoney(); // 자동 저장
             upgrade.effect();
             this.saveUpgrades(); // 업그레이드 레벨 저장
@@ -980,7 +1001,7 @@ export function applyUpgradeMixin(GameManagerClass) {
                 {
                   id: "turretDamage",
                   name: "Turret Damage",
-                  increment: "+3",
+                  increment: "+2",
                   cost: 120,
                   level: levels.turretDamage,
                   maxLevel: maxLevels.turretDamage,
@@ -1071,6 +1092,13 @@ export function applyUpgradeMixin(GameManagerClass) {
 
   proto.applyCoreUpgradeBonuses = function() {
     const levels = this.upgradeLevels.core;
+    const hpLevel = this.getSoftCappedLevel(levels.hp);
+    const turretDamageLevel = this.getSoftCappedLevel(levels.turretDamage);
+    const turretRangeLevel = this.getSoftCappedLevel(levels.turretRange);
+    const turretSpeedLevel = this.getSoftCappedLevel(levels.turretSpeed);
+    const fireRateLevel = this.getSoftCappedLevel(levels.fireRate);
+    const staticDamageLevel = this.getSoftCappedLevel(levels.staticDamage);
+    const staticChainLevel = this.getSoftCappedLevel(levels.staticChain);
 
     // 기본값
     const baseMaxHp = 100;
@@ -1082,13 +1110,13 @@ export function applyUpgradeMixin(GameManagerClass) {
     const baseStaticChain = 3;
 
     // 보너스 계산
-    const bonusHp = levels.hp * 10;
-    const bonusTurretDamage = levels.turretDamage * 3;
-    const bonusTurretRange = levels.turretRange * 15;
-    const bonusTurretSpeed = levels.turretSpeed * 30;
-    const bonusTurretFireRate = levels.fireRate * 0.6;
-    const bonusStaticDamage = levels.staticDamage * 5;
-    const bonusStaticChain = levels.staticChain * 1;
+    const bonusHp = hpLevel * 10;
+    const bonusTurretDamage = turretDamageLevel * 2;
+    const bonusTurretRange = turretRangeLevel * 15;
+    const bonusTurretSpeed = turretSpeedLevel * 30;
+    const bonusTurretFireRate = fireRateLevel * 0.6;
+    const bonusStaticDamage = staticDamageLevel * 5;
+    const bonusStaticChain = staticChainLevel * 1;
 
     // 적용
     const hpDiff = baseMaxHp + bonusHp - this.defenseGame.core.maxHp;
@@ -1104,7 +1132,7 @@ export function applyUpgradeMixin(GameManagerClass) {
 
     this.defenseGame.staticSystem.damage = baseStaticDamage + bonusStaticDamage;
     this.defenseGame.staticSystem.chainCount =
-      baseStaticChain + bonusStaticChain;
+      Math.floor(baseStaticChain + bonusStaticChain);
 
     debugLog("GameManager", "Core upgrade bonus applied:", {
       maxHp: this.defenseGame.core.maxHp,
@@ -1117,9 +1145,10 @@ export function applyUpgradeMixin(GameManagerClass) {
 
   proto.applyShieldUpgradeBonuses = function() {
     const levels = this.upgradeLevels.shield;
+    const shieldLevel = this.getSoftCappedLevel(levels.hp);
 
     const baseShieldMaxHp = 100;
-    const bonusShieldHp = levels.hp * 20;
+    const bonusShieldHp = shieldLevel * 20;
     const nextShieldMaxHp = baseShieldMaxHp + bonusShieldHp;
 
     const shieldDiff = nextShieldMaxHp - this.defenseGame.core.shieldMaxHp;
@@ -1343,7 +1372,7 @@ export function applyUpgradeMixin(GameManagerClass) {
 
   proto.updateAllySlotInfo = function(element) {
     const baseSlots = 12;
-    const bonusSlots = this.upgradeLevels.ally.slots;
+    const bonusSlots = Math.floor(this.getSoftCappedLevel(this.upgradeLevels.ally.slots, 20, 0.3));
     const totalSlots = baseSlots + bonusSlots;
 
     const { mainCount, subCount, mainType, subType } =
@@ -1377,7 +1406,7 @@ export function applyUpgradeMixin(GameManagerClass) {
 
   proto.calculateAllyDistribution = function() {
     const baseSlots = 12;
-    const bonusSlots = this.upgradeLevels.ally.slots;
+    const bonusSlots = Math.floor(this.getSoftCappedLevel(this.upgradeLevels.ally.slots, 20, 0.3));
     const totalSlots = baseSlots + bonusSlots;
 
     const mainType = this.allyConfig.mainType;
@@ -1721,7 +1750,8 @@ export function applyUpgradeMixin(GameManagerClass) {
 
     upgrades.forEach((upgrade) => {
       const isMaxLevel = upgrade.level >= upgrade.maxLevel;
-      const canAfford = this.currentMoney >= upgrade.cost && !isMaxLevel;
+      const cost = this.getUpgradeCost(upgrade.cost, upgrade.level);
+      const canAfford = this.currentMoney >= cost && !isMaxLevel;
 
       const btn = document.createElement("button");
       btn.style.cssText = `
@@ -1750,7 +1780,7 @@ export function applyUpgradeMixin(GameManagerClass) {
 
       const costDisplay = isMaxLevel
         ? `<span style="color: #00ffff; font-size: 10px;">-</span>`
-        : `<span style="color: #ffcc00; font-size: 10px;">${upgrade.cost} MB</span>`;
+        : `<span style="color: #ffcc00; font-size: 10px;">${cost} MB</span>`;
 
       btn.innerHTML = `
         <div>
@@ -1766,7 +1796,7 @@ export function applyUpgradeMixin(GameManagerClass) {
       btn.onclick = () => {
         if (isMaxLevel || !canAfford) return;
 
-        this.currentMoney -= upgrade.cost;
+        this.currentMoney -= cost;
         this.saveMoney(); // 자동 저장
         upgrade.effect();
         this.saveUpgrades(); // 업그레이드 레벨 저장
@@ -1790,10 +1820,14 @@ export function applyUpgradeMixin(GameManagerClass) {
     const levels = this.upgradeLevels.ally;
 
     // 업그레이드 보너스 계산
-    const hpMultiplier = 1 + levels.hp * 0.1; // +10%/Lv
-    const damageMultiplier = 1 + levels.damage * 0.1; // +10%/Lv
-    const speedMultiplier = 1 + levels.speed * 0.05; // +5%/Lv
-    const respawnReduction = levels.respawn * 0.15; // -0.15초/Lv
+    const hpLevel = this.getSoftCappedLevel(levels.hp);
+    const damageLevel = this.getSoftCappedLevel(levels.damage);
+    const speedLevel = this.getSoftCappedLevel(levels.speed);
+    const respawnLevel = this.getSoftCappedLevel(levels.respawn, 15, 0.2);
+    const hpMultiplier = 1 + hpLevel * 0.1; // +10%/Lv (soft cap)
+    const damageMultiplier = 1 + damageLevel * 0.1; // +10%/Lv (soft cap)
+    const speedMultiplier = 1 + speedLevel * 0.05; // +5%/Lv (soft cap)
+    const respawnReduction = respawnLevel * 0.15; // -0.15초/Lv (soft cap)
 
     // 시너지 확인
     const synergyKey1 = `${mainType}+${subType}`;
@@ -1925,11 +1959,13 @@ export function applyUpgradeMixin(GameManagerClass) {
       const hasLevelInfo =
         Number.isFinite(levelValue) && Number.isFinite(maxLevelValue);
       const isMaxLevel = hasLevelInfo && levelValue >= maxLevelValue;
+      const levelForCost = Number.isFinite(levelValue) ? levelValue : 0;
+      const cost = this.getUpgradeCost(upgrade.cost, levelForCost);
       const btn = document.createElement("button");
-      const canAfford = this.currentMoney >= upgrade.cost && !isMaxLevel;
+      const canAfford = this.currentMoney >= cost && !isMaxLevel;
       const descText =
         typeof upgrade.getDesc === "function" ? upgrade.getDesc() : upgrade.desc;
-      const costLabel = isMaxLevel ? "-" : `${upgrade.cost} MB`;
+      const costLabel = isMaxLevel ? "-" : `${cost} MB`;
       const levelLabel = hasLevelInfo
         ? isMaxLevel
           ? "MAX"
@@ -1963,8 +1999,8 @@ export function applyUpgradeMixin(GameManagerClass) {
       `;
 
       btn.onclick = () => {
-        if (this.currentMoney >= upgrade.cost) {
-          this.currentMoney -= upgrade.cost;
+        if (this.currentMoney >= cost) {
+          this.currentMoney -= cost;
           this.saveMoney(); // 자동 저장
           upgrade.effect();
           this.saveUpgrades(); // 업그레이드 레벨 저장

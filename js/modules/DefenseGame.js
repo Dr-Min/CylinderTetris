@@ -339,7 +339,7 @@ export class DefenseGame {
         icon: "N",
         color: "#ffff00",
         desc: "Balanced | LV cap 12",
-        baseDamage: 10,
+        baseDamage: 8,
         baseFireRate: 4.0,
         baseRange: 300,
         baseProjectileSpeed: 400,
@@ -357,7 +357,7 @@ export class DefenseGame {
         icon: "SG",
         color: "#ff8800",
         desc: "Spread x5 | LV cap 6",
-        baseDamage: 5,
+        baseDamage: 4,
         baseFireRate: 2.0,
         baseRange: 150,
         baseProjectileSpeed: 300,
@@ -375,7 +375,7 @@ export class DefenseGame {
         icon: "SN",
         color: "#00ffff",
         desc: "High dmg | LV cap 3",
-        baseDamage: 30,
+        baseDamage: 24,
         baseFireRate: 1.0,
         baseRange: 500,
         baseProjectileSpeed: 700,
@@ -393,7 +393,7 @@ export class DefenseGame {
         icon: "R",
         color: "#00ff00",
         desc: "High rate | LV cap 30",
-        baseDamage: 3,
+        baseDamage: 2,
         baseFireRate: 12.0,
         baseRange: 200,
         baseProjectileSpeed: 500,
@@ -411,7 +411,7 @@ export class DefenseGame {
         icon: "L",
         color: "#ff0000",
         desc: "Splash dmg | LV cap 2",
-        baseDamage: 25,
+        baseDamage: 20,
         baseFireRate: 0.8,
         baseRange: 350,
         baseProjectileSpeed: 200,
@@ -436,7 +436,7 @@ export class DefenseGame {
       fireRate: 4.0,
       lastFireTime: 0,
       range: 300,
-      damage: 10,
+      damage: 8,
       projectileSpeed: 400,
       angle: 0,
       evadeDistance: 50,
@@ -699,56 +699,45 @@ export class DefenseGame {
     debugLog("Canvas", "resize() complete - size:", targetCanvas.width, "x", targetCanvas.height, "scale:", this.gameScale);
   }
 
-  
-  setMiniDisplay(canvasId) {
-    debugLog("Canvas", "setMiniDisplay called with:", canvasId);
-    if (canvasId) {
-      const miniCanvas = document.getElementById(canvasId);
-      debugLog("Canvas", "miniCanvas found:", !!miniCanvas);
-      if (miniCanvas) {
-        debugLog("Canvas", "TODO", this.canvas.id, "isMiniDisplay:", this.isMiniDisplay);
-
-        this.miniCanvas = miniCanvas;
-        this.isMiniDisplay = true;
-
-
-        this.renderDebugFrameCount = 0;
-
-        miniCanvas.style.display = "block";
-
-        debugLog("Canvas", "Switched to mini display mode");
-        debugLog("Canvas", "TODO");
-        debugLog("Canvas", "TODO", this.core.x, this.core.y);
-        debugLog("Canvas", "TODO", this.gameScale);
-        debugLog("Canvas", "TODO", this.alliedViruses.length, "TODO", this.enemies.length);
-      }
-    } else {
-      debugLog("Canvas", "=== ? ? ? ? ===");
-      debugLog("Canvas", "TODO", this.isMiniDisplay);
-
-      if (this.originalCanvas) {
-        debugLog("Canvas", "originalCanvas size:", this.originalCanvas.width, "x", this.originalCanvas.height);
-        debugLog("Canvas", "originalCanvas.style.display:", this.originalCanvas.style.display);
-
-        this.miniCanvas = null;
-        this.isMiniDisplay = false;
-
-        this.renderDebugFrameCount = 0;
-
-        this.originalCanvas.style.display = "block";
-
-        debugLog("Canvas", "Canvas restored - size:", this.originalCanvas.width, "x", this.originalCanvas.height);
-        debugLog("Canvas", "Canvas display:", this.originalCanvas.style.display);
-        debugLog("Canvas", "=== ? ? ? ? ===");
-      }
-    }
-  }
-
   updateResourceDisplay(amount) {
     this.currentData = amount;
     if (this.onDataUpdate) {
       this.onDataUpdate(this.currentData);
     }
+  }
+
+  getKillDataGain() {
+    const baseGain = 10;
+    const stageIndex = Math.max(0, this.currentStageId || 0);
+    const stageScale = 1 + Math.min(1.5, stageIndex * 0.05);
+    const maxPages = this.stageMaxPages || 0;
+    const pageProgress = maxPages > 1 ? (this.currentPage - 1) / (maxPages - 1) : 0;
+    const pageScale = 1 + Math.min(0.3, pageProgress * 0.3);
+    return Math.max(5, Math.round(baseGain * stageScale * pageScale));
+  }
+
+  awardKillData() {
+    const gain = this.getKillDataGain();
+    this.currentData += gain;
+    this.updateResourceDisplay(this.currentData);
+    if (this.onResourceGained) this.onResourceGained(gain);
+  }
+
+  getPageSpawnRate(page, diffScale) {
+    const stageIndex = Math.max(0, this.currentStageId || 0);
+    const stageFactor = 1 + Math.min(0.5, stageIndex * 0.03);
+    const diffFactor = Math.sqrt(diffScale || 1);
+    const baseRate = 0.42 - page * 0.025 * diffFactor;
+    const scaledRate = baseRate / stageFactor;
+    return Math.max(0.16 * this.pageSpawnScale, scaledRate * this.pageSpawnScale);
+  }
+
+  getReinforcementSpawnRate(page) {
+    const stageIndex = Math.max(0, this.currentStageId || 0);
+    const stageFactor = 1 + Math.min(0.4, stageIndex * 0.02);
+    const reinforcementSpawnRates = [0.17, 0.12, 0.09];
+    const baseRate = reinforcementSpawnRates[Math.min(page - 1, 2)];
+    return Math.max(0.08, (baseRate / stageFactor)) * this.pageSpawnScale;
   }
 
   updateAlliedInfo(info) {
@@ -789,9 +778,7 @@ export class DefenseGame {
 
       if (enemy.hp <= 0) {
         this.createExplosion(enemy.x, enemy.y, "#00ff00", 10);
-        const gain = 10;
-        this.currentData += gain;
-        this.updateResourceDisplay(this.currentData);
+        this.awardKillData();
       }
     });
 
@@ -1150,9 +1137,7 @@ export class DefenseGame {
           this.reinforcementPage++;
           this.pageTimer = 0;
 
-          const reinforcementSpawnRates = [0.17, 0.12, 0.08];
-          this.spawnRate =
-            reinforcementSpawnRates[Math.min(this.reinforcementPage - 1, 2)] * this.pageSpawnScale;
+          this.spawnRate = this.getReinforcementSpawnRate(this.reinforcementPage);
 
           this.updateWaveDisplay();
           debugLog(
@@ -1185,10 +1170,7 @@ export class DefenseGame {
           this.currentPage++;
           this.pageTimer = 0;
           if (!this.isFarmingZone) {
-            this.spawnRate = Math.max(
-              0.13 * this.pageSpawnScale,
-              (0.4 - this.currentPage * 0.04 * diffScale) * this.pageSpawnScale
-            );
+            this.spawnRate = this.getPageSpawnRate(this.currentPage, diffScale);
           }
           this.updateWaveDisplay();
         } else if (!this.conquerReady && !this.isFarmingZone) {
@@ -1279,9 +1261,13 @@ export class DefenseGame {
     }
 
     if (!this.isConquered) {
-      const currentSpawnRate = this.isSafeZone
+      const bossMultiplier =
+        this.isBossFight && this.bossManager
+          ? (this.bossManager.getPhaseConfig()?.spawnMultiplier || 1)
+          : 1;
+      const currentSpawnRate = (this.isSafeZone
         ? this.safeZoneSpawnRate
-        : this.spawnRate;
+        : this.spawnRate) / Math.max(1, bossMultiplier);
       this.waveTimer += dt;
       if (this.waveTimer > currentSpawnRate) {
         this.spawnEnemy();
@@ -1491,17 +1477,14 @@ export class DefenseGame {
 
           if (p.target.hp <= 0) {
             const idx = this.enemies.indexOf(p.target);
-            if (idx > -1) {
-              this.enemies.splice(idx, 1);
-              this.createExplosion(p.target.x, p.target.y, "#00ff00", 15);
+              if (idx > -1) {
+                this.enemies.splice(idx, 1);
+                this.createExplosion(p.target.x, p.target.y, "#00ff00", 15);
 
-              const gain = 10;
-              this.currentData += gain;
-              this.updateResourceDisplay(this.currentData);
-              if (this.onResourceGained) this.onResourceGained(gain);
+              this.awardKillData();
+              }
             }
           }
-        }
       } else {
         if (p.vx !== undefined && p.vy !== undefined) {
           p.x += p.vx * dt;
@@ -1536,10 +1519,7 @@ export class DefenseGame {
               this.enemies.splice(j, 1);
               this.createExplosion(enemy.x, enemy.y, p.color || "#00ff00", 15);
 
-              const gain = 10;
-              this.currentData += gain;
-              this.updateResourceDisplay(this.currentData);
-              if (this.onResourceGained) this.onResourceGained(gain);
+              this.awardKillData();
               this.chargeStaticOnKill();
 
               const shooter = this.alliedViruses.find(v => v.virusType === 'HUNTER');
@@ -1766,10 +1746,7 @@ export class DefenseGame {
       if (idx !== -1) {
         this.enemies.splice(idx, 1);
         this.createExplosion(currentTarget.x, currentTarget.y, "#ffff00", 15);
-        const gain = 10;
-        this.currentData += gain;
-        this.updateResourceDisplay(this.currentData);
-        if (this.onResourceGained) this.onResourceGained(gain);
+        this.awardKillData();
       }
     }
 
@@ -1806,10 +1783,7 @@ export class DefenseGame {
         if (idx !== -1) {
           this.enemies.splice(idx, 1);
           this.createExplosion(nextTarget.x, nextTarget.y, "#ffff00", 15);
-          const gain = 10;
-          this.currentData += gain;
-          this.updateResourceDisplay(this.currentData);
-          if (this.onResourceGained) this.onResourceGained(gain);
+          this.awardKillData();
         }
       }
 
@@ -1919,10 +1893,7 @@ export class DefenseGame {
       this.currentPage++;
       this.pageTimer = 0;
       if (!this.isFarmingZone) {
-        this.spawnRate = Math.max(
-          0.13,
-          0.4 - this.currentPage * 0.04 * diffScale
-        );
+        this.spawnRate = this.getPageSpawnRate(this.currentPage, diffScale);
       }
 
       const burstCount = Math.min(30, Math.ceil(this.pageDuration / this.spawnRate));
@@ -1947,7 +1918,7 @@ export class DefenseGame {
     this.reinforcementMaxPages = maxPages;
     this.reinforcementComplete = false;
     this.pageTimer = 0;
-    this.spawnRate = 0.17 * this.pageSpawnScale;
+    this.spawnRate = this.getReinforcementSpawnRate(this.reinforcementPage);
     this.updateWaveDisplay();
     debugLog(
       "Defense",
@@ -1964,7 +1935,7 @@ export class DefenseGame {
     this.reinforcementComplete = false;
     this.currentPage = 1;
     this.pageTimer = 0;
-    this.spawnRate = 0.4 * this.pageSpawnScale;
+    this.spawnRate = this.getPageSpawnRate(this.currentPage, this.stageDifficultyScale || 1.0);
 
     this.core.shieldRadius = 70;
     this.core.shieldState = "OFF";
@@ -2264,6 +2235,7 @@ export class DefenseGame {
 
     const baseSpeed = 60 + Math.random() * 40;
     const baseHp = 10;
+    const baseDamage = 8;
 
     if (this.isReinforcementMode) {
       const stageBase = this.calculateStageBaseDifficulty();
@@ -2278,6 +2250,7 @@ export class DefenseGame {
     }
 
     const maxHp = Math.max(1, Math.floor(baseHp * difficultyScale));
+    const damage = Math.max(6, Math.floor(baseDamage * difficultyScale));
     this.enemies.push({
       x: ex,
       y: ey,
@@ -2285,7 +2258,7 @@ export class DefenseGame {
       speed: baseSpeed * difficultyScale,
       hp: maxHp,
       maxHp,
-      damage: 10,
+      damage,
     });
   }
 
@@ -2435,16 +2408,19 @@ export class DefenseGame {
   }
 
   calculateStageBaseDifficulty() {
-
+    const stageIndex = Math.max(0, this.currentStageId || 0);
     let baseDifficulty;
-    if (this.currentStageId === 0) {
+    if (stageIndex === 0) {
       baseDifficulty = 0.5;
-    } else if (this.currentStageId <= 2) {
+    } else if (stageIndex <= 2) {
       baseDifficulty = 1.0;
-    } else if (this.currentStageId <= 4) {
+    } else if (stageIndex <= 4) {
       baseDifficulty = 1.5;
-    } else {
+    } else if (stageIndex <= 6) {
       baseDifficulty = 2.0;
+    } else {
+      const extra = Math.min(1.4, (stageIndex - 6) * 0.07);
+      baseDifficulty = 2.0 + extra;
     }
 
     return baseDifficulty;

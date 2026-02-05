@@ -760,7 +760,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
         this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
         break;
 
-      case 'approaching':
+      case 'approaching': {
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
@@ -781,8 +781,9 @@ export function applyAllyAIMixin(DefenseGameClass) {
           this.smoothMoveToward(v, v.chatPartner.x, v.chatPartner.y, dt, 0.5);
         }
         break;
+      }
 
-      case 'chatting':
+      case 'chatting': {
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
@@ -821,8 +822,9 @@ export function applyAllyAIMixin(DefenseGameClass) {
           v.y += (Math.random() - 0.5) * 0.3;
         }
         break;
+      }
 
-      case 'walkingTogether':
+      case 'walkingTogether': {
         if (!v.chatPartner || v.chatPartner.hp <= 0) {
           v.safeState = 'wander';
           v.chatPartner = null;
@@ -849,6 +851,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
           }
         }
         break;
+      }
     }
 
     const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
@@ -992,10 +995,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
       this.enemies.splice(enemyIdx, 1);
       this.createExplosion(enemy.x, enemy.y, "#00ff00", 10);
 
-      const gain = 10;
-      this.currentData += gain;
-      this.updateResourceDisplay(this.currentData);
-      if (this.onResourceGained) this.onResourceGained(gain);
+      this.awardKillData();
 
       if (this.onEnemyKilled) {
         this.onEnemyKilled(enemy.x, enemy.y);

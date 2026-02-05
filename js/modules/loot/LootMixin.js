@@ -60,7 +60,9 @@ export function applyLootMixin(GameManagerClass) {
   proto.tryItemDrop = function(x, y, source) {
     // === 1. 일반 아이템 드롭 ===
     // 디버그 드롭률이 설정되어 있으면 사용, 아니면 기본값 5%
-    let dropChance = this.debugItemDropRate !== null ? this.debugItemDropRate : 0.05;
+    const stageId = this.defenseGame?.currentStageId || 0;
+    const stageDropBonus = Math.min(0.08, stageId * 0.003);
+    let dropChance = this.debugItemDropRate !== null ? this.debugItemDropRate : 0.05 + stageDropBonus;
 
     // 장착 아이템 효과로 드롭률 증가 (디버그 모드가 아닐 때만)
     if (this.debugItemDropRate === null) {
@@ -79,7 +81,10 @@ export function applyLootMixin(GameManagerClass) {
     }
 
     // === 2. 블루프린트 드롭 (별도 확률) ===
-    const bpDropChance = this.debugBlueprintDropRate !== null ? this.debugBlueprintDropRate : 0.10;
+    const bpStageBonus = Math.min(0.12, stageId * 0.004);
+    const bpDropChance = this.debugBlueprintDropRate !== null
+      ? this.debugBlueprintDropRate
+      : 0.10 + bpStageBonus;
 
     if (Math.random() <= bpDropChance) {
       // 해금 대상이 남아있는지 확인
@@ -175,7 +180,9 @@ export function applyLootMixin(GameManagerClass) {
 
     if (lockedTargets.length === 0) {
       // 모두 해금됨 - 자원으로 변환
-      const dataAmount = (item.effect.value || 1) * 10;
+      const stageId = this.defenseGame?.currentStageId || 0;
+      const rewardScale = this.getStageRewardScale(stageId);
+      const dataAmount = Math.max(1, Math.round((item.effect.value || 1) * 10 * rewardScale));
       this.currentMoney += dataAmount;
       this.saveMoney();
       this.terminal.updateData(this.currentMoney);
@@ -266,7 +273,9 @@ export function applyLootMixin(GameManagerClass) {
 
     // 모든 해금 완료 시 (target이 null)
     if (!target) {
-      const dataAmount = (item.effect.value || 1) * 10;
+      const stageId = this.defenseGame?.currentStageId || 0;
+      const rewardScale = this.getStageRewardScale(stageId);
+      const dataAmount = Math.max(1, Math.round((item.effect.value || 1) * 10 * rewardScale));
       notification.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 18px;">${item.icon}</span>
@@ -584,8 +593,11 @@ export function applyLootMixin(GameManagerClass) {
             totalData += this.itemDatabase.getItemDataValue(item);
           });
 
+          const stageId = this.defenseGame?.currentStageId || 0;
+          const rewardScale = this.getStageRewardScale(stageId);
+          const scaledTotal = Math.max(0, Math.round(totalData * rewardScale));
           const infoEl = overlay.querySelector("#data-conversion-info");
-          infoEl.innerHTML = `⚠️ 남은 ${lootItems.length}개 아이템은 <span style="color: #ffaa00;">${totalData} DATA</span>로 자동 변환됩니다`;
+          infoEl.innerHTML = `⚠️ 남은 ${lootItems.length}개 아이템은 <span style="color: #ffaa00;">${scaledTotal} DATA</span>로 자동 변환됩니다`;
         }
 
         // 확인 버튼
@@ -610,11 +622,14 @@ export function applyLootMixin(GameManagerClass) {
     });
 
     if (totalData > 0) {
-      this.currentMoney += totalData;
+      const stageId = this.defenseGame?.currentStageId || 0;
+      const rewardScale = this.getStageRewardScale(stageId);
+      const scaledTotal = Math.max(1, Math.round(totalData * rewardScale));
+      this.currentMoney += scaledTotal;
       this.saveMoney();
       this.terminal.updateData(this.currentMoney);
 
-      this.showNotification(`${remainingItems.length}개 아이템 → ${totalData} DATA 변환!`, "#ffaa00");
+      this.showNotification(`${remainingItems.length}개 아이템 → ${scaledTotal} DATA 변환!`, "#ffaa00");
     }
 
     // 획득 목록 초기화

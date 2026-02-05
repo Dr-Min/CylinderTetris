@@ -364,10 +364,7 @@ export function applyWeaponInputMixin(DefenseGameClass) {
           this.enemies.splice(i, 1);
           this.createExplosion(enemy.x, enemy.y, "#ff0000", 15);
 
-          const gain = 10;
-          this.currentData += gain;
-          this.updateResourceDisplay(this.currentData);
-          if (this.onResourceGained) this.onResourceGained(gain);
+          this.awardKillData();
         }
       }
     }

@@ -1,5 +1,5 @@
 // v2.1.108
-const CACHE_NAME = "hacker-tetris-v2.1.108";
+const CACHE_NAME = "hacker-tetris-v2.1.109";
 const ASSETS = [
   "./",
   "./index.html",
@@ -53,6 +53,7 @@ self.addEventListener("activate", (e) => {
               console.log("[SW] Deleting old cache:", key);
               return caches.delete(key);
             }
+            return Promise.resolve(false);
           })
         );
       })

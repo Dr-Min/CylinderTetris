@@ -104,33 +104,33 @@ export class GameManager {
     this.loadMiningData(); // 채굴 데이터 로드
     this.reputation = 0; // Reputation
 
-    // 업그레이드 레벨 추적 (MAX Lv.10)
+    // 업그레이드 레벨 추적 (MAX Lv.100)
     this.upgradeLevels = {
       helper: {
-        damage: 0, // MAX Lv.10, +2.5/Lv = 최종 +25
-        fireRate: 0, // MAX Lv.10, +0.6/Lv = 최종 +6/s
-        range: 0, // MAX Lv.10, +20/Lv = 최종 +200
-        projectileSpeed: 0, // MAX Lv.10, +50/Lv = 최종 +500
-        magazineSize: 0, // MAX Lv.10, 무기별 다름
+        damage: 0, // MAX Lv.100
+        fireRate: 0, // MAX Lv.100
+        range: 0, // MAX Lv.100
+        projectileSpeed: 0, // MAX Lv.100
+        magazineSize: 0, // MAX Lv.100
       },
       core: {
-        hp: 0, // MAX Lv.10, +10/Lv = 최종 +100
-        turretDamage: 0, // MAX Lv.10, +3/Lv = 최종 +30
-        turretRange: 0, // MAX Lv.10, +15/Lv = 최종 +150
-        turretSpeed: 0, // MAX Lv.10, +30/Lv = 최종 +300
-        fireRate: 0, // MAX Lv.10, +0.5/Lv = 최종 +5/s
-        staticDamage: 0, // MAX Lv.10, +5/Lv = 최종 +50
-        staticChain: 0, // MAX Lv.10, +1/Lv = 최종 +10 (3→13)
+        hp: 0, // MAX Lv.100
+        turretDamage: 0, // MAX Lv.100
+        turretRange: 0, // MAX Lv.100
+        turretSpeed: 0, // MAX Lv.100
+        fireRate: 0, // MAX Lv.100
+        staticDamage: 0, // MAX Lv.100
+        staticChain: 0, // MAX Lv.100
       },
       shield: {
         hp: 0,
       },
       ally: {
-        slots: 0, // MAX Lv.10, +1/Lv = 최종 +10 (10→20 슬롯)
-        hp: 0, // MAX Lv.10, 전체 바이러스 HP +10%/Lv
-        damage: 0, // MAX Lv.10, 전체 바이러스 데미지 +10%/Lv
-        speed: 0, // MAX Lv.10, 이동속도 +5%/Lv
-        respawn: 0, // MAX Lv.10, 리스폰 시간 -0.15초/Lv
+        slots: 0, // MAX Lv.100
+        hp: 0, // MAX Lv.100
+        damage: 0, // MAX Lv.100
+        speed: 0, // MAX Lv.100
+        respawn: 0, // MAX Lv.100
       },
     };
 
@@ -256,30 +256,30 @@ export class GameManager {
     // 업그레이드 상한선 정의 (MAX Level)
     this.upgradeMaxLevels = {
       helper: {
-        damage: 10,
-        fireRate: 10,
-        range: 10,
-        projectileSpeed: 10,
-        magazineSize: 10,
+        damage: 100,
+        fireRate: 100,
+        range: 100,
+        projectileSpeed: 100,
+        magazineSize: 100,
       },
       core: {
-        hp: 10,
-        turretDamage: 10,
-        turretRange: 10,
-        turretSpeed: 10,
-        fireRate: 20,
-        staticDamage: 10,
-        staticChain: 10,
+        hp: 100,
+        turretDamage: 100,
+        turretRange: 100,
+        turretSpeed: 100,
+        fireRate: 100,
+        staticDamage: 100,
+        staticChain: 100,
       },
       shield: {
-        hp: 10,
+        hp: 100,
       },
       ally: {
-        slots: 10,
-        hp: 10,
-        damage: 10,
-        speed: 10,
-        respawn: 10,
+        slots: 100,
+        hp: 100,
+        damage: 100,
+        speed: 100,
+        respawn: 100,
       },
     };
 
@@ -2238,8 +2238,8 @@ export class GameManager {
       margin-bottom: 15px;
       text-shadow: 0 0 10px #00ff00;
     `;
-    header.innerText = "[ EQUIPMENT & INVENTORY ]";
-    overlay.appendChild(header);
+      header.innerText = "[ EQUIPMENT & INVENTORY ]";
+      overlay.appendChild(header);
 
     // 장비 슬롯 영역 (상단 4칸)
     const equipSection = document.createElement("div");
@@ -2253,10 +2253,10 @@ export class GameManager {
     `;
 
     // 장착 슬롯 4개 표시
-    for (let idx = 0; idx < 4; idx++) {
-      const isUnlocked = idx < data.unlockedSlots;
-      const slot = this.createEquipSlotElement(
-        data.equipSlots[idx],
+      for (let idx = 0; idx < 4; idx++) {
+        const isUnlocked = idx < data.unlockedSlots;
+        const slot = this.createEquipSlotElement(
+          data.equipSlots[idx],
         idx,
         isUnlocked,
         false // 클릭 가능
@@ -2487,6 +2487,27 @@ export class GameManager {
         this.showNotification(result.message, "#ff0000");
       }
     }
+  }
+
+  getStageRewardScale(stageIndex) {
+    const idx = Math.max(0, stageIndex || 0);
+    return 1 + Math.min(1.5, idx * 0.05);
+  }
+
+  getPageRewardScale(currentPage, maxPages) {
+    const pages = maxPages || 0;
+    if (pages <= 1) return 1;
+    const progress = Math.max(0, (currentPage - 1) / (pages - 1));
+    return 1 + Math.min(0.3, progress * 0.3);
+  }
+
+  getDefenseRewardScale(stageIndex, currentPage, maxPages) {
+    return this.getStageRewardScale(stageIndex) * this.getPageRewardScale(currentPage, maxPages);
+  }
+
+  getRepRewardScale(stageIndex) {
+    const idx = Math.max(0, stageIndex || 0);
+    return 1 + Math.min(1.2, idx * 0.04);
   }
 
   /**
@@ -2816,7 +2837,9 @@ export class GameManager {
 
   async handleMiningClear(linesCleared) {
     // 획득한 데이터 계산
-    const earnedData = (linesCleared || 0) * 100;
+    const baseData = (linesCleared || 0) * 100;
+    const rewardScale = this.getStageRewardScale(this.currentStage);
+    const earnedData = Math.floor(baseData * rewardScale);
     this.currentMoney += earnedData;
     this.saveMoney(); // 자동 저장
 
@@ -2899,7 +2922,8 @@ export class GameManager {
     const finalScore = Math.floor(score * effects.scoreMultiplier);
 
     // 평판 획득 (점수 1000점당 1, 스테이지당 10)
-    const earnedRep = Math.floor(finalScore / 1000) + this.currentStage * 10;
+    const repScale = this.getRepRewardScale(this.currentStage);
+    const earnedRep = Math.floor((finalScore / 1000) * repScale) + Math.floor(this.currentStage * 8);
     this.reputation += earnedRep;
     this.saveReputation();
 
@@ -3096,7 +3120,9 @@ export class GameManager {
     await this.terminal.printSystemMessage('');
 
     // 보상 지급
-    const reward = 10000;
+    const stageId = this.defenseGame?.currentStageId || 0;
+    const rewardScale = this.getStageRewardScale(stageId);
+    const reward = Math.floor(10000 * rewardScale);
     this.currentMoney += reward;
     this.saveMoney();
     await this.terminal.printSystemMessage(`REWARD: +${reward} DATA`);
