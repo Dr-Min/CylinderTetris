@@ -263,49 +263,91 @@ export function applyRenderMixin(DefenseGameClass) {
     this.safeZoneFacilities.forEach((facility, index) => {
       const pulse = 0.7 + Math.sin(now * 2.5 + index) * 0.3;
       const isActive = this.activeSafeZoneFacilityId === facility.id;
-      const baseW = 68;
-      const baseH = 42;
+      const baseW = 72;
+      const baseH = 44;
+      const depth = 14;
       const ringR = facility.radius + 14;
 
       ctx.save();
       ctx.translate(facility.x, facility.y);
 
-      ctx.shadowColor = facility.color;
-      ctx.shadowBlur = isActive ? 20 : 10;
-      ctx.fillStyle = "rgba(10, 18, 16, 0.95)";
-      ctx.fillRect(-baseW / 2, -baseH / 2, baseW, baseH);
-
-      ctx.strokeStyle = facility.color;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-baseW / 2, -baseH / 2, baseW, baseH);
-
-      ctx.fillStyle = `${facility.accent}88`;
-      ctx.fillRect(-baseW * 0.28, -baseH * 0.68, baseW * 0.56, 8);
-
+      // floor ring
+      ctx.globalAlpha = isActive ? 0.82 : 0.42;
       ctx.strokeStyle = facility.accent;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(-baseW * 0.28, -baseH * 0.68, baseW * 0.56, 8);
-
-      const beaconSize = 7 + pulse * 2;
-      ctx.fillStyle = facility.accent;
-      ctx.beginPath();
-      ctx.arc(0, -baseH * 0.68, beaconSize * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.globalAlpha = isActive ? 0.75 : 0.35;
-      ctx.strokeStyle = facility.accent;
-      ctx.lineWidth = isActive ? 2.2 : 1.2;
+      ctx.lineWidth = isActive ? 2.4 : 1.2;
       ctx.beginPath();
       ctx.arc(0, 0, ringR + Math.sin(now * 4 + index) * 2, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
 
+      // body front
+      ctx.shadowColor = facility.color;
+      ctx.shadowBlur = isActive ? 22 : 11;
+      ctx.fillStyle = "rgba(10, 20, 18, 0.95)";
+      ctx.fillRect(-baseW / 2, -baseH / 2, baseW, baseH);
+
+      // body top face (pseudo 3D)
+      ctx.beginPath();
+      ctx.moveTo(-baseW / 2, -baseH / 2);
+      ctx.lineTo(baseW / 2, -baseH / 2);
+      ctx.lineTo(baseW / 2 - depth, -baseH / 2 - depth);
+      ctx.lineTo(-baseW / 2 + depth, -baseH / 2 - depth);
+      ctx.closePath();
+      ctx.fillStyle = `${facility.accent}55`;
+      ctx.fill();
+
+      // body right side face
+      ctx.beginPath();
+      ctx.moveTo(baseW / 2, -baseH / 2);
+      ctx.lineTo(baseW / 2, baseH / 2);
+      ctx.lineTo(baseW / 2 - depth, baseH / 2 - depth);
+      ctx.lineTo(baseW / 2 - depth, -baseH / 2 - depth);
+      ctx.closePath();
+      ctx.fillStyle = `${facility.color}55`;
+      ctx.fill();
+
+      // edges
+      ctx.strokeStyle = facility.color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-baseW / 2, -baseH / 2, baseW, baseH);
+      ctx.beginPath();
+      ctx.moveTo(-baseW / 2, -baseH / 2);
+      ctx.lineTo(-baseW / 2 + depth, -baseH / 2 - depth);
+      ctx.lineTo(baseW / 2 - depth, -baseH / 2 - depth);
+      ctx.lineTo(baseW / 2, -baseH / 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(baseW / 2, baseH / 2);
+      ctx.lineTo(baseW / 2 - depth, baseH / 2 - depth);
+      ctx.stroke();
+
+      // monitor strip
+      ctx.fillStyle = `${facility.accent}99`;
+      ctx.fillRect(-baseW * 0.24, -baseH * 0.62, baseW * 0.48, 9);
+      ctx.strokeStyle = facility.accent;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-baseW * 0.24, -baseH * 0.62, baseW * 0.48, 9);
+
+      const beaconSize = 8 + pulse * 2;
+      ctx.fillStyle = facility.accent;
+      ctx.beginPath();
+      ctx.arc(0, -baseH * 0.62 - depth, beaconSize * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.shadowBlur = 0;
-      ctx.fillStyle = facility.color;
+      const lineY = -baseH * 0.95 - depth;
+      ctx.fillStyle = isActive ? facility.accent : facility.color;
       ctx.font = "bold 10px monospace";
       ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText(facility.label, 0, baseH * 0.72);
+      ctx.textBaseline = "middle";
+      ctx.fillText(facility.label, 0, lineY);
+
+      const openHint = this.isMobile ? "TAP: OPEN" : "CLICK: OPEN";
+      ctx.globalAlpha = isActive ? 1 : 0.72;
+      ctx.fillStyle = "#e8f8ee";
+      ctx.font = "bold 9px monospace";
+      ctx.fillText(openHint, 0, lineY - 12);
+      ctx.globalAlpha = 1;
 
       ctx.restore();
     });

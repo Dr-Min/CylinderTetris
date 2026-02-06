@@ -311,6 +311,8 @@ export class DefenseGame {
         y: 0,
         radius: 46,
         triggerRadius: 72,
+        collisionHalfWidth: 36,
+        collisionHalfHeight: 24,
         color: "#ffcc00",
         accent: "#00ffff",
       },
@@ -322,6 +324,8 @@ export class DefenseGame {
         y: 0,
         radius: 46,
         triggerRadius: 72,
+        collisionHalfWidth: 36,
+        collisionHalfHeight: 24,
         color: "#ff6633",
         accent: "#ffaa00",
       },
@@ -889,9 +893,7 @@ export class DefenseGame {
     }
 
     this.activeSafeZoneFacilityId = nearest.id;
-    const inputHint = this.isMobile ? "TAP" : "CLICK";
-    this.safeZonePrompt.innerText = `${inputHint}: ${nearest.actionLabel}`;
-    this.safeZonePrompt.style.display = "block";
+    this.safeZonePrompt.style.display = "none";
   }
 
   tryInteractSafeZoneFacility(worldX, worldY) {
@@ -901,8 +903,13 @@ export class DefenseGame {
     }
 
     for (const facility of this.safeZoneFacilities) {
+      const halfW = facility.collisionHalfWidth || 36;
+      const halfH = facility.collisionHalfHeight || 24;
+      const inBody =
+        Math.abs(worldX - facility.x) <= halfW * 1.15 &&
+        Math.abs(worldY - facility.y) <= halfH * 1.25;
       const tapDist = Math.hypot(worldX - facility.x, worldY - facility.y);
-      if (tapDist > facility.radius * 1.2) {
+      if (!inBody && tapDist > facility.radius * 1.2) {
         continue;
       }
 
@@ -919,6 +926,32 @@ export class DefenseGame {
       return true;
     }
     return false;
+  }
+
+  resolveSafeZoneFacilityCollisions() {
+    if (!this.isSafeZone || !Array.isArray(this.safeZoneFacilities)) return;
+    const coreRadius = this.core.radius + 2;
+
+    for (let pass = 0; pass < 2; pass++) {
+      for (const facility of this.safeZoneFacilities) {
+        const halfW = (facility.collisionHalfWidth || 36) + coreRadius;
+        const halfH = (facility.collisionHalfHeight || 24) + coreRadius;
+        const dx = this.core.x - facility.x;
+        const dy = this.core.y - facility.y;
+        const overlapX = halfW - Math.abs(dx);
+        const overlapY = halfH - Math.abs(dy);
+
+        if (overlapX <= 0 || overlapY <= 0) continue;
+
+        if (overlapX < overlapY) {
+          const dirX = dx === 0 ? (this.moveInput.x >= 0 ? 1 : -1) : Math.sign(dx);
+          this.core.x += dirX * overlapX;
+        } else {
+          const dirY = dy === 0 ? (this.moveInput.y >= 0 ? 1 : -1) : Math.sign(dy);
+          this.core.y += dirY * overlapY;
+        }
+      }
+    }
   }
 
   start() {
@@ -2963,6 +2996,8 @@ export class DefenseGame {
       this.core.x = Math.min(Math.max(this.core.x, 0), this.worldWidth);
       this.core.y = Math.min(Math.max(this.core.y, 0), this.worldHeight);
     }
+
+    this.resolveSafeZoneFacilityCollisions();
     this.core.targetOffsetX = this.moveInput.x * sway;
     this.core.targetOffsetY = this.moveInput.y * sway;
   }
