@@ -254,104 +254,321 @@ export function applyRenderMixin(DefenseGameClass) {
     });
   }
 
+  proto.drawFacilityBox = function(w, h, d, frontColor, topColor, sideColor, strokeColor) {
+    const ctx = this.ctx;
+
+    ctx.fillStyle = frontColor;
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, -h / 2);
+    ctx.lineTo(w / 2, -h / 2);
+    ctx.lineTo(w / 2 - d, -h / 2 - d);
+    ctx.lineTo(-w / 2 + d, -h / 2 - d);
+    ctx.closePath();
+    ctx.fillStyle = topColor;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(w / 2, -h / 2);
+    ctx.lineTo(w / 2, h / 2);
+    ctx.lineTo(w / 2 - d, h / 2 - d);
+    ctx.lineTo(w / 2 - d, -h / 2 - d);
+    ctx.closePath();
+    ctx.fillStyle = sideColor;
+    ctx.fill();
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-w / 2, -h / 2, w, h);
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, -h / 2);
+    ctx.lineTo(-w / 2 + d, -h / 2 - d);
+    ctx.lineTo(w / 2 - d, -h / 2 - d);
+    ctx.lineTo(w / 2, -h / 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(w / 2, h / 2);
+    ctx.lineTo(w / 2 - d, h / 2 - d);
+    ctx.stroke();
+  };
+
+  proto.renderFacilityLabel = function(facility, actionText, isActive, labelY) {
+    const ctx = this.ctx;
+    const inputHint = this.isMobile ? "TAP" : "CLICK";
+
+    ctx.globalAlpha = isActive ? 1 : 0.78;
+    ctx.fillStyle = "#e8f8ee";
+    ctx.font = "bold 9px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`${inputHint}: ${actionText}`, 0, labelY - 12);
+
+    ctx.fillStyle = isActive ? facility.accent : facility.color;
+    ctx.font = "bold 10px monospace";
+    ctx.fillText(facility.label, 0, labelY);
+    ctx.globalAlpha = 1;
+  };
+
+  proto.renderFacilityOwner = function(facility, now, isActive) {
+    const owner = facility.owner;
+    if (!owner) return;
+
+    const ctx = this.ctx;
+    const bob = Math.sin(now * 2.2 + (owner.phase || 0)) * 1.8;
+    const x = facility.x + (owner.offsetX || 0);
+    const y = facility.y + (owner.offsetY || 0) + bob;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    ctx.globalAlpha = isActive ? 1 : 0.9;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+    ctx.beginPath();
+    ctx.ellipse(0, 14, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (owner.role === "merchant") {
+      ctx.fillStyle = owner.bodyColor;
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 10, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(0, -10, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = owner.gearColor;
+      ctx.fillRect(-7, -12, 14, 4);
+
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(-5, -11, 10, 2);
+
+      ctx.fillStyle = owner.accentColor;
+      ctx.fillRect(8, -2, 7, 4);
+      ctx.strokeStyle = owner.accentColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(8, -2, 7, 4);
+    } else {
+      ctx.fillStyle = owner.bodyColor;
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 12, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = owner.gearColor;
+      ctx.fillRect(-8, -13, 16, 8);
+      ctx.fillStyle = "#111";
+      ctx.fillRect(-5, -10, 10, 2);
+
+      ctx.strokeStyle = owner.accentColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(10, 2);
+      ctx.lineTo(17, -2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(17, -2);
+      ctx.lineTo(20, -5);
+      ctx.moveTo(17, -2);
+      ctx.lineTo(20, 1);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = owner.accentColor;
+    ctx.font = "bold 8px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(owner.name, 0, -24);
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+  };
+
+  proto.renderUpgradeShopFacility = function(facility, now, isActive) {
+    const ctx = this.ctx;
+    const pulse = 0.8 + Math.sin(now * 2.8) * 0.2;
+    const w = 58;
+    const h = 74;
+    const d = 16;
+
+    ctx.save();
+    ctx.translate(facility.x, facility.y);
+
+    ctx.globalAlpha = isActive ? 0.88 : 0.45;
+    ctx.strokeStyle = facility.accent;
+    ctx.lineWidth = isActive ? 2.6 : 1.2;
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 58, 26, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.shadowColor = facility.accent;
+    ctx.shadowBlur = isActive ? 20 : 9;
+    this.drawFacilityBox(
+      w,
+      h,
+      d,
+      "rgba(10, 18, 18, 0.95)",
+      "rgba(0, 240, 255, 0.35)",
+      "rgba(255, 204, 0, 0.25)",
+      facility.color
+    );
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = "rgba(0, 12, 18, 0.9)";
+    ctx.fillRect(-12, -20, 24, 46);
+    ctx.strokeStyle = facility.accent;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-12, -20, 24, 46);
+
+    for (let i = 0; i < 4; i++) {
+      const y = -15 + i * 10;
+      const glow = (Math.sin(now * 4 + i * 0.8) + 1) * 0.5;
+      ctx.fillStyle = `rgba(0, 255, 230, ${0.25 + glow * 0.45})`;
+      ctx.fillRect(-9, y, 18, 4);
+    }
+
+    ctx.fillStyle = "#224a3a";
+    ctx.fillRect(-40, 13, 12, 10);
+    ctx.fillStyle = facility.accent;
+    ctx.fillRect(-37, 9, 8, 4);
+
+    ctx.fillStyle = "#3a2c14";
+    ctx.fillRect(29, 12, 13, 11);
+    ctx.fillStyle = facility.color;
+    ctx.beginPath();
+    ctx.arc(35, 9, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(0, -h / 2 - d - 12);
+    ctx.rotate(Math.sin(now * 1.7) * 0.25);
+    ctx.strokeStyle = facility.accent;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -9);
+    ctx.lineTo(6, 0);
+    ctx.lineTo(2, 0);
+    ctx.lineTo(2, 8);
+    ctx.lineTo(-2, 8);
+    ctx.lineTo(-2, 0);
+    ctx.lineTo(-6, 0);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+
+    this.renderFacilityLabel(
+      facility,
+      facility.openHint || "UPGRADE",
+      isActive,
+      -h / 2 - d - 32 - pulse
+    );
+
+    ctx.restore();
+  };
+
+  proto.renderDismantlerFacility = function(facility, now, isActive) {
+    const ctx = this.ctx;
+    const w = 98;
+    const h = 34;
+    const d = 12;
+    const press = (Math.sin(now * 3.5) + 1) * 0.5;
+
+    ctx.save();
+    ctx.translate(facility.x, facility.y);
+
+    ctx.globalAlpha = isActive ? 0.86 : 0.46;
+    ctx.strokeStyle = facility.accent;
+    ctx.lineWidth = isActive ? 2.4 : 1.2;
+    ctx.beginPath();
+    ctx.rect(-58, -18, 116, 44);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.shadowColor = facility.color;
+    ctx.shadowBlur = isActive ? 18 : 8;
+    this.drawFacilityBox(
+      w,
+      h,
+      d,
+      "rgba(24, 14, 10, 0.95)",
+      "rgba(255, 120, 40, 0.32)",
+      "rgba(255, 190, 80, 0.2)",
+      facility.color
+    );
+    ctx.shadowBlur = 0;
+
+    const beltY = 4;
+    ctx.fillStyle = "rgba(12, 12, 12, 0.95)";
+    ctx.fillRect(-41, beltY, 82, 10);
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-41, beltY, 82, 10);
+
+    const beltOffset = ((now * 65) % 14) - 7;
+    ctx.strokeStyle = "#999";
+    for (let x = -36 + beltOffset; x <= 36; x += 14) {
+      ctx.beginPath();
+      ctx.moveTo(x, beltY + 2);
+      ctx.lineTo(x + 6, beltY + 8);
+      ctx.stroke();
+    }
+
+    const headY = -h / 2 - d + 4 + press * 6;
+    ctx.fillStyle = "#5e5e5e";
+    ctx.fillRect(10, headY, 22, 14);
+    ctx.strokeStyle = facility.accent;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, headY, 22, 14);
+
+    ctx.strokeStyle = facility.accent;
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 3; i++) {
+      const sparkX = 21 + i * 4;
+      const sparkY = headY + 15 + Math.sin(now * 12 + i) * 2;
+      ctx.beginPath();
+      ctx.moveTo(sparkX, sparkY);
+      ctx.lineTo(sparkX + 2, sparkY + 3);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "#55453a";
+    ctx.beginPath();
+    ctx.arc(-45, 12, 6, 0, Math.PI * 2);
+    ctx.arc(-36, 14, 5, 0, Math.PI * 2);
+    ctx.arc(-30, 11, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#3d4d5a";
+    ctx.fillRect(42, 8, 8, 12);
+    ctx.fillRect(51, 10, 7, 10);
+
+    this.renderFacilityLabel(
+      facility,
+      facility.openHint || "DISMANTLE",
+      isActive,
+      -h / 2 - d - 30
+    );
+
+    ctx.restore();
+  };
+
   proto.renderSafeZoneFacilities = function() {
     if (!this.isSafeZone || !Array.isArray(this.safeZoneFacilities)) return;
 
-    const ctx = this.ctx;
     const now = performance.now() / 1000;
-
-    this.safeZoneFacilities.forEach((facility, index) => {
-      const pulse = 0.7 + Math.sin(now * 2.5 + index) * 0.3;
+    this.safeZoneFacilities.forEach((facility) => {
       const isActive = this.activeSafeZoneFacilityId === facility.id;
-      const baseW = 72;
-      const baseH = 44;
-      const depth = 14;
-      const ringR = facility.radius + 14;
 
-      ctx.save();
-      ctx.translate(facility.x, facility.y);
+      if (facility.kind === "shop") {
+        this.renderUpgradeShopFacility(facility, now, isActive);
+      } else if (facility.kind === "dismantler") {
+        this.renderDismantlerFacility(facility, now, isActive);
+      }
 
-      // floor ring
-      ctx.globalAlpha = isActive ? 0.82 : 0.42;
-      ctx.strokeStyle = facility.accent;
-      ctx.lineWidth = isActive ? 2.4 : 1.2;
-      ctx.beginPath();
-      ctx.arc(0, 0, ringR + Math.sin(now * 4 + index) * 2, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-
-      // body front
-      ctx.shadowColor = facility.color;
-      ctx.shadowBlur = isActive ? 22 : 11;
-      ctx.fillStyle = "rgba(10, 20, 18, 0.95)";
-      ctx.fillRect(-baseW / 2, -baseH / 2, baseW, baseH);
-
-      // body top face (pseudo 3D)
-      ctx.beginPath();
-      ctx.moveTo(-baseW / 2, -baseH / 2);
-      ctx.lineTo(baseW / 2, -baseH / 2);
-      ctx.lineTo(baseW / 2 - depth, -baseH / 2 - depth);
-      ctx.lineTo(-baseW / 2 + depth, -baseH / 2 - depth);
-      ctx.closePath();
-      ctx.fillStyle = `${facility.accent}55`;
-      ctx.fill();
-
-      // body right side face
-      ctx.beginPath();
-      ctx.moveTo(baseW / 2, -baseH / 2);
-      ctx.lineTo(baseW / 2, baseH / 2);
-      ctx.lineTo(baseW / 2 - depth, baseH / 2 - depth);
-      ctx.lineTo(baseW / 2 - depth, -baseH / 2 - depth);
-      ctx.closePath();
-      ctx.fillStyle = `${facility.color}55`;
-      ctx.fill();
-
-      // edges
-      ctx.strokeStyle = facility.color;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-baseW / 2, -baseH / 2, baseW, baseH);
-      ctx.beginPath();
-      ctx.moveTo(-baseW / 2, -baseH / 2);
-      ctx.lineTo(-baseW / 2 + depth, -baseH / 2 - depth);
-      ctx.lineTo(baseW / 2 - depth, -baseH / 2 - depth);
-      ctx.lineTo(baseW / 2, -baseH / 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(baseW / 2, baseH / 2);
-      ctx.lineTo(baseW / 2 - depth, baseH / 2 - depth);
-      ctx.stroke();
-
-      // monitor strip
-      ctx.fillStyle = `${facility.accent}99`;
-      ctx.fillRect(-baseW * 0.24, -baseH * 0.62, baseW * 0.48, 9);
-      ctx.strokeStyle = facility.accent;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(-baseW * 0.24, -baseH * 0.62, baseW * 0.48, 9);
-
-      const beaconSize = 8 + pulse * 2;
-      ctx.fillStyle = facility.accent;
-      ctx.beginPath();
-      ctx.arc(0, -baseH * 0.62 - depth, beaconSize * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.shadowBlur = 0;
-      const lineY = -baseH * 0.95 - depth;
-      ctx.fillStyle = isActive ? facility.accent : facility.color;
-      ctx.font = "bold 10px monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(facility.label, 0, lineY);
-
-      const openHint = this.isMobile ? "TAP: OPEN" : "CLICK: OPEN";
-      ctx.globalAlpha = isActive ? 1 : 0.72;
-      ctx.fillStyle = "#e8f8ee";
-      ctx.font = "bold 9px monospace";
-      ctx.fillText(openHint, 0, lineY - 12);
-      ctx.globalAlpha = 1;
-
-      ctx.restore();
+      this.renderFacilityOwner(facility, now, isActive);
     });
-  }
+  };
 
   
   proto.render = function() {

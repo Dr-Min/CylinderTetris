@@ -305,29 +305,53 @@ export class DefenseGame {
     this.safeZoneFacilities = [
       {
         id: "upgrade_shop",
+        kind: "shop",
         label: "UPGRADE SHOP",
         actionLabel: "OPEN UPGRADE SHOP",
+        openHint: "UPGRADE",
         x: 0,
         y: 0,
-        radius: 46,
-        triggerRadius: 72,
-        collisionHalfWidth: 36,
-        collisionHalfHeight: 24,
+        radius: 52,
+        triggerRadius: 78,
+        collisionHalfWidth: 34,
+        collisionHalfHeight: 30,
         color: "#ffcc00",
         accent: "#00ffff",
+        owner: {
+          name: "BROKER-7",
+          role: "merchant",
+          bodyColor: "#88ffcc",
+          gearColor: "#ffe066",
+          accentColor: "#00f0ff",
+          offsetX: -58,
+          offsetY: 22,
+          phase: 0.35,
+        },
       },
       {
         id: "dismantler",
+        kind: "dismantler",
         label: "DISMANTLER",
         actionLabel: "OPEN DISMANTLER",
+        openHint: "DISMANTLE",
         x: 0,
         y: 0,
-        radius: 46,
-        triggerRadius: 72,
-        collisionHalfWidth: 36,
+        radius: 56,
+        triggerRadius: 82,
+        collisionHalfWidth: 52,
         collisionHalfHeight: 24,
         color: "#ff6633",
         accent: "#ffaa00",
+        owner: {
+          name: "SCRAP-MASTER",
+          role: "engineer",
+          bodyColor: "#ff9977",
+          gearColor: "#666666",
+          accentColor: "#ffcc88",
+          offsetX: 62,
+          offsetY: 20,
+          phase: 1.1,
+        },
       },
     ];
     this.activeSafeZoneFacilityId = null;
@@ -856,10 +880,16 @@ export class DefenseGame {
     }
     const spreadX = Math.max(170, this.worldWidth * 0.12);
     const offsetY = Math.max(90, this.worldHeight * 0.08);
-    this.safeZoneFacilities[0].x = this.coreHome.x - spreadX;
-    this.safeZoneFacilities[0].y = this.coreHome.y + offsetY;
-    this.safeZoneFacilities[1].x = this.coreHome.x + spreadX;
-    this.safeZoneFacilities[1].y = this.coreHome.y + offsetY;
+    const shop = this.safeZoneFacilities.find((facility) => facility.id === "upgrade_shop");
+    const dismantler = this.safeZoneFacilities.find((facility) => facility.id === "dismantler");
+    if (shop) {
+      shop.x = this.coreHome.x - spreadX;
+      shop.y = this.coreHome.y + offsetY - 8;
+    }
+    if (dismantler) {
+      dismantler.x = this.coreHome.x + spreadX;
+      dismantler.y = this.coreHome.y + offsetY + 10;
+    }
   }
 
   hideSafeZoneFacilityPrompt() {
