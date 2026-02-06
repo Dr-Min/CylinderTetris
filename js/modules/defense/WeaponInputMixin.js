@@ -473,6 +473,10 @@ export function applyWeaponInputMixin(DefenseGameClass) {
       }
     }
 
+    if (this.tryInteractSafeZoneFacility(scaledClickX, scaledClickY)) {
+      return;
+    }
+
     this.fireAtPosition(scaledClickX, scaledClickY);
   }
 
@@ -510,6 +514,10 @@ export function applyWeaponInputMixin(DefenseGameClass) {
             );
             continue;
           }
+        }
+
+        if (this.tryInteractSafeZoneFacility(scaledTouchX, scaledTouchY)) {
+          continue;
         }
 
         if (touchX >= rect.width * this.rightFireZoneRatio) {
@@ -562,6 +570,9 @@ export function applyWeaponInputMixin(DefenseGameClass) {
           this.miningManager.cabinet.y,
           "#00ff88", 8
         );
+        return;
+      }
+      if (this.tryInteractSafeZoneFacility(worldPos.x, worldPos.y)) {
         return;
       }
     }

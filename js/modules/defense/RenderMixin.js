@@ -254,6 +254,63 @@ export function applyRenderMixin(DefenseGameClass) {
     });
   }
 
+  proto.renderSafeZoneFacilities = function() {
+    if (!this.isSafeZone || !Array.isArray(this.safeZoneFacilities)) return;
+
+    const ctx = this.ctx;
+    const now = performance.now() / 1000;
+
+    this.safeZoneFacilities.forEach((facility, index) => {
+      const pulse = 0.7 + Math.sin(now * 2.5 + index) * 0.3;
+      const isActive = this.activeSafeZoneFacilityId === facility.id;
+      const baseW = 68;
+      const baseH = 42;
+      const ringR = facility.radius + 14;
+
+      ctx.save();
+      ctx.translate(facility.x, facility.y);
+
+      ctx.shadowColor = facility.color;
+      ctx.shadowBlur = isActive ? 20 : 10;
+      ctx.fillStyle = "rgba(10, 18, 16, 0.95)";
+      ctx.fillRect(-baseW / 2, -baseH / 2, baseW, baseH);
+
+      ctx.strokeStyle = facility.color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-baseW / 2, -baseH / 2, baseW, baseH);
+
+      ctx.fillStyle = `${facility.accent}88`;
+      ctx.fillRect(-baseW * 0.28, -baseH * 0.68, baseW * 0.56, 8);
+
+      ctx.strokeStyle = facility.accent;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-baseW * 0.28, -baseH * 0.68, baseW * 0.56, 8);
+
+      const beaconSize = 7 + pulse * 2;
+      ctx.fillStyle = facility.accent;
+      ctx.beginPath();
+      ctx.arc(0, -baseH * 0.68, beaconSize * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = isActive ? 0.75 : 0.35;
+      ctx.strokeStyle = facility.accent;
+      ctx.lineWidth = isActive ? 2.2 : 1.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, ringR + Math.sin(now * 4 + index) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = facility.color;
+      ctx.font = "bold 10px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText(facility.label, 0, baseH * 0.72);
+
+      ctx.restore();
+    });
+  }
+
   
   proto.render = function() {
     if (!this.renderDebugFrameCount) this.renderDebugFrameCount = 0;
@@ -292,6 +349,7 @@ export function applyRenderMixin(DefenseGameClass) {
     if (!this.isSafeZone) {
       this.renderMiningEffect(this.ctx, time);
     }
+    this.renderSafeZoneFacilities();
 
     if (this.isConquered) {
       if (!this.conqueredRenderLogged) {

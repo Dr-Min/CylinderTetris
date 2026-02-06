@@ -30,8 +30,11 @@ export class GameManager {
     this.miningManager = new MiningManager(); // 채굴 매니저
     this.defenseGame.miningManager = this.miningManager;
     this.defenseGame.onRecallRequest = () => this.handleRecall();
+    this.defenseGame.onSafeZoneFacilityInteract = (facilityId) =>
+      this.handleSafeZoneFacilityInteract(facilityId);
     this.collectedItemsThisStage = []; // 현재 스테이지에서 획득한 아이템들
     this.isBossBreachMode = false;
+    this.dismantlerLevel = 0;
 
     // 해금 진행률 (Decryption Progress)
     // 바이러스: TANK, HUNTER, BOMBER, HEALER (SWARM만 기본 해금)
@@ -2198,6 +2201,265 @@ export class GameManager {
   /**
    * 인벤토리/장비 UI 표시
    */
+  async handleSafeZoneFacilityInteract(facilityId) {
+    if (!this.defenseGame || !this.defenseGame.isSafeZone) return;
+    if (this._safeZoneFacilityBusy) return;
+
+    this._safeZoneFacilityBusy = true;
+    try {
+      if (facilityId === "upgrade_shop") {
+        await this.showUpgrades("safezone_shop");
+      } else if (facilityId === "dismantler") {
+        await this.showDismantler();
+      }
+    } finally {
+      this._safeZoneFacilityBusy = false;
+    }
+  }
+
+  getDismantleMultiplier(isBulk = false) {
+    const level = Math.max(0, this.dismantlerLevel || 0);
+    const efficiency = 1.2 + level * 0.05;
+    const modeScale = isBulk ? 0.9 : 1.0;
+    return efficiency * modeScale;
+  }
+
+  getDismantleValue(item, isBulk = false) {
+    if (!item || item.rarity === "blueprint") return 0;
+    const base = this.itemDatabase.getItemDataValue(item);
+    return Math.max(1, Math.floor(base * this.getDismantleMultiplier(isBulk)));
+  }
+
+  async showDismantler() {
+    this.defenseGame.pause();
+
+    const overlay = await this.playTerminalAnimation(
+      "BOOTING DISMANTLER...",
+      true
+    );
+
+    overlay.id = "dismantler-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 3000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    `;
+
+    const closeDismantler = () => {
+      overlay.remove();
+      this.defenseGame.resume();
+      this.showCommandMenu();
+    };
+
+    const dismantleRarities = (allowedRarities) => {
+      const data = this.inventoryManager.getData();
+      let total = 0;
+      let count = 0;
+
+      data.inventory.forEach((item, idx) => {
+        if (!item) return;
+        if (!allowedRarities.includes(item.rarity)) return;
+
+        const removed = this.inventoryManager.removeFromInventory(idx);
+        if (!removed) return;
+        total += this.getDismantleValue(removed, true);
+        count++;
+      });
+
+      if (count <= 0) {
+        this.showNotification("No matching items to dismantle.", "#ff6666");
+        return;
+      }
+
+      this.currentMoney += total;
+      this.saveMoney();
+      this.terminal.updateData(this.currentMoney);
+      this.showNotification(`Dismantled ${count} items -> +${total} DATA`, "#ffaa00");
+      render();
+    };
+
+    const dismantleSingle = (index) => {
+      const item = this.inventoryManager.removeFromInventory(index);
+      if (!item) return;
+
+      const value = this.getDismantleValue(item, false);
+      if (value <= 0) {
+        this.showNotification("This item cannot be dismantled.", "#ff6666");
+        this.inventoryManager.addToInventory(item);
+        return;
+      }
+
+      this.currentMoney += value;
+      this.saveMoney();
+      this.terminal.updateData(this.currentMoney);
+      this.showNotification(`${item.name} -> +${value} DATA`, "#ffaa00");
+      render();
+    };
+
+    const render = () => {
+      const data = this.inventoryManager.getData();
+      overlay.innerHTML = "";
+
+      const header = document.createElement("div");
+      header.style.cssText = `
+        color: #ff8800;
+        font-family: var(--term-font);
+        font-size: 22px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 10px #ff8800;
+      `;
+      header.innerText = "[ ITEM DISMANTLER ]";
+      overlay.appendChild(header);
+
+      const moneyInfo = document.createElement("div");
+      moneyInfo.style.cssText = `
+        color: #00f0ff;
+        font-family: var(--term-font);
+        font-size: 14px;
+        margin-bottom: 8px;
+      `;
+      moneyInfo.innerText = `Current DATA: ${this.currentMoney} MB`;
+      overlay.appendChild(moneyInfo);
+
+      const formulaInfo = document.createElement("div");
+      formulaInfo.style.cssText = `
+        color: #aaa;
+        font-family: var(--term-font);
+        font-size: 11px;
+        margin-bottom: 12px;
+        text-align: center;
+      `;
+      formulaInfo.innerText = `Single x${this.getDismantleMultiplier(false).toFixed(2)} | Bulk x${this.getDismantleMultiplier(true).toFixed(2)}`;
+      overlay.appendChild(formulaInfo);
+
+      const actionRow = document.createElement("div");
+      actionRow.style.cssText = `
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: 14px;
+      `;
+
+      const createActionButton = (label, color, onClick) => {
+        const button = document.createElement("button");
+        button.style.cssText = `
+          padding: 8px 10px;
+          background: rgba(0, 0, 0, 0.45);
+          border: 1px solid ${color};
+          color: ${color};
+          font-family: var(--term-font);
+          font-size: 11px;
+          cursor: pointer;
+        `;
+        button.innerText = label;
+        button.onclick = onClick;
+        return button;
+      };
+
+      actionRow.appendChild(
+        createActionButton(
+          "BULK: COMMON",
+          "#00ff99",
+          () => dismantleRarities(["common"])
+        )
+      );
+      actionRow.appendChild(
+        createActionButton(
+          "BULK: RARE-",
+          "#00ddff",
+          () => dismantleRarities(["common", "rare"])
+        )
+      );
+      actionRow.appendChild(
+        createActionButton(
+          "BULK: ALL",
+          "#ffbb44",
+          () => dismantleRarities(["common", "rare", "legendary"])
+        )
+      );
+      overlay.appendChild(actionRow);
+
+      const infoLine = document.createElement("div");
+      const itemCount = data.inventory.filter((item) => item).length;
+      infoLine.style.cssText = `
+        color: #777;
+        font-family: var(--term-font);
+        font-size: 11px;
+        margin-bottom: 10px;
+      `;
+      infoLine.innerText = `Inventory Items: ${itemCount} / 20 (click item to dismantle)`;
+      overlay.appendChild(infoLine);
+
+      const grid = document.createElement("div");
+      grid.style.cssText = `
+        width: min(420px, 95vw);
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid #444;
+        background: rgba(0, 0, 0, 0.45);
+        margin-bottom: 14px;
+      `;
+
+      data.inventory.forEach((item, idx) => {
+        const slot = this.createInventorySlotElement(item, idx);
+        slot.style.width = "100%";
+        slot.style.height = "62px";
+        slot.style.position = "relative";
+        slot.style.fontSize = "10px";
+
+        if (item) {
+          const valueTag = document.createElement("div");
+          valueTag.style.cssText = `
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            right: 2px;
+            font-size: 8px;
+            color: #ffcc66;
+            text-align: center;
+            text-shadow: 0 0 4px #000;
+          `;
+          valueTag.innerText = `+${this.getDismantleValue(item, false)} DATA`;
+          slot.appendChild(valueTag);
+          slot.onclick = () => dismantleSingle(idx);
+        }
+
+        grid.appendChild(slot);
+      });
+      overlay.appendChild(grid);
+
+      const closeBtn = document.createElement("button");
+      closeBtn.style.cssText = `
+        margin-top: 8px;
+        padding: 10px 28px;
+        background: transparent;
+        border: 2px solid #ff5555;
+        color: #ff5555;
+        font-family: var(--term-font);
+        font-size: 13px;
+        cursor: pointer;
+      `;
+      closeBtn.innerText = "[CLOSE]";
+      closeBtn.onclick = closeDismantler;
+      overlay.appendChild(closeBtn);
+    };
+
+    render();
+  }
+
   async showInventory() {
     this.defenseGame.pause();
 

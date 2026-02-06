@@ -4,7 +4,8 @@
 export function applyUpgradeMixin(GameManagerClass) {
   const proto = GameManagerClass.prototype;
 
-  proto.showUpgrades = async function() {
+  proto.showUpgrades = async function(source = "terminal") {
+    this.upgradePriceSource = source;
     this.defenseGame.pause();
 
     // 터미널 애니메이션 (오버레이 유지)
@@ -59,6 +60,20 @@ export function applyUpgradeMixin(GameManagerClass) {
     `;
     dataInfo.innerText = `Available DATA: ${this.currentMoney} MB`;
     overlay.appendChild(dataInfo);
+
+    const priceInfo = document.createElement("div");
+    const isOnSite = this.upgradePriceSource === "safezone_shop";
+    priceInfo.style.cssText = `
+      color: ${isOnSite ? "#66ff99" : "#ff9966"};
+      font-family: var(--term-font);
+      font-size: 11px;
+      margin-bottom: 14px;
+      text-align: center;
+    `;
+    priceInfo.innerText = isOnSite
+      ? "ON-SITE FACILITY PRICE: BASE COST"
+      : "TERMINAL REMOTE SURCHARGE: +25%";
+    overlay.appendChild(priceInfo);
 
     // 카테고리 그리드 (2x2)
     const categoryGrid = document.createElement("div");
@@ -163,6 +178,7 @@ export function applyUpgradeMixin(GameManagerClass) {
     `;
     closeBtn.innerText = "[CLOSE]";
     closeBtn.onclick = () => {
+      this.upgradePriceSource = "terminal";
       overlay.remove();
       this.defenseGame.resume();
       this.showCommandMenu();
@@ -173,9 +189,15 @@ export function applyUpgradeMixin(GameManagerClass) {
   proto.getUpgradeCost = function(baseCost, level) {
     const tier = Math.floor(level / 10);
     const scale = 1 + level * 0.08 + tier * 0.3;
-    const rawCost = baseCost * scale;
+    const sourceMultiplier =
+      this.upgradePriceSource === "safezone_shop" ? 1.0 : 1.25;
+    const rawCost = baseCost * scale * sourceMultiplier;
     const rounded = Math.floor(rawCost / 5) * 5;
-    return Math.max(baseCost, rounded);
+    const terminalMin =
+      sourceMultiplier > 1
+        ? Math.ceil((baseCost * sourceMultiplier) / 5) * 5
+        : baseCost;
+    return Math.max(baseCost, terminalMin, rounded);
   };
 
   proto.getSoftCappedLevel = function(level, softCap = 20, tailFactor = 0.25) {

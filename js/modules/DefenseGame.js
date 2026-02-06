@@ -302,6 +302,53 @@ export class DefenseGame {
     this.recallBtn.addEventListener("touchstart", handleRecallTap, { passive: false });
     this.uiLayer.appendChild(this.recallBtn);
 
+    this.safeZoneFacilities = [
+      {
+        id: "upgrade_shop",
+        label: "UPGRADE SHOP",
+        actionLabel: "OPEN UPGRADE SHOP",
+        x: 0,
+        y: 0,
+        radius: 46,
+        triggerRadius: 72,
+        color: "#ffcc00",
+        accent: "#00ffff",
+      },
+      {
+        id: "dismantler",
+        label: "DISMANTLER",
+        actionLabel: "OPEN DISMANTLER",
+        x: 0,
+        y: 0,
+        radius: 46,
+        triggerRadius: 72,
+        color: "#ff6633",
+        accent: "#ffaa00",
+      },
+    ];
+    this.activeSafeZoneFacilityId = null;
+    this.onSafeZoneFacilityInteract = null;
+    this.safeZonePrompt = document.createElement("div");
+    this.safeZonePrompt.id = "safezone-facility-prompt";
+    this.safeZonePrompt.style.cssText = `
+      position: absolute;
+      left: 50%;
+      bottom: 68px;
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      border: 1px solid #00ff99;
+      background: rgba(0, 20, 10, 0.85);
+      color: #00ff99;
+      font-family: var(--term-font);
+      font-size: 12px;
+      text-shadow: 0 0 8px rgba(0, 255, 153, 0.45);
+      pointer-events: none;
+      z-index: 45;
+      display: none;
+      white-space: nowrap;
+    `;
+    this.uiLayer.appendChild(this.safeZonePrompt);
+
 
     this.isRunning = false;
     this.lastTime = 0;
@@ -680,6 +727,7 @@ export class DefenseGame {
     this.worldHeight = targetCanvas.height * this.worldScale;
     this.coreHome.x = this.worldWidth / 2;
     this.coreHome.y = this.worldHeight / 2;
+    this.updateSafeZoneFacilityLayout();
     this.core.worldWidth = this.worldWidth;
     this.core.worldHeight = this.worldHeight;
 
@@ -798,6 +846,81 @@ export class DefenseGame {
     }
   }
 
+  updateSafeZoneFacilityLayout() {
+    if (!Array.isArray(this.safeZoneFacilities) || this.safeZoneFacilities.length < 2) {
+      return;
+    }
+    const spreadX = Math.max(170, this.worldWidth * 0.12);
+    const offsetY = Math.max(90, this.worldHeight * 0.08);
+    this.safeZoneFacilities[0].x = this.coreHome.x - spreadX;
+    this.safeZoneFacilities[0].y = this.coreHome.y + offsetY;
+    this.safeZoneFacilities[1].x = this.coreHome.x + spreadX;
+    this.safeZoneFacilities[1].y = this.coreHome.y + offsetY;
+  }
+
+  hideSafeZoneFacilityPrompt() {
+    if (!this.safeZonePrompt) return;
+    this.safeZonePrompt.style.display = "none";
+    this.activeSafeZoneFacilityId = null;
+  }
+
+  updateSafeZoneFacilityPrompt() {
+    if (!this.safeZonePrompt) return;
+    if (!this.isSafeZone || !this.isRunning || this.uiLayer?.style?.display === "none") {
+      this.hideSafeZoneFacilityPrompt();
+      return;
+    }
+
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const facility of this.safeZoneFacilities) {
+      const dx = this.core.x - facility.x;
+      const dy = this.core.y - facility.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= facility.triggerRadius && dist < nearestDist) {
+        nearestDist = dist;
+        nearest = facility;
+      }
+    }
+
+    if (!nearest) {
+      this.hideSafeZoneFacilityPrompt();
+      return;
+    }
+
+    this.activeSafeZoneFacilityId = nearest.id;
+    const inputHint = this.isMobile ? "TAP" : "CLICK";
+    this.safeZonePrompt.innerText = `${inputHint}: ${nearest.actionLabel}`;
+    this.safeZonePrompt.style.display = "block";
+  }
+
+  tryInteractSafeZoneFacility(worldX, worldY) {
+    if (!this.isSafeZone) return false;
+    if (!Array.isArray(this.safeZoneFacilities) || this.safeZoneFacilities.length === 0) {
+      return false;
+    }
+
+    for (const facility of this.safeZoneFacilities) {
+      const tapDist = Math.hypot(worldX - facility.x, worldY - facility.y);
+      if (tapDist > facility.radius * 1.2) {
+        continue;
+      }
+
+      const coreDist = Math.hypot(this.core.x - facility.x, this.core.y - facility.y);
+      if (coreDist > facility.triggerRadius + this.core.radius) {
+        this.createExplosion(facility.x, facility.y, "#ff8800", 4);
+        return true;
+      }
+
+      if (typeof this.onSafeZoneFacilityInteract === "function") {
+        this.onSafeZoneFacilityInteract(facility.id);
+      }
+      this.createExplosion(facility.x, facility.y, facility.accent, 6);
+      return true;
+    }
+    return false;
+  }
+
   start() {
     this.resize();
     this.isRunning = true;
@@ -806,6 +929,8 @@ export class DefenseGame {
 
     this.isSafeZone = (this.currentStageId === 0);
     this.isFarmingZone = (this.currentStageId === 3);
+    this.activeSafeZoneFacilityId = null;
+    this.updateSafeZoneFacilityPrompt();
     this.updateRecallBtnVisibility();
 
     this.currentPage = 1;
@@ -838,6 +963,7 @@ export class DefenseGame {
     this.isRunning = false;
     this.canvas.style.display = "none";
     this.uiLayer.style.display = "none";
+    this.hideSafeZoneFacilityPrompt();
     this.updateRecallBtnVisibility();
 
     this.bgmManager.stop();
@@ -845,6 +971,7 @@ export class DefenseGame {
 
   pause() {
     this.isRunning = false;
+    this.hideSafeZoneFacilityPrompt();
     this.updateRecallBtnVisibility();
 
     this.bgmManager.stop();
@@ -879,6 +1006,7 @@ export class DefenseGame {
       this.uiLayer.style.display = "none";
     }
     debugLog("Canvas", "canvas after set:", this.canvas.style.display);
+    this.updateSafeZoneFacilityPrompt();
     this.updateRecallBtnVisibility();
   }
 
@@ -946,6 +1074,7 @@ export class DefenseGame {
       this.updateCoreMovement(dt);
     }
     this.updateCamera();
+    this.updateSafeZoneFacilityPrompt();
     const canMove = this.core.shieldState !== "DISABLED";
     this.joystickContainer.style.display = (this.isMobile && canMove) ? "block" : "none";
 
