@@ -2539,8 +2539,8 @@ export class DefenseGame {
       if (!typeData) continue;
 
       const margin = 40;
-      const screenW = this.canvas.width;
-      const screenH = this.canvas.height;
+      const worldW = this.worldWidth || this.canvas.width;
+      const worldH = this.worldHeight || this.canvas.height;
       const coreX = this.core.x;
       const coreY = this.core.y;
 
@@ -2549,20 +2549,20 @@ export class DefenseGame {
 
       switch (zone) {
         case 0:
-          spawnX = margin + Math.random() * (screenW * 0.35 - margin);
-          spawnY = margin + Math.random() * (screenH * 0.35 - margin);
+          spawnX = margin + Math.random() * (worldW * 0.35 - margin);
+          spawnY = margin + Math.random() * (worldH * 0.35 - margin);
           break;
         case 1:
-          spawnX = screenW * 0.65 + Math.random() * (screenW * 0.35 - margin);
-          spawnY = margin + Math.random() * (screenH * 0.35 - margin);
+          spawnX = worldW * 0.65 + Math.random() * (worldW * 0.35 - margin);
+          spawnY = margin + Math.random() * (worldH * 0.35 - margin);
           break;
         case 2:
-          spawnX = margin + Math.random() * (screenW * 0.35 - margin);
-          spawnY = screenH * 0.65 + Math.random() * (screenH * 0.35 - margin);
+          spawnX = margin + Math.random() * (worldW * 0.35 - margin);
+          spawnY = worldH * 0.65 + Math.random() * (worldH * 0.35 - margin);
           break;
         case 3:
-          spawnX = screenW * 0.65 + Math.random() * (screenW * 0.35 - margin);
-          spawnY = screenH * 0.65 + Math.random() * (screenH * 0.35 - margin);
+          spawnX = worldW * 0.65 + Math.random() * (worldW * 0.35 - margin);
+          spawnY = worldH * 0.65 + Math.random() * (worldH * 0.35 - margin);
           break;
       }
 
@@ -3042,11 +3042,11 @@ export class DefenseGame {
       const margin = 40;
       const targetX = Math.max(
         margin,
-        Math.min(this.canvas.width - margin, ownerAnchor.x + Math.cos(angle) * dist)
+        Math.min((this.worldWidth || this.canvas.width) - margin, ownerAnchor.x + Math.cos(angle) * dist)
       );
       const targetY = Math.max(
         margin,
-        Math.min(this.canvas.height - margin, ownerAnchor.y + Math.sin(angle) * dist)
+        Math.min((this.worldHeight || this.canvas.height) - margin, ownerAnchor.y + Math.sin(angle) * dist)
       );
       const expiresAt = now + 11000;
 

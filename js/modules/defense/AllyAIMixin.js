@@ -671,8 +671,8 @@ export function applyAllyAIMixin(DefenseGameClass) {
   }
 
   proto.safeZoneWander = function(v, dt) {
-    const screenW = this.canvas.width;
-    const screenH = this.canvas.height;
+    const screenW = this.worldWidth || this.canvas.width;
+    const screenH = this.worldHeight || this.canvas.height;
     const margin = 40;
 
     const barrierRadius = (this.core.shieldRadius || 70) + 20;
