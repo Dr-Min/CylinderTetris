@@ -1,5 +1,5 @@
-// v2.1.112
-const CACHE_NAME = "hacker-tetris-v2.1.112";
+// v2.1.117
+const CACHE_NAME = "hacker-tetris-v2.1.117";
 const ASSETS = [
   "./",
   "./index.html",
@@ -20,6 +20,7 @@ const ASSETS = [
   "./js/modules/InventoryManager.js",
   "./js/modules/MiningManager.js",
   "./js/data/virusDialogues.json",
+  "./js/data/facilityDialogues.json",
   "./manifest.json",
   "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
   "https://fonts.googleapis.com/css2?family=VT323&display=swap",

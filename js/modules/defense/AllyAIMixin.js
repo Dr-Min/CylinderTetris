@@ -713,8 +713,29 @@ export function applyAllyAIMixin(DefenseGameClass) {
     }
 
     v.stateTimer += dt;
+    const now = performance.now();
+    const isFacilityVisitActive =
+      !!v.facilityVisitTarget &&
+      Number.isFinite(v.facilityVisitTarget.x) &&
+      Number.isFinite(v.facilityVisitTarget.y) &&
+      (v.facilityVisitUntil || 0) > now;
 
-    switch (v.safeState) {
+    if (isFacilityVisitActive) {
+      this.smoothMoveToward(v, v.facilityVisitTarget.x, v.facilityVisitTarget.y, dt, 0.58);
+      const visitDist = Math.hypot(v.facilityVisitTarget.x - v.x, v.facilityVisitTarget.y - v.y);
+      if (visitDist < 20) {
+        v.facilityVisitHold = (v.facilityVisitHold || 0) + dt;
+      } else {
+        v.facilityVisitHold = 0;
+      }
+    } else if (v.facilityVisitTarget) {
+      v.facilityVisitTarget = null;
+      v.facilityVisitUntil = 0;
+      v.facilityVisitFacilityId = null;
+      v.facilityVisitHold = 0;
+    }
+
+    if (!isFacilityVisitActive) switch (v.safeState) {
       case 'wander':
         if (v.stateTimer >= v.stateDuration) {
           v.stateTimer = 0;

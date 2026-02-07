@@ -310,17 +310,254 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.globalAlpha = 1;
   };
 
+  proto.assignFacilityOwnerTarget = function(owner, state, baseX, baseY, now) {
+    const leashRadius = Math.max(20, owner.leashRadius || 90);
+    const minRadius = Math.min(
+      Math.max(6, owner.wanderMinRadius || 16),
+      Math.max(6, leashRadius - 4)
+    );
+    const angle = Math.random() * Math.PI * 2;
+    const radius = minRadius + Math.random() * Math.max(0, leashRadius - minRadius);
+    state.targetX = baseX + Math.cos(angle) * radius;
+    state.targetY = baseY + Math.sin(angle) * radius;
+
+    const speedMin = Math.max(8, owner.wanderSpeedMin || 20);
+    const speedMax = Math.max(speedMin, owner.wanderSpeedMax || speedMin + 14);
+    const boostChance = Math.max(0, Math.min(1, owner.boostChance || 0));
+    const boostMult = Math.max(1, owner.boostMult || 1);
+    let speed = speedMin + Math.random() * (speedMax - speedMin);
+    if (Math.random() < boostChance) {
+      speed *= boostMult;
+    }
+    state.travelSpeed = speed;
+
+    const retargetMin = Math.max(0.2, owner.retargetMin || 0.8);
+    const retargetMax = Math.max(retargetMin, owner.retargetMax || retargetMin + 1.2);
+    state.nextRetargetAt = now + retargetMin + Math.random() * (retargetMax - retargetMin);
+
+    const idleChance = Math.max(0, Math.min(1, owner.idleChance || 0));
+    if (Math.random() < idleChance) {
+      const idleMin = Math.max(0, owner.idleMin || 0.2);
+      const idleMax = Math.max(idleMin, owner.idleMax || 0.6);
+      state.holdUntil = now + idleMin + Math.random() * (idleMax - idleMin);
+    } else {
+      state.holdUntil = now;
+    }
+  };
+
+  proto.updateFacilityOwnerPosition = function(facility, owner, now) {
+    if (!this.safeZoneOwnerStates) {
+      this.safeZoneOwnerStates = Object.create(null);
+    }
+
+    const phase = owner.phase || 0;
+    const baseX = facility.x + (owner.offsetX || 0);
+    const baseY = facility.y + (owner.offsetY || 0);
+    const stateKey = facility.id || owner.name || owner.role || "owner";
+
+    let state = this.safeZoneOwnerStates[stateKey];
+    if (!state) {
+      state = {
+        x: baseX,
+        y: baseY,
+        targetX: baseX,
+        targetY: baseY,
+        vx: 0,
+        vy: 0,
+        travelSpeed: owner.wanderSpeedMin || 20,
+        nextRetargetAt: now,
+        holdUntil: now,
+        lastTime: now,
+        noiseSeedX: Math.random() * Math.PI * 2,
+        noiseSeedY: Math.random() * Math.PI * 2,
+        stepPhase: Math.random() * Math.PI * 2,
+        lean: 0,
+        lookX: 0,
+        lookY: 0,
+        scaleX: 1,
+        scaleY: 1,
+      };
+      this.safeZoneOwnerStates[stateKey] = state;
+    }
+
+    if (
+      !Number.isFinite(state.x) ||
+      !Number.isFinite(state.y) ||
+      !Number.isFinite(state.vx) ||
+      !Number.isFinite(state.vy)
+    ) {
+      state.x = baseX;
+      state.y = baseY;
+      state.targetX = baseX;
+      state.targetY = baseY;
+      state.vx = 0;
+      state.vy = 0;
+      state.lastTime = now;
+    }
+
+    const dtRaw = now - (state.lastTime || now);
+    const dt = Math.min(0.08, Math.max(0.008, Number.isFinite(dtRaw) ? dtRaw : 0.016));
+    state.lastTime = now;
+
+    if (
+      !Number.isFinite(state.targetX) ||
+      !Number.isFinite(state.targetY) ||
+      now >= (state.nextRetargetAt || 0) ||
+      Math.hypot(state.targetX - state.x, state.targetY - state.y) < 4
+    ) {
+      this.assignFacilityOwnerTarget(owner, state, baseX, baseY, now);
+    }
+
+    let desiredVX = 0;
+    let desiredVY = 0;
+    const isHolding = now < (state.holdUntil || 0);
+
+    if (!isHolding) {
+      const toTargetX = state.targetX - state.x;
+      const toTargetY = state.targetY - state.y;
+      const targetDist = Math.hypot(toTargetX, toTargetY);
+      if (targetDist > 0.001) {
+        const speed = Math.max(8, state.travelSpeed || owner.wanderSpeedMin || 20);
+        desiredVX = (toTargetX / targetDist) * speed;
+        desiredVY = (toTargetY / targetDist) * speed;
+      }
+    }
+
+    const coreX = this.core?.x;
+    const coreY = this.core?.y;
+    const approachRadius = Math.max(0, owner.approachRadius || 0);
+    if (Number.isFinite(coreX) && Number.isFinite(coreY) && approachRadius > 0) {
+      const toCoreX = coreX - state.x;
+      const toCoreY = coreY - state.y;
+      const coreDist = Math.hypot(toCoreX, toCoreY);
+      if (coreDist > 0.001 && coreDist < approachRadius) {
+        const nearRatio = (approachRadius - coreDist) / approachRadius;
+        const approachSpeed = Math.max(0, owner.approachSpeed || 0);
+        const minCoreGap = Math.max(0, owner.minCoreGap || 20);
+        if (coreDist > minCoreGap) {
+          desiredVX += (toCoreX / coreDist) * (approachSpeed * nearRatio);
+          desiredVY += (toCoreY / coreDist) * (approachSpeed * nearRatio);
+        }
+      }
+    }
+
+    const jitter = Math.max(0, owner.driftJitter || 10);
+    const jitterScale = isHolding ? 0.35 : 1;
+    desiredVX += Math.cos(now * 1.9 + state.noiseSeedX) * jitter * jitterScale;
+    desiredVY += Math.sin(now * 2.3 + state.noiseSeedY) * jitter * jitterScale;
+
+    const accel = Math.max(40, owner.wanderAccel || 140);
+    const deltaVX = desiredVX - state.vx;
+    const deltaVY = desiredVY - state.vy;
+    const deltaVMag = Math.hypot(deltaVX, deltaVY);
+    if (deltaVMag > 0.001) {
+      const maxDelta = accel * dt;
+      const step = Math.min(maxDelta, deltaVMag);
+      state.vx += (deltaVX / deltaVMag) * step;
+      state.vy += (deltaVY / deltaVMag) * step;
+    }
+
+    const dragRate = isHolding ? 5.5 : 3.1;
+    const drag = Math.max(0, 1 - dragRate * dt);
+    state.vx *= drag;
+    state.vy *= drag;
+
+    const maxSpeed = Math.max(12, (owner.wanderSpeedMax || 32) * 1.4);
+    const speedMag = Math.hypot(state.vx, state.vy);
+    if (speedMag > maxSpeed) {
+      const scale = maxSpeed / speedMag;
+      state.vx *= scale;
+      state.vy *= scale;
+    }
+
+    state.x += state.vx * dt;
+    state.y += state.vy * dt;
+
+    const leashRadius = Math.max(20, owner.leashRadius || 90);
+    const leashDX = state.x - baseX;
+    const leashDY = state.y - baseY;
+    const leashDist = Math.hypot(leashDX, leashDY);
+    if (leashDist > leashRadius && leashDist > 0.001) {
+      const scale = leashRadius / leashDist;
+      state.x = baseX + leashDX * scale;
+      state.y = baseY + leashDY * scale;
+      const nx = leashDX / leashDist;
+      const ny = leashDY / leashDist;
+      const outwardSpeed = state.vx * nx + state.vy * ny;
+      if (outwardSpeed > 0) {
+        state.vx -= nx * outwardSpeed;
+        state.vy -= ny * outwardSpeed;
+      }
+      state.targetX = baseX - nx * (leashRadius * (0.2 + Math.random() * 0.3));
+      state.targetY = baseY - ny * (leashRadius * (0.2 + Math.random() * 0.3));
+      state.nextRetargetAt = Math.min(state.nextRetargetAt || now, now + 0.25);
+    }
+
+    const finalSpeed = Math.hypot(state.vx, state.vy);
+    const motion = Math.min(1, finalSpeed / 70);
+    state.stepPhase += dt * (2.8 + finalSpeed * 0.14);
+    const bob = Math.sin(state.stepPhase) * (1 + motion * 1.4);
+    const leanTarget = Math.max(-0.28, Math.min(0.28, state.vx / 72));
+    state.lean = state.lean * 0.82 + leanTarget * 0.18;
+    const lookXTarget = Math.max(-2.8, Math.min(2.8, state.vx / 20));
+    const lookYTarget = Math.max(-1.8, Math.min(1.8, state.vy / 24));
+    state.lookX = state.lookX * 0.78 + lookXTarget * 0.22;
+    state.lookY = state.lookY * 0.78 + lookYTarget * 0.22;
+    state.scaleX = 1 + motion * 0.08;
+    state.scaleY = 1 - motion * 0.06;
+
+    if (!this.safeZoneOwnerActors) {
+      this.safeZoneOwnerActors = Object.create(null);
+    }
+    let ownerActor = this.safeZoneOwnerActors[stateKey];
+    if (!ownerActor) {
+      ownerActor = {
+        x: state.x,
+        y: state.y,
+        radius: 10,
+        isSpeaking: false,
+      };
+      this.safeZoneOwnerActors[stateKey] = ownerActor;
+    }
+    ownerActor.x = state.x;
+    ownerActor.y = state.y;
+    ownerActor.radius = 10;
+    ownerActor.facilityId = facility.id;
+    ownerActor.ownerName = owner.name;
+    ownerActor.ownerRole = owner.role;
+
+    return {
+      x: state.x,
+      y: state.y + bob + Math.sin(now * 2.2 + phase) * 1.1,
+      lean: state.lean,
+      lookX: state.lookX,
+      lookY: state.lookY,
+      scaleX: state.scaleX,
+      scaleY: state.scaleY,
+      motion,
+    };
+  };
+
   proto.renderFacilityOwner = function(facility, now, isActive) {
     const owner = facility.owner;
     if (!owner) return;
 
     const ctx = this.ctx;
-    const bob = Math.sin(now * 2.2 + (owner.phase || 0)) * 1.8;
-    const x = facility.x + (owner.offsetX || 0);
-    const y = facility.y + (owner.offsetY || 0) + bob;
+    const pos = this.updateFacilityOwnerPosition(facility, owner, now);
+    const x = pos.x;
+    const y = pos.y;
+    const lean = pos.lean || 0;
+    const lookX = pos.lookX || 0;
+    const lookY = pos.lookY || 0;
+    const scaleX = pos.scaleX || 1;
+    const scaleY = pos.scaleY || 1;
+    const motion = pos.motion || 0;
+    const blink = Math.sin(now * 1.75 + (owner.phase || 0) * 3.1) > 0.92 ? 0.25 : 1;
 
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(lean);
+    ctx.scale(scaleX, scaleY);
 
     ctx.globalAlpha = isActive ? 1 : 0.9;
     ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
@@ -329,48 +566,54 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.fill();
 
     if (owner.role === "merchant") {
+      const headX = lookX * 0.45;
+      const headY = -10 + lookY * 0.35;
+      const visorSwing = Math.sin(now * (5.8 + motion * 3.2) + (owner.phase || 0)) * (0.8 + motion * 1.6);
+
       ctx.fillStyle = owner.bodyColor;
       ctx.beginPath();
-      ctx.ellipse(0, 2, 10, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 2 + lookY * 0.2, 10, 11, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(0, -10, 8, 0, Math.PI * 2);
+      ctx.arc(headX, headY, 8, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = owner.gearColor;
-      ctx.fillRect(-7, -12, 14, 4);
+      ctx.fillRect(headX - 7, headY - 2, 14, 4);
 
       ctx.fillStyle = "#0a0a0a";
-      ctx.fillRect(-5, -11, 10, 2);
+      ctx.fillRect(headX - 5, headY - 1, 10, Math.max(1, 2 * blink));
 
       ctx.fillStyle = owner.accentColor;
-      ctx.fillRect(8, -2, 7, 4);
+      ctx.fillRect(8 + visorSwing, -2, 7, 4);
       ctx.strokeStyle = owner.accentColor;
       ctx.lineWidth = 1;
-      ctx.strokeRect(8, -2, 7, 4);
+      ctx.strokeRect(8 + visorSwing, -2, 7, 4);
     } else {
+      const toolSwing = Math.sin(now * (4.7 + motion * 2.4) + (owner.phase || 0)) * (1.4 + motion * 2.2);
+
       ctx.fillStyle = owner.bodyColor;
       ctx.beginPath();
-      ctx.ellipse(0, 2, 12, 10, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 2 + lookY * 0.2, 12, 10, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = owner.gearColor;
-      ctx.fillRect(-8, -13, 16, 8);
+      ctx.fillRect(-8 + lookX * 0.25, -13 + lookY * 0.2, 16, 8);
       ctx.fillStyle = "#111";
-      ctx.fillRect(-5, -10, 10, 2);
+      ctx.fillRect(-5 + lookX * 0.35, -10 + lookY * 0.2, 10, Math.max(1, 2 * blink));
 
       ctx.strokeStyle = owner.accentColor;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(10, 2);
-      ctx.lineTo(17, -2);
+      ctx.moveTo(10, 2 + toolSwing * 0.15);
+      ctx.lineTo(17, -2 + toolSwing * 0.25);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(17, -2);
-      ctx.lineTo(20, -5);
-      ctx.moveTo(17, -2);
-      ctx.lineTo(20, 1);
+      ctx.moveTo(17, -2 + toolSwing * 0.25);
+      ctx.lineTo(20, -5 + toolSwing * 0.2);
+      ctx.moveTo(17, -2 + toolSwing * 0.25);
+      ctx.lineTo(20, 1 + toolSwing * 0.2);
       ctx.stroke();
     }
 
@@ -608,7 +851,6 @@ export function applyRenderMixin(DefenseGameClass) {
     if (!this.isSafeZone) {
       this.renderMiningEffect(this.ctx, time);
     }
-    this.renderSafeZoneFacilities();
 
     if (this.isConquered) {
       if (!this.conqueredRenderLogged) {
@@ -1045,6 +1287,9 @@ export function applyRenderMixin(DefenseGameClass) {
       }
     }
 
+    // Keep facility visuals above the core when overlapping in Safe Zone.
+    this.renderSafeZoneFacilities();
+
     this.ctx.font = "bold 10px monospace";
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
@@ -1366,7 +1611,8 @@ export function applyRenderMixin(DefenseGameClass) {
       ctx.save();
       ctx.globalAlpha = bubble.opacity;
 
-      const textY = v.y - v.radius - 15;
+      const radius = Number.isFinite(v.radius) ? v.radius : 10;
+      const textY = v.y - radius - 15;
 
       ctx.font = "bold 13px 'VT323', 'Courier New', monospace";
       ctx.textAlign = "center";

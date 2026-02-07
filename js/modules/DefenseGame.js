@@ -323,9 +323,25 @@ export class DefenseGame {
           bodyColor: "#88ffcc",
           gearColor: "#ffe066",
           accentColor: "#00f0ff",
-          offsetX: -58,
+          offsetX: 58,
           offsetY: 22,
           phase: 0.35,
+          wanderMinRadius: 24,
+          wanderSpeedMin: 28,
+          wanderSpeedMax: 58,
+          wanderAccel: 180,
+          driftJitter: 18,
+          boostChance: 0.3,
+          boostMult: 1.3,
+          retargetMin: 0.6,
+          retargetMax: 1.8,
+          idleChance: 0.22,
+          idleMin: 0.15,
+          idleMax: 0.55,
+          approachRadius: 360,
+          approachSpeed: 70,
+          leashRadius: 170,
+          minCoreGap: 24,
         },
       },
       {
@@ -348,13 +364,30 @@ export class DefenseGame {
           bodyColor: "#ff9977",
           gearColor: "#666666",
           accentColor: "#ffcc88",
-          offsetX: 62,
+          offsetX: -62,
           offsetY: 20,
           phase: 1.1,
+          wanderMinRadius: 20,
+          wanderSpeedMin: 24,
+          wanderSpeedMax: 50,
+          wanderAccel: 160,
+          driftJitter: 14,
+          boostChance: 0.24,
+          boostMult: 1.22,
+          retargetMin: 0.7,
+          retargetMax: 2.0,
+          idleChance: 0.2,
+          idleMin: 0.2,
+          idleMax: 0.7,
+          approachRadius: 320,
+          approachSpeed: 58,
+          leashRadius: 156,
+          minCoreGap: 22,
         },
       },
     ];
     this.activeSafeZoneFacilityId = null;
+    this.safeZoneOwnerStates = Object.create(null);
     this.onSafeZoneFacilityInteract = null;
     this.safeZonePrompt = document.createElement("div");
     this.safeZonePrompt.id = "safezone-facility-prompt";
@@ -534,8 +567,14 @@ export class DefenseGame {
     this.droppedItems = [];
     this.collectorViruses = [];
     this.virusDialogues = null;
+    this.facilityDialogues = { upgrade_shop: [], dismantler: [] };
     this.activeSpeechBubbles = [];
+    this.safeZoneOwnerActors = Object.create(null);
+    this.facilityDialogueCooldowns = { upgrade_shop: 0, dismantler: 0 };
+    this.pendingFacilityVisits = Object.create(null);
+    this.facilityDialogueAttemptTimer = 0;
     this.loadVirusDialogues();
+    this.loadFacilityDialogues();
     this.slowFields = [];
     this.nextWaveId = 1;
 
@@ -878,17 +917,19 @@ export class DefenseGame {
     if (!Array.isArray(this.safeZoneFacilities) || this.safeZoneFacilities.length < 2) {
       return;
     }
-    const spreadX = Math.max(170, this.worldWidth * 0.12);
-    const offsetY = Math.max(90, this.worldHeight * 0.08);
+    const spreadX = Math.max(250, this.worldWidth * 0.18);
+    const offsetY = Math.max(130, this.worldHeight * 0.12);
+    const edgePadding = 90;
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
     const shop = this.safeZoneFacilities.find((facility) => facility.id === "upgrade_shop");
     const dismantler = this.safeZoneFacilities.find((facility) => facility.id === "dismantler");
     if (shop) {
-      shop.x = this.coreHome.x - spreadX;
-      shop.y = this.coreHome.y + offsetY - 8;
+      shop.x = clamp(this.coreHome.x - spreadX - 26, edgePadding, this.worldWidth - edgePadding);
+      shop.y = clamp(this.coreHome.y + offsetY + 6, edgePadding, this.worldHeight - edgePadding);
     }
     if (dismantler) {
-      dismantler.x = this.coreHome.x + spreadX;
-      dismantler.y = this.coreHome.y + offsetY + 10;
+      dismantler.x = clamp(this.coreHome.x + spreadX + 34, edgePadding, this.worldWidth - edgePadding);
+      dismantler.y = clamp(this.coreHome.y + offsetY + 26, edgePadding, this.worldHeight - edgePadding);
     }
   }
 
@@ -993,6 +1034,10 @@ export class DefenseGame {
     this.isSafeZone = (this.currentStageId === 0);
     this.isFarmingZone = (this.currentStageId === 3);
     this.activeSafeZoneFacilityId = null;
+    this.safeZoneOwnerActors = Object.create(null);
+    this.pendingFacilityVisits = Object.create(null);
+    this.facilityDialogueCooldowns = { upgrade_shop: 1.8, dismantler: 2.2 };
+    this.facilityDialogueAttemptTimer = 1.2;
     this.updateSafeZoneFacilityPrompt();
     this.updateRecallBtnVisibility();
 
@@ -1028,6 +1073,7 @@ export class DefenseGame {
     this.uiLayer.style.display = "none";
     this.hideSafeZoneFacilityPrompt();
     this.updateRecallBtnVisibility();
+    this.pendingFacilityVisits = Object.create(null);
 
     this.bgmManager.stop();
   }
@@ -1399,6 +1445,7 @@ export class DefenseGame {
     this.updateCollectorViruses(dt);
 
     this.updateSpeechBubbles();
+    this.updateSafeZoneFacilityDialogues(dt);
 
     if (this.isSafeZone) {
       if (Math.random() < 0.008) {
@@ -2472,29 +2519,22 @@ export class DefenseGame {
     };
 
     const config = this.alliedConfig;
-    let spawnEntries = null;
-    if (config && config.mainTypeData) {
-      spawnEntries = [];
-      for (let i = 0; i < config.mainCount; i++) {
-        spawnEntries.push({ type: config.mainType, data: config.mainTypeData });
-      }
-      for (let i = 0; i < config.subCount; i++) {
-        if (config.subTypeData) {
-          spawnEntries.push({ type: config.subType, data: config.subTypeData });
-        }
-      }
-      if (spawnEntries.length === 0) {
-        spawnEntries = null;
-      }
+    const count = 40;
+    const unlockedTypes = new Set(["SWARM"]);
+    if (Array.isArray(config?.safeZoneUnlockedTypes)) {
+      config.safeZoneUnlockedTypes.forEach((type) => {
+        if (type && virusTypes[type]) unlockedTypes.add(type);
+      });
+    } else {
+      if (config?.mainType && virusTypes[config.mainType]) unlockedTypes.add(config.mainType);
+      if (config?.subType && virusTypes[config.subType]) unlockedTypes.add(config.subType);
     }
-
-    const types = ["SWARM", "SWARM", "SWARM", "TANK", "HUNTER", "HUNTER", "BOMBER", "HEALER", "SWARM", "HUNTER", "SWARM", "BOMBER"];
-    const count = spawnEntries ? spawnEntries.length : 12 + Math.floor(Math.random() * 7);
+    const typePool = Array.from(unlockedTypes).filter((type) => !!virusTypes[type]);
+    if (typePool.length === 0) typePool.push("SWARM");
 
     for (let i = 0; i < count; i++) {
-      const entry = spawnEntries ? spawnEntries[i] : null;
-      const type = entry ? entry.type : types[i % types.length];
-      const typeData = entry ? entry.data : virusTypes[type];
+      const type = typePool[Math.floor(Math.random() * typePool.length)];
+      const typeData = virusTypes[type];
 
       if (!typeData) continue;
 
@@ -2533,7 +2573,7 @@ export class DefenseGame {
         spawnY = coreY + Math.sin(pushAngle) * 180;
       }
 
-      const useConfigBonuses = !!spawnEntries;
+      const useConfigBonuses = !!config;
       const pureBonus = useConfigBonuses && config?.isPureSpecialization ? config.pureBonus : 1.0;
       const hpValue = useConfigBonuses
         ? Math.floor(typeData.baseHp * config.hpMultiplier * pureBonus)
@@ -2861,6 +2901,161 @@ export class DefenseGame {
       console.warn('[DefenseGame] Failed to load virus dialogues:', e);
       this.virusDialogues = { battle: [], idle: [], hurt: [], kill: [] };
     }
+  }
+
+  async loadFacilityDialogues() {
+    try {
+      const response = await fetch("./js/data/facilityDialogues.json");
+      const parsed = await response.json();
+      this.facilityDialogues = {
+        upgrade_shop: Array.isArray(parsed?.upgrade_shop) ? parsed.upgrade_shop : [],
+        dismantler: Array.isArray(parsed?.dismantler) ? parsed.dismantler : [],
+      };
+      debugLog("Defense", "Facility dialogues loaded:", {
+        shop: this.facilityDialogues.upgrade_shop.length,
+        dismantler: this.facilityDialogues.dismantler.length,
+      });
+    } catch (e) {
+      debugWarn("Defense", "Failed to load facility dialogues", e);
+      this.facilityDialogues = { upgrade_shop: [], dismantler: [] };
+    }
+  }
+
+  getFacilityDialogueScenario(facilityId) {
+    const scenarios = this.facilityDialogues?.[facilityId];
+    if (!Array.isArray(scenarios) || scenarios.length === 0) return null;
+    return scenarios[Math.floor(Math.random() * scenarios.length)] || null;
+  }
+
+  startFacilityDialogueScenario(facilityId, ally, ownerActor) {
+    if (!ally || !ownerActor || ally.hp <= 0) return false;
+    if (ally.isSpeaking || ownerActor.isSpeaking) return false;
+
+    const scenario = this.getFacilityDialogueScenario(facilityId);
+    if (!scenario || !Array.isArray(scenario.turns) || scenario.turns.length === 0) return false;
+
+    let delay = 0;
+    let validTurnCount = 0;
+
+    scenario.turns.forEach((turn) => {
+      const text = `${turn?.text || ""}`.trim();
+      if (!text) return;
+      const speaker = turn?.speaker === "owner" ? ownerActor : ally;
+      const duration = Math.max(900, Math.min(2100, 500 + text.length * 70));
+
+      setTimeout(() => {
+        if (!this.isRunning || !this.isSafeZone) return;
+        if (!speaker || !Number.isFinite(speaker.x) || !Number.isFinite(speaker.y)) return;
+        this.createSpeechBubble(speaker, text, duration);
+      }, delay);
+
+      delay += duration + 140;
+      validTurnCount++;
+    });
+
+    if (validTurnCount === 0) return false;
+    this.facilityDialogueCooldowns[facilityId] = Math.max(
+      this.facilityDialogueCooldowns[facilityId] || 0,
+      6 + Math.random() * 7 + validTurnCount * 0.5
+    );
+    return true;
+  }
+
+  updateSafeZoneFacilityDialogues(dt) {
+    if (!this.isSafeZone || !this.isRunning) return;
+    if (!Array.isArray(this.safeZoneFacilities) || this.safeZoneFacilities.length === 0) return;
+
+    const now = performance.now();
+
+    this.safeZoneFacilities.forEach((facility) => {
+      const id = facility.id;
+      this.facilityDialogueCooldowns[id] = Math.max(
+        0,
+        (this.facilityDialogueCooldowns[id] || 0) - dt
+      );
+    });
+
+    Object.entries(this.pendingFacilityVisits).forEach(([facilityId, plan]) => {
+      const facility = this.safeZoneFacilities.find((f) => f.id === facilityId);
+      const ally = plan?.ally;
+      if (!facility || !ally || ally.hp <= 0 || !this.alliedViruses.includes(ally) || now > plan.expiresAt) {
+        if (ally) {
+          ally.facilityVisitTarget = null;
+          ally.facilityVisitUntil = 0;
+          ally.facilityVisitFacilityId = null;
+          ally.facilityVisitHold = 0;
+        }
+        delete this.pendingFacilityVisits[facilityId];
+        return;
+      }
+
+      if (!ally.facilityVisitTarget) {
+        ally.facilityVisitTarget = { x: plan.targetX, y: plan.targetY };
+      } else {
+        ally.facilityVisitTarget.x = plan.targetX;
+        ally.facilityVisitTarget.y = plan.targetY;
+      }
+      ally.facilityVisitUntil = plan.expiresAt;
+      ally.facilityVisitFacilityId = facilityId;
+
+      const ownerActor = this.safeZoneOwnerActors?.[facilityId];
+      if (!ownerActor) return;
+
+      const distToTarget = Math.hypot(ally.x - plan.targetX, ally.y - plan.targetY);
+      const distToOwner = Math.hypot(ally.x - ownerActor.x, ally.y - ownerActor.y);
+      if (distToTarget <= 24 && distToOwner <= 96) {
+        const started = this.startFacilityDialogueScenario(facilityId, ally, ownerActor);
+        if (started) {
+          ally.facilityVisitTarget = null;
+          ally.facilityVisitUntil = 0;
+          ally.facilityVisitFacilityId = null;
+          ally.facilityVisitHold = 0;
+          delete this.pendingFacilityVisits[facilityId];
+        }
+      }
+    });
+
+    this.facilityDialogueAttemptTimer = Math.max(0, this.facilityDialogueAttemptTimer - dt);
+    if (this.facilityDialogueAttemptTimer > 0) return;
+    this.facilityDialogueAttemptTimer = 0.7 + Math.random() * 0.8;
+
+    this.safeZoneFacilities.forEach((facility) => {
+      const id = facility.id;
+      if (this.facilityDialogueCooldowns[id] > 0) return;
+      if (this.pendingFacilityVisits[id]) return;
+      if (!Array.isArray(this.facilityDialogues?.[id]) || this.facilityDialogues[id].length === 0) return;
+      if (Math.random() > 0.42) return;
+
+      const candidates = this.alliedViruses.filter(
+        (v) =>
+          v.hp > 0 &&
+          !v.isSpeaking &&
+          !v.facilityVisitTarget &&
+          !v.chatPartner
+      );
+      if (candidates.length === 0) return;
+
+      const ownerAnchor = this.safeZoneOwnerActors?.[id] || facility;
+      const ally = candidates[Math.floor(Math.random() * candidates.length)];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 18 + Math.random() * 30;
+      const margin = 40;
+      const targetX = Math.max(
+        margin,
+        Math.min(this.canvas.width - margin, ownerAnchor.x + Math.cos(angle) * dist)
+      );
+      const targetY = Math.max(
+        margin,
+        Math.min(this.canvas.height - margin, ownerAnchor.y + Math.sin(angle) * dist)
+      );
+      const expiresAt = now + 11000;
+
+      this.pendingFacilityVisits[id] = { ally, targetX, targetY, expiresAt };
+      ally.facilityVisitTarget = { x: targetX, y: targetY };
+      ally.facilityVisitUntil = expiresAt;
+      ally.facilityVisitFacilityId = id;
+      ally.facilityVisitHold = 0;
+    });
   }
 
   

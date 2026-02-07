@@ -1,0 +1,3778 @@
+{
+  "upgrade_shop": [
+    {
+      "id": "shop_001",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "How much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        }
+      ]
+    },
+    {
+      "id": "shop_002",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 59 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_003",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this battery, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        }
+      ]
+    },
+    {
+      "id": "shop_004",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this part, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_005",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this lens, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 110 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_006",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this antenna, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_007",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this core, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        }
+      ]
+    },
+    {
+      "id": "shop_008",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this device, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_009",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this sensor, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_010",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this cable, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_011",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this board, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 212 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_012",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this drone, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 229 DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_013",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this kit, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_014",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this tool, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_015",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this glove, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 280 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_016",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this shield, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_017",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this chip, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_018",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_019",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this battery, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        }
+      ]
+    },
+    {
+      "id": "shop_020",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this part, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_021",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this lens, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 382 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_022",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this antenna, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 399 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_023",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this core, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_024",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this device, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_025",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this sensor, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 90 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_026",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this cable, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_027",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this board, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        }
+      ]
+    },
+    {
+      "id": "shop_028",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this drone, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_029",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this kit, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_030",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this tool, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_031",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this glove, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 192 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_032",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this shield, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 209 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_033",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this chip, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_034",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_035",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this battery, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 260 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_036",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this part, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_037",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this lens, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_038",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this antenna, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_039",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this core, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        }
+      ]
+    },
+    {
+      "id": "shop_040",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this device, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_041",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this sensor, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 362 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_042",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this cable, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 379 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_043",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this board, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        }
+      ]
+    },
+    {
+      "id": "shop_044",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this drone, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_045",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this kit, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 70 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_046",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this tool, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_047",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this glove, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        }
+      ]
+    },
+    {
+      "id": "shop_048",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this shield, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_049",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this chip, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_050",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_051",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this battery, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 172 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_052",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this part, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 189 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_053",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this lens, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_054",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this antenna, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_055",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this core, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 240 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_056",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this device, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_057",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this sensor, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_058",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this cable, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_059",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this board, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        }
+      ]
+    },
+    {
+      "id": "shop_060",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this drone, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_061",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this kit, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 342 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_062",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this tool, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 359 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_063",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this glove, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        }
+      ]
+    },
+    {
+      "id": "shop_064",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this shield, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_065",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this chip, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 50 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_066",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_067",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this battery, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_068",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this part, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_069",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this lens, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_070",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this antenna, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_071",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this core, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 152 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_072",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this device, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 169 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_073",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this sensor, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_074",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this cable, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_075",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this board, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 220 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_076",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this drone, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_077",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this kit, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_078",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this tool, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_079",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this glove, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        }
+      ]
+    },
+    {
+      "id": "shop_080",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this shield, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_081",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this chip, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 322 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_082",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 339 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_083",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this battery, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        }
+      ]
+    },
+    {
+      "id": "shop_084",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this part, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_085",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this lens, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 390 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_086",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this antenna, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_087",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this core, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        }
+      ]
+    },
+    {
+      "id": "shop_088",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this device, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_089",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this sensor, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_090",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this cable, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_091",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this board, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 132 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_092",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this drone, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 149 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_093",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this kit, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_094",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this tool, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_095",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this glove, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 200 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_096",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this shield, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_097",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this chip, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_098",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_099",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this battery, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        }
+      ]
+    },
+    {
+      "id": "shop_100",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this part, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_101",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this lens, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 302 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_102",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this antenna, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 319 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_103",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this core, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        }
+      ]
+    },
+    {
+      "id": "shop_104",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this device, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_105",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this sensor, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 370 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_106",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this cable, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_107",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this board, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        }
+      ]
+    },
+    {
+      "id": "shop_108",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this drone, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_109",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this kit, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_110",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this tool, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_111",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this glove, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 112 DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_112",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this shield, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 129 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_113",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this chip, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_114",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_115",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this battery, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 180 DATA."
+        }
+      ]
+    },
+    {
+      "id": "shop_116",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this part, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_117",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this lens, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_118",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this antenna, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_119",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this core, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        }
+      ]
+    },
+    {
+      "id": "shop_120",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this device, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    },
+    {
+      "id": "shop_121",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this sensor, how much is this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price query complete. 282 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_122",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this cable, price check please."
+        },
+        {
+          "speaker": "owner",
+          "text": "Fixed price table. 299 DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Dialog closed. Next customer."
+        }
+      ]
+    },
+    {
+      "id": "shop_123",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this board, can I buy this?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Sales denied for your profile."
+        }
+      ]
+    },
+    {
+      "id": "shop_124",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this drone, give me a quote."
+        },
+        {
+          "speaker": "owner",
+          "text": "No permission. Trade blocked."
+        }
+      ]
+    },
+    {
+      "id": "shop_125",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this kit, any discount?"
+        },
+        {
+          "speaker": "owner",
+          "text": "No special rate. 350 DATA."
+        },
+        {
+          "speaker": "ally",
+          "text": "Why not me?"
+        }
+      ]
+    },
+    {
+      "id": "shop_126",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this tool, cash price?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Low trust score. Prepay only."
+        }
+      ]
+    },
+    {
+      "id": "shop_127",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this glove, sell me one unit?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 1. Move quickly."
+        }
+      ]
+    },
+    {
+      "id": "shop_128",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this shield, is this in stock?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stock count: 0. Wait for patch."
+        }
+      ]
+    },
+    {
+      "id": "shop_129",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this chip, I need this now."
+        },
+        {
+          "speaker": "owner",
+          "text": "On-site base price applied."
+        },
+        {
+          "speaker": "ally",
+          "text": "That is too much."
+        }
+      ]
+    },
+    {
+      "id": "shop_130",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "this module, payment in DATA?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bargain mode disabled."
+        }
+      ]
+    }
+  ],
+  "dismantler": [
+    {
+      "id": "dismantler_001",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "How much for this junk?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Stop asking. 77 DATA. Toss it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_002",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 36 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_003",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 53 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_004",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 70 DATA only."
+        },
+        {
+          "speaker": "ally",
+          "text": "Okay, process it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_005",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_006",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_007",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        },
+        {
+          "speaker": "ally",
+          "text": "I will bring more."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_008",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_009",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_010",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Push it a little higher."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_011",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 189 DATA. Next!"
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_012",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 206 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_013",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 223 DATA at best!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Wait, keep one item."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_014",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 240 DATA only."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_015",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_016",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        },
+        {
+          "speaker": "ally",
+          "text": "Fine, do it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_017",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_018",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_019",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        },
+        {
+          "speaker": "ally",
+          "text": "That payout is rough."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_020",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_021",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 119 DATA. Next!"
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_022",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 136 DATA!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Calm down and listen."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_023",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 153 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_024",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 170 DATA only."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_025",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Better than expected."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_026",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_027",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_028",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Okay, process it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_029",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_030",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_031",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 49 DATA. Next!"
+        },
+        {
+          "speaker": "ally",
+          "text": "I will bring more."
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_032",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 66 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_033",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 83 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_034",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 100 DATA only."
+        },
+        {
+          "speaker": "ally",
+          "text": "Push it a little higher."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_035",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_036",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_037",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Wait, keep one item."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_038",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_039",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_040",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Fine, do it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_041",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 219 DATA. Next!"
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_042",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 236 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_043",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 253 DATA at best!"
+        },
+        {
+          "speaker": "ally",
+          "text": "That payout is rough."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_044",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 30 DATA only."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_045",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_046",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        },
+        {
+          "speaker": "ally",
+          "text": "Calm down and listen."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_047",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_048",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_049",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        },
+        {
+          "speaker": "ally",
+          "text": "Better than expected."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_050",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_051",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 149 DATA. Next!"
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_052",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 166 DATA!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Okay, process it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_053",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 183 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_054",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 200 DATA only."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_055",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        },
+        {
+          "speaker": "ally",
+          "text": "I will bring more."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_056",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_057",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_058",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Push it a little higher."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_059",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_060",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_061",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 79 DATA. Next!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Wait, keep one item."
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_062",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 96 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_063",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 113 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_064",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 130 DATA only."
+        },
+        {
+          "speaker": "ally",
+          "text": "Fine, do it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_065",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_066",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_067",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        },
+        {
+          "speaker": "ally",
+          "text": "That payout is rough."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_068",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_069",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_070",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Calm down and listen."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_071",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 249 DATA. Next!"
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_072",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 26 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_073",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 43 DATA at best!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Better than expected."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_074",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 60 DATA only."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_075",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_076",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        },
+        {
+          "speaker": "ally",
+          "text": "Okay, process it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_077",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_078",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_079",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        },
+        {
+          "speaker": "ally",
+          "text": "I will bring more."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_080",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_081",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 179 DATA. Next!"
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_082",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 196 DATA!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Push it a little higher."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_083",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 213 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_084",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 230 DATA only."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_085",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Wait, keep one item."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_086",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_087",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_088",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Fine, do it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_089",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_090",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_091",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 109 DATA. Next!"
+        },
+        {
+          "speaker": "ally",
+          "text": "That payout is rough."
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_092",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 126 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_093",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 143 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_094",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 160 DATA only."
+        },
+        {
+          "speaker": "ally",
+          "text": "Calm down and listen."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_095",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_096",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_097",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Better than expected."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_098",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_099",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_100",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Okay, process it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_101",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 39 DATA. Next!"
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_102",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 56 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_103",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 73 DATA at best!"
+        },
+        {
+          "speaker": "ally",
+          "text": "I will bring more."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_104",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 90 DATA only."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_105",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_106",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        },
+        {
+          "speaker": "ally",
+          "text": "Push it a little higher."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_107",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_108",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_109",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        },
+        {
+          "speaker": "ally",
+          "text": "Wait, keep one item."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_110",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_111",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 209 DATA. Next!"
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_112",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 226 DATA!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Fine, do it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_113",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 243 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_114",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 20 DATA only."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_115",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        },
+        {
+          "speaker": "ally",
+          "text": "That payout is rough."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_116",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_117",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bad battery, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_118",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "damaged lens, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Calm down and listen."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_119",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "bent module, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_120",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead drone, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_121",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dirty antenna, how much for dismantle?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Price? 139 DATA. Next!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Better than expected."
+        },
+        {
+          "speaker": "owner",
+          "text": "Next! Bring harder scrap."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_122",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "faulty sensor, convert this to DATA."
+        },
+        {
+          "speaker": "owner",
+          "text": "Crush it and you get 156 DATA!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_123",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "scrap cable, give me a value."
+        },
+        {
+          "speaker": "owner",
+          "text": "Pure scrap. 173 DATA at best!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_124",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "dead device, can I exchange here?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bad quality. 190 DATA only."
+        },
+        {
+          "speaker": "ally",
+          "text": "Okay, process it."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_125",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "worn kit, take this scrap."
+        },
+        {
+          "speaker": "owner",
+          "text": "Less talk. I can shred it now!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_126",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "old tool, is there a fee?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Condition is awful, still accepted."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_127",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "broken chip, bulk process possible?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Fee? My mood is the fee!"
+        },
+        {
+          "speaker": "ally",
+          "text": "I will bring more."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_128",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "cracked core, low grade still valid?"
+        },
+        {
+          "speaker": "owner",
+          "text": "Bulk? Yes. Regret later!"
+        }
+      ]
+    },
+    {
+      "id": "dismantler_129",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "burnt part, melt all leftovers."
+        },
+        {
+          "speaker": "owner",
+          "text": "This one is barely worth keeping."
+        }
+      ]
+    },
+    {
+      "id": "dismantler_130",
+      "turns": [
+        {
+          "speaker": "ally",
+          "text": "rusty board, say the unit price again."
+        },
+        {
+          "speaker": "owner",
+          "text": "Decide fast. I am busy!"
+        },
+        {
+          "speaker": "ally",
+          "text": "Push it a little higher."
+        }
+      ]
+    }
+  ]
+}

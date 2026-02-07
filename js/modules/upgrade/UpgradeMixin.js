@@ -1858,6 +1858,12 @@ export function applyUpgradeMixin(GameManagerClass) {
 
     // 순수 특화 보너스 (서브 없을 때)
     const isPureSpecialization = !subType;
+    const safeZoneUnlockedTypes = Object.keys(this.virusTypes).filter((typeName) =>
+      this.isVirusUnlocked(typeName)
+    );
+    if (!safeZoneUnlockedTypes.includes("SWARM")) {
+      safeZoneUnlockedTypes.unshift("SWARM");
+    }
 
     return {
       mainType,
@@ -1873,6 +1879,7 @@ export function applyUpgradeMixin(GameManagerClass) {
       synergy: synergy || null,
       isPureSpecialization,
       pureBonus: isPureSpecialization ? 1.3 : 1.0, // 순수 특화 +30%
+      safeZoneUnlockedTypes,
     };
   };
 
