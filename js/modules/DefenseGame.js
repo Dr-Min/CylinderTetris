@@ -573,6 +573,14 @@ export class DefenseGame {
     this.facilityDialogueCooldowns = { upgrade_shop: 0, dismantler: 0 };
     this.pendingFacilityVisits = Object.create(null);
     this.facilityDialogueAttemptTimer = 0;
+    this.facilityDialogueHistory = { upgrade_shop: [], dismantler: [] };
+    this.safeZoneCrowdHotspots = [];
+    this.safeZoneCrowdDirector = {
+      focusId: "plaza_core",
+      vibe: "steady",
+      shiftTimer: 0,
+      ambientSpeechTimer: 0,
+    };
     this.loadVirusDialogues();
     this.loadFacilityDialogues();
     this.slowFields = [];
@@ -931,6 +939,242 @@ export class DefenseGame {
       dismantler.x = clamp(this.coreHome.x + spreadX + 34, edgePadding, this.worldWidth - edgePadding);
       dismantler.y = clamp(this.coreHome.y + offsetY + 26, edgePadding, this.worldHeight - edgePadding);
     }
+    this.rebuildSafeZoneCrowdHotspots();
+  }
+
+  rebuildSafeZoneCrowdHotspots() {
+    const worldW = this.worldWidth || this.canvas.width;
+    const worldH = this.worldHeight || this.canvas.height;
+    const margin = 96;
+    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+    const shop = this.safeZoneFacilities.find((facility) => facility.id === "upgrade_shop");
+    const dismantler = this.safeZoneFacilities.find((facility) => facility.id === "dismantler");
+    const coreX = this.coreHome?.x || worldW * 0.5;
+    const coreY = this.coreHome?.y || worldH * 0.5;
+    const arcDist = Math.max(190, Math.min(worldW, worldH) * 0.15);
+
+    this.safeZoneCrowdHotspots = [
+      {
+        id: "plaza_core",
+        kind: "plaza",
+        x: clamp(coreX, margin, worldW - margin),
+        y: clamp(coreY + Math.max(120, worldH * 0.08), margin, worldH - margin),
+        radius: 130,
+        weight: 1.25,
+      },
+      {
+        id: "shop_lane",
+        kind: "facility",
+        facilityId: "upgrade_shop",
+        x: clamp((shop?.x || coreX - arcDist) + 24, margin, worldW - margin),
+        y: clamp((shop?.y || coreY + arcDist) + 56, margin, worldH - margin),
+        radius: 92,
+        weight: 1.05,
+      },
+      {
+        id: "dismantler_lane",
+        kind: "facility",
+        facilityId: "dismantler",
+        x: clamp((dismantler?.x || coreX + arcDist) - 28, margin, worldW - margin),
+        y: clamp((dismantler?.y || coreY + arcDist) + 54, margin, worldH - margin),
+        radius: 96,
+        weight: 1.05,
+      },
+      {
+        id: "north_walk",
+        kind: "walk",
+        x: clamp(coreX + worldW * 0.2, margin, worldW - margin),
+        y: clamp(coreY - worldH * 0.22, margin, worldH - margin),
+        radius: 88,
+        weight: 0.9,
+      },
+      {
+        id: "west_walk",
+        kind: "walk",
+        x: clamp(coreX - worldW * 0.24, margin, worldW - margin),
+        y: clamp(coreY + worldH * 0.04, margin, worldH - margin),
+        radius: 86,
+        weight: 0.88,
+      },
+      {
+        id: "east_walk",
+        kind: "walk",
+        x: clamp(coreX + worldW * 0.24, margin, worldW - margin),
+        y: clamp(coreY + worldH * 0.02, margin, worldH - margin),
+        radius: 86,
+        weight: 0.88,
+      },
+      {
+        id: "south_walk",
+        kind: "walk",
+        x: clamp(coreX, margin, worldW - margin),
+        y: clamp(coreY + worldH * 0.26, margin, worldH - margin),
+        radius: 94,
+        weight: 0.95,
+      },
+    ];
+  }
+
+  seedSafeZoneCrowdProfiles() {
+    if (!Array.isArray(this.alliedViruses) || this.alliedViruses.length === 0) return;
+
+    const total = this.alliedViruses.length;
+    const now = performance.now();
+    const agentCount = Math.max(8, Math.min(12, Math.floor(total * 0.24)));
+    const indexBag = this.alliedViruses.map((_, idx) => idx);
+
+    for (let i = indexBag.length - 1; i > 0; i--) {
+      const pick = Math.floor(Math.random() * (i + 1));
+      const tmp = indexBag[i];
+      indexBag[i] = indexBag[pick];
+      indexBag[pick] = tmp;
+    }
+
+    const agentSet = new Set(indexBag.slice(0, agentCount));
+    this.alliedViruses.forEach((ally, idx) => {
+      const role = agentSet.has(idx) ? "agent" : "ambient";
+      const roll = Math.random();
+      let persona = "social";
+      if (roll < 0.24) persona = "trader";
+      else if (roll < 0.54) persona = "social";
+      else if (roll < 0.78) persona = "scout";
+      else persona = "loner";
+
+      ally.crowdRole = role;
+      ally.personaType = persona;
+      ally.crowdEnergy = 0.3 + Math.random() * 0.7;
+      ally.crowdThinkAt = now + Math.random() * (role === "ambient" ? 1800 : 900);
+      ally.crowdTalkCooldownUntil = now + 1200 + Math.random() * 5200;
+      ally.crowdMoveJitter = Math.random() * Math.PI * 2;
+      ally.lastCrowdHotspotId = null;
+      ally.safeState = role === "ambient" ? "ambient" : ally.safeState;
+      if (role === "ambient") {
+        ally.chatPartner = null;
+      }
+    });
+  }
+
+  chooseSafeZoneCrowdHotspot(ally) {
+    const hotspots = this.safeZoneCrowdHotspots;
+    if (!Array.isArray(hotspots) || hotspots.length === 0) return null;
+    const focusId = this.safeZoneCrowdDirector?.focusId;
+    const persona = ally?.personaType || "social";
+
+    let totalWeight = 0;
+    const weighted = hotspots.map((spot) => {
+      let weight = Math.max(0.05, spot.weight || 1);
+      if (focusId && focusId === spot.id) weight *= 2.2;
+      if (ally?.lastCrowdHotspotId === spot.id) weight *= 0.45;
+      if (persona === "trader" && spot.kind === "facility") weight *= 1.6;
+      if (persona === "scout" && spot.kind === "walk") weight *= 1.35;
+      if (persona === "loner" && spot.kind === "plaza") weight *= 0.55;
+      if (persona === "social" && spot.kind === "plaza") weight *= 1.35;
+      totalWeight += weight;
+      return { spot, weight };
+    });
+
+    if (totalWeight <= 0.001) return hotspots[Math.floor(Math.random() * hotspots.length)] || null;
+
+    let r = Math.random() * totalWeight;
+    for (const entry of weighted) {
+      r -= entry.weight;
+      if (r <= 0) return entry.spot;
+    }
+    return weighted[weighted.length - 1]?.spot || null;
+  }
+
+  getAmbientSafeZoneLine(ally, hotspot) {
+    const persona = ally?.personaType || "social";
+    const nearFacility = hotspot?.facilityId;
+    const socialLine = this.getRandomDialogue("safeChat");
+    const soloLine = this.getRandomDialogue("safeSolo");
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    if (nearFacility === "upgrade_shop") {
+      const shopLines = [
+        "Price check complete. Budget not approved.",
+        "Queue discipline. I respect that.",
+        "Upgrade request pending confirmation.",
+        "Comparing module cost ratios.",
+        "Need more DATA before this deal.",
+      ];
+      return pick(shopLines);
+    }
+
+    if (nearFacility === "dismantler") {
+      const dismLines = [
+        "Scrap first, feelings later.",
+        "This looks broken enough to sell.",
+        "That quote was loud, but fair.",
+        "If it rattles, it has value.",
+        "I can hear metal screaming already.",
+      ];
+      return pick(dismLines);
+    }
+
+    if (persona === "social") return socialLine || soloLine;
+    if (persona === "loner") return soloLine || socialLine;
+    if (persona === "trader") return Math.random() < 0.5
+      ? (socialLine || soloLine)
+      : pick(["DATA flow is healthy.", "Looking for a better trade."]);
+    return Math.random() < 0.6 ? (soloLine || socialLine) : (socialLine || soloLine);
+  }
+
+  updateSafeZoneCrowdDirector(dt) {
+    if (!this.isSafeZone || !this.isRunning) return;
+    if (!Array.isArray(this.safeZoneCrowdHotspots) || this.safeZoneCrowdHotspots.length === 0) {
+      this.rebuildSafeZoneCrowdHotspots();
+    }
+
+    const director = this.safeZoneCrowdDirector;
+    if (!director) return;
+
+    director.shiftTimer = Math.max(0, (director.shiftTimer || 0) - dt);
+    director.ambientSpeechTimer = Math.max(0, (director.ambientSpeechTimer || 0) - dt);
+
+    if (director.shiftTimer <= 0) {
+      const hotspots = this.safeZoneCrowdHotspots;
+      const nextSpot = hotspots[Math.floor(Math.random() * hotspots.length)];
+      if (nextSpot) director.focusId = nextSpot.id;
+
+      const roll = Math.random();
+      if (roll < 0.28) director.vibe = "trade_rush";
+      else if (roll < 0.52) director.vibe = "scrap_rush";
+      else if (roll < 0.8) director.vibe = "social_wave";
+      else director.vibe = "quiet";
+      director.shiftTimer = 5.5 + Math.random() * 6.2;
+    }
+
+    if (director.ambientSpeechTimer <= 0 && this.alliedViruses.length > 0) {
+      director.ambientSpeechTimer = 1.1 + Math.random() * 2.1;
+      const focus = this.safeZoneCrowdHotspots.find((spot) => spot.id === director.focusId);
+      const now = performance.now();
+      let speaker = null;
+      let bestScore = -Infinity;
+
+      for (const ally of this.alliedViruses) {
+        if (ally.hp <= 0 || ally.isSpeaking || ally.crowdRole !== "ambient") continue;
+        if ((ally.crowdTalkCooldownUntil || 0) > now) continue;
+        let score = Math.random() * 0.6;
+        if (focus) {
+          const dist = Math.hypot(ally.x - focus.x, ally.y - focus.y);
+          score += Math.max(0, 1.2 - dist / 180);
+        }
+        if (ally.personaType === "social") score += 0.2;
+        if (score > bestScore) {
+          bestScore = score;
+          speaker = ally;
+        }
+      }
+
+      if (speaker) {
+        const line = this.getAmbientSafeZoneLine(speaker, focus);
+        if (line) {
+          this.createSpeechBubble(speaker, line, 1100 + Math.random() * 850);
+          speaker.crowdTalkCooldownUntil = now + 5200 + Math.random() * 4600;
+        }
+      }
+    }
   }
 
   hideSafeZoneFacilityPrompt() {
@@ -1038,6 +1282,13 @@ export class DefenseGame {
     this.pendingFacilityVisits = Object.create(null);
     this.facilityDialogueCooldowns = { upgrade_shop: 1.8, dismantler: 2.2 };
     this.facilityDialogueAttemptTimer = 1.2;
+    this.facilityDialogueHistory = { upgrade_shop: [], dismantler: [] };
+    this.safeZoneCrowdDirector = {
+      focusId: "plaza_core",
+      vibe: "steady",
+      shiftTimer: 2.4,
+      ambientSpeechTimer: 0.8,
+    };
     this.updateSafeZoneFacilityPrompt();
     this.updateRecallBtnVisibility();
 
@@ -1057,6 +1308,8 @@ export class DefenseGame {
     this.coreReturnAtHome = false;
 
     if (this.isSafeZone) {
+      this.rebuildSafeZoneCrowdHotspots();
+      this.seedSafeZoneCrowdProfiles();
       this.playBGMTrack('SAFE_ZONE');
     } else {
       this.playBGMTrack('DEFENSE');
@@ -1445,6 +1698,7 @@ export class DefenseGame {
     this.updateCollectorViruses(dt);
 
     this.updateSpeechBubbles();
+    this.updateSafeZoneCrowdDirector(dt);
     this.updateSafeZoneFacilityDialogues(dt);
 
     if (this.isSafeZone) {
@@ -2637,6 +2891,7 @@ export class DefenseGame {
     }
 
     debugLog("SafeZone", `Spawned ${this.alliedViruses.length} allied viruses`);
+    this.seedSafeZoneCrowdProfiles();
   }
 
   calculateStageBaseDifficulty() {
@@ -2924,7 +3179,84 @@ export class DefenseGame {
   getFacilityDialogueScenario(facilityId) {
     const scenarios = this.facilityDialogues?.[facilityId];
     if (!Array.isArray(scenarios) || scenarios.length === 0) return null;
-    return scenarios[Math.floor(Math.random() * scenarios.length)] || null;
+
+    const history = this.facilityDialogueHistory?.[facilityId] || [];
+    let pool = scenarios;
+    if (history.length > 0 && scenarios.length > history.length + 4) {
+      pool = scenarios.filter((entry) => entry?.id && !history.includes(entry.id));
+      if (pool.length === 0) pool = scenarios;
+    }
+
+    const picked = pool[Math.floor(Math.random() * pool.length)] || null;
+    if (picked?.id) {
+      if (!this.facilityDialogueHistory[facilityId]) {
+        this.facilityDialogueHistory[facilityId] = [];
+      }
+      this.facilityDialogueHistory[facilityId].push(picked.id);
+      if (this.facilityDialogueHistory[facilityId].length > 12) {
+        this.facilityDialogueHistory[facilityId].shift();
+      }
+    }
+    return picked;
+  }
+
+  getFacilityAdlibTurn(facilityId, ally) {
+    const persona = ally?.personaType || "social";
+    const pick = (list) => list[Math.floor(Math.random() * list.length)];
+    if (facilityId === "upgrade_shop") {
+      const ownerLines = [
+        "Policy unchanged. Purchase requires valid credentials.",
+        "Remote markup acknowledged. On-site rate remains fixed.",
+        "Inventory stable. Queue integrity maintained.",
+        "Request logged. Outcome: denied.",
+      ];
+      const allyLinesByPersona = {
+        trader: ["Understood. I will return with more DATA.", "Copy. Tracking better entry timing."],
+        scout: ["Signal received. I will verify alternatives.", "Noted. I will scout another module."],
+        loner: ["No argument. Leaving the line.", "Copy. I move alone anyway."],
+        social: ["Tough crowd. I will come back later.", "All right. Maybe next cycle."],
+      };
+      return Math.random() < 0.6
+        ? { speaker: "owner", text: pick(ownerLines) }
+        : { speaker: "ally", text: pick(allyLinesByPersona[persona] || allyLinesByPersona.social) };
+    }
+
+    const ownerLines = [
+      "If it rattles, it sells. Drop it here.",
+      "Less talking, more scrapping.",
+      "I quote once. Take it or leave it.",
+      "Bring rust, get DATA, move.",
+    ];
+    const allyLinesByPersona = {
+      trader: ["Fine. Your price is ugly, but workable.", "Deal. Convert it now."],
+      scout: ["Copy. Testing this route.", "Noted. I will bring cleaner parts next time."],
+      loner: ["Do the conversion. No lecture.", "I just need the DATA."],
+      social: ["You always shout, but the rate is fair.", "Okay, okay. Here is the junk."],
+    };
+    return Math.random() < 0.58
+      ? { speaker: "owner", text: pick(ownerLines) }
+      : { speaker: "ally", text: pick(allyLinesByPersona[persona] || allyLinesByPersona.social) };
+  }
+
+  buildFacilityDialogueTurns(facilityId, scenario, ally) {
+    const baseTurns = Array.isArray(scenario?.turns)
+      ? scenario.turns
+          .map((turn) => ({
+            speaker: turn?.speaker === "owner" ? "owner" : "ally",
+            text: `${turn?.text || ""}`.trim(),
+          }))
+          .filter((turn) => turn.text.length > 0)
+      : [];
+
+    if (baseTurns.length === 0) return [];
+
+    const turns = [...baseTurns];
+    if (turns.length < 4 && Math.random() < 0.5) {
+      const adlib = this.getFacilityAdlibTurn(facilityId, ally);
+      if (adlib?.text) turns.push(adlib);
+    }
+    if (turns.length > 4) turns.length = 4;
+    return turns;
   }
 
   startFacilityDialogueScenario(facilityId, ally, ownerActor) {
@@ -2932,12 +3264,13 @@ export class DefenseGame {
     if (ally.isSpeaking || ownerActor.isSpeaking) return false;
 
     const scenario = this.getFacilityDialogueScenario(facilityId);
-    if (!scenario || !Array.isArray(scenario.turns) || scenario.turns.length === 0) return false;
+    const turns = this.buildFacilityDialogueTurns(facilityId, scenario, ally);
+    if (turns.length === 0) return false;
 
     let delay = 0;
     let validTurnCount = 0;
 
-    scenario.turns.forEach((turn) => {
+    turns.forEach((turn) => {
       const text = `${turn?.text || ""}`.trim();
       if (!text) return;
       const speaker = turn?.speaker === "owner" ? ownerActor : ally;
@@ -3024,8 +3357,15 @@ export class DefenseGame {
       if (this.facilityDialogueCooldowns[id] > 0) return;
       if (this.pendingFacilityVisits[id]) return;
       if (!Array.isArray(this.facilityDialogues?.[id]) || this.facilityDialogues[id].length === 0) return;
-      if (Math.random() > 0.42) return;
+      const vibe = this.safeZoneCrowdDirector?.vibe || "steady";
+      let visitChance = 0.42;
+      if (vibe === "trade_rush" && id === "upgrade_shop") visitChance = 0.68;
+      else if (vibe === "scrap_rush" && id === "dismantler") visitChance = 0.68;
+      else if (vibe === "social_wave") visitChance = 0.5;
+      else if (vibe === "quiet") visitChance = 0.28;
+      if (Math.random() > visitChance) return;
 
+      const ownerAnchor = this.safeZoneOwnerActors?.[id] || facility;
       const candidates = this.alliedViruses.filter(
         (v) =>
           v.hp > 0 &&
@@ -3034,9 +3374,20 @@ export class DefenseGame {
           !v.chatPartner
       );
       if (candidates.length === 0) return;
-
-      const ownerAnchor = this.safeZoneOwnerActors?.[id] || facility;
-      const ally = candidates[Math.floor(Math.random() * candidates.length)];
+      let ally = candidates[0];
+      let bestScore = -Infinity;
+      candidates.forEach((candidate) => {
+        let score = Math.random() * 0.6;
+        if (candidate.crowdRole === "ambient") score += 0.08;
+        if (candidate.personaType === "trader" && id === "upgrade_shop") score += 0.45;
+        if (candidate.personaType === "scout" && id === "dismantler") score += 0.22;
+        const nearScore = 1 - Math.min(1, Math.hypot(candidate.x - ownerAnchor.x, candidate.y - ownerAnchor.y) / 280);
+        score += nearScore * 0.5;
+        if (score > bestScore) {
+          bestScore = score;
+          ally = candidate;
+        }
+      });
       const angle = Math.random() * Math.PI * 2;
       const dist = 18 + Math.random() * 30;
       const margin = 40;

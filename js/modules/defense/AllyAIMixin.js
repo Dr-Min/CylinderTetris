@@ -670,12 +670,104 @@ export function applyAllyAIMixin(DefenseGameClass) {
     v.y += (Math.random() - 0.5) * 0.5;
   }
 
+  proto.updateAmbientSafeZoneVirus = function(v, dt, screenW, screenH, margin, barrierRadius) {
+    if (!v.homeX) {
+      let homeX, homeY, distFromCore;
+      do {
+        homeX = margin + Math.random() * (screenW - margin * 2);
+        homeY = margin + Math.random() * (screenH - margin * 2);
+        distFromCore = Math.hypot(homeX - this.core.x, homeY - this.core.y);
+      } while (distFromCore < barrierRadius);
+
+      v.homeX = homeX;
+      v.homeY = homeY;
+      v.homeRadius = 70 + Math.random() * 90;
+    }
+
+    const now = performance.now();
+    const isFacilityVisitActive =
+      !!v.facilityVisitTarget &&
+      Number.isFinite(v.facilityVisitTarget.x) &&
+      Number.isFinite(v.facilityVisitTarget.y) &&
+      (v.facilityVisitUntil || 0) > now;
+
+    if (isFacilityVisitActive) {
+      this.smoothMoveToward(v, v.facilityVisitTarget.x, v.facilityVisitTarget.y, dt, 0.56);
+    } else if (v.facilityVisitTarget) {
+      v.facilityVisitTarget = null;
+      v.facilityVisitUntil = 0;
+      v.facilityVisitFacilityId = null;
+      v.facilityVisitHold = 0;
+    }
+
+    if (!isFacilityVisitActive) {
+      if (!v.crowdThinkAt || now >= v.crowdThinkAt || !Number.isFinite(v.wanderTargetX) || !Number.isFinite(v.wanderTargetY)) {
+        const hotspot = this.chooseSafeZoneCrowdHotspot ? this.chooseSafeZoneCrowdHotspot(v) : null;
+        const target = hotspot || { x: v.homeX, y: v.homeY, radius: v.homeRadius || 90 };
+        const targetRadius = Math.max(20, (target.radius || 80) * (0.35 + Math.random() * 0.5));
+        const angle = Math.random() * Math.PI * 2;
+
+        v.lastCrowdHotspotId = hotspot?.id || null;
+        v.wanderTargetX = target.x + Math.cos(angle) * targetRadius;
+        v.wanderTargetY = target.y + Math.sin(angle) * targetRadius;
+        v.wanderTargetX = Math.max(margin, Math.min(screenW - margin, v.wanderTargetX));
+        v.wanderTargetY = Math.max(margin, Math.min(screenH - margin, v.wanderTargetY));
+
+        const stateRoll = Math.random();
+        if (stateRoll < 0.2) {
+          v.ambientState = "pause";
+          v.ambientStateUntil = now + 700 + Math.random() * 1400;
+        } else if (stateRoll < 0.4) {
+          v.ambientState = "inspect";
+          v.ambientStateUntil = now + 900 + Math.random() * 1700;
+        } else {
+          v.ambientState = "stroll";
+          v.ambientStateUntil = now + 1200 + Math.random() * 2000;
+        }
+
+        const cadence = v.personaType === "scout" ? 900 : 1200;
+        v.crowdThinkAt = now + cadence + Math.random() * 1700;
+      }
+
+      if (v.ambientState === "pause" && now < (v.ambientStateUntil || 0)) {
+        v.vx = (v.vx || 0) * 0.82;
+        v.vy = (v.vy || 0) * 0.82;
+      } else if (v.ambientState === "inspect") {
+        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.2 + (v.crowdEnergy || 0.5) * 0.1);
+      } else {
+        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.3 + (v.crowdEnergy || 0.5) * 0.2);
+      }
+    }
+
+    v.crowdMoveJitter = (v.crowdMoveJitter || 0) + dt * (1.6 + (v.crowdEnergy || 0.5));
+    v.x += Math.sin(v.crowdMoveJitter) * 0.12;
+    v.y += Math.cos(v.crowdMoveJitter * 0.9) * 0.1;
+
+    const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
+    if (distFromCore < 100 && distFromCore > 0) {
+      const pushAngle = Math.atan2(v.y - this.core.y, v.x - this.core.x);
+      const pushStrength = (1 - distFromCore / 100) * 1.8;
+      v.x += Math.cos(pushAngle) * pushStrength;
+      v.y += Math.sin(pushAngle) * pushStrength;
+    }
+
+    v.x = Math.max(margin, Math.min(screenW - margin, v.x));
+    v.y = Math.max(margin, Math.min(screenH - margin, v.y));
+    v.wanderTargetX = Math.max(margin, Math.min(screenW - margin, v.wanderTargetX || v.x));
+    v.wanderTargetY = Math.max(margin, Math.min(screenH - margin, v.wanderTargetY || v.y));
+  }
+
   proto.safeZoneWander = function(v, dt) {
     const screenW = this.worldWidth || this.canvas.width;
     const screenH = this.worldHeight || this.canvas.height;
     const margin = 40;
 
     const barrierRadius = (this.core.shieldRadius || 70) + 20;
+
+    if (v.crowdRole === "ambient") {
+      this.updateAmbientSafeZoneVirus(v, dt, screenW, screenH, margin, barrierRadius);
+      return;
+    }
 
     if (!v.homeX) {
       let homeX, homeY, distFromCore;
@@ -745,6 +837,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
           if (roll < 0.5 && this.alliedViruses.length > 1) {
             const nearbyFriends = this.alliedViruses.filter(a =>
               a !== v &&
+              a.crowdRole !== "ambient" &&
               a.safeState !== 'approaching' &&
               Math.hypot(a.x - v.homeX, a.y - v.homeY) < 250
             );
@@ -762,6 +855,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
           } else if (roll < 0.65) {
             const farFriends = this.alliedViruses.filter(a =>
               a !== v &&
+              a.crowdRole !== "ambient" &&
               Math.hypot(a.homeX - v.homeX, a.homeY - v.homeY) > 150
             );
 
