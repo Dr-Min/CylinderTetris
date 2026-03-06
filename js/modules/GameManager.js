@@ -1239,11 +1239,14 @@ export class GameManager {
 
   async showCommandMenu() {
     const currentStage = this.stageManager.getCurrentStage();
+    const isBossStage =
+      currentStage?.type === "boss" || (this.defenseGame && this.defenseGame.isBossFight);
 
     // 최대 페이지 도달 시 점령 옵션 추가
     const isConquerReady =
       this.defenseGame &&
       !this.defenseGame.isSafeZone &&
+      !isBossStage &&
       this.defenseGame.currentPage >= (this.defenseGame.maxPages || 12);
 
     const choices = [
@@ -1525,6 +1528,13 @@ export class GameManager {
 
   // 터미널에서 점령 선택 시
   async handleConquerFromTerminal() {
+    const currentStage = this.stageManager.getCurrentStage();
+    if (currentStage?.type === "boss" || this.defenseGame?.isBossFight) {
+      await this.terminal.printSystemMessage("CONQUEST unavailable during boss fight.");
+      await this.showCommandMenu();
+      return;
+    }
+
     // 1. 점령 시작 메시지
     await this.terminal.printSystemMessage("INITIATING CONQUEST PROTOCOL...");
 
@@ -3334,16 +3344,30 @@ export class GameManager {
    * 보스전 시작
    */
   endBossFight() {
-    if (!this.defenseGame.isBossFight) return;
+    const hasBossState =
+      this.defenseGame.isBossFight || this.isBossBreachMode || !!this._bossTetrisCallbacksBackup;
+    if (!hasBossState) return;
 
     debugLog("Boss", "Ending boss fight");
 
+    if (typeof this.stopBossInterferenceLoop === "function") {
+      this.stopBossInterferenceLoop();
+    }
+
     this.bossManager.stop();
+    this.bossManager.onInterference = null;
+    this.bossManager.onBossDefeated = null;
+    this.bossManager.onPhaseChange = null;
+    this.bossManager.onBreachReady = null;
     this.defenseGame.isBossFight = false;
     this.defenseGame.bossManager = null;
     this.defenseGame.onBreachReady = null;
+    this.defenseGame.breachReadyShown = false;
     this.isBossBreachMode = false;
     this.tetrisGame.endBossFight();
+    if (typeof this.restoreTetrisCallbacksFromBoss === "function") {
+      this.restoreTetrisCallbacksFromBoss();
+    }
   }
 
   /**
@@ -3353,8 +3377,8 @@ export class GameManager {
     debugLog("Boss", "BOSS DEFEATED!");
 
     // 방해 루프 중지
-    if (this.bossInterferenceInterval) {
-      clearInterval(this.bossInterferenceInterval);
+    if (typeof this.stopBossInterferenceLoop === "function") {
+      this.stopBossInterferenceLoop();
     }
 
     // 테트리스 종료
@@ -3366,6 +3390,7 @@ export class GameManager {
 
     // 스테이지 점령
     const currentStage = this.stageManager.getCurrentStage();
+    const isFirstClear = !!currentStage && !currentStage.conquered;
     if (currentStage) {
       this.stageManager.conquerStage(currentStage.id);
     }
@@ -3382,16 +3407,20 @@ export class GameManager {
     await this.terminal.printSystemMessage('');
 
     // 보상 지급
-    const stageId = this.defenseGame?.currentStageId || 0;
-    const rewardScale = this.getStageRewardScale(stageId);
-    const reward = Math.floor(10000 * rewardScale);
-    this.currentMoney += reward;
-    this.saveMoney();
-    await this.terminal.printSystemMessage(`REWARD: +${reward} DATA`);
+    if (isFirstClear) {
+      const stageId = currentStage?.id ?? this.defenseGame?.currentStageId ?? 0;
+      const rewardScale = this.getStageRewardScale(stageId);
+      const reward = Math.floor(10000 * rewardScale);
+      this.currentMoney += reward;
+      this.saveMoney();
+      await this.terminal.printSystemMessage(`REWARD: +${reward} DATA`);
+    } else {
+      await this.terminal.printSystemMessage("REWARD: 0 DATA (already conquered)");
+    }
 
     // 디펜스 모드로 복귀
     this.switchToDefenseMode();
-    this.defenseGame.setConquered(true);
+    this.defenseGame.setConqueredState(true);
     this.defenseGame.resume();
 
     await this.showCommandMenu();

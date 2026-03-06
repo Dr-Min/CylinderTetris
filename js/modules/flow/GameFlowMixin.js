@@ -690,6 +690,30 @@ export function applyGameFlowMixin(GameManagerClass) {
     // 난이도 상승 등 추가 처리가 필요하다면 여기서
   }
 
+  proto.stopBossInterferenceLoop = function() {
+    if (this.bossInterferenceInterval) {
+      clearInterval(this.bossInterferenceInterval);
+      this.bossInterferenceInterval = null;
+    }
+  }
+
+  proto.backupTetrisCallbacksForBoss = function() {
+    if (this._bossTetrisCallbacksBackup || !this.tetrisGame) return;
+    this._bossTetrisCallbacksBackup = {
+      onStageClear: this.tetrisGame.onStageClear,
+      onGameOver: this.tetrisGame.onGameOver,
+      onLineCleared: this.tetrisGame.onLineCleared,
+    };
+  }
+
+  proto.restoreTetrisCallbacksFromBoss = function() {
+    if (!this._bossTetrisCallbacksBackup || !this.tetrisGame) return;
+    this.tetrisGame.onStageClear = this._bossTetrisCallbacksBackup.onStageClear;
+    this.tetrisGame.onGameOver = this._bossTetrisCallbacksBackup.onGameOver;
+    this.tetrisGame.onLineCleared = this._bossTetrisCallbacksBackup.onLineCleared;
+    this._bossTetrisCallbacksBackup = null;
+  }
+
   proto.startBossFight = function() {
     debugLog("Boss", "Starting boss fight!");
 
@@ -730,6 +754,10 @@ export function applyGameFlowMixin(GameManagerClass) {
 
     if (choice === 'breach') {
       await this.startBossBreach();
+    } else {
+      this.bossManager.deferBreach(80);
+      this.defenseGame.breachReadyShown = false;
+      await this.terminal.printSystemMessage('Breach deferred. Continue defense.');
     }
   }
 
@@ -746,10 +774,12 @@ export function applyGameFlowMixin(GameManagerClass) {
       isMiniDisplay: this.defenseGame?.isMiniDisplay,
     });
 
-    // 테트리스 모드로 전환
-    
-
     // 테트리스에 보스전 모드 설정
+    if (!this.bossManager.startBreach()) {
+      await this.terminal.printSystemMessage('BREACH NOT READY');
+      return;
+    }
+
     this.tetrisGame.startBossFight(this.bossManager);
     this.isBossBreachMode = true;
 
@@ -765,6 +795,7 @@ export function applyGameFlowMixin(GameManagerClass) {
     await this.terminal.printSystemMessage('BREACH INITIATED - Clear 3 lines to damage core!');
 
     // 테트리스 콜백 설정
+    this.backupTetrisCallbacksForBoss();
     this.tetrisGame.onStageClear = () => this.handleBossBreachSuccess();
     this.tetrisGame.onGameOver = () => this.handleBossBreachFail();
     this.tetrisGame.onLineCleared = (lineNum) => this.handlePuzzleLineCleared(lineNum);
@@ -794,13 +825,11 @@ export function applyGameFlowMixin(GameManagerClass) {
    * 보스 방해 업데이트 루프
    */
   proto.startBossInterferenceLoop = function() {
-    if (this.bossInterferenceInterval) {
-      clearInterval(this.bossInterferenceInterval);
-    }
+    this.stopBossInterferenceLoop();
 
     this.bossInterferenceInterval = setInterval(() => {
       if (!this.tetrisGame.state.isPlaying || !this.tetrisGame.state.isBossFight) {
-        clearInterval(this.bossInterferenceInterval);
+        this.stopBossInterferenceLoop();
         return;
       }
 
@@ -817,21 +846,21 @@ export function applyGameFlowMixin(GameManagerClass) {
     this.isBossBreachMode = false;
 
     // 방해 루프 중지
-    if (this.bossInterferenceInterval) {
-      clearInterval(this.bossInterferenceInterval);
-    }
+    this.stopBossInterferenceLoop();
 
     // 보스에게 데미지
     const defeated = this.bossManager.dealDamage(20);
 
     if (defeated) {
       // 보스 처치 - handleBossDefeated에서 처리
+      this.restoreTetrisCallbacksFromBoss();
       return;
     }
 
     // 테트리스 종료, 디펜스로 복귀
     this.tetrisGame.state.isPlaying = false;
     this.tetrisGame.endBossFight();
+    this.restoreTetrisCallbacksFromBoss();
 
     // 침투 게이지 리셋
     this.defenseGame.breachReadyShown = false;
@@ -857,9 +886,7 @@ export function applyGameFlowMixin(GameManagerClass) {
     this.isBossBreachMode = false;
 
     // 방해 루프 중지
-    if (this.bossInterferenceInterval) {
-      clearInterval(this.bossInterferenceInterval);
-    }
+    this.stopBossInterferenceLoop();
 
     // BossManager에 실패 알림
     this.bossManager.onBreachFailed();
@@ -867,6 +894,7 @@ export function applyGameFlowMixin(GameManagerClass) {
     // 테트리스 종료
     this.tetrisGame.state.isPlaying = false;
     this.tetrisGame.endBossFight();
+    this.restoreTetrisCallbacksFromBoss();
 
     await this.terminal.printSystemMessage('BREACH FAILED! Core firewall restored.');
     await this.terminal.printSystemMessage('Breach gauge reset. Continue defense.');

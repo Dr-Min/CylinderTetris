@@ -1427,7 +1427,7 @@ export function applyRenderMixin(DefenseGameClass) {
 
       if (this.isBossFight && this.bossManager) {
         const hpSpan = document.getElementById("conquest-core-hp");
-        if (hpSpan) hpSpan.innerText = "TODO" + Math.ceil(this.bossManager.bossHP) + "%";
+        if (hpSpan) hpSpan.innerText = "♥ " + Math.ceil(this.bossManager.bossHP) + "%";
       }
     }
   }

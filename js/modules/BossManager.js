@@ -189,6 +189,13 @@ export class BossManager {
         this.isBreachReady = false;
         this.clearActiveEffects();
     }
+
+    deferBreach(resumeGauge = 80) {
+        if (!this.isActive) return;
+        const gauge = Math.max(0, Math.min(this.maxBreachGauge - 1, resumeGauge));
+        this.breachGauge = gauge;
+        this.isBreachReady = false;
+    }
     
     /**
      * 페이즈 전환 체크
