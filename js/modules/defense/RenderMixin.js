@@ -5,7 +5,7 @@
 export function applyRenderMixin(DefenseGameClass) {
   const proto = DefenseGameClass.prototype;
 
-  proto.renderConqueredVisuals = function() {
+  proto.renderConqueredVisuals = function () {
     const ctx = this.ctx;
     const x = this.shieldAnchor.x;
     const y = this.shieldAnchor.y;
@@ -144,8 +144,8 @@ export function applyRenderMixin(DefenseGameClass) {
   }
 
 
-  
-  proto.renderDroppedItems = function() {
+
+  proto.renderDroppedItems = function () {
     const ctx = this.ctx;
     const now = performance.now();
 
@@ -186,8 +186,8 @@ export function applyRenderMixin(DefenseGameClass) {
     });
   }
 
-  
-  proto.renderCollectorViruses = function() {
+
+  proto.renderCollectorViruses = function () {
     const ctx = this.ctx;
     const time = performance.now() / 1000;
 
@@ -254,7 +254,7 @@ export function applyRenderMixin(DefenseGameClass) {
     });
   }
 
-  proto.drawFacilityBox = function(w, h, d, frontColor, topColor, sideColor, strokeColor) {
+  proto.drawFacilityBox = function (w, h, d, frontColor, topColor, sideColor, strokeColor) {
     const ctx = this.ctx;
 
     ctx.fillStyle = frontColor;
@@ -293,7 +293,7 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.stroke();
   };
 
-  proto.renderFacilityLabel = function(facility, actionText, isActive, labelY) {
+  proto.renderFacilityLabel = function (facility, actionText, isActive, labelY) {
     const ctx = this.ctx;
     const inputHint = this.isMobile ? "TAP" : "CLICK";
 
@@ -310,7 +310,7 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.globalAlpha = 1;
   };
 
-  proto.assignFacilityOwnerTarget = function(owner, state, baseX, baseY, now) {
+  proto.assignFacilityOwnerTarget = function (owner, state, baseX, baseY, now) {
     const leashRadius = Math.max(20, owner.leashRadius || 90);
     const minRadius = Math.min(
       Math.max(6, owner.wanderMinRadius || 16),
@@ -345,7 +345,7 @@ export function applyRenderMixin(DefenseGameClass) {
     }
   };
 
-  proto.updateFacilityOwnerPosition = function(facility, owner, now) {
+  proto.updateFacilityOwnerPosition = function (facility, owner, now) {
     if (!this.safeZoneOwnerStates) {
       this.safeZoneOwnerStates = Object.create(null);
     }
@@ -538,7 +538,7 @@ export function applyRenderMixin(DefenseGameClass) {
     };
   };
 
-  proto.renderFacilityOwner = function(facility, now, isActive) {
+  proto.renderFacilityOwner = function (facility, now, isActive) {
     const owner = facility.owner;
     if (!owner) return;
 
@@ -627,7 +627,7 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   };
 
-  proto.renderUpgradeShopFacility = function(facility, now, isActive) {
+  proto.renderUpgradeShopFacility = function (facility, now, isActive) {
     const ctx = this.ctx;
     const pulse = 0.8 + Math.sin(now * 2.8) * 0.2;
     const w = 58;
@@ -710,7 +710,7 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   };
 
-  proto.renderDismantlerFacility = function(facility, now, isActive) {
+  proto.renderDismantlerFacility = function (facility, now, isActive) {
     const ctx = this.ctx;
     const w = 98;
     const h = 34;
@@ -796,7 +796,7 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   };
 
-  proto.renderSafeZoneFacilities = function() {
+  proto.renderSafeZoneFacilities = function () {
     if (!this.isSafeZone || !Array.isArray(this.safeZoneFacilities)) return;
 
     const now = performance.now() / 1000;
@@ -813,8 +813,8 @@ export function applyRenderMixin(DefenseGameClass) {
     });
   };
 
-  
-  proto.render = function() {
+
+  proto.render = function () {
     if (!this.renderDebugFrameCount) this.renderDebugFrameCount = 0;
 
     const shouldLog = this.renderDebugFrameCount < 3;
@@ -1203,17 +1203,50 @@ export function applyRenderMixin(DefenseGameClass) {
     });
     this.ctx.shadowBlur = 0;
 
+    if (!this.enemySprites) {
+      this.initEnemySprites();
+    }
+
     this.enemies.forEach((e) => {
-      this.ctx.fillStyle = "#ff3333";
-      this.ctx.beginPath();
-      this.ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-      this.ctx.fill();
+      this.ctx.save();
+
+      this.ctx.translate(e.x, e.y);
+      if (e.rotation) {
+        this.ctx.rotate(e.rotation);
+      } else {
+        // 기본 회전각(코어 방향 등) 계산 (임시)
+        const angle = Math.atan2(this.core.y - e.y, this.core.x - e.x);
+        this.ctx.rotate(angle);
+      }
+
+      const type = e.type || e.virusType || 'GRUNT';
+      const sprite = this.enemySprites[type] || this.enemySprites['GRUNT'];
+
+      const scale = e.radius / 20;
+      const drawSize = 80 * scale;
+
+      this.ctx.globalAlpha = e.isStealth ? 0.2 : 1.0;
+
+      // ELITE 파동 이펙트 (동적 스케일링 필요)
+      if (type === 'ELITE') {
+        const pulse = (Date.now() % 1000) / 1000;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, e.radius * 1.5 + pulse * 20, 0, Math.PI * 2);
+        this.ctx.strokeStyle = `rgba(0, 255, 170, ${1 - pulse})`;
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+      }
+
+      this.ctx.drawImage(sprite, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+      this.ctx.globalAlpha = 1.0;
+
+      this.ctx.restore();
 
       const hpPct = Math.max(0, Math.min(1, e.hp / e.maxHp));
-      this.ctx.fillStyle = "#550000";
-      this.ctx.fillRect(e.x - 10, e.y - 20, 20, 4);
-      this.ctx.fillStyle = "#ff0000";
-      this.ctx.fillRect(e.x - 10, e.y - 20, 20 * hpPct, 4);
+      this.ctx.fillStyle = e.isStealth ? "rgba(85,0,0,0)" : "#550000";
+      this.ctx.fillRect(e.x - 10, e.y - e.radius - 10, 20, 4);
+      this.ctx.fillStyle = e.isStealth ? "rgba(255,0,0,0)" : (e.color || "#ff0000");
+      this.ctx.fillRect(e.x - 10, e.y - e.radius - 10, 20 * hpPct, 4);
     });
 
     const coreScale = this.core.scale || 1;
@@ -1432,8 +1465,8 @@ export function applyRenderMixin(DefenseGameClass) {
     }
   }
 
-  
-  proto.renderBossUI = function() {
+
+  proto.renderBossUI = function () {
     const status = this.bossManager.getStatus();
     const ctx = this.ctx;
     const canvasWidth = this.canvas.width;
@@ -1529,8 +1562,8 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   }
 
-  
-  proto.renderStaticEffects = function() {
+
+  proto.renderStaticEffects = function () {
     const ss = this.staticSystem;
     const se = this.staticEffects;
     const chargeRatio = ss.currentCharge / ss.maxCharge;
@@ -1600,8 +1633,8 @@ export function applyRenderMixin(DefenseGameClass) {
 
   }
 
-  
-  proto.renderSpeechBubbles = function() {
+
+  proto.renderSpeechBubbles = function () {
     const ctx = this.ctx;
 
     this.activeSpeechBubbles.forEach(bubble => {
@@ -1630,8 +1663,8 @@ export function applyRenderMixin(DefenseGameClass) {
   }
 
 
-  
-  proto.renderMiningEffect = function(ctx, time) {
+
+  proto.renderMiningEffect = function (ctx, time) {
     if (!this.miningManager) return;
     const cx = this.shieldAnchor.x;
     const cy = this.shieldAnchor.y;
@@ -1687,4 +1720,157 @@ export function applyRenderMixin(DefenseGameClass) {
 
     ctx.restore();
   }
+
+  proto.initEnemySprites = function () {
+    this.enemySprites = {};
+    const baseR = 20;
+    const canvasSize = 80;
+    const center = canvasSize / 2;
+
+    const createRender = (type, color, drawFn) => {
+      const cvs = document.createElement('canvas');
+      cvs.width = canvasSize;
+      cvs.height = canvasSize;
+      const ctx = cvs.getContext('2d');
+
+      // 고급 네온 글로우 효과 설정
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 15;
+      ctx.lineJoin = 'round';
+
+      // 중심 이동
+      ctx.translate(center, center);
+
+      drawFn(ctx, baseR);
+      return cvs;
+    };
+
+    // 1. TANK (수호자 - 두터운 육각형 진형)
+    this.enemySprites['TANK'] = createRender('TANK', '#aa0000', (ctx, r) => { // 다크 크림슨
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        ctx.lineTo(r * Math.cos(i * Math.PI / 3), r * Math.sin(i * Math.PI / 3));
+      }
+      ctx.closePath();
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, '#ff4444');
+      grad.addColorStop(1, '#880000');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    });
+
+    // 2. ELITE (지휘관 - 다이아몬드 코어)
+    this.enemySprites['ELITE'] = createRender('ELITE', '#ff0055', (ctx, r) => { // 밝은 핑크-레드
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 1.5);
+      ctx.lineTo(r * 1.5, 0);
+      ctx.lineTo(0, r * 1.5);
+      ctx.lineTo(-r * 1.5, 0);
+      ctx.closePath();
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.5);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(1, '#ff0055');
+      ctx.fillStyle = grad;
+      ctx.fill();
+    });
+
+    // 3. RUNNER (타격대 - 날카로운 화살촉)
+    this.enemySprites['RUNNER'] = createRender('RUNNER', '#ff5500', (ctx, r) => { // 블러드 오렌지
+      ctx.beginPath();
+      ctx.moveTo(r * 1.5, 0);
+      ctx.lineTo(-r, r);
+      ctx.lineTo(-r * 0.5, 0);
+      ctx.lineTo(-r, -r);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(-r, 0, r * 1.5, 0);
+      grad.addColorStop(0, '#cc2200');
+      grad.addColorStop(1, '#ff6600');
+      ctx.fillStyle = grad;
+      ctx.fill();
+    });
+
+    // 4. ASSASSIN (스텔스 - 닌자 표창)
+    this.enemySprites['ASSASSIN'] = createRender('ASSASSIN', '#550022', (ctx, r) => { // 다크 버건디
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        ctx.lineTo(r * Math.cos(i * Math.PI / 2), r * Math.sin(i * Math.PI / 2));
+        ctx.lineTo(r * 0.3 * Math.cos((i + 0.5) * Math.PI / 2), r * 0.3 * Math.sin((i + 0.5) * Math.PI / 2));
+      }
+      ctx.closePath();
+      ctx.fillStyle = '#660033';
+      ctx.fill();
+      ctx.strokeStyle = '#ff0044';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    // 5. VAMPIRE (흡혈귀 - 섬뜩한 톱니바퀴)
+    this.enemySprites['VAMPIRE'] = createRender('VAMPIRE', '#880000', (ctx, r) => { // 다크 블러드
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const rad = i % 2 === 0 ? r : r * 0.5;
+        ctx.lineTo(rad * Math.cos(i * Math.PI / 4), rad * Math.sin(i * Math.PI / 4));
+      }
+      ctx.closePath();
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, '#330000');
+      grad.addColorStop(1, '#aa0000');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = '#ff3333';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    // 6. SPLITTER (분열체 - 세포 분열)
+    this.enemySprites['SPLITTER'] = createRender('SPLITTER', '#ff00aa', (ctx, r) => { // 딥 마젠타
+      ctx.beginPath();
+      ctx.arc(-r * 0.5, 0, r * 0.8, 0, Math.PI * 2);
+      ctx.arc(r * 0.5, 0, r * 0.8, 0, Math.PI * 2);
+      const grad = ctx.createLinearGradient(-r * 1.3, 0, r * 1.3, 0);
+      grad.addColorStop(0, '#ff33aa');
+      grad.addColorStop(0.5, '#aa0055');
+      grad.addColorStop(1, '#ff33aa');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = '#ffccff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // 7. BREACHER (공성추 - 쉴드 분쇄기 코어)
+    this.enemySprites['BREACHER'] = createRender('BREACHER', '#cc00ff', (ctx, r) => { // 보라 핑크
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, '#ffccff');
+      grad.addColorStop(1, '#aa00cc');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    });
+
+    // 8. GRUNT (일반형 - 빛나는 데이터 파편)
+    this.enemySprites['GRUNT'] = createRender('GRUNT', '#ff3333', (ctx, r) => {
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, '#ff9999');
+      grad.addColorStop(1, '#aa0000');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.5, 0, Math.PI * 1.5);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+  };
 }

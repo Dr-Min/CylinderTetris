@@ -4,6 +4,8 @@ import { applyWeaponInputMixin } from "./defense/WeaponInputMixin.js";
 import { applyEffectsMixin } from "./defense/EffectsMixin.js";
 import { applyShieldMixin } from "./defense/ShieldMixin.js";
 import { applyRenderMixin } from "./defense/RenderMixin.js";
+import { applyEnemyMixin } from "./defense/EnemyMixin.js";
+import { applyWaveMixin } from "./defense/WaveMixin.js";
 
 export class DefenseGame {
   constructor(containerId) {
@@ -1763,163 +1765,13 @@ export class DefenseGame {
         : this.spawnRate) / Math.max(1, bossMultiplier);
       this.waveTimer += dt;
       if (this.waveTimer > currentSpawnRate) {
-        this.spawnEnemy();
+        // 기존 spawnEnemy() 대신 WaveMixin의 trySpawnWave() 호출
+        this.trySpawnWave(this.difficultyScale);
         this.waveTimer = 0;
       }
     }
 
-    for (let i = this.enemies.length - 1; i >= 0; i--) {
-      const enemy = this.enemies[i];
-      const prevHp = enemy.hp;
-
-      if (!Number.isFinite(enemy.hp)) {
-        debugLog("Enemy", "hp NaN - removing", "type", enemy.type || enemy.id || "unknown");
-        this.enemies.splice(i, 1);
-        continue;
-      }
-
-      let targetX = this.core.x;
-      let targetY = this.core.y;
-
-      if (enemy.tauntedBy) {
-        const taunter = this.alliedViruses.find(
-          (v) => v === enemy.tauntedBy && v.hp > 0
-        );
-        if (taunter) {
-          targetX = taunter.x;
-          targetY = taunter.y;
-        } else {
-          enemy.tauntedBy = null;
-        }
-      } else {
-        let nearestTank = null;
-        let nearestTankDist = Infinity;
-
-        for (const v of this.alliedViruses) {
-          if (v.virusType === "TANK" && v.hp > 0) {
-            const tankDist = Math.hypot(v.x - enemy.x, v.y - enemy.y);
-            if (
-              tankDist < (v.aggroRadius || 120) &&
-              tankDist < nearestTankDist
-            ) {
-              nearestTank = v;
-              nearestTankDist = tankDist;
-            }
-          }
-        }
-
-        if (nearestTank) {
-          targetX = nearestTank.x;
-          targetY = nearestTank.y;
-        }
-      }
-
-      const dx = targetX - enemy.x;
-      const dy = targetY - enemy.y;
-      const distToTarget = Math.hypot(dx, dy);
-
-      const distToCore = Math.hypot(
-        this.core.x - enemy.x,
-        this.core.y - enemy.y
-      );
-
-      if (
-        this.core.shieldActive &&
-        distToCore < this.core.shieldRadius + enemy.radius
-      ) {
-        this.core.shieldHp -= 10;
-        this.chargeStaticOnHit();
-        this.createExplosion(enemy.x, enemy.y, "#00f0ff", 5);
-        this.enemies.splice(i, 1);
-
-        if (this.core.shieldHp <= 0) {
-          this.core.shieldHp = 0;
-          this.core.shieldActive = false;
-          this.core.shieldState = "BROKEN";
-          this.core.shieldTimer = 5.0;
-          this.updateShieldBtnUI("BROKEN", "#555");
-          this.createExplosion(this.core.x, this.core.y, "#00f0ff", 30);
-          this.updateShieldBtnUI("ACTIVE", "#fff");
-        }
-        continue;
-      }
-
-      if (distToCore < this.core.radius + enemy.radius) {
-        if (!this.isGodMode) {
-          this.core.hp -= enemy.damage;
-          this.chargeStaticOnHit();
-
-          if (this.isBossFight) {
-            this.frameCoreDamaged++;
-          }
-        }
-        this.createExplosion(enemy.x, enemy.y, "#ff0000", 20);
-        this.enemies.splice(i, 1);
-
-        if (this.core.hp <= 0 && !this.isGodMode) {
-          this.core.hp = 0;
-          this.createExplosion(this.core.x, this.core.y, "#ff0000", 50);
-          this.stop();
-          if (this.onGameOver) this.onGameOver();
-        }
-        continue;
-      }
-
-      if (enemy.knockbackVx || enemy.knockbackVy) {
-        enemy.x += (enemy.knockbackVx || 0) * dt;
-        enemy.y += (enemy.knockbackVy || 0) * dt;
-
-        const friction = Math.pow(0.05, dt);
-        enemy.knockbackVx = (enemy.knockbackVx || 0) * friction;
-        enemy.knockbackVy = (enemy.knockbackVy || 0) * friction;
-
-        if (
-          Math.abs(enemy.knockbackVx) < 1 &&
-          Math.abs(enemy.knockbackVy) < 1
-        ) {
-          enemy.knockbackVx = 0;
-          enemy.knockbackVy = 0;
-        }
-      }
-
-      if (distToTarget > 0) {
-        const slowMult = enemy.slowMultiplier || 1;
-        enemy.x += (dx / distToTarget) * enemy.speed * slowMult * dt;
-        enemy.y += (dy / distToTarget) * enemy.speed * slowMult * dt;
-      }
-
-      if (prevHp > 1 && enemy.hp <= 1) {
-        debugLog(
-          "Enemy",
-          "hp low",
-          "hp",
-          enemy.hp,
-          "type",
-          enemy.type || enemy.id || "unknown"
-        );
-      }
-
-      if (enemy.hp <= 0) {
-        debugLog(
-          "Enemy",
-          "force cleanup",
-          "hp",
-          enemy.hp,
-          "type",
-          enemy.type || enemy.id || "unknown",
-          "x",
-          Math.round(enemy.x),
-          "y",
-          Math.round(enemy.y)
-        );
-        this.enemies.splice(i, 1);
-      }
-    }
-
-    const stuck = this.enemies.find(e => e.hp <= 0);
-    if (stuck) {
-      debugLog("Enemy", "stuck hp<=0", "hp", stuck.hp, "type", stuck.type || stuck.id || "unknown");
-    }
+    this.updateEnemies(dt, this.core);
 
     this.separateAllViruses();
 
@@ -1970,14 +1822,14 @@ export class DefenseGame {
 
           if (p.target.hp <= 0) {
             const idx = this.enemies.indexOf(p.target);
-              if (idx > -1) {
-                this.enemies.splice(idx, 1);
-                this.createExplosion(p.target.x, p.target.y, "#00ff00", 15);
+            if (idx > -1) {
+              this.enemies.splice(idx, 1);
+              this.createExplosion(p.target.x, p.target.y, "#00ff00", 15);
 
               this.awardKillData();
-              }
             }
           }
+        }
       } else {
         if (p.vx !== undefined && p.vy !== undefined) {
           p.x += p.vx * dt;
@@ -2098,7 +1950,7 @@ export class DefenseGame {
     this.updateStaticSystem(dt);
   }
 
-  
+
   updateStaticSystem(dt) {
     const ss = this.staticSystem;
 
@@ -2161,7 +2013,7 @@ export class DefenseGame {
     this.core.y = this.shieldAnchor.y;
     this.updateCamera();
     debugLog("Defense", "EmergencyReturn triggered", "charges", this.emergencyReturnCharges);
-    this.playEmergencyReturnAnimation().catch(() => {});
+    this.playEmergencyReturnAnimation().catch(() => { });
   }
 
   playEmergencyReturnAnimation() {
@@ -2204,7 +2056,7 @@ export class DefenseGame {
     });
   }
 
-  
+
   dischargeStatic() {
     const ss = this.staticSystem;
     ss.currentCharge = 0;
@@ -2287,7 +2139,7 @@ export class DefenseGame {
     debugLog("Defense", "Static discharged! Hit", hitEnemies.length, "enemies");
   }
 
-  
+
   addChainLine(x1, y1, x2, y2) {
     this.staticEffects.chains.push({
       x1,
@@ -2301,7 +2153,7 @@ export class DefenseGame {
     });
   }
 
-  
+
   createStaticSpark() {
     const angle = Math.random() * Math.PI * 2;
     const dist = 20 + Math.random() * 15;
@@ -2320,12 +2172,12 @@ export class DefenseGame {
     });
   }
 
-  
+
   chargeStaticOnHit() {
     this.staticSystem.currentCharge += this.staticSystem.hitChargeAmount;
   }
 
-  
+
   chargeStaticOnKill() {
     this.staticSystem.currentCharge += this.staticSystem.killChargeAmount;
   }
@@ -2556,7 +2408,7 @@ export class DefenseGame {
     this.spawnCollectorVirus(x, y);
   }
 
-  
+
   spawnCollectorVirus(targetX, targetY) {
     const angle = Math.random() * Math.PI * 2;
     const spawnDist = 30;
@@ -2578,7 +2430,7 @@ export class DefenseGame {
     });
   }
 
-  
+
   updateCollectorViruses(dt) {
     for (let i = this.collectorViruses.length - 1; i >= 0; i--) {
       const v = this.collectorViruses[i];
@@ -2651,7 +2503,7 @@ export class DefenseGame {
     this.droppedItems = this.droppedItems.filter(d => !d.collected);
   }
 
-  
+
   getItemRarityColor(rarity) {
     const colors = {
       common: "#ffffff",
@@ -2711,49 +2563,6 @@ export class DefenseGame {
     }
   }
 
-  spawnEnemy() {
-    if (this.isSafeZone || this.isConquered) {
-      debugLog("Enemy", "spawnEnemy blocked - isSafeZone:", this.isSafeZone, "isConquered:", this.isConquered);
-      return;
-    }
-    debugLog("Enemy", "spawnEnemy called - isSafeZone:", this.isSafeZone);
-
-    const angle = Math.random() * Math.PI * 2;
-    const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 50;
-
-    const ex = this.core.x + Math.cos(angle) * distance;
-    const ey = this.core.y + Math.sin(angle) * distance;
-
-    let difficultyScale;
-
-    const baseSpeed = 60 + Math.random() * 40;
-    const baseHp = 10;
-    const baseDamage = 8;
-
-    if (this.isReinforcementMode) {
-      const stageBase = this.calculateStageBaseDifficulty();
-      const reinforcementBonus = 0.5 + (this.reinforcementPage - 1) * 0.3;
-      difficultyScale = stageBase + reinforcementBonus;
-    } else {
-      const stageBase = this.calculateStageBaseDifficulty();
-      const pageProgress = (this.currentPage - 1) / (this.stageMaxPages - 1);
-      const pageMultiplier =
-        pageProgress * (this.stageDifficultyScale * stageBase * 0.5);
-      difficultyScale = stageBase + pageMultiplier;
-    }
-
-    const maxHp = Math.max(1, Math.floor(baseHp * difficultyScale));
-    const damage = Math.max(6, Math.floor(baseDamage * difficultyScale));
-    this.enemies.push({
-      x: ex,
-      y: ey,
-      radius: 10,
-      speed: baseSpeed * difficultyScale,
-      hp: maxHp,
-      maxHp,
-      damage,
-    });
-  }
 
   spawnSafeZoneAllies() {
     debugLog("Enemy", "spawnSafeZoneAllies called - isSafeZone:", this.isSafeZone);
@@ -2971,7 +2780,7 @@ export class DefenseGame {
     );
   }
 
-  
+
   async spawnAlliesWithConfig() {
     const config = this.alliedConfig;
     if (!config) return;
@@ -3028,7 +2837,7 @@ export class DefenseGame {
     );
   }
 
-  
+
   createVirusFromType(typeName, typeData, angle, targetRadius, config) {
     const pureBonus = config.isPureSpecialization ? config.pureBonus : 1.0;
 
@@ -3241,11 +3050,11 @@ export class DefenseGame {
   buildFacilityDialogueTurns(facilityId, scenario, ally) {
     const baseTurns = Array.isArray(scenario?.turns)
       ? scenario.turns
-          .map((turn) => ({
-            speaker: turn?.speaker === "owner" ? "owner" : "ally",
-            text: `${turn?.text || ""}`.trim(),
-          }))
-          .filter((turn) => turn.text.length > 0)
+        .map((turn) => ({
+          speaker: turn?.speaker === "owner" ? "owner" : "ally",
+          text: `${turn?.text || ""}`.trim(),
+        }))
+        .filter((turn) => turn.text.length > 0)
       : [];
 
     if (baseTurns.length === 0) return [];
@@ -3409,7 +3218,7 @@ export class DefenseGame {
     });
   }
 
-  
+
   getRandomDialogue(category) {
     if (!this.virusDialogues || !this.virusDialogues[category]) return null;
     const dialogues = this.virusDialogues[category];
@@ -3417,7 +3226,7 @@ export class DefenseGame {
     return dialogues[Math.floor(Math.random() * dialogues.length)];
   }
 
-  
+
   createSpeechBubble(virus, text, duration = 1500) {
     if (!text) return;
 
@@ -3439,7 +3248,7 @@ export class DefenseGame {
     }, duration + 500);
   }
 
-  
+
   tryVirusSpeech(virus, situation, chance = 0.1) {
     if (Math.random() > chance) return;
     const text = this.getRandomDialogue(situation);
@@ -3448,7 +3257,7 @@ export class DefenseGame {
     }
   }
 
-  
+
   updateSpeechBubbles() {
     const now = performance.now();
 
@@ -3464,14 +3273,14 @@ export class DefenseGame {
     });
   }
 
-  
+
   playBGMTrack(trackName) {
     if (this.currentBGMTrack === trackName) return;
     this.currentBGMTrack = trackName;
     this.bgmManager.play(trackName);
   }
 
-  
+
   toggleBGM() {
     const isOn = this.bgmManager.toggleMute();
 
@@ -3674,3 +3483,5 @@ applyWeaponInputMixin(DefenseGame);
 applyEffectsMixin(DefenseGame);
 applyShieldMixin(DefenseGame);
 applyRenderMixin(DefenseGame);
+applyEnemyMixin(DefenseGame);
+applyWaveMixin(DefenseGame);

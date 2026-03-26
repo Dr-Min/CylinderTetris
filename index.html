@@ -1,96 +1,97 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <meta name="description" content="Shield Stage Breach Tetris - Defense & Equipment Farming Game" />
-    <meta name="theme-color" content="#33ff00" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="HACKER_TRIS" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <title>HACKER_TETRIS_PROTOCOL_V2.1.121</title>
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json" />
-    <!-- 게임 UI 스타일 (통합) -->
-    <link rel="stylesheet" href="css/style.css?v=2.1.121" />
-    <!-- Three.js는 모듈에서 import하므로 제거됨 -->
-  </head>
-  <body>
-    <!-- CRT 효과 오버레이 (전체 적용) -->
-    <div class="crt-overlay"></div>
-    <!-- scanline 제거됨 -->
 
-    <!-- 터미널 레이어 (인트로 및 스토리 진행) -->
-    <div id="terminal-layer">
-      <div id="terminal-content"></div>
-      <div class="input-line hidden">
-        <span class="prompt">root@hack_sys:~#</span>
-        <span id="user-input"></span><span class="cursor"></span>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description" content="Shield Stage Breach Tetris - Defense & Equipment Farming Game" />
+  <meta name="theme-color" content="#33ff00" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HACKER_TRIS" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>HACKER_TETRIS_PROTOCOL_V2.1.127</title>
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <!-- 게임 UI 스타일 (통합) -->
+  <link rel="stylesheet" href="css/style.css?v=2.1.127" />
+  <!-- Three.js는 모듈에서 import하므로 제거됨 -->
+</head>
+
+<body>
+  <!-- CRT 효과 오버레이 (전체 적용) -->
+  <div class="crt-overlay"></div>
+  <!-- scanline 제거됨 -->
+
+  <!-- 터미널 레이어 (인트로 및 스토리 진행) -->
+  <div id="terminal-layer">
+    <div id="terminal-content"></div>
+    <div class="input-line hidden">
+      <span class="prompt">root@hack_sys:~#</span>
+      <span id="user-input"></span><span class="cursor"></span>
+    </div>
+
+    <div id="choice-area" class="choice-container hidden">
+      <!-- 선택지 버튼들이 여기 생성됨 -->
+    </div>
+  </div>
+
+  <!-- 3D 게임 컨테이너 -->
+  <div id="game-container" style="opacity: 0"></div>
+
+  <!-- 게임 UI 레이어 (게임 시작 후 표시) -->
+  <div id="game-ui" style="display: none">
+    <!-- 상단 정보 바 -->
+    <div class="top-bar">
+      <div class="level-box">
+        <div>LEVEL</div>
+        <div id="level-display">1</div>
       </div>
 
-      <div id="choice-area" class="choice-container hidden">
-        <!-- 선택지 버튼들이 여기 생성됨 -->
+      <div class="score-board">
+        <div style="font-size: 14px; color: #aaa">DATA MINED</div>
+        <div id="score-display">0</div>
+      </div>
+
+      <div class="next-box">
+        <div class="label">NEXT</div>
+        <canvas id="next-canvas" width="60" height="60"></canvas>
       </div>
     </div>
 
-    <!-- 3D 게임 컨테이너 -->
-    <div id="game-container" style="opacity: 0"></div>
-
-    <!-- 게임 UI 레이어 (게임 시작 후 표시) -->
-    <div id="game-ui" style="display: none">
-      <!-- 상단 정보 바 -->
-      <div class="top-bar">
-        <div class="level-box">
-          <div>LEVEL</div>
-          <div id="level-display">1</div>
-        </div>
-
-        <div class="score-board">
-          <div style="font-size: 14px; color: #aaa">DATA MINED</div>
-          <div id="score-display">0</div>
-        </div>
-
-        <div class="next-box">
-          <div class="label">NEXT</div>
-          <canvas id="next-canvas" width="60" height="60"></canvas>
-        </div>
-      </div>
-
-      <!-- 우측 상단 설정 버튼 -->
-      <div class="settings-area">
-        <button id="bgm-btn">BGM<br />ON</button>
-        <button id="toggle-btn">VIEW<br />OFF</button>
-      </div>
-
-      <!-- 모바일 컨트롤 (좌측 이동) -->
-      <div class="mobile-controls-left">
-        <button id="left-btn">◀</button>
-        <button id="right-btn">▶</button>
-      </div>
-      
-      <!-- 모바일 컨트롤 (블록 변경 - 퍼즐 모드용) -->
-      <button id="switch-block-btn" style="display: none;">NEXT<br/>BLOCK</button>
-
-      <!-- 모바일 컨트롤 (우측 드롭) -->
-      <button id="drop-btn">DROP</button>
-
-    <div class="version-info" id="app-version">PROTOCOL v2.1.121</div>
+    <!-- 우측 상단 설정 버튼 -->
+    <div class="settings-area">
+      <button id="bgm-btn">BGM<br />ON</button>
+      <button id="toggle-btn">VIEW<br />OFF</button>
     </div>
 
-    <!-- 게임 오버 스크린 -->
-    <div id="game-over-screen" class="hidden">
-      <h1>CONNECTION<br />LOST</h1>
-      <div style="color: #00ff00; margin-bottom: 20px">
-        FINAL DATA: <span id="final-score">0</span>
-      </div>
-      <button id="restart-btn" onclick="location.reload()">RECONNECT</button>
+    <!-- 모바일 컨트롤 (좌측 이동) -->
+    <div class="mobile-controls-left">
+      <button id="left-btn">◀</button>
+      <button id="right-btn">▶</button>
     </div>
 
-    <!-- 진입점 -->
-    <script type="module" src="js/main.js?v=2.1.121"></script>
-  </body>
+    <!-- 모바일 컨트롤 (블록 변경 - 퍼즐 모드용) -->
+    <button id="switch-block-btn" style="display: none;">NEXT<br />BLOCK</button>
+
+    <!-- 모바일 컨트롤 (우측 드롭) -->
+    <button id="drop-btn">DROP</button>
+
+    <div class="version-info" id="app-version">PROTOCOL v2.1.127</div>
+  </div>
+
+  <!-- 게임 오버 스크린 -->
+  <div id="game-over-screen" class="hidden">
+    <h1>CONNECTION<br />LOST</h1>
+    <div style="color: #00ff00; margin-bottom: 20px">
+      FINAL DATA: <span id="final-score">0</span>
+    </div>
+    <button id="restart-btn" onclick="location.reload()">RECONNECT</button>
+  </div>
+
+  <!-- 진입점 -->
+  <script type="module" src="js/main.js?v=2.1.127"></script>
+</body>
+
 </html>
