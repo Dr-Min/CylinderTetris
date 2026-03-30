@@ -6,6 +6,7 @@ import { applyShieldMixin } from "./defense/ShieldMixin.js";
 import { applyRenderMixin } from "./defense/RenderMixin.js";
 import { applyEnemyMixin } from "./defense/EnemyMixin.js";
 import { applyWaveMixin } from "./defense/WaveMixin.js";
+import { applyRoamingProtocolMixin } from "./defense/RoamingProtocolMixin.js";
 
 export class DefenseGame {
   constructor(containerId) {
@@ -640,6 +641,25 @@ export class DefenseGame {
     this.alliedConfig = null;
     this.alliedInfo = { count: 0, level: 1, color: "#00aaff" };
     this.currentData = 0;
+    this.roamingProtocol = {
+      stageKey: null,
+      letters: ["F", "E", "D", "C", "B", "A"],
+      collected: [],
+      shards: [],
+      active: false,
+      timer: 0,
+      duration: 8,
+      respawnTimer: 0,
+      respawnDelay: 2.8,
+      shardRadius: 16,
+      fireRateMultiplier: 2.2,
+      barrageCount: 3,
+      barrageSpread: 0.22,
+      barrageDamageMultiplier: 0.58,
+      barrageColor: "#ff5cb8",
+    };
+    window.render_game_to_text = () => this.renderGameToText();
+    window.advanceTime = (ms) => this.advanceTime(ms);
 
     window.addEventListener("resize", () => this.resize());
 
@@ -820,6 +840,9 @@ export class DefenseGame {
     }
 
     this.updateCamera();
+    if (typeof this.clampRoamingProtocolShards === "function") {
+      this.clampRoamingProtocolShards();
+    }
 
     debugLog("Canvas", "resize() complete - size:", targetCanvas.width, "x", targetCanvas.height, "scale:", this.gameScale);
   }
@@ -829,6 +852,65 @@ export class DefenseGame {
     if (this.onDataUpdate) {
       this.onDataUpdate(this.currentData);
     }
+  }
+
+  advanceTime(ms = 16.67) {
+    const frameMs = 1000 / 60;
+    const steps = Math.max(1, Math.round((ms || frameMs) / frameMs));
+    for (let i = 0; i < steps; i++) {
+      this.update(frameMs);
+    }
+    this.render();
+  }
+
+  renderGameToText() {
+    const roamingProtocol = this.roamingProtocol || {};
+    const letters = Array.isArray(roamingProtocol.letters)
+      ? roamingProtocol.letters
+      : [];
+    const collected = Array.isArray(roamingProtocol.collected)
+      ? letters.filter((letter) => roamingProtocol.collected.includes(letter))
+      : [];
+    const payload = {
+      coordinateSystem: "origin=(0,0) top-left, +x right, +y down",
+      stage: {
+        id: this.currentStageId || 0,
+        safeZone: !!this.isSafeZone,
+        conquered: !!this.isConquered,
+        farming: !!this.isFarmingZone,
+      },
+      core: {
+        x: Math.round(this.core.x),
+        y: Math.round(this.core.y),
+        hp: Math.round(this.core.hp),
+        shieldHp: Math.round(this.core.shieldHp),
+        shieldState: this.core.shieldState,
+      },
+      camera: {
+        x: Math.round(this.camera.x || 0),
+        y: Math.round(this.camera.y || 0),
+      },
+      enemies: this.enemies.slice(0, 8).map((enemy) => ({
+        x: Math.round(enemy.x),
+        y: Math.round(enemy.y),
+        hp: Math.round(enemy.hp),
+        type: enemy.type || enemy.virusType || "UNKNOWN",
+      })),
+      roamingProtocol: {
+        active: !!roamingProtocol.active,
+        timer: Number((roamingProtocol.timer || 0).toFixed(2)),
+        collected,
+        remainingLetters: letters.filter((letter) => !collected.includes(letter)),
+        shards: Array.isArray(roamingProtocol.shards)
+          ? roamingProtocol.shards.map((shard) => ({
+            letter: shard.letter,
+            x: Math.round(shard.x),
+            y: Math.round(shard.y),
+          }))
+          : [],
+      },
+    };
+    return JSON.stringify(payload);
   }
 
   getKillDataGain() {
@@ -1316,6 +1398,7 @@ export class DefenseGame {
     } else {
       this.playBGMTrack('DEFENSE');
     }
+    this.ensureRoamingProtocolState();
 
     this.lastTime = performance.now();
     this.animate(this.lastTime);
@@ -1370,6 +1453,7 @@ export class DefenseGame {
       this.uiLayer.style.display = "none";
     }
     debugLog("Canvas", "canvas after set:", this.canvas.style.display);
+    this.ensureRoamingProtocolState();
     this.updateSafeZoneFacilityPrompt();
     this.updateRecallBtnVisibility();
   }
@@ -1417,6 +1501,7 @@ export class DefenseGame {
     const dt = clampedDeltaTime / 1000;
 
     this.validateGameState();
+    this.ensureRoamingProtocolState();
 
     if (this.isMiniDisplay) {
       this.canvas.style.display = "none";
@@ -1698,6 +1783,7 @@ export class DefenseGame {
     this.applySynergyEffects(dt);
 
     this.updateCollectorViruses(dt);
+    this.updateRoamingProtocol(dt);
 
     this.updateSpeechBubbles();
     this.updateSafeZoneCrowdDirector(dt);
@@ -3485,3 +3571,4 @@ applyShieldMixin(DefenseGame);
 applyRenderMixin(DefenseGame);
 applyEnemyMixin(DefenseGame);
 applyWaveMixin(DefenseGame);
+applyRoamingProtocolMixin(DefenseGame);

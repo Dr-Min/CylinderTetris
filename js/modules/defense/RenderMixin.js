@@ -851,6 +851,7 @@ export function applyRenderMixin(DefenseGameClass) {
     if (!this.isSafeZone) {
       this.renderMiningEffect(this.ctx, time);
     }
+    this.renderRoamingProtocolShards();
 
     if (this.isConquered) {
       if (!this.conqueredRenderLogged) {
@@ -1195,7 +1196,7 @@ export function applyRenderMixin(DefenseGameClass) {
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
     this.projectiles.forEach((p) => {
-      const color = p.fromHelper ? "#ffff00" : "#00ff00";
+      const color = p.color || (p.fromHelper ? "#ffff00" : "#00ff00");
       this.ctx.fillStyle = color;
       this.ctx.shadowColor = color;
       this.ctx.shadowBlur = 5;
@@ -1254,6 +1255,41 @@ export function applyRenderMixin(DefenseGameClass) {
 
     const coreVisualX = this.core.x + (this.core.visualOffsetX || 0);
     const coreVisualY = this.core.y + (this.core.visualOffsetY || 0);
+    const roamingProtocolActive =
+      typeof this.isRoamingProtocolActive === "function" &&
+      this.isRoamingProtocolActive();
+    const roamingProtocolColor = this.roamingProtocol?.barrageColor || "#ff5cb8";
+
+    if (roamingProtocolActive) {
+      const pulse = 1 + Math.sin(time * 8) * 0.08;
+      this.ctx.save();
+      this.ctx.strokeStyle = roamingProtocolColor;
+      this.ctx.shadowColor = roamingProtocolColor;
+      this.ctx.shadowBlur = 18;
+      this.ctx.globalAlpha = 0.72;
+      this.ctx.lineWidth = 3;
+      this.ctx.beginPath();
+      this.ctx.arc(
+        coreVisualX,
+        coreVisualY,
+        scaledRadius + 10 * pulse,
+        0,
+        Math.PI * 2
+      );
+      this.ctx.stroke();
+      this.ctx.globalAlpha = 0.35;
+      this.ctx.lineWidth = 1.5;
+      this.ctx.beginPath();
+      this.ctx.arc(
+        coreVisualX,
+        coreVisualY,
+        scaledRadius + 18 + Math.sin(time * 5) * 2,
+        0,
+        Math.PI * 2
+      );
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
 
     this.ctx.save();
     this.ctx.translate(coreVisualX, coreVisualY);
@@ -1418,6 +1454,7 @@ export function applyRenderMixin(DefenseGameClass) {
     if (this.isBossFight && this.bossManager) {
       this.renderBossUI();
     }
+    this.renderRoamingProtocolHud();
 
     if (this.isMiniDisplay && this.miniCanvas) {
       const miniCtx = this.miniCanvas.getContext("2d");

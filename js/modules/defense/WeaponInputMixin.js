@@ -414,30 +414,46 @@ export function applyWeaponInputMixin(DefenseGameClass) {
   proto.fireProjectileToward = function(angle) {
     const asciiChars =
       "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    const randomChar =
-      asciiChars[Math.floor(Math.random() * asciiChars.length)];
+    const barrageConfig =
+      typeof this.getRoamingProtocolProjectileConfig === "function"
+        ? this.getRoamingProtocolProjectileConfig()
+        : null;
+    const projectileCount = Math.max(1, barrageConfig?.count || 1);
+    const spread = barrageConfig?.spread || 0;
+    const damageMultiplier = barrageConfig?.damageMultiplier || 1;
+    const projectileColor = barrageConfig?.color || "#00ff00";
 
     const recoilDist = 8;
     this.core.targetOffsetX = Math.cos(angle) * recoilDist;
     this.core.targetOffsetY = Math.sin(angle) * recoilDist;
 
-    this.projectiles.push({
-      x: this.core.x,
-      y: this.core.y,
-      target: null,
-      angle: angle,
-      speed: 400,
-      damage: this.turret.damage,
-      radius: 4,
-      life: 2.0,
-      char: randomChar,
-    });
+    for (let i = 0; i < projectileCount; i++) {
+      const randomChar =
+        asciiChars[Math.floor(Math.random() * asciiChars.length)];
+      const shotAngle =
+        projectileCount > 1
+          ? angle + (i - (projectileCount - 1) / 2) * spread
+          : angle;
+
+      this.projectiles.push({
+        x: this.core.x,
+        y: this.core.y,
+        target: null,
+        angle: shotAngle,
+        speed: 400,
+        damage: this.turret.damage * damageMultiplier,
+        radius: 4,
+        life: 2.0,
+        char: randomChar,
+        color: projectileColor,
+      });
+    }
 
     this.createExplosion(
       this.core.x + Math.cos(angle) * 40,
       this.core.y + Math.sin(angle) * 40,
-      "#00ff00",
-      3
+      projectileColor,
+      projectileCount > 1 ? 5 : 3
     );
   }
 
@@ -745,7 +761,11 @@ export function applyWeaponInputMixin(DefenseGameClass) {
     const effects = this.getItemEffects ? this.getItemEffects() : null;
     const bonus = effects && Number.isFinite(effects.attackSpeed) ? effects.attackSpeed : 0;
     const baseRate = Number.isFinite(this.turret.fireRate) ? this.turret.fireRate : 4;
-    const rate = Math.max(0.5, baseRate * (1 + bonus));
+    const protocolMultiplier =
+      typeof this.getRoamingProtocolFireRateMultiplier === "function"
+        ? this.getRoamingProtocolFireRateMultiplier()
+        : 1;
+    const rate = Math.max(0.5, baseRate * (1 + bonus) * protocolMultiplier);
     return 1 / rate;
   }
 
