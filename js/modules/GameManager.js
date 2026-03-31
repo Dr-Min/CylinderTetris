@@ -1784,6 +1784,15 @@ export class GameManager {
     );
 
     const mapData = this.stageManager.getMapData();
+    const rowCount =
+      mapData.rowCount ||
+      mapData.stages.reduce(
+        (max, stage) => Math.max(max, (stage.position?.row ?? 0) + 1),
+        0
+      );
+    const totalConquestCount =
+      mapData.totalConquestCount ||
+      mapData.stages.filter((stage) => stage.type === "conquest").length;
 
     // 맵 컨테이너 (기존 오버레이 위에 생성하거나 교체)
     // 여기서는 bgOverlay를 재활용하여 자연스럽게 전환
@@ -1825,7 +1834,7 @@ export class GameManager {
     mapContainer.style.cssText = `
       display: grid;
       grid-template-columns: repeat(3, 100px);
-      grid-template-rows: repeat(5, 80px);
+      grid-template-rows: repeat(${rowCount}, 80px);
       gap: 10px;
       justify-content: center;
       align-content: center;
@@ -1841,7 +1850,7 @@ export class GameManager {
       const btn = document.createElement("button");
       btn.className = "map-stage-btn";
 
-      // 위치 계산 (row 0~4, col 0~2)
+      // 위치 계산
       const gridRow = stage.position.row + 1;
       const gridCol = stage.position.col + 1;
 
@@ -1966,7 +1975,7 @@ export class GameManager {
     info.innerHTML = `
       <div style="color:#00ff00;margin-bottom:10px;">Current: ${currentStage.name}</div>
       <div>${currentStage.description}</div>
-      <div style="margin-top:10px;color:#666;">Conquered: ${mapData.conqueredCount}/4</div>
+      <div style="margin-top:10px;color:#666;">Conquered: ${mapData.conqueredCount}/${totalConquestCount}</div>
     `;
     bgOverlay.appendChild(info);
 
@@ -2154,6 +2163,7 @@ export class GameManager {
 
     // 안전영역 여부
     this.defenseGame.isSafeZone = stage.type === "safe";
+    this.defenseGame.isFarmingZone = stage.type === "farming";
     this.defenseGame.safeZoneSpawnRate = stage.spawnRate;
     this.defenseGame.spawnRate = stage.spawnRate;
 

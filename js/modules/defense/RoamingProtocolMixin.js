@@ -45,6 +45,10 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     return `${this.currentStageId || 0}:${zone}`;
   };
 
+  proto.isRoamingProtocolAvailable = function () {
+    return !this.isSafeZone && !this.isConquered;
+  };
+
   proto.isRoamingProtocolActive = function () {
     return !!(
       this.roamingProtocol &&
@@ -99,6 +103,24 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     if (!this.roamingProtocol) return;
 
     const stageKey = this.getRoamingProtocolStageKey();
+    const available =
+      typeof this.isRoamingProtocolAvailable === "function"
+        ? this.isRoamingProtocolAvailable()
+        : !this.isSafeZone && !this.isConquered;
+
+    if (!available) {
+      this.roamingProtocol.stageKey = stageKey;
+      this.roamingProtocol.active = false;
+      this.roamingProtocol.timer = 0;
+      this.roamingProtocol.barrageTimer = 0;
+      this.roamingProtocol.respawnTimer = 0;
+      this.roamingProtocol.resetFlashTimer = 0;
+      this.roamingProtocol.failedLetter = null;
+      this.roamingProtocol.collected = [];
+      this.roamingProtocol.shards = [];
+      return;
+    }
+
     if (!force && this.roamingProtocol.stageKey === stageKey) {
       this.clampRoamingProtocolShards();
       return;
@@ -209,7 +231,11 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
   };
 
   proto.spawnRoamingProtocolShards = function () {
-    if (!this.roamingProtocol) return;
+    if (
+      !this.roamingProtocol ||
+      (typeof this.isRoamingProtocolAvailable === "function" &&
+        !this.isRoamingProtocolAvailable())
+    ) return;
 
     const letters = this.roamingProtocol.letters || [];
     this.roamingProtocol.shards = letters.map((letter, index) => {
@@ -413,7 +439,11 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
   };
 
   proto.updateRoamingProtocol = function (dt) {
-    if (!this.roamingProtocol) return;
+    if (
+      !this.roamingProtocol ||
+      (typeof this.isRoamingProtocolAvailable === "function" &&
+        !this.isRoamingProtocolAvailable())
+    ) return;
 
     if (this.roamingProtocol.resetFlashTimer > 0) {
       this.roamingProtocol.resetFlashTimer = Math.max(
@@ -478,6 +508,9 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
   proto.renderRoamingProtocolShards = function () {
     if (
       !this.roamingProtocol ||
+      ((typeof this.isRoamingProtocolAvailable === "function" &&
+        !this.isRoamingProtocolAvailable()) &&
+        !this.isRoamingProtocolActive()) ||
       this.isRoamingProtocolActive() ||
       !Array.isArray(this.roamingProtocol.shards) ||
       this.roamingProtocol.shards.length === 0
@@ -537,7 +570,12 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
   };
 
   proto.renderRoamingProtocolHud = function () {
-    if (!this.roamingProtocol) return;
+    if (
+      !this.roamingProtocol ||
+      ((typeof this.isRoamingProtocolAvailable === "function" &&
+        !this.isRoamingProtocolAvailable()) &&
+        !this.isRoamingProtocolActive())
+    ) return;
 
     const ctx = this.ctx;
     const letters = this.roamingProtocol.letters || [];

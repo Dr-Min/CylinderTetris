@@ -1368,7 +1368,7 @@ export class DefenseGame {
     this.uiLayer.style.display = "block";
 
     this.isSafeZone = (this.currentStageId === 0);
-    this.isFarmingZone = (this.currentStageId === 3);
+    this.isFarmingZone = !!this.isFarmingZone;
     this.activeSafeZoneFacilityId = null;
     this.safeZoneOwnerActors = Object.create(null);
     this.pendingFacilityVisits = Object.create(null);
@@ -2804,13 +2804,15 @@ export class DefenseGame {
       baseDifficulty = 0.5;
     } else if (stageIndex <= 2) {
       baseDifficulty = 1.0;
-    } else if (stageIndex <= 4) {
-      baseDifficulty = 1.5;
+    } else if (stageIndex === 3) {
+      baseDifficulty = 1.35;
     } else if (stageIndex <= 6) {
+      baseDifficulty = 1.5;
+    } else if (stageIndex <= 8) {
       baseDifficulty = 2.0;
     } else {
-      const extra = Math.min(1.4, (stageIndex - 6) * 0.07);
-      baseDifficulty = 2.0 + extra;
+      const extra = Math.min(1.6, (stageIndex - 8) * 0.12);
+      baseDifficulty = 2.2 + extra;
     }
 
     return baseDifficulty;
