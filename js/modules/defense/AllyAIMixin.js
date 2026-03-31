@@ -704,7 +704,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
       if (!v.crowdThinkAt || now >= v.crowdThinkAt || !Number.isFinite(v.wanderTargetX) || !Number.isFinite(v.wanderTargetY)) {
         const hotspot = this.chooseSafeZoneCrowdHotspot ? this.chooseSafeZoneCrowdHotspot(v) : null;
         const target = hotspot || { x: v.homeX, y: v.homeY, radius: v.homeRadius || 90 };
-        const targetRadius = Math.max(20, (target.radius || 80) * (0.35 + Math.random() * 0.5));
+        const targetRadius = Math.max(26, (target.radius || 80) * (0.5 + Math.random() * 0.7));
         const angle = Math.random() * Math.PI * 2;
 
         v.lastCrowdHotspotId = hotspot?.id || null;
@@ -714,34 +714,34 @@ export function applyAllyAIMixin(DefenseGameClass) {
         v.wanderTargetY = Math.max(margin, Math.min(screenH - margin, v.wanderTargetY));
 
         const stateRoll = Math.random();
-        if (stateRoll < 0.2) {
+        if (stateRoll < 0.1) {
           v.ambientState = "pause";
-          v.ambientStateUntil = now + 700 + Math.random() * 1400;
-        } else if (stateRoll < 0.4) {
+          v.ambientStateUntil = now + 450 + Math.random() * 900;
+        } else if (stateRoll < 0.3) {
           v.ambientState = "inspect";
-          v.ambientStateUntil = now + 900 + Math.random() * 1700;
+          v.ambientStateUntil = now + 650 + Math.random() * 1100;
         } else {
           v.ambientState = "stroll";
-          v.ambientStateUntil = now + 1200 + Math.random() * 2000;
+          v.ambientStateUntil = now + 900 + Math.random() * 1600;
         }
 
-        const cadence = v.personaType === "scout" ? 900 : 1200;
-        v.crowdThinkAt = now + cadence + Math.random() * 1700;
+        const cadence = v.personaType === "scout" ? 650 : 900;
+        v.crowdThinkAt = now + cadence + Math.random() * 1200;
       }
 
       if (v.ambientState === "pause" && now < (v.ambientStateUntil || 0)) {
-        v.vx = (v.vx || 0) * 0.82;
-        v.vy = (v.vy || 0) * 0.82;
+        v.vx = (v.vx || 0) * 0.76;
+        v.vy = (v.vy || 0) * 0.76;
       } else if (v.ambientState === "inspect") {
-        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.2 + (v.crowdEnergy || 0.5) * 0.1);
+        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.28 + (v.crowdEnergy || 0.5) * 0.16);
       } else {
-        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.3 + (v.crowdEnergy || 0.5) * 0.2);
+        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.42 + (v.crowdEnergy || 0.5) * 0.28);
       }
     }
 
     v.crowdMoveJitter = (v.crowdMoveJitter || 0) + dt * (1.6 + (v.crowdEnergy || 0.5));
-    v.x += Math.sin(v.crowdMoveJitter) * 0.12;
-    v.y += Math.cos(v.crowdMoveJitter * 0.9) * 0.1;
+    v.x += Math.sin(v.crowdMoveJitter) * 0.18;
+    v.y += Math.cos(v.crowdMoveJitter * 0.9) * 0.15;
 
     const distFromCore = Math.hypot(v.x - this.core.x, v.y - this.core.y);
     if (distFromCore < 100 && distFromCore > 0) {
@@ -795,7 +795,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
     if (v.safeState === undefined) {
       v.safeState = 'wander';
       v.stateTimer = 0;
-      v.stateDuration = 3 + Math.random() * 4;
+      v.stateDuration = 2.2 + Math.random() * 2.6;
       v.chatPartner = null;
       v.chatOffsetAngle = Math.random() * Math.PI * 2;
 
@@ -834,7 +834,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
 
           const roll = Math.random();
 
-          if (roll < 0.5 && this.alliedViruses.length > 1) {
+          if (roll < 0.58 && this.alliedViruses.length > 1) {
             const nearbyFriends = this.alliedViruses.filter(a =>
               a !== v &&
               a.crowdRole !== "ambient" &&
@@ -845,14 +845,14 @@ export function applyAllyAIMixin(DefenseGameClass) {
             if (nearbyFriends.length > 0) {
               v.chatPartner = nearbyFriends[Math.floor(Math.random() * nearbyFriends.length)];
               v.safeState = 'approaching';
-              v.stateDuration = 4 + Math.random() * 3;
+              v.stateDuration = 3 + Math.random() * 2.2;
             } else {
               const pos = getNearHomePos();
               v.wanderTargetX = pos.x;
               v.wanderTargetY = pos.y;
-              v.stateDuration = 3 + Math.random() * 3;
+              v.stateDuration = 1.8 + Math.random() * 2.6;
             }
-          } else if (roll < 0.65) {
+          } else if (roll < 0.8) {
             const farFriends = this.alliedViruses.filter(a =>
               a !== v &&
               a.crowdRole !== "ambient" &&
@@ -862,17 +862,17 @@ export function applyAllyAIMixin(DefenseGameClass) {
             if (farFriends.length > 0) {
               v.chatPartner = farFriends[Math.floor(Math.random() * farFriends.length)];
               v.safeState = 'approaching';
-              v.stateDuration = 6 + Math.random() * 4;
+              v.stateDuration = 4 + Math.random() * 3;
             }
           } else {
             const pos = getNearHomePos();
             v.wanderTargetX = pos.x;
             v.wanderTargetY = pos.y;
-            v.stateDuration = 2 + Math.random() * 4;
+            v.stateDuration = 1.6 + Math.random() * 3;
           }
         }
 
-        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
+        this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.34 + (v.crowdEnergy || 0.5) * 0.12);
         break;
 
       case 'approaching': {
@@ -893,7 +893,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
           v.safeState = 'wander';
           v.chatPartner = null;
         } else {
-          this.smoothMoveToward(v, v.chatPartner.x, v.chatPartner.y, dt, 0.5);
+          this.smoothMoveToward(v, v.chatPartner.x, v.chatPartner.y, dt, 0.62);
         }
         break;
       }
@@ -906,10 +906,10 @@ export function applyAllyAIMixin(DefenseGameClass) {
         }
 
         if (v.stateTimer >= v.stateDuration) {
-          if (Math.random() < 0.6) {
+          if (Math.random() < 0.72) {
             v.safeState = 'walkingTogether';
             v.stateTimer = 0;
-            v.stateDuration = 4 + Math.random() * 4;
+            v.stateDuration = 3.2 + Math.random() * 3.4;
 
             const targetHome = Math.random() < 0.5 ? v : v.chatPartner;
             if (targetHome && targetHome.homeX) {
@@ -926,15 +926,15 @@ export function applyAllyAIMixin(DefenseGameClass) {
             v.chatPartner = null;
           }
         } else {
-          const stickDist = 18;
+          const stickDist = 22;
           const targetX = v.chatPartner.x + Math.cos(v.chatOffsetAngle) * stickDist;
           const targetY = v.chatPartner.y + Math.sin(v.chatOffsetAngle) * stickDist;
 
           v.x += (targetX - v.x) * 0.1;
           v.y += (targetY - v.y) * 0.1;
 
-          v.x += (Math.random() - 0.5) * 0.3;
-          v.y += (Math.random() - 0.5) * 0.3;
+          v.x += (Math.random() - 0.5) * 0.45;
+          v.y += (Math.random() - 0.5) * 0.45;
         }
         break;
       }
@@ -950,7 +950,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
           v.safeState = 'wander';
           v.chatPartner = null;
         } else {
-          this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.25);
+          this.smoothMoveToward(v, v.wanderTargetX, v.wanderTargetY, dt, 0.34 + (v.crowdEnergy || 0.5) * 0.08);
 
           if (v.chatPartner.safeState === 'chatting' || v.chatPartner.safeState === 'walkingTogether') {
             v.chatPartner.wanderTargetX = v.wanderTargetX + (Math.random() - 0.5) * 30;

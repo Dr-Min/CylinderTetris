@@ -153,7 +153,15 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     });
   };
 
-  proto.pickRoamingProtocolPoint = function (index, total) {
+  proto.getRoamingProtocolMinShardGap = function () {
+    const worldW = this.worldWidth || this.canvas.width || 0;
+    const worldH = this.worldHeight || this.canvas.height || 0;
+    const minDim = Math.min(worldW, worldH);
+    const baseGap = this.isMobile ? 96 : 128;
+    return Math.max(baseGap, minDim * (this.isMobile ? 0.09 : 0.12));
+  };
+
+  proto.pickRoamingProtocolPoint = function (index, total, existingPoints = []) {
     const worldW = this.worldWidth || this.canvas.width || 0;
     const worldH = this.worldHeight || this.canvas.height || 0;
     const margin = Math.min(120, Math.max(60, Math.min(worldW, worldH) * 0.07));
@@ -166,6 +174,10 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       : this.shieldAnchor.y || this.core.y || worldH / 2;
     const minDim = Math.min(worldW, worldH);
     const shieldRadius = Math.max(this.core.shieldRadius || 70, this.baseShieldRadius || 70);
+    const minShardGap =
+      typeof this.getRoamingProtocolMinShardGap === "function"
+        ? this.getRoamingProtocolMinShardGap()
+        : (this.isMobile ? 96 : 128);
     const minRadius = roamingWide
       ? Math.max(150, minDim * 0.2)
       : Math.max(shieldRadius + 72, (this.core.radius || 15) + 108);
@@ -202,6 +214,16 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         penalty += (minRadius * (roamingWide ? 0.78 : 1) - coreDistance) * 2.4;
       }
 
+      const closestShardDistance = existingPoints.length
+        ? existingPoints.reduce((closest, point) => {
+            const dist = Math.hypot(x - point.x, y - point.y);
+            return Math.min(closest, dist);
+          }, Infinity)
+        : Infinity;
+      if (closestShardDistance < minShardGap) {
+        penalty += (minShardGap - closestShardDistance) * 6;
+      }
+
       if (this.isSafeZone && Array.isArray(this.safeZoneFacilities)) {
         this.safeZoneFacilities.forEach((facility) => {
           const dist = Math.hypot(x - facility.x, y - facility.y);
@@ -213,9 +235,12 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       }
 
       const edgeDistance = Math.min(x - margin, y - margin, worldW - margin - x, worldH - margin - y);
+      const spacingBonus = Number.isFinite(closestShardDistance)
+        ? Math.min(closestShardDistance, minShardGap * 1.45) * 0.35
+        : minShardGap * 0.2;
       const score = roamingWide
-        ? coreDistance - penalty + Math.random() * 18
-        : edgeDistance * 0.35 - penalty + Math.random() * 30;
+        ? coreDistance + spacingBonus - penalty + Math.random() * 18
+        : edgeDistance * 0.35 + spacingBonus - penalty + Math.random() * 30;
       if (score > bestScore) {
         bestScore = score;
         bestPoint = { x, y };
@@ -238,8 +263,10 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     ) return;
 
     const letters = this.roamingProtocol.letters || [];
+    const assignedPoints = [];
     this.roamingProtocol.shards = letters.map((letter, index) => {
-      const point = this.pickRoamingProtocolPoint(index, letters.length);
+      const point = this.pickRoamingProtocolPoint(index, letters.length, assignedPoints);
+      assignedPoints.push(point);
       return {
         id: `${letter}-${index}-${Date.now()}`,
         letter,

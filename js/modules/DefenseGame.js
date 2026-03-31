@@ -1112,7 +1112,7 @@ export class DefenseGame {
 
     const total = this.alliedViruses.length;
     const now = performance.now();
-    const agentCount = Math.max(8, Math.min(12, Math.floor(total * 0.24)));
+    const agentCount = Math.max(6, Math.min(18, Math.round(total * 0.44)));
     const indexBag = this.alliedViruses.map((_, idx) => idx);
 
     for (let i = indexBag.length - 1; i > 0; i--) {
@@ -1134,8 +1134,8 @@ export class DefenseGame {
 
       ally.crowdRole = role;
       ally.personaType = persona;
-      ally.crowdEnergy = 0.3 + Math.random() * 0.7;
-      ally.crowdThinkAt = now + Math.random() * (role === "ambient" ? 1800 : 900);
+      ally.crowdEnergy = 0.42 + Math.random() * 0.78;
+      ally.crowdThinkAt = now + Math.random() * (role === "ambient" ? 900 : 550);
       ally.crowdTalkCooldownUntil = now + 1200 + Math.random() * 5200;
       ally.crowdMoveJitter = Math.random() * Math.PI * 2;
       ally.lastCrowdHotspotId = null;
@@ -2676,7 +2676,6 @@ export class DefenseGame {
     };
 
     const config = this.alliedConfig;
-    const count = 40;
     const unlockedTypes = new Set(["SWARM"]);
     if (Array.isArray(config?.safeZoneUnlockedTypes)) {
       config.safeZoneUnlockedTypes.forEach((type) => {
@@ -2688,6 +2687,12 @@ export class DefenseGame {
     }
     const typePool = Array.from(unlockedTypes).filter((type) => !!virusTypes[type]);
     if (typePool.length === 0) typePool.push("SWARM");
+    const baseCount = this.isMobile ? 18 : 26;
+    const bonusCount = Math.min(this.isMobile ? 4 : 6, Math.max(0, typePool.length - 1) * 2);
+    const count = baseCount + bonusCount;
+    const hotspots = Array.isArray(this.safeZoneCrowdHotspots) && this.safeZoneCrowdHotspots.length > 0
+      ? this.safeZoneCrowdHotspots
+      : null;
 
     for (let i = 0; i < count; i++) {
       const type = typePool[Math.floor(Math.random() * typePool.length)];
@@ -2701,27 +2706,21 @@ export class DefenseGame {
       const coreX = this.core.x;
       const coreY = this.core.y;
 
-      const zone = i % 4;
-      let spawnX, spawnY;
-
-      switch (zone) {
-        case 0:
-          spawnX = margin + Math.random() * (worldW * 0.35 - margin);
-          spawnY = margin + Math.random() * (worldH * 0.35 - margin);
-          break;
-        case 1:
-          spawnX = worldW * 0.65 + Math.random() * (worldW * 0.35 - margin);
-          spawnY = margin + Math.random() * (worldH * 0.35 - margin);
-          break;
-        case 2:
-          spawnX = margin + Math.random() * (worldW * 0.35 - margin);
-          spawnY = worldH * 0.65 + Math.random() * (worldH * 0.35 - margin);
-          break;
-        case 3:
-          spawnX = worldW * 0.65 + Math.random() * (worldW * 0.35 - margin);
-          spawnY = worldH * 0.65 + Math.random() * (worldH * 0.35 - margin);
-          break;
+      let spawnX;
+      let spawnY;
+      const hotspot = hotspots ? hotspots[Math.floor(Math.random() * hotspots.length)] : null;
+      if (hotspot) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.max(36, (hotspot.radius || 90) * (0.3 + Math.random() * 0.85));
+        spawnX = hotspot.x + Math.cos(angle) * radius;
+        spawnY = hotspot.y + Math.sin(angle) * radius;
+      } else {
+        spawnX = margin + Math.random() * Math.max(1, worldW - margin * 2);
+        spawnY = margin + Math.random() * Math.max(1, worldH - margin * 2);
       }
+
+      spawnX = Math.max(margin, Math.min(worldW - margin, spawnX));
+      spawnY = Math.max(margin, Math.min(worldH - margin, spawnY));
 
       const distFromCore = Math.hypot(spawnX - coreX, spawnY - coreY);
       if (distFromCore < 150) {
@@ -2756,7 +2755,7 @@ export class DefenseGame {
         attackType: typeData.attackType || "melee",
         homeX: spawnX,
         homeY: spawnY,
-        homeRadius: 80 + Math.random() * 60,
+        homeRadius: 95 + Math.random() * 110,
         vx: 0,
         vy: 0,
         wobblePhase: Math.random() * Math.PI * 2,
