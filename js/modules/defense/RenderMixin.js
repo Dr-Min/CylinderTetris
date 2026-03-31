@@ -851,7 +851,6 @@ export function applyRenderMixin(DefenseGameClass) {
     if (!this.isSafeZone) {
       this.renderMiningEffect(this.ctx, time);
     }
-    this.renderRoamingProtocolShards();
 
     if (this.isConquered) {
       if (!this.conqueredRenderLogged) {
@@ -927,6 +926,7 @@ export function applyRenderMixin(DefenseGameClass) {
         this.ctx.setLineDash([]);
       }
     }
+    this.renderRoamingProtocolShards();
 
     this.alliedViruses.forEach((v) => {
       this.ctx.save();

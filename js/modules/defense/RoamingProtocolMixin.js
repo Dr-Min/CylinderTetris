@@ -8,6 +8,8 @@ const LETTER_COLORS = {
   B: "#ff5cb8",
   A: "#ff944d",
 };
+const BARRAGE_ASCII_CHARS =
+  "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -52,9 +54,7 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
   };
 
   proto.getRoamingProtocolFireRateMultiplier = function () {
-    return this.isRoamingProtocolActive()
-      ? this.roamingProtocol.fireRateMultiplier
-      : 1;
+    return 1;
   };
 
   proto.getRoamingProtocolProjectileConfig = function () {
@@ -68,11 +68,31 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     }
 
     return {
-      count: this.roamingProtocol.barrageCount,
-      spread: this.roamingProtocol.barrageSpread,
-      damageMultiplier: this.roamingProtocol.barrageDamageMultiplier,
+      count: 1,
+      spread: 0,
+      damageMultiplier: 1,
       color: this.roamingProtocol.barrageColor,
     };
+  };
+
+  proto.getRoamingProtocolProgressIndex = function () {
+    if (!this.roamingProtocol || !Array.isArray(this.roamingProtocol.collected)) {
+      return 0;
+    }
+    return Math.max(
+      0,
+      Math.min(
+        this.roamingProtocol.collected.length,
+        this.roamingProtocol.letters?.length || 0
+      )
+    );
+  };
+
+  proto.getNextRoamingProtocolLetter = function () {
+    if (!this.roamingProtocol || !Array.isArray(this.roamingProtocol.letters)) {
+      return null;
+    }
+    return this.roamingProtocol.letters[this.getRoamingProtocolProgressIndex()] || null;
   };
 
   proto.ensureRoamingProtocolState = function (force = false) {
@@ -87,7 +107,10 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     this.roamingProtocol.stageKey = stageKey;
     this.roamingProtocol.active = false;
     this.roamingProtocol.timer = 0;
+    this.roamingProtocol.barrageTimer = 0;
     this.roamingProtocol.respawnTimer = 0;
+    this.roamingProtocol.resetFlashTimer = 0;
+    this.roamingProtocol.failedLetter = null;
     this.roamingProtocol.collected = [];
     this.roamingProtocol.shards = [];
 
@@ -120,32 +143,41 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       ? this.coreHome.y || worldH / 2
       : this.shieldAnchor.y || this.core.y || worldH / 2;
     const minDim = Math.min(worldW, worldH);
+    const shieldRadius = Math.max(this.core.shieldRadius || 70, this.baseShieldRadius || 70);
     const minRadius = roamingWide
       ? Math.max(150, minDim * 0.2)
-      : Math.max(28, (this.core.shieldRadius || 70) * 0.35);
+      : Math.max(shieldRadius + 72, (this.core.radius || 15) + 108);
     const maxRadius = roamingWide
       ? Math.max(minRadius + 120, minDim * 0.42)
-      : Math.max(minRadius + 12, (this.core.shieldRadius || 70) - 18);
+      : Math.max(minRadius + 160, minDim * 0.48);
 
     let bestPoint = null;
     let bestScore = -Infinity;
 
-    for (let attempt = 0; attempt < 12; attempt++) {
-      const baseAngle =
-        -Math.PI / 2 + (Math.PI * 2 * index) / Math.max(1, total);
-      const angle = baseAngle + (Math.random() - 0.5) * (roamingWide ? 0.52 : 0.3);
-      const radius =
-        minRadius + Math.random() * Math.max(1, maxRadius - minRadius);
-      let x = centerX + Math.cos(angle) * radius;
-      let y = centerY + Math.sin(angle) * radius;
+    for (let attempt = 0; attempt < 18; attempt++) {
+      let x;
+      let y;
+
+      if (roamingWide) {
+        const baseAngle =
+          -Math.PI / 2 + (Math.PI * 2 * index) / Math.max(1, total);
+        const angle = baseAngle + (Math.random() - 0.5) * 0.52;
+        const radius =
+          minRadius + Math.random() * Math.max(1, maxRadius - minRadius);
+        x = centerX + Math.cos(angle) * radius;
+        y = centerY + Math.sin(angle) * radius;
+      } else {
+        x = margin + Math.random() * Math.max(1, worldW - margin * 2);
+        y = margin + Math.random() * Math.max(1, worldH - margin * 2);
+      }
 
       x = clamp(x, margin, Math.max(margin, worldW - margin));
       y = clamp(y, margin, Math.max(margin, worldH - margin));
 
       let penalty = 0;
       const coreDistance = Math.hypot(x - centerX, y - centerY);
-      if (roamingWide && coreDistance < minRadius * 0.78) {
-        penalty += (minRadius * 0.78 - coreDistance) * 2;
+      if (coreDistance < minRadius * (roamingWide ? 0.78 : 1)) {
+        penalty += (minRadius * (roamingWide ? 0.78 : 1) - coreDistance) * 2.4;
       }
 
       if (this.isSafeZone && Array.isArray(this.safeZoneFacilities)) {
@@ -158,7 +190,10 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         });
       }
 
-      const score = coreDistance - penalty + Math.random() * 18;
+      const edgeDistance = Math.min(x - margin, y - margin, worldW - margin - x, worldH - margin - y);
+      const score = roamingWide
+        ? coreDistance - penalty + Math.random() * 18
+        : edgeDistance * 0.35 - penalty + Math.random() * 30;
       if (score > bestScore) {
         bestScore = score;
         bestPoint = { x, y };
@@ -190,19 +225,61 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       };
     });
     this.roamingProtocol.collected = [];
+    this.roamingProtocol.barrageTimer = 0;
     this.roamingProtocol.respawnTimer = 0;
   };
 
+  proto.resetRoamingProtocolProgress = function ({
+    failedLetter = null,
+    sourceX = this.core.x,
+    sourceY = this.core.y,
+  } = {}) {
+    if (!this.roamingProtocol) return;
+
+    this.roamingProtocol.active = false;
+    this.roamingProtocol.timer = 0;
+    this.roamingProtocol.barrageTimer = 0;
+    this.roamingProtocol.collected = [];
+    this.roamingProtocol.shards = [];
+    this.roamingProtocol.respawnTimer = 0;
+    this.roamingProtocol.resetFlashTimer = 0.6;
+    this.roamingProtocol.failedLetter = failedLetter;
+
+    if (typeof this.shakeScreen === "function") {
+      this.shakeScreen(7, 4);
+    }
+
+    this.createExplosion(sourceX, sourceY, "#ff5566", 12);
+    this.spawnRoamingProtocolShards();
+  };
+
   proto.collectRoamingProtocolShard = function (index) {
-    if (!this.roamingProtocol || !Array.isArray(this.roamingProtocol.shards)) return;
+    if (!this.roamingProtocol || !Array.isArray(this.roamingProtocol.shards)) return null;
 
     const shard = this.roamingProtocol.shards[index];
-    if (!shard) return;
+    if (!shard) return null;
+    const expectedLetter = this.getNextRoamingProtocolLetter();
+
+    if (expectedLetter && shard.letter !== expectedLetter) {
+      debugLog("Defense", "Roaming protocol mismatch", {
+        expected: expectedLetter,
+        actual: shard.letter,
+        stage: this.currentStageId,
+      });
+      this.resetRoamingProtocolProgress({
+        failedLetter: shard.letter,
+        sourceX: shard.x,
+        sourceY: shard.y,
+      });
+      return "reset";
+    }
 
     this.roamingProtocol.shards.splice(index, 1);
     if (!this.roamingProtocol.collected.includes(shard.letter)) {
       this.roamingProtocol.collected.push(shard.letter);
     }
+    this.roamingProtocol.failedLetter = null;
+    this.roamingProtocol.resetFlashTimer = 0;
 
     this.createExplosion(shard.x, shard.y, shard.color, 10);
     this.shockwaves.push({
@@ -230,7 +307,9 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
 
     if (this.roamingProtocol.collected.length >= this.roamingProtocol.letters.length) {
       this.activateRoamingProtocolOverdrive();
+      return "complete";
     }
+    return "collected";
   };
 
   proto.activateRoamingProtocolOverdrive = function () {
@@ -238,7 +317,10 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
 
     this.roamingProtocol.active = true;
     this.roamingProtocol.timer = this.roamingProtocol.duration;
+    this.roamingProtocol.barrageTimer = 0;
     this.roamingProtocol.respawnTimer = 0;
+    this.roamingProtocol.resetFlashTimer = 0;
+    this.roamingProtocol.failedLetter = null;
     this.roamingProtocol.shards = [];
     this.roamingProtocol.collected = [...this.roamingProtocol.letters];
 
@@ -291,14 +373,79 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     });
   };
 
+  proto.fireRoamingProtocolBarrage = function () {
+    if (!this.roamingProtocol || !this.isRoamingProtocolActive()) return;
+
+    const projectileCount = Math.max(6, this.roamingProtocol.barrageCount || 10);
+    const baseAngle = Math.random() * Math.PI * 2;
+    const angleStep = (Math.PI * 2) / projectileCount;
+    const jitter = angleStep * 0.65;
+    const originRadius = this.core.radius + 8;
+    const projectileSpeed = 420;
+    const projectileLife = this.roamingProtocol.barrageLife || 1.4;
+    const projectileDamage =
+      this.turret.damage * (this.roamingProtocol.barrageDamageMultiplier || 0.42);
+    const projectileColor = this.roamingProtocol.barrageColor || "#ff5cb8";
+
+    this.core.targetOffsetX = (Math.random() - 0.5) * 6;
+    this.core.targetOffsetY = (Math.random() - 0.5) * 6;
+
+    for (let i = 0; i < projectileCount; i++) {
+      const angle = baseAngle + angleStep * i + (Math.random() - 0.5) * jitter;
+      const randomChar =
+        BARRAGE_ASCII_CHARS[Math.floor(Math.random() * BARRAGE_ASCII_CHARS.length)];
+
+      this.projectiles.push({
+        x: this.core.x + Math.cos(angle) * originRadius,
+        y: this.core.y + Math.sin(angle) * originRadius,
+        target: null,
+        angle,
+        speed: projectileSpeed,
+        damage: projectileDamage,
+        radius: 4,
+        life: projectileLife,
+        char: randomChar,
+        color: projectileColor,
+      });
+    }
+
+    this.createExplosion(this.core.x, this.core.y, projectileColor, this.isMobile ? 3 : 5);
+  };
+
   proto.updateRoamingProtocol = function (dt) {
     if (!this.roamingProtocol) return;
 
+    if (this.roamingProtocol.resetFlashTimer > 0) {
+      this.roamingProtocol.resetFlashTimer = Math.max(
+        0,
+        this.roamingProtocol.resetFlashTimer - dt
+      );
+      if (this.roamingProtocol.resetFlashTimer <= 0) {
+        this.roamingProtocol.failedLetter = null;
+      }
+    }
+
     if (this.roamingProtocol.active) {
       this.roamingProtocol.timer = Math.max(0, this.roamingProtocol.timer - dt);
+      this.roamingProtocol.barrageTimer += dt;
+
+      const barrageInterval = Math.max(0.05, this.roamingProtocol.barrageInterval || 0.1);
+      let volleyCount = 0;
+      while (
+        this.roamingProtocol.barrageTimer >= barrageInterval &&
+        volleyCount < 4
+      ) {
+        this.roamingProtocol.barrageTimer -= barrageInterval;
+        this.fireRoamingProtocolBarrage();
+        volleyCount++;
+      }
+
       if (this.roamingProtocol.timer <= 0) {
         this.roamingProtocol.active = false;
+        this.roamingProtocol.barrageTimer = 0;
         this.roamingProtocol.collected = [];
+        this.roamingProtocol.failedLetter = null;
+        this.roamingProtocol.resetFlashTimer = 0;
         this.roamingProtocol.respawnTimer = this.roamingProtocol.respawnDelay;
       }
       return;
@@ -319,10 +466,11 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
 
     for (let i = this.roamingProtocol.shards.length - 1; i >= 0; i--) {
       const shard = this.roamingProtocol.shards[i];
-      const captureRadius = this.core.radius + shard.radius + 4;
+      const captureRadius = this.core.radius + shard.radius + 6;
       const dist = Math.hypot(this.core.x - shard.x, this.core.y - shard.y);
       if (dist <= captureRadius) {
         this.collectRoamingProtocolShard(i);
+        break;
       }
     }
   };
@@ -339,21 +487,24 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
 
     const ctx = this.ctx;
     const now = performance.now() / 1000;
+    const nextLetter = this.getNextRoamingProtocolLetter();
 
     this.roamingProtocol.shards.forEach((shard, index) => {
-      const pulse = 1 + Math.sin(now * 3.3 + shard.pulseOffset) * 0.08;
-      const bob = Math.sin(now * 2.5 + shard.pulseOffset) * 4;
-      const outerRadius = shard.radius * 1.18 * pulse;
-      const innerRadius = shard.radius * 0.74 * pulse;
+      const isTarget = shard.letter === nextLetter;
+      const pulse = 1 + Math.sin(now * (isTarget ? 5.2 : 3.3) + shard.pulseOffset) * (isTarget ? 0.13 : 0.08);
+      const bob = Math.sin(now * (isTarget ? 3.2 : 2.5) + shard.pulseOffset) * (isTarget ? 6 : 4);
+      const outerRadius = shard.radius * (isTarget ? 1.42 : 1.18) * pulse;
+      const innerRadius = shard.radius * (isTarget ? 0.82 : 0.74) * pulse;
       const labelY = shard.y + bob;
       const rotation = now * 0.8 + index * 0.5;
 
       ctx.save();
       ctx.translate(shard.x, labelY);
       ctx.rotate(rotation);
-      ctx.shadowColor = shard.color;
-      ctx.shadowBlur = 18;
-      ctx.fillStyle = hexToRgba(shard.color, 0.14);
+      ctx.globalAlpha = isTarget ? 1 : 0.82;
+      ctx.shadowColor = isTarget ? "#ffffff" : shard.color;
+      ctx.shadowBlur = isTarget ? 26 : 18;
+      ctx.fillStyle = hexToRgba(shard.color, isTarget ? 0.2 : 0.14);
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
         const angle = (Math.PI / 3) * i;
@@ -365,12 +516,12 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       ctx.closePath();
       ctx.fill();
 
-      ctx.strokeStyle = shard.color;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isTarget ? "#ffffff" : shard.color;
+      ctx.lineWidth = isTarget ? 2.6 : 2;
       ctx.stroke();
 
       ctx.rotate(-rotation * 1.6);
-      ctx.fillStyle = hexToRgba(shard.color, 0.22);
+      ctx.fillStyle = hexToRgba(shard.color, isTarget ? 0.32 : 0.22);
       ctx.beginPath();
       ctx.arc(0, 0, innerRadius, 0, Math.PI * 2);
       ctx.fill();
@@ -390,20 +541,35 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
 
     const ctx = this.ctx;
     const letters = this.roamingProtocol.letters || [];
-    const collectedSet = new Set(this.roamingProtocol.collected || []);
+    const progressIndex = this.getRoamingProtocolProgressIndex();
     const isActive = this.isRoamingProtocolActive();
+    const failedLetter = this.roamingProtocol.failedLetter;
+    const warningActive =
+      !isActive &&
+      (this.roamingProtocol.resetFlashTimer || 0) > 0 &&
+      !!failedLetter;
+    const nextLetter = this.getNextRoamingProtocolLetter();
     const boxWidth = this.isMobile ? 244 : 268;
     const boxHeight = this.isMobile ? 58 : 64;
     const x = this.canvas.width / 2 - boxWidth / 2;
     const y = this.isMobile ? 18 : 16;
-    const header = isActive ? "F-A OVERDRIVE" : "F-A DRIVE";
+    const header = isActive ? "F-A OVERDRIVE" : warningActive ? "F-A RESET" : "F-A DRIVE";
     const subline = isActive
       ? `${this.roamingProtocol.timer.toFixed(1)}s CORE BARRAGE`
-      : `${collectedSet.size}/${letters.length} SHARDS COLLECTED`;
+      : warningActive
+        ? `WRONG ${failedLetter} -> RESET`
+        : nextLetter
+          ? `NEXT SHARD: ${nextLetter}`
+          : `${progressIndex}/${letters.length} SHARDS LOCKED`;
+    const frameColor = isActive
+      ? this.roamingProtocol.barrageColor
+      : warningActive
+        ? "#ff5566"
+        : "#00f0ff";
 
     ctx.save();
-    ctx.fillStyle = "rgba(4, 8, 16, 0.76)";
-    ctx.strokeStyle = isActive ? this.roamingProtocol.barrageColor : "#00f0ff";
+    ctx.fillStyle = warningActive ? "rgba(24, 6, 10, 0.82)" : "rgba(4, 8, 16, 0.76)";
+    ctx.strokeStyle = frameColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.roundRect(x, y, boxWidth, boxHeight, 10);
@@ -413,11 +579,11 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = this.isMobile ? "bold 13px monospace" : "bold 14px monospace";
-    ctx.fillStyle = isActive ? "#fff2fb" : "#d9fbff";
+    ctx.fillStyle = isActive ? "#fff2fb" : warningActive ? "#ffd6dd" : "#d9fbff";
     ctx.fillText(header, x + boxWidth / 2, y + 16);
 
     ctx.font = this.isMobile ? "10px monospace" : "11px monospace";
-    ctx.fillStyle = isActive ? "#ff99dd" : "#7fdcff";
+    ctx.fillStyle = isActive ? "#ff99dd" : warningActive ? "#ff8899" : "#7fdcff";
     ctx.fillText(subline, x + boxWidth / 2, y + 31);
 
     const badgeStartX = x + 24;
@@ -426,18 +592,27 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
 
     letters.forEach((letter, index) => {
       const badgeX = badgeStartX + badgeGap * index;
-      const collected = isActive || collectedSet.has(letter);
+      const collected = isActive || index < progressIndex;
+      const isNext = !isActive && index === progressIndex;
       const color = LETTER_COLORS[letter] || "#ffffff";
 
-      ctx.fillStyle = collected ? hexToRgba(color, 0.26) : "rgba(255, 255, 255, 0.06)";
-      ctx.strokeStyle = collected ? color : "rgba(255, 255, 255, 0.18)";
-      ctx.lineWidth = collected ? 1.8 : 1;
+      ctx.fillStyle = collected
+        ? hexToRgba(color, 0.26)
+        : isNext
+          ? hexToRgba(color, 0.16)
+          : "rgba(255, 255, 255, 0.06)";
+      ctx.strokeStyle = collected
+        ? color
+        : isNext
+          ? "#ffffff"
+          : "rgba(255, 255, 255, 0.18)";
+      ctx.lineWidth = collected ? 1.8 : isNext ? 2.2 : 1;
       ctx.beginPath();
       ctx.arc(badgeX, badgeY, 11, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = collected ? "#ffffff" : "#7a8794";
+      ctx.fillStyle = collected ? "#ffffff" : isNext ? color : "#7a8794";
       ctx.font = "bold 11px monospace";
       ctx.fillText(letter, badgeX, badgeY + 0.5);
     });

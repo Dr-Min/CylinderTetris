@@ -493,24 +493,43 @@ export function applyEffectsMixin(DefenseGameClass) {
     });
   }
 
-  proto.shakeScreen = function() {
-    const container = document.getElementById("game-container");
-    if (!container) return;
+  proto.shakeScreen = function(intensity = 15, maxShakes = 8) {
+    const targets = [
+      document.getElementById("game-container"),
+      this.canvas,
+      this.uiLayer,
+    ].filter(Boolean);
+    if (targets.length === 0) return;
 
-    container.style.transition = "none";
+    const originalState = targets.map((element) => ({
+      element,
+      transform: element.style.transform || "",
+      transition: element.style.transition || "",
+    }));
+
+    targets.forEach((element) => {
+      element.style.transition = "none";
+    });
+
     let shakeCount = 0;
-    const maxShakes = 8;
-    const shakeIntensity = 15;
+    const shakeIntensity = intensity;
     const doShake = () => {
       if (shakeCount >= maxShakes) {
-        container.style.transform = "translate(0, 0)";
+        originalState.forEach(({ element, transform, transition }) => {
+          element.style.transform = transform;
+          element.style.transition = transition;
+        });
         return;
       }
 
       const decay = 1 - shakeCount / maxShakes;
       const x = (Math.random() - 0.5) * shakeIntensity * decay;
       const y = (Math.random() - 0.5) * shakeIntensity * decay;
-      container.style.transform = `translate(${x}px, ${y}px)`;
+      originalState.forEach(({ element, transform }) => {
+        element.style.transform = transform
+          ? `${transform} translate(${x}px, ${y}px)`
+          : `translate(${x}px, ${y}px)`;
+      });
 
       shakeCount++;
       setTimeout(doShake, 40);

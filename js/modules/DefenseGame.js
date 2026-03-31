@@ -652,11 +652,16 @@ export class DefenseGame {
       respawnTimer: 0,
       respawnDelay: 2.8,
       shardRadius: 16,
-      fireRateMultiplier: 2.2,
-      barrageCount: 3,
+      fireRateMultiplier: 1,
+      barrageCount: this.isMobile ? 10 : 12,
       barrageSpread: 0.22,
-      barrageDamageMultiplier: 0.58,
+      barrageDamageMultiplier: 0.42,
       barrageColor: "#ff5cb8",
+      barrageInterval: this.isMobile ? 0.11 : 0.09,
+      barrageLife: this.isMobile ? 1.2 : 1.4,
+      barrageTimer: 0,
+      resetFlashTimer: 0,
+      failedLetter: null,
     };
     window.render_game_to_text = () => this.renderGameToText();
     window.advanceTime = (ms) => this.advanceTime(ms);
@@ -900,6 +905,9 @@ export class DefenseGame {
         active: !!roamingProtocol.active,
         timer: Number((roamingProtocol.timer || 0).toFixed(2)),
         collected,
+        nextLetter: letters[collected.length] || null,
+        failedLetter: roamingProtocol.failedLetter || null,
+        resetFlashTimer: Number((roamingProtocol.resetFlashTimer || 0).toFixed(2)),
         remainingLetters: letters.filter((letter) => !collected.includes(letter)),
         shards: Array.isArray(roamingProtocol.shards)
           ? roamingProtocol.shards.map((shard) => ({
