@@ -942,7 +942,13 @@ export class DefenseGame {
     const stageIndex = Math.max(0, this.currentStageId || 0);
     const stageFactor = 1 + Math.min(0.5, stageIndex * 0.03);
     const diffFactor = Math.sqrt(diffScale || 1);
-    const baseRate = 0.42 - page * 0.025 * diffFactor;
+    let earlyPressureBonus = 0;
+    if (stageIndex <= 2) {
+      earlyPressureBonus = Math.max(0, (4 - page) * 0.012);
+    } else if (stageIndex <= 5) {
+      earlyPressureBonus = Math.max(0, (3 - page) * 0.008);
+    }
+    const baseRate = 0.42 - page * 0.025 * diffFactor - earlyPressureBonus;
     const scaledRate = baseRate / stageFactor;
     return Math.max(0.16 * this.pageSpawnScale, scaledRate * this.pageSpawnScale);
   }
