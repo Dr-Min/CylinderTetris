@@ -70,6 +70,7 @@ This file provides persistent project context for coding agents.
 - Keep version strings in sync: `index.html` title, CSS/JS cache-busting query, and in-UI protocol label.
 - If you update versions, also update `manifest.json` and `sw.js` cache keys.
 - Preserve the SW update notification flow in `js/main.js`.
+- Treat PWA version sync as mandatory for any user-visible build or cache-affecting change: bump the version, sync all listed files, then commit and push the update.
 
 ## 14) Terminal Commands Cheat Sheet
 - `/map` - open map and choose a stage
