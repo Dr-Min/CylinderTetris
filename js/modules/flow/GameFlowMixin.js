@@ -59,6 +59,11 @@ export function applyGameFlowMixin(GameManagerClass) {
       await this.terminal.printSystemMessage(
         "System Idle. Ready for Operations."
       );
+      if (this.defenseGame.isSafeZone) {
+        await this.tutorialDirector?.handleEvent("safe-zone-ready", {
+          stage: initialStage,
+        });
+      }
       await this.showCommandMenu();
     } else if (mode === "breach") {
       // 1. 디펜스 정지 및 숨김
@@ -150,6 +155,7 @@ export function applyGameFlowMixin(GameManagerClass) {
     debugLog("Conquest", "=== startConquestTetris 시작 ===");
     const targetLines = 3;
     const speed = 500;
+    this.tutorialDirector?.handleEvent("breach-started");
 
     // 테트리스 상단 UI 숨기기 (Mining Rate, DATA MINED 등)
     this.hideConquestTetrisUI();
@@ -331,6 +337,7 @@ export function applyGameFlowMixin(GameManagerClass) {
   proto.handleConquestComplete = async function() {
     debugLog("Conquest", "========== handleConquestComplete START ==========");
     this.isConquestMode = false;
+    this.tutorialDirector?.handleEvent("conquest-complete");
 
     // 테트리스 정리 (혹시 아직 플레이 중이면)
     if (this.tetrisGame.state.isPlaying) {
@@ -658,6 +665,7 @@ export function applyGameFlowMixin(GameManagerClass) {
   }
 
   proto.handleConquest = async function() {
+    this.tutorialDirector?.handleEvent("breach-started");
     // 1. 점령 로직 실행 (병합 등 계산)
     const result = this.conquestManager.conquerStage();
 

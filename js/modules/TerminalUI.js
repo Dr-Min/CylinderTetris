@@ -733,6 +733,8 @@ export class TerminalUI {
         const choice = choices[index];
         const btn = document.createElement("button");
         btn.className = "choice-btn";
+        btn.dataset.choiceValue = String(choice.value);
+        btn.dataset.choiceStyle = choice.style || "default";
         
         // 점령 스타일 (빨간색, 큰 폰트)
         if (choice.style === "conquer") {
@@ -750,6 +752,7 @@ export class TerminalUI {
         
         const displayIndex = index + 1;
         const fullText = `[${displayIndex}] ${choice.text}`;
+        btn.dataset.choiceIndex = String(displayIndex);
         btn.textContent = ""; // 빈 상태로 시작
         
         btn.onclick = () => {

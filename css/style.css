@@ -411,6 +411,173 @@ body {
   text-shadow: 0 0 3px #4af;
 }
 
+#tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  pointer-events: none;
+}
+
+#tutorial-overlay.tutorial-blocking {
+  pointer-events: auto;
+}
+
+#tutorial-overlay .tutorial-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, rgba(0, 255, 170, 0.06), transparent 42%),
+    rgba(2, 7, 14, 0.14);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+#tutorial-overlay.tutorial-hint .tutorial-scrim,
+#tutorial-overlay.tutorial-toast .tutorial-scrim {
+  opacity: 0.4;
+}
+
+#tutorial-overlay.tutorial-modal .tutorial-scrim {
+  opacity: 1;
+}
+
+#tutorial-overlay .tutorial-highlight {
+  position: fixed;
+  border: 2px solid rgba(99, 255, 214, 0.95);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 9999px rgba(2, 7, 14, 0.18),
+    0 0 18px rgba(99, 255, 214, 0.45),
+    inset 0 0 18px rgba(99, 255, 214, 0.12);
+  display: none;
+}
+
+#tutorial-overlay .tutorial-pointer {
+  position: fixed;
+  height: 16px;
+  transform-origin: 0 50%;
+  display: none;
+}
+
+#tutorial-overlay .tutorial-pointer-line {
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: calc(100% - 14px);
+  height: 2px;
+  background: linear-gradient(90deg, rgba(99, 255, 214, 0.2), rgba(99, 255, 214, 1));
+  box-shadow: 0 0 10px rgba(99, 255, 214, 0.65);
+}
+
+#tutorial-overlay .tutorial-pointer-head {
+  position: absolute;
+  right: 0;
+  top: 2px;
+  width: 11px;
+  height: 11px;
+  border-top: 2px solid rgba(99, 255, 214, 1);
+  border-right: 2px solid rgba(99, 255, 214, 1);
+  transform: rotate(45deg);
+  box-shadow: 0 0 8px rgba(99, 255, 214, 0.45);
+}
+
+#tutorial-overlay .tutorial-card {
+  position: fixed;
+  width: min(340px, calc(100vw - 28px));
+  padding: 16px 16px 14px;
+  border: 1px solid rgba(99, 255, 214, 0.8);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(6, 16, 26, 0.96), rgba(3, 10, 18, 0.92)),
+    rgba(3, 10, 18, 0.92);
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(99, 255, 214, 0.18),
+    inset 0 0 0 1px rgba(99, 255, 214, 0.08);
+  color: #d9fff8;
+  font-family: var(--term-font);
+  pointer-events: auto;
+}
+
+#tutorial-overlay .tutorial-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+#tutorial-overlay .tutorial-avatar {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(99, 255, 214, 0.28), transparent 60%),
+    rgba(7, 28, 34, 0.92);
+  border: 1px solid rgba(99, 255, 214, 0.5);
+  color: #7bffe2;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 0 12px rgba(99, 255, 214, 0.12);
+}
+
+#tutorial-overlay .tutorial-header-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+#tutorial-overlay .tutorial-speaker {
+  color: #7bffe2;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  margin-bottom: 4px;
+}
+
+#tutorial-overlay .tutorial-title {
+  color: #f5fff9;
+  font-size: 18px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+}
+
+#tutorial-overlay .tutorial-body {
+  color: rgba(220, 255, 247, 0.92);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+#tutorial-overlay .tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+#tutorial-overlay .tutorial-actions button {
+  border-radius: 999px;
+  border: 1px solid rgba(99, 255, 214, 0.65);
+  background: rgba(6, 18, 24, 0.9);
+  color: #d9fff8;
+  font-family: var(--term-font);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  padding: 8px 14px;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 0 10px rgba(99, 255, 214, 0.14);
+}
+
+#tutorial-overlay .tutorial-actions button:hover,
+#tutorial-overlay .tutorial-actions button:focus {
+  color: #031012;
+  background: #7bffe2;
+  box-shadow: 0 0 14px rgba(123, 255, 226, 0.35);
+}
+
 #game-container {
   transition: opacity 1s;
   position: fixed;
@@ -862,6 +1029,32 @@ body {
     margin: 0;
   }
 
+  #tutorial-overlay .tutorial-card {
+    width: min(320px, calc(100vw - 20px));
+    padding: 14px 14px 12px;
+    border-radius: 16px;
+  }
+
+  #tutorial-overlay .tutorial-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 12px;
+  }
+
+  #tutorial-overlay .tutorial-title {
+    font-size: 16px;
+  }
+
+  #tutorial-overlay .tutorial-body {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  #tutorial-overlay .tutorial-actions button {
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+
   /* 게임 오버 스크린 모바일 - 중복 제거됨 (위에서 정의) */
 
   /* 업데이트 알림 모바일 */
@@ -946,6 +1139,40 @@ body {
     line-height: 22px;
     background: rgba(0, 0, 0, 0.5);
     padding: 0 6px;
+  }
+
+  #tutorial-overlay .tutorial-card {
+    width: min(300px, calc(100vw - 16px));
+    padding: 12px 12px 10px;
+  }
+
+  #tutorial-overlay .tutorial-card-header {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  #tutorial-overlay .tutorial-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    font-size: 11px;
+  }
+
+  #tutorial-overlay .tutorial-title {
+    font-size: 15px;
+  }
+
+  #tutorial-overlay .tutorial-body {
+    font-size: 12px;
+  }
+
+  #tutorial-overlay .tutorial-actions {
+    gap: 8px;
+  }
+
+  #tutorial-overlay .tutorial-actions button {
+    font-size: 11px;
+    padding: 8px 10px;
   }
 
   .top-bar {

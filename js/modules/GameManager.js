@@ -14,12 +14,18 @@ import "./debug/DebugSystem.js";
 import { applyLootMixin } from "./loot/LootMixin.js";
 import { applyPersistenceMixin } from "./persist/PersistenceMixin.js";
 import { applyGameFlowMixin } from "./flow/GameFlowMixin.js";
+import { TutorialDirector } from "./tutorial/TutorialDirector.js";
 
 export class GameManager {
   constructor() {
     this.terminal = new TerminalUI();
     this.tetrisGame = new TetrisGame("game-container");
     this.defenseGame = new DefenseGame("game-container");
+    this.tutorialDirector = new TutorialDirector({
+      gameManager: this,
+      terminal: this.terminal,
+      defenseGame: this.defenseGame,
+    });
     this.perkManager = new PerkManager();
     this.conquestManager = new ConquestManager();
     this.equipmentManager = new EquipmentManager();
@@ -77,7 +83,10 @@ export class GameManager {
     this.defenseGame.onConquer = () => this.handleConquest();
 
     // 점령 가능 상태 시 선택지 갱신
-    this.defenseGame.onConquerReady = () => this.refreshCommandMenu();
+    this.defenseGame.onConquerReady = () => {
+      this.refreshCommandMenu();
+      this.tutorialDirector?.handleEvent("conquer-ready");
+    };
 
     // PAGE 업데이트 연결 (터미널에 표시)
     this.defenseGame.onPageUpdate = (text, color) =>
@@ -1219,9 +1228,18 @@ export class GameManager {
     this.setupBGMButton();
 
     // [DEV] 튜토리얼 스킵 (개발 중 비활성화)
-    localStorage.setItem("tutorial_completed", "true");
+    const tutorialFlag = localStorage.getItem("tutorial_completed");
+    const hasLegacyProgress =
+      this.stageManager.getConqueredCount() > 0 ||
+      this.currentMoney > 0 ||
+      this.reputation > 0;
 
-    const tutorialCompleted = localStorage.getItem("tutorial_completed");
+    if (!tutorialFlag && hasLegacyProgress) {
+      localStorage.setItem("tutorial_completed", "true");
+    }
+
+    this.tutorialDirector.syncFromStorage();
+    const tutorialCompleted = this.tutorialDirector.isComplete();
     if (tutorialCompleted) {
       this.loadPermanentPerks();
 
@@ -1231,7 +1249,7 @@ export class GameManager {
       await new Promise((r) => setTimeout(r, 500));
 
       // 바로 게임 시작 (평판 시스템 스킵)
-      this.switchMode("defense");
+      await this.switchMode("defense");
     } else {
       await this.startIntro();
     }
@@ -1277,7 +1295,12 @@ export class GameManager {
       });
     }
 
-    const choice = await this.terminal.showChoices(choices);
+    const choicePromise = this.terminal.showChoices(choices);
+    this.tutorialDirector?.handleEvent("command-menu-shown", {
+      choices,
+      stageType: currentStage?.type || "unknown",
+    });
+    const choice = await choicePromise;
 
     if (choice === "conquer") {
       await this.handleConquerFromTerminal();
@@ -1862,6 +1885,10 @@ export class GameManager {
       const isAccessible = accessibleIds.includes(stage.id);
       const isConquered = stage.conquered;
       const isLocked = !isAccessible && !isConquered;
+      btn.dataset.stageId = String(stage.id);
+      btn.dataset.stageType = stage.type;
+      btn.dataset.stageAccessible = isAccessible ? "true" : "false";
+      btn.dataset.stageCurrent = isCurrent ? "true" : "false";
 
       // 색상 설정 (우선순위: 현재 > 갈수있음 > 점령됨 > 보스 > 파밍 > 잠김)
       let bgColor,
@@ -1996,6 +2023,7 @@ export class GameManager {
     `;
     closeBtn.innerText = "[CLOSE MAP]";
     closeBtn.onclick = () => {
+      this.tutorialDirector?.handleEvent("map-closed");
       bgOverlay.remove();
       this.defenseGame.resume();
       this.showCommandMenu();
@@ -2019,6 +2047,7 @@ export class GameManager {
       `;
       document.head.appendChild(style);
     }
+    this.tutorialDirector?.handleEvent("map-opened");
   }
 
   /**
@@ -2028,6 +2057,7 @@ export class GameManager {
     const result = this.stageManager.moveToStage(stage.id);
 
     if (result.success) {
+      this.tutorialDirector?.handleEvent("stage-selected", { stage: result.stage });
       // 1. 장비 선택 (안전영역 제외) - 맵 위에서 바로 진행
       if (stage.type !== "safe") {
         await this.showEquipmentSelection(stage);
@@ -2067,6 +2097,9 @@ export class GameManager {
       // 6. 연출 종료 후 시스템 메시지 (타이핑 효과)
       // terminal.clear() 제거 - 메시지 축적 유지
       await this.terminal.printSystemMessage(`DEPLOYED: ${result.stage.name}`);
+      await this.tutorialDirector?.handleEvent("combat-ready", {
+        stage: result.stage,
+      });
 
       await this.showCommandMenu();
     } else {
@@ -3078,6 +3111,17 @@ export class GameManager {
 
   async startIntro() {
     this.terminal.show();
+    this.loadPermanentPerks();
+    this.terminal.clear();
+    await this.terminal.typeText("Initializing HACKER_PROTOCOL v22...", 20);
+    await new Promise((r) => setTimeout(r, 400));
+    await this.terminal.typeText("Linking support unit PDX-01...", 20);
+    await new Promise((r) => setTimeout(r, 400));
+    await this.terminal.typeText("Deploying to Safe Zone...", 20);
+    await new Promise((r) => setTimeout(r, 500));
+    this.tutorialDirector.beginFirstRunSession();
+    await this.switchMode("defense");
+    return;
     await this.terminal.typeText("Initializing HACKER_PROTOCOL v22...", 20);
     await new Promise((r) => setTimeout(r, 500));
     await this.terminal.typeText("Connecting to local proxy...", 20);
