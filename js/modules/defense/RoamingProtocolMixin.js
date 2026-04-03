@@ -10,6 +10,10 @@ const LETTER_COLORS = {
 };
 const BARRAGE_ASCII_CHARS =
   "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const MOBILE_ROAMING_RING_RADIUS = 62;
+const MOBILE_ROAMING_BADGE_RADIUS = 11;
+const MOBILE_ROAMING_TRAVEL_DURATION = 0.22;
+const MOBILE_ROAMING_RETURN_DURATION = 0.36;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -29,6 +33,15 @@ function hexToRgba(hex, alpha) {
   const g = (intValue >> 8) & 255;
   const b = intValue & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function lerp(start, end, amount) {
+  return start + (end - start) * amount;
+}
+
+function easeInOutSine(value) {
+  const clamped = clamp(value, 0, 1);
+  return -(Math.cos(Math.PI * clamped) - 1) * 0.5;
 }
 
 export function applyRoamingProtocolMixin(DefenseGameClass) {
@@ -99,6 +112,47 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     return this.roamingProtocol.letters[this.getRoamingProtocolProgressIndex()] || null;
   };
 
+  proto.ensureRoamingProtocolVisualState = function () {
+    if (!this.roamingProtocol) return null;
+    if (!this.roamingProtocol.visual) {
+      this.roamingProtocol.visual = {
+        mode: "center",
+        transition: 0,
+        orbitPhase: -Math.PI / 2,
+        carryFullSet: false,
+      };
+    }
+    return this.roamingProtocol.visual;
+  };
+
+  proto.resetRoamingProtocolVisualState = function (mode = "center") {
+    const visual = this.ensureRoamingProtocolVisualState();
+    if (!visual) return;
+    visual.mode = mode;
+    visual.transition = 0;
+    visual.carryFullSet = false;
+  };
+
+  proto.getRoamingProtocolWorldCenter = function () {
+    return {
+      x: (this.worldWidth || this.canvas.width || 0) * 0.5,
+      y: (this.worldHeight || this.canvas.height || 0) * 0.5,
+    };
+  };
+
+  proto.projectRoamingProtocolPoint = function (worldX, worldY) {
+    const screenCenterX = this.canvas.width * 0.5;
+    const screenCenterY = this.canvas.height * 0.5;
+    const cameraX = this.camera?.x ?? this.core.x;
+    const cameraY = this.camera?.y ?? this.core.y;
+    const scale = this.gameScale || 1;
+
+    return {
+      x: screenCenterX + (worldX - cameraX) * scale,
+      y: screenCenterY + (worldY - cameraY) * scale,
+    };
+  };
+
   proto.ensureRoamingProtocolState = function (force = false) {
     if (!this.roamingProtocol) return;
 
@@ -118,6 +172,7 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       this.roamingProtocol.failedLetter = null;
       this.roamingProtocol.collected = [];
       this.roamingProtocol.shards = [];
+      this.resetRoamingProtocolVisualState("center");
       return;
     }
 
@@ -135,6 +190,7 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     this.roamingProtocol.failedLetter = null;
     this.roamingProtocol.collected = [];
     this.roamingProtocol.shards = [];
+    this.resetRoamingProtocolVisualState("center");
 
     this.spawnRoamingProtocolShards();
     debugLog("Defense", "Roaming protocol reset", stageKey);
@@ -297,6 +353,7 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     this.roamingProtocol.respawnTimer = 0;
     this.roamingProtocol.resetFlashTimer = 0.6;
     this.roamingProtocol.failedLetter = failedLetter;
+    this.resetRoamingProtocolVisualState("center");
 
     if (typeof this.shakeScreen === "function") {
       this.shakeScreen(7, 4);
@@ -368,6 +425,8 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
   proto.activateRoamingProtocolOverdrive = function () {
     if (!this.roamingProtocol) return;
 
+    const visual = this.ensureRoamingProtocolVisualState();
+
     this.roamingProtocol.active = true;
     this.roamingProtocol.timer = this.roamingProtocol.duration;
     this.roamingProtocol.barrageTimer = 0;
@@ -376,6 +435,12 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     this.roamingProtocol.failedLetter = null;
     this.roamingProtocol.shards = [];
     this.roamingProtocol.collected = [...this.roamingProtocol.letters];
+
+    if (visual) {
+      visual.mode = "travel-to-core";
+      visual.transition = 0;
+      visual.carryFullSet = true;
+    }
 
     const barrageColor = this.roamingProtocol.barrageColor;
     const shockwaveRadius = Math.max(180, this.core.shieldRadius * 2.5);
@@ -472,6 +537,38 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         !this.isRoamingProtocolAvailable())
     ) return;
 
+    const visual = this.ensureRoamingProtocolVisualState();
+    if (visual) {
+      const spinSpeed =
+        visual.mode === "travel-to-core" ||
+        visual.mode === "orbit" ||
+        visual.mode === "return-to-center"
+          ? 7.4
+          : 0.85;
+      visual.orbitPhase = (visual.orbitPhase + dt * spinSpeed) % (Math.PI * 2);
+
+      if (visual.mode === "travel-to-core") {
+        visual.transition = Math.min(
+          1,
+          visual.transition + dt / MOBILE_ROAMING_TRAVEL_DURATION
+        );
+        if (visual.transition >= 1) {
+          visual.mode = "orbit";
+          visual.transition = 1;
+        }
+      } else if (visual.mode === "return-to-center") {
+        visual.transition = Math.min(
+          1,
+          visual.transition + dt / MOBILE_ROAMING_RETURN_DURATION
+        );
+        if (visual.transition >= 1) {
+          visual.mode = "center";
+          visual.transition = 0;
+          visual.carryFullSet = false;
+        }
+      }
+    }
+
     if (this.roamingProtocol.resetFlashTimer > 0) {
       this.roamingProtocol.resetFlashTimer = Math.max(
         0,
@@ -504,6 +601,11 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         this.roamingProtocol.failedLetter = null;
         this.roamingProtocol.resetFlashTimer = 0;
         this.roamingProtocol.respawnTimer = this.roamingProtocol.respawnDelay;
+        if (visual) {
+          visual.mode = "return-to-center";
+          visual.transition = 0;
+          visual.carryFullSet = true;
+        }
       }
       return;
     }
@@ -633,111 +735,105 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         : "#00f0ff";
 
     if (this.isMobile) {
-      const screenCenterX = this.canvas.width * 0.5;
-      const screenCenterY = this.canvas.height * 0.5;
-      const cameraX = this.camera?.x ?? this.core.x;
-      const cameraY = this.camera?.y ?? this.core.y;
+      const visual = this.ensureRoamingProtocolVisualState();
+      const centerWorld = this.getRoamingProtocolWorldCenter();
+      const centerScreen = this.projectRoamingProtocolPoint(centerWorld.x, centerWorld.y);
       const coreWorldX = this.core.x + (this.core.visualOffsetX || 0);
       const coreWorldY = this.core.y + (this.core.visualOffsetY || 0);
-      const coreScreenX = screenCenterX + (coreWorldX - cameraX) * (this.gameScale || 1);
-      const coreScreenY = screenCenterY + (coreWorldY - cameraY) * (this.gameScale || 1);
-      const ringRadius = Math.max(
-        52,
-        ((this.core.shieldRadius || this.core.radius || 16) + 28) * (this.gameScale || 1)
+      const coreScreen = this.projectRoamingProtocolPoint(coreWorldX, coreWorldY);
+      const anchorBlend = visual
+        ? visual.mode === "travel-to-core"
+          ? easeInOutSine(visual.transition)
+          : visual.mode === "orbit"
+            ? 1
+            : visual.mode === "return-to-center"
+              ? 1 - easeInOutSine(visual.transition)
+              : 0
+        : 0;
+      const anchorX = lerp(centerScreen.x, coreScreen.x, anchorBlend);
+      const anchorY = lerp(centerScreen.y, coreScreen.y, anchorBlend);
+      const ringRadius = clamp(
+        Math.min(this.canvas.width, this.canvas.height) * 0.12,
+        56,
+        MOBILE_ROAMING_RING_RADIUS
       );
-      const orbitPhase = Date.now() / 1000 * (isActive ? 1.2 : 0.55) - Math.PI / 2;
-      const labelWidth = 132;
-      const labelHeight = 34;
-      const labelY =
-        coreScreenY + ringRadius + labelHeight + 8 < this.canvas.height - 12
-          ? coreScreenY + ringRadius + 14
-          : coreScreenY - ringRadius - labelHeight - 14;
+      const orbitPhase = visual?.orbitPhase ?? -Math.PI / 2;
+      const fullyCharged = isActive || !!visual?.carryFullSet;
 
       ctx.save();
-      ctx.strokeStyle = hexToRgba(frameColor, isActive ? 0.78 : 0.45);
+      ctx.strokeStyle = hexToRgba(
+        frameColor,
+        isActive ? 0.82 : warningActive ? 0.78 : 0.42
+      );
       ctx.lineWidth = isActive ? 2.4 : 1.7;
       ctx.beginPath();
-      ctx.arc(coreScreenX, coreScreenY, ringRadius, 0, Math.PI * 2);
+      ctx.arc(anchorX, anchorY, ringRadius, 0, Math.PI * 2);
       ctx.stroke();
 
-      ctx.strokeStyle = hexToRgba(frameColor, isActive ? 0.35 : 0.22);
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = hexToRgba(
+        frameColor,
+        isActive ? 0.34 : warningActive ? 0.28 : 0.18
+      );
+      ctx.lineWidth = 1.1;
       ctx.beginPath();
       ctx.arc(
-        coreScreenX,
-        coreScreenY,
+        anchorX,
+        anchorY,
         ringRadius + 7 + Math.sin(Date.now() / 220) * 2,
-        0,
-        Math.PI * 2
+        orbitPhase * 0.35,
+        orbitPhase * 0.35 + Math.PI * 1.35
       );
       ctx.stroke();
+
+      ctx.fillStyle = hexToRgba(frameColor, isActive ? 0.16 : warningActive ? 0.2 : 0.12);
+      ctx.beginPath();
+      ctx.arc(anchorX, anchorY, 10, 0, Math.PI * 2);
+      ctx.fill();
 
       letters.forEach((letter, index) => {
         const badgeAngle = orbitPhase + (index * Math.PI * 2) / Math.max(1, letters.length);
-        const badgeX = coreScreenX + Math.cos(badgeAngle) * ringRadius;
-        const badgeY = coreScreenY + Math.sin(badgeAngle) * ringRadius;
-        const collected = isActive || index < progressIndex;
-        const isNext = !isActive && index === progressIndex;
+        const badgeX = anchorX + Math.cos(badgeAngle) * ringRadius;
+        const badgeY = anchorY + Math.sin(badgeAngle) * ringRadius;
         const color = LETTER_COLORS[letter] || "#ffffff";
+        const isCharged = fullyCharged || index < progressIndex;
+        const isNext = !fullyCharged && index === progressIndex;
+        const isFailed = warningActive && failedLetter === letter;
 
-        ctx.fillStyle = collected
-          ? hexToRgba(color, 0.30)
-          : isNext
-            ? hexToRgba(color, 0.16)
-            : "rgba(6, 10, 18, 0.72)";
-        ctx.strokeStyle = collected
-          ? color
-          : isNext
-            ? "#ffffff"
-            : "rgba(255, 255, 255, 0.14)";
-        ctx.lineWidth = collected ? 2 : isNext ? 2.4 : 1;
+        ctx.fillStyle = isFailed
+          ? "rgba(64, 12, 22, 0.9)"
+          : isCharged
+            ? hexToRgba(color, 0.3)
+            : isNext
+              ? hexToRgba(color, 0.16)
+              : "rgba(6, 10, 18, 0.72)";
+        ctx.strokeStyle = isFailed
+          ? "#ff7b8e"
+          : isCharged
+            ? color
+            : isNext
+              ? "#ffffff"
+              : "rgba(255, 255, 255, 0.14)";
+        ctx.lineWidth = isFailed ? 2.3 : isCharged ? 2 : isNext ? 2.2 : 1;
         ctx.beginPath();
-        ctx.arc(badgeX, badgeY, 11, 0, Math.PI * 2);
+        ctx.arc(badgeX, badgeY, MOBILE_ROAMING_BADGE_RADIUS, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        if (isNext) {
-          ctx.strokeStyle = hexToRgba(color, 0.42);
-          ctx.lineWidth = 1.2;
+        if (isNext || isFailed) {
+          ctx.strokeStyle = isFailed ? "rgba(255, 123, 142, 0.38)" : hexToRgba(color, 0.42);
+          ctx.lineWidth = 1.15;
           ctx.beginPath();
-          ctx.arc(badgeX, badgeY, 15.5, 0, Math.PI * 2);
+          ctx.arc(badgeX, badgeY, MOBILE_ROAMING_BADGE_RADIUS + 4.5, 0, Math.PI * 2);
           ctx.stroke();
         }
 
-        ctx.fillStyle = collected ? "#ffffff" : isNext ? color : "#75808e";
+        ctx.fillStyle = isFailed ? "#ffd8de" : isCharged ? "#ffffff" : isNext ? color : "#75808e";
         ctx.font = "bold 11px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(letter, badgeX, badgeY + 0.5);
       });
 
-      ctx.fillStyle = warningActive ? "rgba(24, 6, 10, 0.88)" : "rgba(4, 8, 16, 0.82)";
-      ctx.strokeStyle = frameColor;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect(coreScreenX - labelWidth / 2, labelY, labelWidth, labelHeight, 10);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.font = "bold 11px monospace";
-      ctx.fillStyle = isActive ? "#fff2fb" : warningActive ? "#ffd6dd" : "#d9fbff";
-      ctx.fillText(header, coreScreenX, labelY + 11);
-
-      ctx.font = "10px monospace";
-      ctx.fillStyle = isActive ? "#ff99dd" : warningActive ? "#ff8899" : "#7fdcff";
-      ctx.fillText(
-        isActive
-          ? `${this.roamingProtocol.timer.toFixed(1)}s BARRAGE`
-          : warningActive
-            ? `WRONG ${failedLetter}`
-            : nextLetter
-              ? `NEXT ${nextLetter}`
-              : `${progressIndex}/${letters.length} LOCKED`,
-        coreScreenX,
-        labelY + 24
-      );
       ctx.restore();
       return;
     }
