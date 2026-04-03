@@ -1241,6 +1241,7 @@ export class GameManager {
     const currentStage = this.stageManager.getCurrentStage();
     const isBossStage =
       currentStage?.type === "boss" || (this.defenseGame && this.defenseGame.isBossFight);
+    const isDefenseStage = this.defenseGame && !this.defenseGame.isSafeZone;
 
     // 최대 페이지 도달 시 점령 옵션 추가
     const isConquerReady =
@@ -1249,15 +1250,17 @@ export class GameManager {
       !isBossStage &&
       this.defenseGame.currentPage >= (this.defenseGame.maxPages || 12);
 
-    const choices = [
-      { text: "/map (Open Stage Map)", value: "map" },
-      { text: "/inventory (Equipment & Items)", value: "inventory" },
-      { text: "/upgrade (System Upgrades)", value: "upgrade" },
-      { text: "/reset (Reset All Progress)", value: "reset", style: "danger" },
-    ];
+    const choices = isDefenseStage
+      ? [{ text: "/upgrade (System Upgrades)", value: "upgrade" }]
+      : [
+        { text: "/map (Open Stage Map)", value: "map" },
+        { text: "/inventory (Equipment & Items)", value: "inventory" },
+        { text: "/upgrade (System Upgrades)", value: "upgrade" },
+        { text: "/reset (Reset All Progress)", value: "reset", style: "danger" },
+      ];
 
     // 점령 가능 시 빨간색 큰 선택지 추가
-    if (isConquerReady) {
+    if (!isDefenseStage && isConquerReady) {
       choices.unshift({
         text: ">>> CONQUER THIS SECTOR <<<",
         value: "conquer",
@@ -1266,7 +1269,7 @@ export class GameManager {
     }
 
     // 안전지역이 아닐 때 귀환 옵션 추가
-    if (this.defenseGame && !this.defenseGame.isSafeZone) {
+    if (!isDefenseStage && this.defenseGame && !this.defenseGame.isSafeZone) {
       choices.push({
         text: "/recall (Return to Safe Zone)",
         value: "recall",

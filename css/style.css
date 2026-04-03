@@ -981,3 +981,16 @@ body {
     bottom: 10px;
   }
 }
+
+@media (max-width: 768px) {
+  #terminal-layer {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 90px);
+  }
+}
+
+@media (max-width: 480px) {
+  #terminal-layer {
+    padding: 8px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 90px);
+  }
+}
