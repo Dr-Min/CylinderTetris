@@ -614,10 +614,6 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       (this.roamingProtocol.resetFlashTimer || 0) > 0 &&
       !!failedLetter;
     const nextLetter = this.getNextRoamingProtocolLetter();
-    const boxWidth = this.isMobile ? 244 : 268;
-    const boxHeight = this.isMobile ? 58 : 64;
-    const x = this.canvas.width / 2 - boxWidth / 2;
-    const y = this.isMobile ? 18 : 16;
     const header = isActive ? "F-A OVERDRIVE" : warningActive ? "F-A RESET" : "F-A DRIVE";
     const subline = isActive
       ? `${this.roamingProtocol.timer.toFixed(1)}s CORE BARRAGE`
@@ -626,11 +622,125 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         : nextLetter
           ? `NEXT SHARD: ${nextLetter}`
           : `${progressIndex}/${letters.length} SHARDS LOCKED`;
+    const boxWidth = this.isMobile ? 244 : 268;
+    const boxHeight = this.isMobile ? 58 : 64;
+    const x = this.canvas.width / 2 - boxWidth / 2;
+    const y = this.isMobile ? 18 : 16;
     const frameColor = isActive
       ? this.roamingProtocol.barrageColor
       : warningActive
         ? "#ff5566"
         : "#00f0ff";
+
+    if (this.isMobile) {
+      const screenCenterX = this.canvas.width * 0.5;
+      const screenCenterY = this.canvas.height * 0.5;
+      const cameraX = this.camera?.x ?? this.core.x;
+      const cameraY = this.camera?.y ?? this.core.y;
+      const coreWorldX = this.core.x + (this.core.visualOffsetX || 0);
+      const coreWorldY = this.core.y + (this.core.visualOffsetY || 0);
+      const coreScreenX = screenCenterX + (coreWorldX - cameraX) * (this.gameScale || 1);
+      const coreScreenY = screenCenterY + (coreWorldY - cameraY) * (this.gameScale || 1);
+      const ringRadius = Math.max(
+        52,
+        ((this.core.shieldRadius || this.core.radius || 16) + 28) * (this.gameScale || 1)
+      );
+      const orbitPhase = Date.now() / 1000 * (isActive ? 1.2 : 0.55) - Math.PI / 2;
+      const labelWidth = 132;
+      const labelHeight = 34;
+      const labelY =
+        coreScreenY + ringRadius + labelHeight + 8 < this.canvas.height - 12
+          ? coreScreenY + ringRadius + 14
+          : coreScreenY - ringRadius - labelHeight - 14;
+
+      ctx.save();
+      ctx.strokeStyle = hexToRgba(frameColor, isActive ? 0.78 : 0.45);
+      ctx.lineWidth = isActive ? 2.4 : 1.7;
+      ctx.beginPath();
+      ctx.arc(coreScreenX, coreScreenY, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = hexToRgba(frameColor, isActive ? 0.35 : 0.22);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(
+        coreScreenX,
+        coreScreenY,
+        ringRadius + 7 + Math.sin(Date.now() / 220) * 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.stroke();
+
+      letters.forEach((letter, index) => {
+        const badgeAngle = orbitPhase + (index * Math.PI * 2) / Math.max(1, letters.length);
+        const badgeX = coreScreenX + Math.cos(badgeAngle) * ringRadius;
+        const badgeY = coreScreenY + Math.sin(badgeAngle) * ringRadius;
+        const collected = isActive || index < progressIndex;
+        const isNext = !isActive && index === progressIndex;
+        const color = LETTER_COLORS[letter] || "#ffffff";
+
+        ctx.fillStyle = collected
+          ? hexToRgba(color, 0.30)
+          : isNext
+            ? hexToRgba(color, 0.16)
+            : "rgba(6, 10, 18, 0.72)";
+        ctx.strokeStyle = collected
+          ? color
+          : isNext
+            ? "#ffffff"
+            : "rgba(255, 255, 255, 0.14)";
+        ctx.lineWidth = collected ? 2 : isNext ? 2.4 : 1;
+        ctx.beginPath();
+        ctx.arc(badgeX, badgeY, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        if (isNext) {
+          ctx.strokeStyle = hexToRgba(color, 0.42);
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(badgeX, badgeY, 15.5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = collected ? "#ffffff" : isNext ? color : "#75808e";
+        ctx.font = "bold 11px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(letter, badgeX, badgeY + 0.5);
+      });
+
+      ctx.fillStyle = warningActive ? "rgba(24, 6, 10, 0.88)" : "rgba(4, 8, 16, 0.82)";
+      ctx.strokeStyle = frameColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(coreScreenX - labelWidth / 2, labelY, labelWidth, labelHeight, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 11px monospace";
+      ctx.fillStyle = isActive ? "#fff2fb" : warningActive ? "#ffd6dd" : "#d9fbff";
+      ctx.fillText(header, coreScreenX, labelY + 11);
+
+      ctx.font = "10px monospace";
+      ctx.fillStyle = isActive ? "#ff99dd" : warningActive ? "#ff8899" : "#7fdcff";
+      ctx.fillText(
+        isActive
+          ? `${this.roamingProtocol.timer.toFixed(1)}s BARRAGE`
+          : warningActive
+            ? `WRONG ${failedLetter}`
+            : nextLetter
+              ? `NEXT ${nextLetter}`
+              : `${progressIndex}/${letters.length} LOCKED`,
+        coreScreenX,
+        labelY + 24
+      );
+      ctx.restore();
+      return;
+    }
 
     ctx.save();
     ctx.fillStyle = warningActive ? "rgba(24, 6, 10, 0.82)" : "rgba(4, 8, 16, 0.76)";
