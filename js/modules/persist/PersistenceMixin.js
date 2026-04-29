@@ -5,6 +5,38 @@
 export function applyPersistenceMixin(GameManagerClass) {
   const proto = GameManagerClass.prototype;
 
+  proto.resetProgressState = function({ replayTutorial = true } = {}) {
+    localStorage.clear();
+    if (replayTutorial) {
+      localStorage.setItem("tutorial_completed", "false");
+    }
+
+    if (this.stageManager?.reset) {
+      this.stageManager.reset();
+    } else if (this.stageManager?.stages) {
+      this.stageManager.stages.forEach((stage) => {
+        stage.conquered = stage.id === 0;
+        stage.visited = false;
+      });
+      this.stageManager.currentStageId = 0;
+    }
+
+    if (this.conquestManager) {
+      this.conquestManager.conqueredStages = [];
+    }
+
+    if (this.miningManager) {
+      this.miningManager.territories = {};
+      if (this.miningManager.cabinet) {
+        this.miningManager.cabinet.storedData = 0;
+      }
+    }
+
+    this.currentMoney = 0;
+    this.reputation = 0;
+    this.tutorialDirector?.syncFromStorage();
+  }
+
   proto.handleResetProgress = async function() {
     // 확인 메시지 표시
     await this.terminal.printSystemMessage(
@@ -20,30 +52,7 @@ export function applyPersistenceMixin(GameManagerClass) {
     ]);
 
     if (confirmChoice === "confirm") {
-      // 모든 localStorage 초기화
-      localStorage.clear();
-
-      // StageManager 점령 상태 초기화
-      if (this.stageManager) {
-        this.stageManager.stages.forEach((stage) => {
-          stage.conquered = false;
-        });
-      }
-
-      // ConquestManager 초기화
-      if (this.conquestManager) {
-        this.conquestManager.conqueredStages = [];
-      }
-
-      // MiningManager 초기화
-      if (this.miningManager) {
-        this.miningManager.territories = {};
-        this.miningManager.cabinet.storedData = 0;
-      }
-
-      // 현재 상태 초기화
-      this.currentMoney = 0;
-      this.reputation = 0;
+      this.resetProgressState();
 
       await this.terminal.printSystemMessage("ALL PROGRESS RESET!");
       await this.terminal.printSystemMessage(

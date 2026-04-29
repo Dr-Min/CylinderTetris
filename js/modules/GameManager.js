@@ -996,24 +996,7 @@ export class GameManager {
           "⚠️ 정말로 모든 진행상황을 초기화하시겠습니까?\n\n- 점령한 스테이지\n- 저장된 데이터(돈)\n- 튜토리얼 완료 상태\n\n이 작업은 되돌릴 수 없습니다!"
         )
       ) {
-        // 모든 localStorage 초기화
-        localStorage.clear();
-
-        // StageManager 점령 상태 초기화
-        if (this.stageManager) {
-          this.stageManager.stages.forEach((stage) => {
-            stage.conquered = false;
-          });
-        }
-
-        // ConquestManager 초기화
-        if (this.conquestManager) {
-          this.conquestManager.conqueredStages = [];
-        }
-
-        // 현재 상태 초기화
-        this.currentMoney = 0;
-        this.reputation = 0;
+        this.resetProgressState();
 
         this.terminal.printSystemMessage("[DEBUG] ALL PROGRESS RESET!");
         this.terminal.printSystemMessage("Reloading page in 2 seconds...");
