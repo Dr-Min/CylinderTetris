@@ -37,3 +37,44 @@ test("conquer hint targets the terminal conquer choice before legacy button", ()
 
   assert.equal(capturedConfig.target(), choiceElement);
 });
+
+test("combat-ready recovers tutorial flow after a conquest stage is entered", async () => {
+  const director = Object.create(TutorialDirector.prototype);
+  const calls = [];
+  director.completed = false;
+  director.sessionActive = true;
+  director.phase = "await-stage-select";
+  director.isActive = () => true;
+  director.showCombatBriefing = async () => {
+    calls.push("briefing");
+  };
+  director.showSurvivalHint = () => {
+    calls.push("survival");
+  };
+
+  await director.handleEvent("combat-ready", {
+    stage: { type: "conquest" },
+  });
+
+  assert.deepEqual(calls, ["briefing", "survival"]);
+  assert.equal(director.phase, "await-breach-ready");
+});
+
+test("command menu re-highlights conquer when the red terminal choice is present", async () => {
+  const director = Object.create(TutorialDirector.prototype);
+  let conquerHintShown = false;
+  director.completed = false;
+  director.sessionActive = true;
+  director.phase = "await-breach-ready";
+  director.isActive = () => true;
+  director.showConquerHint = () => {
+    conquerHintShown = true;
+  };
+
+  await director.handleEvent("command-menu-shown", {
+    choices: [{ value: "upgrade" }, { value: "conquer" }],
+  });
+
+  assert.equal(conquerHintShown, true);
+  assert.equal(director.phase, "await-breach-start");
+});

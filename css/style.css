@@ -509,19 +509,77 @@ body {
 #tutorial-overlay .tutorial-avatar {
   width: 56px;
   height: 56px;
+  flex: 0 0 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
+  border-radius: 50%;
   background:
-    radial-gradient(circle at 30% 30%, rgba(99, 255, 214, 0.28), transparent 60%),
-    rgba(7, 28, 34, 0.92);
-  border: 1px solid rgba(99, 255, 214, 0.5);
-  color: #7bffe2;
-  font-size: 14px;
-  font-weight: bold;
-  letter-spacing: 0.08em;
-  box-shadow: inset 0 0 12px rgba(99, 255, 214, 0.12);
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.8), transparent 18%),
+    radial-gradient(circle at 50% 55%, #ffff00 0 58%, #c9b900 72%, rgba(255, 255, 0, 0.08) 100%);
+  border: 2px solid #ffffff;
+  box-shadow:
+    0 0 14px rgba(255, 255, 0, 0.42),
+    0 0 24px rgba(99, 255, 214, 0.16),
+    inset 0 -8px 12px rgba(120, 100, 0, 0.22);
+  animation: pdx-helper-float 2.4s ease-in-out infinite;
+}
+
+#tutorial-overlay .tutorial-helper-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: pdx-helper-look 3.2s ease-in-out infinite;
+}
+
+#tutorial-overlay .tutorial-helper-eye {
+  position: absolute;
+  top: 20px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #000000;
+}
+
+#tutorial-overlay .tutorial-helper-eye-left {
+  left: 17px;
+}
+
+#tutorial-overlay .tutorial-helper-eye-right {
+  right: 17px;
+}
+
+#tutorial-overlay .tutorial-helper-mouth {
+  position: absolute;
+  left: 18px;
+  top: 31px;
+  width: 20px;
+  height: 9px;
+  border-bottom: 2px solid #000000;
+  border-radius: 0 0 18px 18px;
+}
+
+@keyframes pdx-helper-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.03);
+  }
+}
+
+@keyframes pdx-helper-look {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  45% {
+    transform: translateX(1px);
+  }
+  70% {
+    transform: translateX(-1px);
+  }
 }
 
 #tutorial-overlay .tutorial-header-copy {
@@ -1038,7 +1096,29 @@ body {
   #tutorial-overlay .tutorial-avatar {
     width: 48px;
     height: 48px;
-    font-size: 12px;
+    flex-basis: 48px;
+    border-radius: 50%;
+  }
+
+  #tutorial-overlay .tutorial-helper-eye {
+    top: 17px;
+    width: 6px;
+    height: 6px;
+  }
+
+  #tutorial-overlay .tutorial-helper-eye-left {
+    left: 15px;
+  }
+
+  #tutorial-overlay .tutorial-helper-eye-right {
+    right: 15px;
+  }
+
+  #tutorial-overlay .tutorial-helper-mouth {
+    left: 15px;
+    top: 27px;
+    width: 18px;
+    height: 8px;
   }
 
   #tutorial-overlay .tutorial-title {
@@ -1154,8 +1234,29 @@ body {
   #tutorial-overlay .tutorial-avatar {
     width: 42px;
     height: 42px;
-    border-radius: 14px;
-    font-size: 11px;
+    flex-basis: 42px;
+    border-radius: 50%;
+  }
+
+  #tutorial-overlay .tutorial-helper-eye {
+    top: 15px;
+    width: 5px;
+    height: 5px;
+  }
+
+  #tutorial-overlay .tutorial-helper-eye-left {
+    left: 13px;
+  }
+
+  #tutorial-overlay .tutorial-helper-eye-right {
+    right: 13px;
+  }
+
+  #tutorial-overlay .tutorial-helper-mouth {
+    left: 13px;
+    top: 24px;
+    width: 16px;
+    height: 7px;
   }
 
   #tutorial-overlay .tutorial-title {

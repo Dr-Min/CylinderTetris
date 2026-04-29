@@ -53,6 +53,11 @@ export class TutorialDirector {
         }
         break;
       case "command-menu-shown":
+        if (this.hasChoice(payload.choices, "conquer") && this.canShowConquerHint()) {
+          this.phase = "await-breach-start";
+          this.showConquerHint();
+          break;
+        }
         if (this.phase === "await-map") {
           this.showMapCommandHint();
         }
@@ -76,7 +81,7 @@ export class TutorialDirector {
         }
         break;
       case "combat-ready":
-        if (this.phase === "await-combat-ready" && payload.stage?.type === "conquest") {
+        if (this.canShowCombatBriefing() && payload.stage?.type === "conquest") {
           await this.showCombatBriefing();
           if (!this.isActive()) return;
           this.phase = "await-breach-ready";
@@ -128,7 +133,13 @@ export class TutorialDirector {
       </div>
       <section class="tutorial-card">
         <div class="tutorial-card-header">
-          <div class="tutorial-avatar">PDX-01</div>
+          <div class="tutorial-avatar" aria-hidden="true">
+            <div class="tutorial-helper-face">
+              <span class="tutorial-helper-eye tutorial-helper-eye-left"></span>
+              <span class="tutorial-helper-eye tutorial-helper-eye-right"></span>
+              <span class="tutorial-helper-mouth"></span>
+            </div>
+          </div>
           <div class="tutorial-header-copy">
             <div class="tutorial-speaker">PDX-01</div>
             <div class="tutorial-title"></div>
@@ -339,6 +350,26 @@ export class TutorialDirector {
       placement: "bottom",
       target: () => this.findChoiceButton("conquer") || this.getElementRect("#conquer-btn"),
     });
+  }
+
+  hasChoice(choices, value) {
+    return Array.isArray(choices) && choices.some((choice) => choice?.value === value);
+  }
+
+  canShowCombatBriefing() {
+    return (
+      this.phase === "await-map" ||
+      this.phase === "await-stage-select" ||
+      this.phase === "await-combat-ready"
+    );
+  }
+
+  canShowConquerHint() {
+    return (
+      this.phase === "await-breach-ready" ||
+      this.phase === "await-breach-start" ||
+      this.phase === "await-combat-ready"
+    );
   }
 
   findChoiceButton(value) {
