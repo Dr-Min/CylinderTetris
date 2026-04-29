@@ -1769,7 +1769,7 @@ export class DefenseGame {
           this.conquerReady = true;
 
           if (this.onPageUpdate) {
-            this.onPageUpdate("TODO", "#ff3333");
+            this.onPageUpdate("BREACH READY", "#ff3333");
           }
 
           if (this.onConquerReady) {

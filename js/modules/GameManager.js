@@ -1266,7 +1266,8 @@ export class GameManager {
       this.defenseGame &&
       !this.defenseGame.isSafeZone &&
       !isBossStage &&
-      this.defenseGame.currentPage >= (this.defenseGame.maxPages || 12);
+      currentStage?.type === "conquest" &&
+      this.defenseGame.conquerReady === true;
 
     const choices = isDefenseStage
       ? [{ text: "/upgrade (System Upgrades)", value: "upgrade" }]
@@ -1278,7 +1279,7 @@ export class GameManager {
       ];
 
     // 점령 가능 시 빨간색 큰 선택지 추가
-    if (!isDefenseStage && isConquerReady) {
+    if (isConquerReady) {
       choices.unshift({
         text: ">>> CONQUER THIS SECTOR <<<",
         value: "conquer",
