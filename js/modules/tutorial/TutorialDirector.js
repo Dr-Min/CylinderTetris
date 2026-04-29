@@ -100,7 +100,7 @@ export class TutorialDirector {
               speaker: "PDX-01",
               title: "BREACH LIVE",
               body:
-                "주인님, 이제 3줄만 지우면 돼요.\n파동을 보내서 침투를 밀어붙이세요.",
+                "브리치 진입 완료.\n테트리스 3줄을 지우면 섹터 회수가 진행돼요.",
             },
             3200
           );
@@ -259,7 +259,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "LINK ESTABLISHED",
       body:
-        "주인님, 저는 PDX-01이에요.\n이 Safe Zone에서 작전 링크를 유지하고,\n전투 중에는 코어 옆에서 함께 공격할게요.\n\n밖은 이미 오염됐어요.\n지금부터 첫 섹터를 확보하러 가요.",
+        "주인님, 링크 안정화 완료.\n저는 PDX-01이에요.\n코어 옆에서 작전을 지원할게요.",
       continueLabel: "LINK START",
       placement: "center",
       target: null,
@@ -277,7 +277,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "CORE PROTECTION",
       body:
-        "주인님, 중앙 코어가 이번 작전의 핵심이에요.\n코어가 무너지면 이 섹터는 바로 밀려요.",
+        "중앙 코어가 작전의 핵심이에요.\n코어가 무너지면 바로 철수하게 돼요.",
       continueLabel: "UNDERSTOOD",
       placement: "bottom",
       target: () => this.getCoreRect(),
@@ -288,7 +288,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "SHIELD CONTROL",
       body:
-        "위험할 땐 이 버튼으로 실드를 유지하세요.\n몰릴 때 타이밍만 익혀도 생존력이 크게 달라져요.",
+        "위험할 땐 실드 버튼을 보세요.\n재정비 타이밍이 생존을 갈라요.",
       continueLabel: "MOVE OUT",
       placement: "top",
       target: () => this.getElementRect("#shield-btn"),
@@ -302,7 +302,7 @@ export class TutorialDirector {
     this.showHint({
       speaker: "PDX-01",
       title: "OPEN STAGE MAP",
-      body: "주인님, /map 으로 작전 지도를 열어주세요.",
+      body: "작전 지도부터 확인해요.\n/map을 선택하세요.",
       placement: "bottom",
       target: () => this.findChoiceButton("map"),
     });
@@ -312,7 +312,7 @@ export class TutorialDirector {
     this.showHint({
       speaker: "PDX-01",
       title: "SELECT A SECTOR",
-      body: "열려 있는 섹터 중 하나를 선택해요.\n첫 교두보만 확보하면 다음 길이 열려요.",
+      body: "열려 있는 섹터를 선택하세요.\n첫 교두보를 확보할 시간이에요.",
       placement: "right",
       target: () => this.findFirstAccessibleConquestStageRect(),
     });
@@ -322,7 +322,7 @@ export class TutorialDirector {
     this.showHint({
       speaker: "PDX-01",
       title: "HOLD THE LINE",
-      body: "페이지를 버티면 침투 기회가 열려요.\n조금만 더 버텨요, 주인님.",
+      body: "페이지를 버티면 침투 기회가 열려요.\n코어를 지켜주세요.",
       placement: "bottom",
       target: () =>
         this.getElementRect("#terminal-page-display") ||
@@ -335,9 +335,9 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "BREACH WINDOW",
       body:
-        "지금이에요, 주인님.\nCONQUER를 눌러 브리치를 시작하세요.",
+        "빨간 CONQUER 선택지가 열렸어요.\n눌러서 브리치를 시작하세요.",
       placement: "bottom",
-      target: () => this.getElementRect("#conquer-btn"),
+      target: () => this.findChoiceButton("conquer") || this.getElementRect("#conquer-btn"),
     });
   }
 
@@ -427,6 +427,10 @@ export class TutorialDirector {
     if (!this.currentTargetResolver) return null;
     const rect = this.currentTargetResolver();
     if (!rect) return null;
+    if (typeof rect.getBoundingClientRect === "function") {
+      const elementRect = rect.getBoundingClientRect();
+      return elementRect && typeof elementRect.left === "number" ? elementRect : null;
+    }
     if (typeof rect.left === "number") {
       return rect;
     }
