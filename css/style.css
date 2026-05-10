@@ -422,6 +422,10 @@ body {
   pointer-events: auto;
 }
 
+#tutorial-overlay.tutorial-elevated {
+  z-index: 6000;
+}
+
 #tutorial-overlay .tutorial-scrim {
   position: absolute;
   inset: 0;
@@ -484,6 +488,8 @@ body {
 #tutorial-overlay .tutorial-card {
   position: fixed;
   width: min(340px, calc(100vw - 28px));
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
   padding: 16px 16px 14px;
   border: 1px solid rgba(99, 255, 214, 0.8);
   border-radius: 18px;

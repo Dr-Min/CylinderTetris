@@ -18,13 +18,18 @@ export class TutorialDirector {
     this.rafId = null;
     this.pausedDefense = false;
     this.pauseWasRunning = false;
+    this.pausedTetris = false;
+    this.tetrisWasLogicActive = false;
     this.toastTimer = null;
+    this.topicStorageKey = "tutorial_topics_seen";
+    this.topicState = this.loadTopicState();
 
     this.createOverlay();
   }
 
   syncFromStorage() {
     this.completed = localStorage.getItem(this.storageKey) === "true";
+    this.topicState = this.loadTopicState();
   }
 
   isComplete() {
@@ -41,7 +46,39 @@ export class TutorialDirector {
     this.phase = "await-safe-zone";
   }
 
+  loadTopicState() {
+    try {
+      const raw = localStorage.getItem(this.topicStorageKey);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  hasSeenTopic(topic) {
+    return this.topicState[topic] === true;
+  }
+
+  markTopicSeen(topic) {
+    this.topicState = {
+      ...this.topicState,
+      [topic]: true,
+    };
+    localStorage.setItem(this.topicStorageKey, JSON.stringify(this.topicState));
+  }
+
   async handleEvent(eventName, payload = {}) {
+    if (eventName === "recovery-needed") {
+      await this.showRecoveryHintOnce(payload);
+      return;
+    }
+
+    if (eventName === "breach-failed") {
+      this.showBreachFailureHintOnce();
+      return;
+    }
+
     if (!this.isActive()) return;
 
     switch (eventName) {
@@ -49,7 +86,7 @@ export class TutorialDirector {
         if (this.phase === "await-safe-zone") {
           await this.showHeroIntro();
           if (!this.isActive()) return;
-          this.phase = "await-map";
+          this.phase = "await-inventory";
         }
         break;
       case "command-menu-shown":
@@ -58,12 +95,36 @@ export class TutorialDirector {
           this.showConquerHint();
           break;
         }
+        if (this.phase === "await-inventory") {
+          if (this.hasChoice(payload.choices, "inventory")) {
+            this.showInventoryCommandHint();
+            break;
+          }
+          this.phase = "await-map";
+        }
         if (this.phase === "await-map") {
           this.showMapCommandHint();
         }
         break;
+      case "inventory-opened":
+        if (this.phase === "await-inventory" || this.phase === "await-map") {
+          this.markTopicSeen("inventory-command");
+          await this.showInventoryBriefing();
+          if (!this.isActive()) return;
+          this.phase = "await-map";
+        }
+        break;
+      case "inventory-closed":
+        if (this.phase === "await-inventory") {
+          this.phase = "await-map";
+        }
+        break;
       case "map-opened":
-        if (this.phase === "await-map" || this.phase === "await-stage-select") {
+        if (
+          this.phase === "await-inventory" ||
+          this.phase === "await-map" ||
+          this.phase === "await-stage-select"
+        ) {
           this.phase = "await-stage-select";
           this.showStageSelectHint();
         }
@@ -75,8 +136,15 @@ export class TutorialDirector {
         }
         break;
       case "stage-selected":
-        if (this.phase === "await-stage-select" && payload.stage?.type === "conquest") {
+        if (this.phase === "await-stage-select" && payload.stage && payload.stage.type !== "safe") {
           this.hide();
+          this.phase = "await-equipment";
+        }
+        break;
+      case "equipment-selection-opened":
+        if (this.phase === "await-equipment" || this.phase === "await-combat-ready") {
+          await this.showEquipmentBriefing();
+          if (!this.isActive()) return;
           this.phase = "await-combat-ready";
         }
         break;
@@ -100,15 +168,8 @@ export class TutorialDirector {
           this.phase === "await-breach-start" ||
           this.phase === "await-combat-ready"
         ) {
-          this.showToast(
-            {
-              speaker: "PDX-01",
-              title: "BREACH LIVE",
-              body:
-                "브리치 진입 완료.\n테트리스 3줄을 지우면 섹터 회수가 진행돼요.",
-            },
-            3200
-          );
+          await this.showBreachRules();
+          if (!this.isActive()) return;
           this.complete();
         }
         break;
@@ -169,6 +230,10 @@ export class TutorialDirector {
   }
 
   show(config) {
+    if (this.toastTimer && config.mode !== "toast") {
+      clearTimeout(this.toastTimer);
+      this.toastTimer = null;
+    }
     this.currentMode = config.mode || "hint";
     this.currentPlacement = config.placement || "bottom";
     this.currentTargetResolver = config.target || null;
@@ -178,10 +243,20 @@ export class TutorialDirector {
     this.continueBtn.textContent = config.continueLabel || "CONTINUE";
     this.continueBtn.classList.toggle("hidden", !config.showContinue);
     this.skipBtn.classList.toggle("hidden", config.hideSkip === true);
-    this.root.classList.remove("hidden", "tutorial-hint", "tutorial-modal", "tutorial-toast", "tutorial-blocking");
+    this.root.classList.remove(
+      "hidden",
+      "tutorial-hint",
+      "tutorial-modal",
+      "tutorial-toast",
+      "tutorial-blocking",
+      "tutorial-elevated"
+    );
     this.root.classList.add(`tutorial-${this.currentMode}`);
     if (config.blocking) {
       this.root.classList.add("tutorial-blocking");
+    }
+    if (config.elevated) {
+      this.root.classList.add("tutorial-elevated");
     }
     this.startRenderLoop();
   }
@@ -249,6 +324,9 @@ export class TutorialDirector {
     if (this.pausedDefense) {
       this.resumeDefense();
     }
+    if (this.pausedTetris) {
+      this.resumeTetris();
+    }
     this.complete();
     this.resolveModal("skip");
     this.hide();
@@ -266,19 +344,27 @@ export class TutorialDirector {
   }
 
   async showHeroIntro() {
-    const result = await this.showModal({
+    const introResult = await this.showModal({
       speaker: "PDX-01",
       title: "LINK ESTABLISHED",
       body:
-        "주인님, 링크 안정화 완료.\n저는 PDX-01이에요.\n코어 옆에서 작전을 지원할게요.",
-      continueLabel: "LINK START",
+        "Safe Zone에 연결됐습니다.\n여기는 재정비 구역입니다. 코어가 무너지지 않는 동안 장비를 확인하고 다음 섹터로 이동할 수 있어요.",
+      continueLabel: "NEXT",
       placement: "center",
       target: null,
     });
+    if (introResult === "skip") return;
 
-    if (result === "skip") {
-      return;
-    }
+    const commandResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "TERMINAL COMMANDS",
+      body:
+        "/map: 스테이지 지도 열기\n/inventory: 획득 아이템 확인/장착\n/upgrade: DATA로 시스템 강화\n/reset: 진행 초기화라 신중히 사용",
+      continueLabel: "OPEN MENU",
+      placement: "center",
+      target: null,
+    });
+    if (commandResult === "skip") return;
   }
 
   async showCombatBriefing() {
@@ -288,8 +374,8 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "CORE PROTECTION",
       body:
-        "중앙 코어가 작전의 핵심이에요.\n코어가 무너지면 바로 철수하게 돼요.",
-      continueLabel: "UNDERSTOOD",
+        "중앙 코어가 방어 목표입니다.\n코어 HP가 0이 되면 작전은 실패하고 DATA 일부를 잃습니다.",
+      continueLabel: "NEXT",
       placement: "bottom",
       target: () => this.getCoreRect(),
     });
@@ -299,7 +385,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "SHIELD CONTROL",
       body:
-        "위험할 땐 실드 버튼을 보세요.\n재정비 타이밍이 생존을 갈라요.",
+        "방패 버튼으로 실드를 켜고 끌 수 있습니다.\n위험한 PAGE에서는 실드 타이밍이 생존을 좌우합니다.",
       continueLabel: "MOVE OUT",
       placement: "top",
       target: () => this.getElementRect("#shield-btn"),
@@ -313,7 +399,7 @@ export class TutorialDirector {
     this.showHint({
       speaker: "PDX-01",
       title: "OPEN STAGE MAP",
-      body: "작전 지도부터 확인해요.\n/map을 선택하세요.",
+      body: "이제 /map으로 작전 지도를 여세요.\n지도에서 이동할 섹터를 선택합니다.",
       placement: "bottom",
       target: () => this.findChoiceButton("map"),
     });
@@ -323,7 +409,8 @@ export class TutorialDirector {
     this.showHint({
       speaker: "PDX-01",
       title: "SELECT A SECTOR",
-      body: "열려 있는 섹터를 선택하세요.\n첫 교두보를 확보할 시간이에요.",
+      body:
+        "열려 있는 섹터를 선택하세요.\n정복 섹터는 방어전을 버틴 뒤 breach로 점령할 수 있습니다.",
       placement: "right",
       target: () => this.findFirstAccessibleConquestStageRect(),
     });
@@ -332,8 +419,9 @@ export class TutorialDirector {
   showSurvivalHint() {
     this.showHint({
       speaker: "PDX-01",
-      title: "HOLD THE LINE",
-      body: "페이지를 버티면 침투 기회가 열려요.\n코어를 지켜주세요.",
+      title: "SURVIVE THE PAGES",
+      body:
+        "PAGE가 끝날 때까지 코어를 지키세요.\n최대 PAGE를 버티면 정복 명령이 열립니다.",
       placement: "bottom",
       target: () =>
         this.getElementRect("#terminal-page-display") ||
@@ -344,11 +432,138 @@ export class TutorialDirector {
   showConquerHint() {
     this.showHint({
       speaker: "PDX-01",
-      title: "BREACH WINDOW",
+      title: "CONQUEST PROMPT",
       body:
-        "빨간 CONQUER 선택지가 열렸어요.\n눌러서 브리치를 시작하세요.",
+        ">>> CONQUER THIS SECTOR <<<가 열렸습니다.\n이 명령을 누르면 Tetris breach와 강화 방어가 동시에 시작됩니다.",
       placement: "bottom",
       target: () => this.findChoiceButton("conquer") || this.getElementRect("#conquer-btn"),
+    });
+  }
+
+  showInventoryCommandHint() {
+    this.showHint({
+      speaker: "PDX-01",
+      title: "CHECK YOUR KIT",
+      body:
+        "출격 전에 /inventory를 한 번 확인하세요.\n장비 슬롯과 획득 아이템 위치를 익히는 단계입니다.",
+      placement: "bottom",
+      target: () => this.findChoiceButton("inventory"),
+    });
+  }
+
+  async showInventoryBriefing() {
+    const slotResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "EQUIPMENT SLOTS",
+      body:
+        "위쪽 슬롯이 현재 장착 장비입니다.\n잠긴 슬롯은 DATA를 써서 해금하고, 장착 효과는 다음 전투에 적용됩니다.",
+      continueLabel: "NEXT",
+      placement: "bottom",
+      elevated: true,
+      target: () =>
+        this.getElementRect("#inventory-overlay .inventory-equip-slots") ||
+        this.getElementRect("#inventory-overlay"),
+    });
+    if (slotResult === "skip") return;
+
+    const gridResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "INVENTORY GRID",
+      body:
+        "획득한 아이템은 아래 칸에 보관됩니다.\n아이템을 누르면 장착을 시도하고, 빈 장비 슬롯이 있으면 바로 활용할 수 있어요.",
+      continueLabel: "CLOSE WHEN READY",
+      placement: "top",
+      elevated: true,
+      target: () =>
+        this.getElementRect("#inventory-overlay .inventory-grid") ||
+        this.getElementRect("#inventory-overlay"),
+    });
+    if (gridResult === "skip") return;
+  }
+
+  async showEquipmentBriefing() {
+    const result = await this.showModal({
+      speaker: "PDX-01",
+      title: "MISSION LOADOUT",
+      body:
+        "섹터에 들어가기 전 장착 장비를 다시 확인합니다.\n준비가 끝났으면 [ DEPLOY ]로 방어전을 시작하세요.",
+      continueLabel: "DEPLOY READY",
+      placement: "bottom",
+      elevated: true,
+      target: () =>
+        this.getElementRect("#equipment-selection-overlay .mission-equip-slots") ||
+        this.getElementRect("#equipment-selection-overlay"),
+    });
+    if (result === "skip") return;
+  }
+
+  async showBreachRules() {
+    this.pauseDefense();
+    this.pauseTetris();
+
+    const rulesResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "TETRIS BREACH RULES",
+      body:
+        "점령은 두 조건을 모두 만족해야 완료됩니다.\n1. Tetris에서 목표 3줄을 클리어\n2. 미니 방어 화면의 코어가 강화 PAGE 3개를 생존",
+      continueLabel: "NEXT",
+      placement: "center",
+      elevated: true,
+      target: null,
+    });
+    if (rulesResult === "skip") return;
+
+    const controlResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "DUAL SURVIVAL",
+      body:
+        "줄을 지우면 적에게 넉백/피해가 들어갑니다.\n모바일은 좌/우, DROP, NEXT BLOCK 버튼으로 조작하세요.",
+      continueLabel: "START BREACH",
+      placement: "right",
+      elevated: true,
+      target: () =>
+        this.getElementRect("#mini-defense-panel") ||
+        this.getElementRect("#game-container"),
+    });
+    if (controlResult === "skip") return;
+
+    this.resumeTetris();
+    this.resumeDefense();
+  }
+
+  showBreachFailureHintOnce() {
+    if (this.hasSeenTopic("breach-failure")) return;
+    this.markTopicSeen("breach-failure");
+    this.showToast(
+      {
+        speaker: "PDX-01",
+        title: "BREACH FAILED",
+        body:
+          "퍼즐 실패 시 적 증원이 들어옵니다.\n코어를 지키고 강화 PAGE가 끝날 때까지 버티세요.",
+      },
+      4200
+    );
+  }
+
+  async showRecoveryHintOnce({ lostMoney, remainingMoney } = {}) {
+    if (this.hasSeenTopic("recovery")) return;
+    this.markTopicSeen("recovery");
+
+    const lossLine = Number.isFinite(lostMoney) ? `이번 손실: ${lostMoney} MB\n` : "";
+    const remainingLine = Number.isFinite(remainingMoney)
+      ? `남은 DATA: ${remainingMoney} MB\n`
+      : "";
+
+    await this.showModal({
+      speaker: "PDX-01",
+      title: "RECOVERY AFTER FAILURE",
+      body:
+        `실패하면 DATA의 70%를 잃고 30%만 유지됩니다.\n${lossLine}${remainingLine}` +
+        "REBOOT 후 Safe Zone에서 /inventory와 /upgrade를 확인한 뒤 /map으로 재출격하세요.",
+      continueLabel: "REBOOT READY",
+      hideSkip: true,
+      placement: "center",
+      target: null,
     });
   }
 
@@ -360,6 +575,7 @@ export class TutorialDirector {
     return (
       this.phase === "await-map" ||
       this.phase === "await-stage-select" ||
+      this.phase === "await-equipment" ||
       this.phase === "await-combat-ready"
     );
   }
@@ -433,6 +649,26 @@ export class TutorialDirector {
       this.defenseGame.resume();
     }
     this.pauseWasRunning = false;
+  }
+
+  pauseTetris() {
+    const tetris = this.gameManager?.tetrisGame;
+    if (!tetris || this.pausedTetris) return;
+    this.tetrisWasLogicActive = !!tetris.state?.isLogicActive;
+    if (this.tetrisWasLogicActive) {
+      tetris.state.isLogicActive = false;
+      this.pausedTetris = true;
+    }
+  }
+
+  resumeTetris() {
+    const tetris = this.gameManager?.tetrisGame;
+    if (!tetris || !this.pausedTetris) return;
+    this.pausedTetris = false;
+    if (this.tetrisWasLogicActive && tetris.state) {
+      tetris.state.isLogicActive = true;
+    }
+    this.tetrisWasLogicActive = false;
   }
 
   startRenderLoop() {

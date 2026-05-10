@@ -1,5 +1,5 @@
-// v2.1.139
-const CACHE_NAME = "hacker-tetris-v2.1.139";
+// v2.1.140
+const CACHE_NAME = "hacker-tetris-v2.1.140";
 const ASSETS = [
   "./",
   "./index.html",
@@ -19,6 +19,8 @@ const ASSETS = [
   "./js/modules/StageManager.js",
   "./js/modules/InventoryManager.js",
   "./js/modules/MiningManager.js",
+  "./js/modules/flow/GameFlowMixin.js",
+  "./js/modules/tutorial/TutorialDirector.js",
   "./js/data/virusDialogues.json",
   "./js/data/facilityDialogues.json",
   "./manifest.json",

@@ -87,7 +87,7 @@ export function applyGameFlowMixin(GameManagerClass) {
   proto.moveToStage = async function(stageId) {
     const stage = this.stageManager.getStage(stageId);
     if (!stage) {
-      console.error(`Stage ${stageId} not found!`);
+      debugWarn("GameManager", `Stage ${stageId} not found!`);
       return;
     }
 
@@ -155,7 +155,6 @@ export function applyGameFlowMixin(GameManagerClass) {
     debugLog("Conquest", "=== startConquestTetris 시작 ===");
     const targetLines = 3;
     const speed = 500;
-    this.tutorialDirector?.handleEvent("breach-started");
 
     // 테트리스 상단 UI 숨기기 (Mining Rate, DATA MINED 등)
     this.hideConquestTetrisUI();
@@ -201,6 +200,7 @@ export function applyGameFlowMixin(GameManagerClass) {
       isConquestMode: this.isConquestMode,
     });
     this.tetrisGame.startPuzzleMode(difficulty);
+    this.tutorialDirector?.handleEvent("breach-started");
 
     // 미니 디펜스 렌더링 시작
     this.startMiniDefenseRender();
@@ -370,14 +370,14 @@ export function applyGameFlowMixin(GameManagerClass) {
 
     // 현재 스테이지를 점령 상태로 설정
     const currentStage = this.stageManager.getCurrentStage();
-    console.log("[GameManager] handleConquestComplete - currentStage:", currentStage);
+    debugLog("GameManager", "handleConquestComplete - currentStage:", currentStage);
     if (currentStage) {
       this.stageManager.setConquered(currentStage.id, true);
       // 채굴 등록
-      console.log("[GameManager] Registering territory for mining:", currentStage.id);
+      debugLog("GameManager", "Registering territory for mining:", currentStage.id);
       this.miningManager.registerTerritory(String(currentStage.id));
       this.saveMiningData();
-      console.log("[GameManager] Mining data saved");
+      debugLog("GameManager", "Mining data saved");
     }
 
     // 디펜스 게임에 점령 상태 설정 (시각화 + 아군 10마리)
@@ -385,7 +385,7 @@ export function applyGameFlowMixin(GameManagerClass) {
     this.defenseGame.setConqueredState(true);
 
     // 채굴 마이너 스폰
-    console.log("[GameManager] Spawning miners for conquered stage:", currentStage.id);
+    debugLog("GameManager", "Spawning miners for conquered stage:", currentStage.id);
     this.miningManager.onSceneChange(
       String(currentStage.id),
       false,
@@ -468,6 +468,7 @@ export function applyGameFlowMixin(GameManagerClass) {
     this.terminal.show();
     await this.terminal.printSystemMessage("BREACH FAILED - Conquest Aborted");
     await this.terminal.printSystemMessage("Territory NOT secured.");
+    this.tutorialDirector?.handleEvent("breach-failed");
 
     // 명령 메뉴 표시 (점령 안 됨)
     await this.showCommandMenu();
@@ -629,6 +630,7 @@ export function applyGameFlowMixin(GameManagerClass) {
 
       this.terminal.printSystemMessage("BREACH DEFENSE FAILED!");
       this.terminal.printSystemMessage("Enemy reinforcements incoming!");
+      this.tutorialDirector?.handleEvent("breach-failed");
 
       // 적 다수 스폰 (페널티)
       for (let i = 0; i < 5; i++) {
@@ -665,7 +667,7 @@ export function applyGameFlowMixin(GameManagerClass) {
   }
 
   proto.handleConquest = async function() {
-    this.tutorialDirector?.handleEvent("breach-started");
+    this.tutorialDirector?.handleEvent("conquest-complete");
     // 1. 점령 로직 실행 (병합 등 계산)
     const result = this.conquestManager.conquerStage();
 

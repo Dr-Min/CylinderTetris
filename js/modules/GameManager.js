@@ -2101,6 +2101,8 @@ export class GameManager {
       const data = this.inventoryManager.getData();
 
       const overlay = document.createElement("div");
+      overlay.id = "equipment-selection-overlay";
+      overlay.className = "equipment-selection-overlay";
       overlay.style.cssText = `
         position: fixed;
         top: 0; left: 0;
@@ -2129,6 +2131,7 @@ export class GameManager {
 
       // 장비 슬롯 표시
       const equipRow = document.createElement("div");
+      equipRow.className = "mission-equip-slots";
       equipRow.style.cssText = `
         display: flex;
         gap: 10px;
@@ -2153,6 +2156,7 @@ export class GameManager {
 
       // 출발 버튼
       const deployBtn = document.createElement("button");
+      deployBtn.className = "mission-deploy-button";
       deployBtn.style.cssText = `
         padding: 12px 40px;
         background: rgba(0, 100, 0, 0.5);
@@ -2171,6 +2175,10 @@ export class GameManager {
       overlay.appendChild(deployBtn);
 
       document.body.appendChild(overlay);
+      this.tutorialDirector?.handleEvent("equipment-selection-opened", {
+        stage,
+        overlay,
+      });
     });
   }
 
@@ -2545,6 +2553,7 @@ export class GameManager {
 
     // 장비 슬롯 영역 (상단 4칸)
     const equipSection = document.createElement("div");
+    equipSection.className = "inventory-equip-slots";
     equipSection.style.cssText = `
       display: flex;
       gap: 10px;
@@ -2584,6 +2593,7 @@ export class GameManager {
 
     // 인벤토리 그리드 (20칸: 5x4)
     const invGrid = document.createElement("div");
+    invGrid.className = "inventory-grid";
     invGrid.style.cssText = `
       display: grid;
       grid-template-columns: repeat(5, 50px);
@@ -2622,11 +2632,13 @@ export class GameManager {
     closeBtn.onclick = () => {
       overlay.remove();
       this.defenseGame.resume();
+      this.tutorialDirector?.handleEvent("inventory-closed");
       this.showCommandMenu();
     };
     overlay.appendChild(closeBtn);
 
     document.body.appendChild(overlay);
+    this.tutorialDirector?.handleEvent("inventory-opened", { overlay });
   }
 
 
@@ -3286,6 +3298,11 @@ export class GameManager {
     await new Promise((r) => setTimeout(r, 500));
     await this.terminal.typeText(`DATA LOSS: -${lostMoney} MB (70% lost)`, 15);
     await this.terminal.typeText(`REMAINING DATA: ${newMoney} MB`, 15);
+
+    await this.tutorialDirector?.handleEvent("recovery-needed", {
+      lostMoney,
+      remainingMoney: newMoney,
+    });
 
     await new Promise((r) => setTimeout(r, 1000));
 
