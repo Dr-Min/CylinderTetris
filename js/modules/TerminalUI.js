@@ -132,11 +132,15 @@ export class TerminalUI {
     this.cmdInput.disabled = locked;
     if (locked) {
       this.cmdInput.blur();
-      this.inputLockBtn.innerText = "F512";
+      this.inputLockBtn.innerText = "LOCK";
+      this.inputLockBtn.title = "Unlock terminal input";
+      this.inputLockBtn.setAttribute("aria-label", "Unlock terminal input");
       this.inputLine.style.opacity = "0.6";
     } else {
       this.cmdInput.disabled = false;
-      this.inputLockBtn.innerText = "F513";
+      this.inputLockBtn.innerText = "INPUT";
+      this.inputLockBtn.title = "Lock terminal input";
+      this.inputLockBtn.setAttribute("aria-label", "Lock terminal input");
       this.inputLine.style.opacity = "1";
       this.cmdInput.focus();
     }
@@ -771,7 +775,9 @@ export class TerminalUI {
 
       // 모바일이 아닐 때만 자동 포커스 (모바일은 키보드가 화면 가림 방지)
       if (window.innerWidth > 768) {
-        this.cmdInput.focus();
+        this.setInputLocked(false);
+      } else {
+        this.setInputLocked(true);
       }
       this.scrollToBottom();
 
@@ -808,6 +814,7 @@ export class TerminalUI {
   finalizeChoice(choice, resolve) {
     this.choiceArea.classList.add("hidden");
     this.inputLine.classList.add("hidden"); // 입력창 숨김
+    this.setInputLocked(true);
     this.onInputEnter = null; // 핸들러 해제
 
     // 선택한 내용은 유저 입력처럼 출력
@@ -890,13 +897,16 @@ export class TerminalUI {
 
       // 모바일이 아닐 때만 자동 포커스
       if (window.innerWidth > 768) {
-        this.cmdInput.focus();
+        this.setInputLocked(false);
+      } else {
+        this.setInputLocked(true);
       }
       this.scrollToBottom();
 
       this.onInputEnter = (text) => {
         // 엔터키 입력 시 (내용 상관 없음, 혹은 특정 커맨드 요구 가능)
         this.inputLine.classList.add("hidden");
+        this.setInputLocked(true);
         this.onInputEnter = null;
 
         // [OK] 추가

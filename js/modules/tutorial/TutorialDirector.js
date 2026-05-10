@@ -14,6 +14,7 @@ export class TutorialDirector {
     this.currentMode = "hidden";
     this.currentPlacement = "bottom";
     this.currentTargetResolver = null;
+    this.currentAvoidResolver = null;
     this.pendingResolve = null;
     this.rafId = null;
     this.pausedDefense = false;
@@ -237,6 +238,7 @@ export class TutorialDirector {
     this.currentMode = config.mode || "hint";
     this.currentPlacement = config.placement || "bottom";
     this.currentTargetResolver = config.target || null;
+    this.currentAvoidResolver = config.avoid || null;
     this.speakerEl.textContent = config.speaker || "PDX-01";
     this.titleEl.textContent = config.title || "";
     this.bodyEl.textContent = config.body || "";
@@ -268,6 +270,7 @@ export class TutorialDirector {
     }
     this.currentMode = "hidden";
     this.currentTargetResolver = null;
+    this.currentAvoidResolver = null;
     this.root.className = "hidden";
     this.highlight.style.display = "none";
     this.pointer.style.display = "none";
@@ -402,6 +405,7 @@ export class TutorialDirector {
       body: "이제 /map으로 작전 지도를 여세요.\n지도에서 이동할 섹터를 선택합니다.",
       placement: "bottom",
       target: () => this.findChoiceButton("map"),
+      avoid: () => this.getElementRect("#choice-area"),
     });
   }
 
@@ -437,6 +441,7 @@ export class TutorialDirector {
         ">>> CONQUER THIS SECTOR <<<가 열렸습니다.\n이 명령을 누르면 Tetris breach와 강화 방어가 동시에 시작됩니다.",
       placement: "bottom",
       target: () => this.findChoiceButton("conquer") || this.getElementRect("#conquer-btn"),
+      avoid: () => this.getElementRect("#choice-area"),
     });
   }
 
@@ -448,6 +453,7 @@ export class TutorialDirector {
         "출격 전에 /inventory를 한 번 확인하세요.\n장비 슬롯과 획득 아이템 위치를 익히는 단계입니다.",
       placement: "bottom",
       target: () => this.findChoiceButton("inventory"),
+      avoid: () => this.getElementRect("#choice-area"),
     });
   }
 
@@ -690,26 +696,127 @@ export class TutorialDirector {
     this.rafId = null;
   }
 
-  resolveTargetRect() {
-    if (!this.currentTargetResolver) return null;
-    const rect = this.currentTargetResolver();
+  normalizeRect(rect) {
     if (!rect) return null;
     if (typeof rect.getBoundingClientRect === "function") {
-      const elementRect = rect.getBoundingClientRect();
-      return elementRect && typeof elementRect.left === "number" ? elementRect : null;
+      return this.normalizeRect(rect.getBoundingClientRect());
     }
-    if (typeof rect.left === "number") {
-      return rect;
+    const left = typeof rect.left === "number" ? rect.left : rect.x;
+    const top = typeof rect.top === "number" ? rect.top : rect.y;
+    if (typeof left !== "number" || typeof top !== "number") return null;
+    const width = rect.width || 0;
+    const height = rect.height || 0;
+    const right = typeof rect.right === "number" ? rect.right : left + width;
+    const bottom = typeof rect.bottom === "number" ? rect.bottom : top + height;
+    return { left, top, width, height, right, bottom };
+  }
+
+  resolveRect(resolver) {
+    if (!resolver) return null;
+    return this.normalizeRect(resolver());
+  }
+
+  resolveTargetRect() {
+    return this.resolveRect(this.currentTargetResolver);
+  }
+
+  resolveAvoidRect() {
+    return this.resolveRect(this.currentAvoidResolver);
+  }
+
+  rectsOverlap(first, second, pad = 0) {
+    if (!first || !second) return false;
+    return !(
+      first.right + pad <= second.left ||
+      first.left - pad >= second.right ||
+      first.bottom + pad <= second.top ||
+      first.top - pad >= second.bottom
+    );
+  }
+
+  chooseCardPosition({
+    targetRect,
+    cardRect,
+    viewportWidth,
+    viewportHeight,
+    preferredPlacement,
+    avoidRect = null,
+    margin = 18,
+  }) {
+    const placements = [
+      preferredPlacement,
+      "bottom",
+      "top",
+      "right",
+      "left",
+    ].filter((placement, index, list) => placement && list.indexOf(placement) === index);
+
+    const maxLeft = Math.max(margin, viewportWidth - cardRect.width - margin);
+    const maxTop = Math.max(margin, viewportHeight - cardRect.height - margin);
+
+    const buildPosition = (placement) => {
+      let left = (viewportWidth - cardRect.width) * 0.5;
+      let top = 24;
+
+      if (placement === "right") {
+        left = targetRect.right + 24;
+        top = targetRect.top + targetRect.height * 0.5 - cardRect.height * 0.5;
+      } else if (placement === "left") {
+        left = targetRect.left - cardRect.width - 24;
+        top = targetRect.top + targetRect.height * 0.5 - cardRect.height * 0.5;
+      } else if (placement === "top") {
+        left = targetRect.left + targetRect.width * 0.5 - cardRect.width * 0.5;
+        top = targetRect.top - cardRect.height - 24;
+      } else {
+        left = targetRect.left + targetRect.width * 0.5 - cardRect.width * 0.5;
+        top = targetRect.bottom + 24;
+      }
+
+      left = clamp(left, margin, maxLeft);
+      top = clamp(top, margin, maxTop);
+      return { left, top, placement };
+    };
+
+    const toRect = (position) => ({
+      left: position.left,
+      top: position.top,
+      right: position.left + cardRect.width,
+      bottom: position.top + cardRect.height,
+      width: cardRect.width,
+      height: cardRect.height,
+    });
+
+    let chosen = buildPosition(placements[0] || "bottom");
+    for (const placement of placements) {
+      const candidate = buildPosition(placement);
+      const candidateRect = toRect(candidate);
+      if (
+        !this.rectsOverlap(candidateRect, targetRect, 8) &&
+        !this.rectsOverlap(candidateRect, avoidRect, 8)
+      ) {
+        chosen = candidate;
+        break;
+      }
     }
-    if (typeof rect.x === "number") {
-      return {
-        left: rect.x,
-        top: rect.y,
-        width: rect.width || 0,
-        height: rect.height || 0,
-      };
-    }
-    return null;
+
+    const pushAway = (position, rect) => {
+      if (!this.rectsOverlap(toRect(position), rect, 8)) return position;
+      const belowTop = rect.bottom + 18;
+      if (belowTop + cardRect.height <= viewportHeight - margin) {
+        return { ...position, top: belowTop, placement: "bottom" };
+      }
+      const aboveTop = rect.top - cardRect.height - 18;
+      if (aboveTop >= margin) {
+        return { ...position, top: aboveTop, placement: "top" };
+      }
+      return position;
+    };
+
+    chosen = pushAway(chosen, avoidRect);
+    chosen = pushAway(chosen, targetRect);
+    chosen.left = clamp(chosen.left, margin, maxLeft);
+    chosen.top = clamp(chosen.top, margin, maxTop);
+    return chosen;
   }
 
   updateLayout() {
@@ -745,25 +852,18 @@ export class TutorialDirector {
 
     const cardRect = this.card.getBoundingClientRect();
     const margin = 18;
-    let cardLeft = (viewportWidth - cardRect.width) * 0.5;
-    let cardTop = 24;
-
-    if (this.currentPlacement === "right") {
-      cardLeft = targetRect.right + 24;
-      cardTop = targetRect.top + targetRect.height * 0.5 - cardRect.height * 0.5;
-    } else if (this.currentPlacement === "left") {
-      cardLeft = targetRect.left - cardRect.width - 24;
-      cardTop = targetRect.top + targetRect.height * 0.5 - cardRect.height * 0.5;
-    } else if (this.currentPlacement === "top") {
-      cardLeft = targetRect.left + targetRect.width * 0.5 - cardRect.width * 0.5;
-      cardTop = targetRect.top - cardRect.height - 24;
-    } else {
-      cardLeft = targetRect.left + targetRect.width * 0.5 - cardRect.width * 0.5;
-      cardTop = targetRect.bottom + 24;
-    }
-
-    cardLeft = clamp(cardLeft, margin, viewportWidth - cardRect.width - margin);
-    cardTop = clamp(cardTop, margin, viewportHeight - cardRect.height - margin);
+    const cardPosition = this.chooseCardPosition({
+      targetRect,
+      cardRect,
+      viewportWidth,
+      viewportHeight,
+      preferredPlacement: this.currentPlacement,
+      avoidRect: this.resolveAvoidRect(),
+      margin,
+    });
+    const cardLeft = cardPosition.left;
+    const cardTop = cardPosition.top;
+    const effectivePlacement = cardPosition.placement;
     this.card.style.left = `${Math.round(cardLeft)}px`;
     this.card.style.top = `${Math.round(cardTop)}px`;
 
@@ -772,11 +872,11 @@ export class TutorialDirector {
     let startX = cardLeft + cardRect.width * 0.5;
     let startY = cardTop + cardRect.height * 0.5;
 
-    if (this.currentPlacement === "right") {
+    if (effectivePlacement === "right") {
       startX = cardLeft;
-    } else if (this.currentPlacement === "left") {
+    } else if (effectivePlacement === "left") {
       startX = cardLeft + cardRect.width;
-    } else if (this.currentPlacement === "top") {
+    } else if (effectivePlacement === "top") {
       startY = cardTop + cardRect.height;
     } else {
       startY = cardTop;

@@ -13,6 +13,10 @@ class UpdateManager {
             navigator.serviceWorker
                 .register("./sw.js", { updateViaCache: "none" })
                 .then((reg) => {
+                    if (!reg) {
+                        console.warn("[UpdateManager] SW registration unavailable or blocked");
+                        return;
+                    }
                     console.log("[UpdateManager] SW Registered:", reg.scope);
 
                     // 업데이트 확인 (주기적)
@@ -171,7 +175,7 @@ class MobileOptimizer {
 document.addEventListener("DOMContentLoaded", () => {
     // 버전 표시
     const verEl = document.getElementById("app-version");
-  if (verEl) verEl.innerText = "PROTOCOL v2.1.135";
+  if (verEl) verEl.innerText = "PROTOCOL v2.1.141";
 
     // 업데이트 관리자 초기화
     const updateManager = new UpdateManager();

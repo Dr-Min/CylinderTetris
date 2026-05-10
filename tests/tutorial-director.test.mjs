@@ -13,7 +13,44 @@ test("resolveTargetRect accepts DOM elements from target resolvers", () => {
   const director = Object.create(TutorialDirector.prototype);
   director.currentTargetResolver = () => element;
 
-  assert.equal(director.resolveTargetRect(), expectedRect);
+  assert.deepEqual(director.resolveTargetRect(), {
+    ...expectedRect,
+    right: 130,
+    bottom: 60,
+  });
+});
+
+test("chooseCardPosition falls below mobile map targets when side placement would overlap", () => {
+  const director = Object.create(TutorialDirector.prototype);
+
+  const result = director.chooseCardPosition({
+    targetRect: { left: 35, top: 450, right: 135, bottom: 530, width: 100, height: 80 },
+    cardRect: { width: 326, height: 186 },
+    viewportWidth: 390,
+    viewportHeight: 844,
+    preferredPlacement: "right",
+    avoidRect: null,
+    margin: 18,
+  });
+
+  assert.equal(result.placement, "bottom");
+  assert.ok(result.top >= 548);
+});
+
+test("chooseCardPosition avoids the command choice area", () => {
+  const director = Object.create(TutorialDirector.prototype);
+
+  const result = director.chooseCardPosition({
+    targetRect: { left: 8, top: 96, right: 382, bottom: 123, width: 374, height: 27 },
+    avoidRect: { left: 8, top: 69, right: 382, bottom: 177, width: 374, height: 108 },
+    cardRect: { width: 326, height: 169 },
+    viewportWidth: 390,
+    viewportHeight: 844,
+    preferredPlacement: "bottom",
+    margin: 18,
+  });
+
+  assert.ok(result.top >= 195);
 });
 
 test("conquer hint targets the terminal conquer choice before legacy button", () => {
