@@ -367,6 +367,7 @@ export function applyGameFlowMixin(GameManagerClass) {
 
     // 점령 처리
     this.conquestManager.conquerStage();
+    this.saveConquestData?.();
 
     // 현재 스테이지를 점령 상태로 설정
     const currentStage = this.stageManager.getCurrentStage();
@@ -670,6 +671,7 @@ export function applyGameFlowMixin(GameManagerClass) {
     this.tutorialDirector?.handleEvent("conquest-complete");
     // 1. 점령 로직 실행 (병합 등 계산)
     const result = this.conquestManager.conquerStage();
+    this.saveConquestData?.();
 
     // 2. 터미널 연출
     this.terminal.setDefenseMode(false);

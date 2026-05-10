@@ -113,6 +113,7 @@ export class GameManager {
     // 게임 상태
     this.activeMode = "none"; // 'defense', 'breach'
     this.currentMoney = this.loadSavedMoney(); // localStorage에서 로드
+    this.loadConquestData(); // Load conquest data
     this.loadMiningData(); // 채굴 데이터 로드
     this.reputation = 0; // Reputation
 
@@ -1843,11 +1844,14 @@ export class GameManager {
     const mapContainer = document.createElement("div");
     mapContainer.style.cssText = `
       display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-template-rows: repeat(${rowCount}, 80px);
-      gap: 10px;
+      grid-template-columns: repeat(3, minmax(72px, 96px));
+      grid-template-rows: repeat(${rowCount}, minmax(60px, 80px));
+      gap: clamp(6px, 2vw, 10px);
       justify-content: center;
       align-content: center;
+      width: min(100%, 320px);
+      max-width: 100%;
+      box-sizing: border-box;
       flex: 1; /* 남은 공간 차지 */
     `;
 
@@ -2298,9 +2302,10 @@ export class GameManager {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: clamp(12px, 4vw, 20px);
       box-sizing: border-box;
       overflow-y: auto;
+      overflow-x: hidden;
     `;
 
     const closeDismantler = () => {
@@ -2532,9 +2537,10 @@ export class GameManager {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: clamp(12px, 4vw, 20px);
       box-sizing: border-box;
       overflow-y: auto;
+      overflow-x: hidden;
     `;
 
     const overlay = bgOverlay; // 변수명 통일
@@ -2596,12 +2602,15 @@ export class GameManager {
     invGrid.className = "inventory-grid";
     invGrid.style.cssText = `
       display: grid;
-      grid-template-columns: repeat(5, 50px);
-      grid-template-rows: repeat(4, 50px);
-      gap: 5px;
-      padding: 10px;
+      grid-template-columns: repeat(5, minmax(42px, 50px));
+      grid-template-rows: repeat(4, minmax(42px, 50px));
+      gap: clamp(3px, 1.5vw, 5px);
+      padding: clamp(6px, 2.5vw, 10px);
       border: 1px solid #555;
       background: rgba(0, 0, 0, 0.5);
+      width: min(100%, 290px);
+      max-width: 100%;
+      box-sizing: border-box;
     `;
 
     data.inventory.forEach((item, idx) => {
@@ -2729,8 +2738,11 @@ export class GameManager {
     const borderColor = item ? this.itemDatabase.getRarityColor(item.rarity) : "#333";
 
     slot.style.cssText = `
-      width: 50px;
-      height: 50px;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      box-sizing: border-box;
       border: 1px solid ${borderColor};
       background: ${bgColor};
       display: flex;

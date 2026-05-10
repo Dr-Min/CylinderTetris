@@ -275,7 +275,8 @@ export class StageManager {
             const saved = localStorage.getItem("stage_state");
             if (saved) {
                 const state = JSON.parse(saved);
-                this.currentStageId = state.currentStageId || 0;
+                const currentStageId = Number(state.currentStageId);
+                this.currentStageId = this.getStage(currentStageId) ? currentStageId : 0;
 
                 state.conqueredStages?.forEach((id) => {
                     const stage = this.getStage(id);
@@ -286,6 +287,7 @@ export class StageManager {
                     const stage = this.getStage(id);
                     if (stage) stage.visited = true;
                 });
+                return;
             }
         } catch (e) {
             console.error("Failed to load stage state:", e);

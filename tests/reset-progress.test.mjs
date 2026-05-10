@@ -39,7 +39,12 @@ test("resetProgressState clears progress but marks tutorial for replay", () => {
         stageResetCalled = true;
       },
     };
-    manager.conquestManager = { conqueredStages: [1, 2] };
+    manager.conquestManager = {
+      conqueredStages: 2,
+      mergedStacks: 1,
+      alliedVirusLevel: 3,
+      miningRate: 25,
+    };
     manager.miningManager = {
       territories: { 1: true },
       cabinet: { storedData: 200 },
@@ -52,7 +57,10 @@ test("resetProgressState clears progress but marks tutorial for replay", () => {
     assert.equal(globalThis.localStorage.getItem("tutorial_completed"), "false");
     assert.equal(globalThis.localStorage.getItem("cylinderTetris_money"), null);
     assert.equal(stageResetCalled, true);
-    assert.deepEqual(manager.conquestManager.conqueredStages, []);
+    assert.equal(manager.conquestManager.conqueredStages, 0);
+    assert.equal(manager.conquestManager.mergedStacks, 0);
+    assert.equal(manager.conquestManager.alliedVirusLevel, 1);
+    assert.equal(manager.conquestManager.miningRate, 0);
     assert.deepEqual(manager.miningManager.territories, {});
     assert.equal(manager.miningManager.cabinet.storedData, 0);
     assert.equal(manager.currentMoney, 0);

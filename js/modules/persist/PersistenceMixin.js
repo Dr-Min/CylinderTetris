@@ -1,6 +1,7 @@
 // Persistence methods (extracted from GameManager)
 // Save/load localStorage state, upgrades, money, mining, reputation
 // Applied as mixin to preserve `this` context
+const CONQUEST_STORAGE_KEY = "cylinderTetris_conquest";
 
 export function applyPersistenceMixin(GameManagerClass) {
   const proto = GameManagerClass.prototype;
@@ -22,7 +23,14 @@ export function applyPersistenceMixin(GameManagerClass) {
     }
 
     if (this.conquestManager) {
-      this.conquestManager.conqueredStages = [];
+      if (typeof this.conquestManager.reset === "function") {
+        this.conquestManager.reset();
+      } else {
+        this.conquestManager.conqueredStages = 0;
+        this.conquestManager.mergedStacks = 0;
+        this.conquestManager.alliedVirusLevel = 1;
+        this.conquestManager.miningRate = 0;
+      }
     }
 
     if (this.miningManager) {
@@ -284,6 +292,55 @@ export function applyPersistenceMixin(GameManagerClass) {
     } catch (e) {
       console.warn("Failed to load mining data:", e);
     }
+  }
+
+  proto.saveConquestData = function() {
+    if (!this.conquestManager?.saveData) return;
+
+    try {
+      localStorage.setItem(
+        CONQUEST_STORAGE_KEY,
+        JSON.stringify(this.conquestManager.saveData())
+      );
+    } catch (e) {
+      if (typeof debugWarn === "function") {
+        debugWarn("GameManager", "Failed to save conquest data:", e);
+      } else {
+        console.warn("Failed to save conquest data:", e);
+      }
+    }
+  }
+
+  proto.loadConquestData = function() {
+    if (!this.conquestManager?.loadData) return false;
+
+    try {
+      const saved = localStorage.getItem(CONQUEST_STORAGE_KEY);
+      if (saved) {
+        this.conquestManager.loadData(JSON.parse(saved));
+        return true;
+      }
+    } catch (e) {
+      localStorage.removeItem(CONQUEST_STORAGE_KEY);
+      if (typeof debugWarn === "function") {
+        debugWarn("GameManager", "Failed to load conquest data:", e);
+      } else {
+        console.warn("Failed to load conquest data:", e);
+      }
+    }
+
+    const conqueredCount = Number(this.stageManager?.getConqueredCount?.() || 0);
+    if (Number.isFinite(conqueredCount) && conqueredCount > 0) {
+      if (typeof this.conquestManager.applyConquestTotal === "function") {
+        this.conquestManager.applyConquestTotal(conqueredCount);
+      } else {
+        this.conquestManager.loadData({ conqueredStages: conqueredCount });
+      }
+      this.saveConquestData();
+      return true;
+    }
+
+    return false;
   }
 
 
