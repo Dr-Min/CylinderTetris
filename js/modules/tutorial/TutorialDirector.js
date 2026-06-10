@@ -388,12 +388,25 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "SHIELD CONTROL",
       body:
-        "방패 버튼으로 실드를 켜고 끌 수 있습니다.\n위험한 PAGE에서는 실드 타이밍이 생존을 좌우합니다.",
-      continueLabel: "MOVE OUT",
+        "방패 버튼으로 실드를 켜고 끕니다.\n켜면 안전하지만, 실드를 끈 동안 적을 처치하면 DATA가 코어로 흡수됩니다.\n끄면 벌고, 켜면 산다 — 타이밍이 전부입니다.",
+      continueLabel: "NEXT",
       placement: "top",
       target: () => this.getElementRect("#shield-btn"),
     });
     if (shieldResult === "skip") return;
+
+    const isMobile = !!this.defenseGame?.isMobile;
+    const fireResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "FIRE & MOVE",
+      body: isMobile
+        ? "화면을 터치하면 그 방향으로 발사합니다.\n왼쪽 아래 조이스틱으로 코어를 움직일 수 있어요.\n상단 배너에 현재 목표와 진행도가 항상 표시됩니다."
+        : "클릭 또는 스페이스바로 발사합니다 (연사 가능).\nWASD/방향키로 코어를 움직일 수 있어요.\n상단 배너에 현재 목표와 진행도가 항상 표시됩니다.",
+      continueLabel: "MOVE OUT",
+      placement: "bottom",
+      target: () => this.getElementRect("#objective-banner"),
+    });
+    if (fireResult === "skip") return;
 
     this.resumeDefense();
   }
@@ -425,9 +438,10 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "SURVIVE THE PAGES",
       body:
-        "PAGE가 끝날 때까지 코어를 지키세요.\n최대 PAGE를 버티면 정복 명령이 열립니다.",
+        "PAGE가 끝날 때까지 코어를 지키세요.\n상단 배너의 진행바가 가득 차면 정복 명령이 열립니다.",
       placement: "bottom",
       target: () =>
+        this.getElementRect("#objective-banner") ||
         this.getElementRect("#terminal-page-display") ||
         this.getElementRect("#defense-ui #wave-info"),
     });
