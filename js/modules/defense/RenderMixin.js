@@ -834,6 +834,8 @@ export function applyRenderMixin(DefenseGameClass) {
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    this.renderStageBackground();
+
     this.ctx.save();
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2;
@@ -1606,6 +1608,131 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   }
 
+
+  // 스테이지별 배경 테마 (포인트 컬러 + 배경 패턴)
+  proto.getStageTheme = function () {
+    const themes = {
+      0: { accent: "#00ff88", bg: "grid",   tint: "rgba(0, 35, 18, 0.55)" },
+      1: { accent: "#00f0ff", bg: "stream", tint: "rgba(0, 18, 35, 0.5)" },
+      2: { accent: "#ffaa00", bg: "stream", tint: "rgba(35, 22, 0, 0.5)" },
+      3: { accent: "#ffd24a", bg: "grid",   tint: "rgba(30, 26, 0, 0.5)" },
+      4: { accent: "#bb66ff", bg: "noise",  tint: "rgba(22, 0, 35, 0.5)" },
+      5: { accent: "#ff66aa", bg: "noise",  tint: "rgba(35, 0, 22, 0.5)" },
+      6: { accent: "#ff3366", bg: "core",   tint: "rgba(35, 0, 9, 0.55)" },
+    };
+    return themes[this.currentStageId] || themes[1];
+  };
+
+  proto.renderStageBackground = function () {
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    if (!w || !h) return;
+    const theme = this.getStageTheme();
+    const time = Date.now() / 1000;
+
+    // 1. 은은한 스테이지 색 워시
+    ctx.fillStyle = theme.tint;
+    ctx.fillRect(0, 0, w, h);
+
+    // 2. 패턴 (모두 저알파, 화면 공간 — 카메라 영향 없음)
+    ctx.save();
+    if (theme.bg === "grid") {
+      const cell = 56;
+      const scroll = (time * 8) % cell;
+      ctx.strokeStyle = theme.accent;
+      ctx.globalAlpha = 0.05;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = -cell + scroll; x <= w; x += cell) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+      }
+      for (let y = -cell + scroll; y <= h; y += cell) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+      }
+      ctx.stroke();
+    } else if (theme.bg === "stream") {
+      // 떨어지는 바이너리 레인 (밀도 제한)
+      const key = `${this.currentStageId}:${w}x${h}`;
+      if (!this._bgRain || this._bgRainKey !== key) {
+        this._bgRainKey = key;
+        const cols = Math.min(28, Math.floor(w / 48));
+        this._bgRain = Array.from({ length: cols }, () => ({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          speed: 24 + Math.random() * 40,
+          chars: Array.from({ length: 4 }, () => (Math.random() < 0.5 ? "0" : "1")),
+        }));
+      }
+      ctx.font = "11px 'Courier New', monospace";
+      ctx.fillStyle = theme.accent;
+      for (const col of this._bgRain) {
+        col.y += col.speed / 60;
+        if (col.y > h + 60) {
+          col.y = -60;
+          col.x = Math.random() * w;
+        }
+        for (let i = 0; i < col.chars.length; i++) {
+          ctx.globalAlpha = 0.1 - i * 0.02;
+          ctx.fillText(col.chars[i], col.x, col.y - i * 13);
+        }
+      }
+    } else if (theme.bg === "noise") {
+      // 간헐적 글리치 띠
+      if (Math.random() < 0.06) {
+        this._bgGlitch = {
+          y: Math.random() * h,
+          height: 2 + Math.random() * 18,
+          life: 3,
+        };
+      }
+      if (this._bgGlitch && this._bgGlitch.life > 0) {
+        this._bgGlitch.life--;
+        ctx.globalAlpha = 0.07;
+        ctx.fillStyle = theme.accent;
+        ctx.fillRect(0, this._bgGlitch.y, w, this._bgGlitch.height);
+      }
+      // 흐릿한 대각선 스캔
+      const scan = (time * 30) % (h + 200) - 100;
+      const grad = ctx.createLinearGradient(0, scan - 60, 0, scan + 60);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(0.5, theme.accent);
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = 0.04;
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, scan - 60, w, 120);
+    } else if (theme.bg === "core") {
+      // 보스: 화면 중심 박동 + 동심원
+      const pulse = 0.5 + Math.sin(time * 2.4) * 0.5;
+      const cx = w / 2;
+      const cy = h / 2;
+      ctx.strokeStyle = theme.accent;
+      for (let i = 0; i < 3; i++) {
+        const r = (Math.max(w, h) * 0.18) * (i + 1) + pulse * 14;
+        ctx.globalAlpha = 0.05 - i * 0.012;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    // 3. 비네팅 (모서리 어둡게 — 깊이감)
+    if (!this._vignette || this._vignetteKey !== `${w}x${h}`) {
+      this._vignetteKey = `${w}x${h}`;
+      const g = ctx.createRadialGradient(
+        w / 2, h / 2, Math.min(w, h) * 0.45,
+        w / 2, h / 2, Math.max(w, h) * 0.75
+      );
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, "rgba(0,0,0,0.45)");
+      this._vignette = g;
+    }
+    ctx.fillStyle = this._vignette;
+    ctx.fillRect(0, 0, w, h);
+  };
 
   proto.renderEnemyProjectiles = function () {
     if (!this.enemyProjectiles || this.enemyProjectiles.length === 0) return;
