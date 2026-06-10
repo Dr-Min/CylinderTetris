@@ -746,6 +746,8 @@ export function applyGameFlowMixin(GameManagerClass) {
     // 콜백 설정: 페이즈 전환
     this.bossManager.onPhaseChange = (phase, config) => {
       this.terminal.printSystemMessage(`>>> ${config.description} <<<`);
+      this.defenseGame.announcePageEvent(config.description, "#ff3366");
+      this.defenseGame.addScreenShake(10);
     };
   }
 

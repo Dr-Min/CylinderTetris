@@ -1452,6 +1452,7 @@ export function applyRenderMixin(DefenseGameClass) {
 
     this.renderSpeechBubbles();
 
+    this.renderEnemyProjectiles();
     this.renderDataMotes();
     this.renderDamageNumbers();
 
@@ -1605,6 +1606,21 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   }
 
+
+  proto.renderEnemyProjectiles = function () {
+    if (!this.enemyProjectiles || this.enemyProjectiles.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    for (const p of this.enemyProjectiles) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+    }
+    ctx.restore();
+  };
 
   proto.renderDataMotes = function () {
     if (!this.dataMotes || this.dataMotes.length === 0) return;

@@ -194,6 +194,10 @@ export class DefenseGame {
     this.pageEvent = null;
     this.onSupplyDrop = null;
 
+    // 보스전: 적 탄환 + 페이즈별 공격 타이머
+    this.enemyProjectiles = [];
+    this.bossAttackTimers = { ring: 0, aimed: 0, summon: 0 };
+
     const joystickLeft = this.isMobile ? 60 : 24;
     const joystickBottom = this.isMobile ? 60 : 24;
     this.joystickContainer = document.createElement("div");
@@ -1567,6 +1571,9 @@ export class DefenseGame {
     this.currentPage = 1;
     this.pageTimer = 0;
     this.pageEvent = null;
+    this.enemyProjectiles = [];
+    this.bossAttackTimers = { ring: 0, aimed: 0, summon: 0 };
+    this._ringAnnounced = false;
     this.conquerReady = false;
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
@@ -2060,6 +2067,11 @@ export class DefenseGame {
 
     this.updateEnemies(dt, this.core);
 
+    if (this.isBossFight && this.bossManager?.isActive) {
+      this.updateBossAttacks(dt);
+    }
+    this.updateEnemyProjectiles(dt);
+
     this.separateAllViruses();
 
     let nearestEnemy = null;
@@ -2472,6 +2484,149 @@ export class DefenseGame {
 
   chargeStaticOnKill() {
     this.staticSystem.currentCharge += this.staticSystem.killChargeAmount;
+  }
+
+  // 보스 페이즈별 공격 패턴: 2+ 수렴 탄막 링, 3+ 증원 소환, 4 조준 사격
+  updateBossAttacks(dt) {
+    const phase = this.bossManager.currentPhase || 1;
+    const t = this.bossAttackTimers;
+
+    if (phase >= 2) {
+      t.ring += dt;
+      const ringInterval = phase >= 4 ? 7 : 10;
+      if (t.ring >= ringInterval) {
+        t.ring = 0;
+        this.fireBossRing(phase);
+      }
+    }
+
+    if (phase >= 3) {
+      t.summon += dt;
+      if (t.summon >= 14) {
+        t.summon = 0;
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 50;
+        const scenarios = phase >= 4
+          ? ["BREACHER_STORM", "SWARM_BEACON", "GHOST_PROTOCOL"]
+          : ["SWARM_BEACON", "SHIELD_WALL"];
+        this.spawnFormation(
+          scenarios[Math.floor(Math.random() * scenarios.length)],
+          this.core.x + Math.cos(angle) * distance,
+          this.core.y + Math.sin(angle) * distance,
+          this.stageDifficultyScale || 1
+        );
+        this.announcePageEvent("⛧ 보스가 증원을 소환했다", "#ff3366");
+      }
+    }
+
+    if (phase >= 4) {
+      t.aimed += dt;
+      if (t.aimed >= 5) {
+        t.aimed = 0;
+        this.fireBossAimedVolley();
+      }
+    }
+  }
+
+  // 코어를 향해 수렴하는 탄막 링 (2칸의 빈틈으로 회피 가능)
+  fireBossRing(phase) {
+    const count = phase >= 4 ? 18 : 12;
+    const radius = Math.max(this.canvas.width, this.canvas.height) * 0.5 + 40;
+    const gapIndex = Math.floor(Math.random() * count);
+    const speed = 90 + phase * 10;
+    for (let i = 0; i < count; i++) {
+      if (i === gapIndex || i === (gapIndex + 1) % count) continue;
+      const angle = (Math.PI * 2 / count) * i;
+      this.enemyProjectiles.push({
+        x: this.core.x + Math.cos(angle) * radius,
+        y: this.core.y + Math.sin(angle) * radius,
+        vx: -Math.cos(angle) * speed,
+        vy: -Math.sin(angle) * speed,
+        radius: 6,
+        damage: 8,
+        life: 14,
+        color: "#ff3366",
+      });
+    }
+    if (!this._ringAnnounced) {
+      this._ringAnnounced = true;
+      this.announcePageEvent("⛧ RING ATTACK — 틈새로 회피하라", "#ff3366");
+    }
+    this.addScreenShake(5);
+  }
+
+  fireBossAimedVolley() {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.max(this.canvas.width, this.canvas.height) * 0.5 + 40;
+    const sx = this.core.x + Math.cos(angle) * radius;
+    const sy = this.core.y + Math.sin(angle) * radius;
+    for (let i = 0; i < 3; i++) {
+      const aim = Math.atan2(this.core.y - sy, this.core.x - sx) + (i - 1) * 0.12;
+      this.enemyProjectiles.push({
+        x: sx,
+        y: sy,
+        vx: Math.cos(aim) * 230,
+        vy: Math.sin(aim) * 230,
+        radius: 5,
+        damage: 6,
+        life: 8,
+        color: "#ff66aa",
+      });
+    }
+  }
+
+  updateEnemyProjectiles(dt) {
+    if (!this.enemyProjectiles || this.enemyProjectiles.length === 0) return;
+    const core = this.core;
+    for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
+      const p = this.enemyProjectiles[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.life <= 0) {
+        this.enemyProjectiles.splice(i, 1);
+        continue;
+      }
+
+      const dist = Math.hypot(p.x - core.x, p.y - core.y);
+
+      if (core.shieldActive && dist < core.shieldRadius + p.radius) {
+        core.shieldHp -= p.damage;
+        this.createExplosion(p.x, p.y, "#00f0ff", 4);
+        this.addScreenShake(2);
+        this.enemyProjectiles.splice(i, 1);
+        if (core.shieldHp <= 0) {
+          core.shieldHp = 0;
+          core.shieldActive = false;
+          core.shieldState = "BROKEN";
+          core.shieldTimer = 5.0;
+          this.updateShieldBtnUI("BROKEN", "#555");
+        }
+        continue;
+      }
+
+      if (dist < core.radius + p.radius) {
+        if (!this.isGodMode) {
+          core.hp -= p.damage;
+          if (this.isBossFight && this.bossManager) {
+            this.frameCoreDamaged = (this.frameCoreDamaged || 0) + 1;
+          }
+        }
+        this.addScreenShake(10);
+        this.triggerHitStop(0.04);
+        this.spawnDamageNumber(core.x, core.y - core.radius - 6, `-${p.damage}`, "#ff4444", true);
+        this.createExplosion(p.x, p.y, "#ff0000", 10);
+        this.enemyProjectiles.splice(i, 1);
+
+        if (core.hp <= 0 && !this.isGodMode) {
+          core.hp = 0;
+          this.createExplosion(core.x, core.y, "#ff0000", 50);
+          this.stop();
+          if (this.onGameOver) this.onGameOver();
+        }
+        continue;
+      }
+    }
   }
 
   // 새 페이지 시작 시 변형 이벤트를 굴림: 매 페이지가 똑같지 않게
