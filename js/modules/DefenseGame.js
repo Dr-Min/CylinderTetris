@@ -1414,8 +1414,7 @@ export class DefenseGame {
     }
     this.ensureRoamingProtocolState();
 
-    this.lastTime = performance.now();
-    this.animate(this.lastTime);
+    this.startLoop();
     debugLog("Defense", "Mode Started");
   }
 
@@ -1447,8 +1446,7 @@ export class DefenseGame {
 
     if (!this.isRunning) {
       this.isRunning = true;
-      this.lastTime = performance.now();
-      requestAnimationFrame((t) => this.animate(t));
+      this.startLoop();
       debugLog("Canvas", "Animation frame requested");
 
       if (this.currentBGMTrack) {

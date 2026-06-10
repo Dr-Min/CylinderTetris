@@ -54,12 +54,26 @@ export function applyEffectsMixin(DefenseGameClass) {
   }
 
   proto.animate = function(time) {
-    if (!this.isRunning) return;
+    if (!this.isRunning) {
+      this._animLoopActive = false;
+      return;
+    }
     const deltaTime = time - this.lastTime;
     this.lastTime = time;
     this.update(deltaTime);
     this.render();
     requestAnimationFrame((t) => this.animate(t));
+  }
+
+  // stop() 직후 start()가 불려도 루프가 중첩되지 않도록 단일 진입점 보장
+  proto.startLoop = function() {
+    if (this._animLoopActive) {
+      this.lastTime = performance.now();
+      return;
+    }
+    this._animLoopActive = true;
+    this.lastTime = performance.now();
+    this.animate(this.lastTime);
   }
 
   

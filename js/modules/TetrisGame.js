@@ -802,7 +802,7 @@ export class TetrisGame {
     this.SoundManager.init();
     this.SoundManager.startBGM();
 
-    this.animate();
+    this.startLoop();
   }
 
   generateNextPiece() {
@@ -1158,8 +1158,8 @@ export class TetrisGame {
     
     this.SoundManager.init();
     this.SoundManager.startBGM();
-    
-    this.animate();
+
+    this.startLoop();
   }
   
   /**
@@ -2143,8 +2143,19 @@ export class TetrisGame {
     debugLog("Tetris", "GAME OVER");
   }
 
+  // 재시작 시 루프 중첩을 막는 단일 진입점
+  startLoop() {
+    this.state.lastTime = Date.now();
+    if (this._animLoopActive) return;
+    this._animLoopActive = true;
+    this.animate();
+  }
+
   animate() {
-    if (!this.state.isPlaying) return;
+    if (!this.state.isPlaying) {
+      this._animLoopActive = false;
+      return;
+    }
     requestAnimationFrame(() => this.animate());
 
     const now = Date.now();
