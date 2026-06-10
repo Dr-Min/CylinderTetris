@@ -221,6 +221,28 @@ export function applyEnemyMixin(DefenseGameClass) {
                 }
                 break;
 
+            case 'CARRIER': {
+                // 보급 캐리어: 코어 주위를 선회하다가 시간이 지나면 도주.
+                // 코어를 공격하지 않으며, 격추 시 대량의 DATA 캐시를 떨어뜨림.
+                enemy.escapeTimer = (enemy.escapeTimer ?? 14) - dt;
+                if (enemy.escapeTimer <= 0) {
+                    const awayAngle = Math.atan2(enemy.y - core.y, enemy.x - core.x);
+                    enemy.x += Math.cos(awayAngle) * enemy.speed * 2.4 * dt;
+                    enemy.y += Math.sin(awayAngle) * enemy.speed * 2.4 * dt;
+                    enemy.rotation = awayAngle;
+                    return; // 화면 밖으로 나가면 validateGameState가 정리
+                }
+                const orbitR = (core.shieldRadius || 100) + 90;
+                const distToCore = Math.hypot(enemy.x - core.x, enemy.y - core.y) || 1;
+                const toCore = Math.atan2(core.y - enemy.y, core.x - enemy.x);
+                const radialSpeed = (distToCore - orbitR) * 0.8;
+                const tangentAngle = toCore + (Math.PI / 2) * (enemy.orbitDir || 1);
+                enemy.x += (Math.cos(toCore) * radialSpeed + Math.cos(tangentAngle) * enemy.speed) * dt;
+                enemy.y += (Math.sin(toCore) * radialSpeed + Math.sin(tangentAngle) * enemy.speed) * dt;
+                enemy.rotation = tangentAngle;
+                return;
+            }
+
             case 'VAMPIRE':
                 // 기생 로직
                 // 기지로 가기 전 반경 250px 내에 아군 바이러스가 있으면 그쪽으로 타겟 변경

@@ -190,6 +190,10 @@ export class DefenseGame {
     // 실드 OFF 상태에서 처치 시 코어로 빨려 들어가는 DATA 입자
     this.dataMotes = [];
 
+    // 페이지 변형 이벤트 (RUSH / CARRIER / SUPPLY)
+    this.pageEvent = null;
+    this.onSupplyDrop = null;
+
     const joystickLeft = this.isMobile ? 60 : 24;
     const joystickBottom = this.isMobile ? 60 : 24;
     this.joystickContainer = document.createElement("div");
@@ -1005,6 +1009,14 @@ export class DefenseGame {
       if (!this.core.shieldActive) {
         this.spawnDataMotes(enemy.x, enemy.y);
       }
+      if (enemy.isCarrier && enemy.dataBonus) {
+        this.currentData += enemy.dataBonus;
+        this.updateResourceDisplay(this.currentData);
+        if (this.onResourceGained) this.onResourceGained(enemy.dataBonus);
+        this.spawnDamageNumber(enemy.x, enemy.y - 26, `+${enemy.dataBonus} CACHE`, "#ffcc00", true);
+        this.addScreenShake(8);
+        this.spawnDataMotes(enemy.x, enemy.y);
+      }
     }
     this.playKillSound(this.killCombo.count);
   }
@@ -1554,6 +1566,7 @@ export class DefenseGame {
 
     this.currentPage = 1;
     this.pageTimer = 0;
+    this.pageEvent = null;
     this.conquerReady = false;
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
@@ -1936,6 +1949,7 @@ export class DefenseGame {
           this.pageTimer = 0;
           if (!this.isFarmingZone) {
             this.spawnRate = this.getPageSpawnRate(this.currentPage, diffScale);
+            this.rollPageEvent();
           }
           this.updateWaveDisplay();
         } else if (!this.conquerReady && !this.isFarmingZone) {
@@ -2460,6 +2474,78 @@ export class DefenseGame {
     this.staticSystem.currentCharge += this.staticSystem.killChargeAmount;
   }
 
+  // 새 페이지 시작 시 변형 이벤트를 굴림: 매 페이지가 똑같지 않게
+  rollPageEvent() {
+    this.pageEvent = null;
+    if (this.isSafeZone || this.isFarmingZone || this.isConquered || this.isBossFight) return;
+    if (this.currentPage < 2 || this.conquerReady) return;
+
+    const roll = Math.random();
+    if (roll < 0.18) {
+      this.pageEvent = "RUSH";
+      this.spawnRate = Math.max(0.08, this.spawnRate * 0.45);
+      this.announcePageEvent("⚠ RUSH — 대량 침입 감지", "#ff5533");
+    } else if (roll < 0.30) {
+      this.pageEvent = "CARRIER";
+      const count = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < count; i++) this.spawnCarrierEnemy();
+      this.announcePageEvent("◆ CARRIER 포착 — 도주 전에 격추하라", "#ffcc00");
+    } else if (roll < 0.40) {
+      this.pageEvent = "SUPPLY";
+      if (this.onSupplyDrop) this.onSupplyDrop();
+      this.announcePageEvent("▼ SUPPLY DROP — 보급품 회수", "#00ff88");
+    }
+  }
+
+  spawnCarrierEnemy() {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 50;
+    const ex = this.core.x + Math.cos(angle) * distance;
+    const ey = this.core.y + Math.sin(angle) * distance;
+    const diffScale = this.stageDifficultyScale || 1;
+    const cfg = {
+      id: "CARRIER",
+      speed: 95,
+      hp: Math.max(12, Math.floor(28 * diffScale)),
+      damage: 0,
+      radius: 13,
+      color: "#ffcc00",
+    };
+    const carrier = this.createEnemyFromType(cfg, ex, ey, angle, distance);
+    carrier.isCarrier = true;
+    carrier.escapeTimer = 14;
+    carrier.orbitDir = Math.random() < 0.5 ? 1 : -1;
+    carrier.dataBonus = this.getKillDataGain() * 6;
+    this.enemies.push(carrier);
+  }
+
+  announcePageEvent(text, color) {
+    if (!this.uiLayer) return;
+    const el = document.createElement("div");
+    el.style.cssText = `
+      position: absolute;
+      top: 18%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--term-font, 'Courier New', monospace);
+      font-size: ${this.isMobile ? 15 : 22}px;
+      color: ${color};
+      text-shadow: 0 0 12px ${color};
+      letter-spacing: 2px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 36;
+      opacity: 1;
+      transition: opacity 0.5s;
+    `;
+    el.innerText = text;
+    this.uiLayer.appendChild(el);
+    setTimeout(() => { el.style.opacity = "0"; }, 1600);
+    setTimeout(() => el.remove(), 2200);
+    this.playGlitchSound();
+    this.updateObjectiveBanner();
+  }
+
   // 상단 목표 배너: "지금 뭘 해야 하는지"를 항상 한 줄로 보여줌
   updateObjectiveBanner() {
     if (!this.objectiveBanner) return;
@@ -2500,8 +2586,13 @@ export class DefenseGame {
       color = "#ffaa00";
       progress = Math.min(1, this.pageTimer / (this.pageDuration || 1));
     } else {
-      text = `PAGE ${this.currentPage}/${maxPages} — 생존하라`;
-      color = "#00f0ff";
+      const eventInfo = {
+        RUSH: { tag: "⚠ RUSH · ", color: "#ff5533" },
+        CARRIER: { tag: "◆ CARRIER · ", color: "#ffcc00" },
+        SUPPLY: { tag: "▼ SUPPLY · ", color: "#00ff88" },
+      }[this.pageEvent];
+      text = `${eventInfo ? eventInfo.tag : ""}PAGE ${this.currentPage}/${maxPages} — 생존하라`;
+      color = eventInfo ? eventInfo.color : "#00f0ff";
       progress = (this.currentPage - 1 + Math.min(1, this.pageTimer / (this.pageDuration || 1))) / maxPages;
     }
 

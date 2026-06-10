@@ -52,6 +52,25 @@ export function applyLootMixin(GameManagerClass) {
   }
 
   /**
+   * 보급 페이지: 코어 주변 필드에 아이템 2개를 확정 투하
+   * (수집 바이러스가 자동 회수)
+   */
+  proto.handleSupplyDrop = function() {
+    if (!this.defenseGame || this.activeMode !== "defense") return;
+    const core = this.defenseGame.core;
+    for (let i = 0; i < 2; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = (core.shieldRadius || 100) + 80 + Math.random() * 120;
+      const item = this.itemDatabase.generateRandomItem();
+      this.defenseGame.spawnDroppedItem(
+        core.x + Math.cos(angle) * dist,
+        core.y + Math.sin(angle) * dist,
+        item
+      );
+    }
+  }
+
+  /**
    * 아이템 드롭 시도 (디펜스 모드 - 적 위치에 시각적 드롭)
    * @param {number} x - 드롭 위치 X
    * @param {number} y - 드롭 위치 Y

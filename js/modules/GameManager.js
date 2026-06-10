@@ -96,6 +96,9 @@ export class GameManager {
     // 적 처치 시 아이템 드롭 콜백
     this.defenseGame.onEnemyKilled = (x, y) => this.tryItemDrop(x, y, "defense");
 
+    // 보급 페이지: 필드에 아이템 투하
+    this.defenseGame.onSupplyDrop = () => this.handleSupplyDrop();
+
     // 아이템 수집 완료 콜백 (수집 바이러스가 코어에 도착했을 때)
     this.defenseGame.onItemCollected = (item) => this.handleItemCollected(item);
 
