@@ -1,7 +1,15 @@
 # 🕵️‍♂️ HACKER'S BASE: Shield Stage Breach Tetris
-> **Version**: 9.7.8  
+> **Version**: 2.2.0  
 > **Concept**: Stage-based Defense + Breach-triggered Tetris Defense + Territory Occupation  
 > **Tech Stack**: Vanilla JS, Three.js, HTML5 Canvas, PWA
+
+## ⚡ v2.2.0 핵심 시스템 요약
+- **목표 배너**: 화면 상단에 현재 목표/진행바 상시 표시 (`DefenseGame.updateObjectiveBanner`)
+- **페이지 이벤트**: 매 페이지 RUSH(스폰 2배) / CARRIER(고가치 선회 적) / SUPPLY(아이템 투하) 굴림 (`rollPageEvent`)
+- **실드 리스크-보상**: 실드 OFF 중 처치 시 DATA 입자가 코어로 흡수 (`spawnDataMotes`)
+- **보스 공격**: Phase 2+ 탄막 링, 3+ 증원 소환, 4 조준 사격 (`updateBossAttacks`, `enemyProjectiles`)
+- **타격감**: 히트스톱/셰이크/데미지 숫자/콤보 사운드 — 허브는 `awardKillData(enemy)`
+- **스테이지 배경**: 스테이지별 컬러+패턴 (`RenderMixin.getStageTheme`, `renderStageBackground`)
 
 ---
 
