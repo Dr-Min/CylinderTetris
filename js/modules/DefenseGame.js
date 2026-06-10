@@ -137,6 +137,59 @@ export class DefenseGame {
     this.uiLayer.style.display = "none";
     document.body.appendChild(this.uiLayer);
 
+    // 상단 상시 목표 배너 + 페이지 진행바
+    this.objectiveBanner = document.createElement("div");
+    this.objectiveBanner.id = "objective-banner";
+    this.objectiveBanner.style.cssText = `
+      position: absolute;
+      top: ${this.isMobile ? 6 : 10}px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 92%;
+      padding: 4px 14px 6px;
+      background: rgba(0, 10, 5, 0.55);
+      border: 1px solid rgba(0, 255, 136, 0.35);
+      border-radius: 4px;
+      font-family: var(--term-font, 'Courier New', monospace);
+      text-align: center;
+      pointer-events: none;
+      z-index: 35;
+    `;
+    this.objectiveText = document.createElement("div");
+    this.objectiveText.style.cssText = `
+      font-size: ${this.isMobile ? 11 : 13}px;
+      letter-spacing: 1px;
+      color: #00f0ff;
+      text-shadow: 0 0 6px currentColor;
+      white-space: nowrap;
+    `;
+    const objectiveBarBg = document.createElement("div");
+    objectiveBarBg.style.cssText = `
+      margin-top: 4px;
+      width: ${this.isMobile ? 150 : 220}px;
+      height: 4px;
+      background: rgba(0, 255, 136, 0.12);
+      border-radius: 2px;
+      overflow: hidden;
+    `;
+    this.objectiveBar = document.createElement("div");
+    this.objectiveBar.style.cssText = `
+      width: 0%;
+      height: 100%;
+      background: #00f0ff;
+      box-shadow: 0 0 6px #00f0ff;
+      transition: width 0.2s linear;
+    `;
+    objectiveBarBg.appendChild(this.objectiveBar);
+    this.objectiveBarBg = objectiveBarBg;
+    this.objectiveBanner.appendChild(this.objectiveText);
+    this.objectiveBanner.appendChild(objectiveBarBg);
+    this.uiLayer.appendChild(this.objectiveBanner);
+    this.objectiveRefreshTimer = 0;
+
+    // 실드 OFF 상태에서 처치 시 코어로 빨려 들어가는 DATA 입자
+    this.dataMotes = [];
+
     const joystickLeft = this.isMobile ? 60 : 24;
     const joystickBottom = this.isMobile ? 60 : 24;
     this.joystickContainer = document.createElement("div");
@@ -949,8 +1002,52 @@ export class DefenseGame {
     this.triggerHitStop(0.03);
     if (enemy) {
       this.spawnDamageNumber(enemy.x, enemy.y - (enemy.radius || 8), `+${gain}`, "#00ff88", true);
+      if (!this.core.shieldActive) {
+        this.spawnDataMotes(enemy.x, enemy.y);
+      }
     }
     this.playKillSound(this.killCombo.count);
+  }
+
+  // 실드가 꺼져 있을 때만: 처치 위치에서 DATA 입자가 코어로 흡수됨
+  // ("끄면 벌고, 켜면 안전"을 설명 없이 전달하는 비주얼)
+  spawnDataMotes(x, y) {
+    if (this.dataMotes.length > 60) return;
+    const count = 4;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const burst = 30 + Math.random() * 40;
+      this.dataMotes.push({
+        x,
+        y,
+        vx: Math.cos(angle) * burst,
+        vy: Math.sin(angle) * burst,
+        char: "01"[Math.floor(Math.random() * 2)],
+        life: 2.5,
+      });
+    }
+  }
+
+  updateDataMotes(dt) {
+    const core = this.core;
+    for (let i = this.dataMotes.length - 1; i >= 0; i--) {
+      const m = this.dataMotes[i];
+      m.life -= dt;
+      const dx = core.x - m.x;
+      const dy = core.y - m.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      // 처음엔 흩어졌다가 점점 강하게 코어로 흡인
+      const pull = 600 * Math.min(1, (2.5 - m.life) * 1.4);
+      m.vx += (dx / dist) * pull * dt;
+      m.vy += (dy / dist) * pull * dt;
+      m.vx *= Math.pow(0.25, dt);
+      m.vy *= Math.pow(0.25, dt);
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
+      if (dist < core.radius + 4 || m.life <= 0) {
+        this.dataMotes.splice(i, 1);
+      }
+    }
   }
 
   addScreenShake(power) {
@@ -1581,6 +1678,13 @@ export class DefenseGame {
     if (this.hitStopTimer > 0) {
       this.hitStopTimer -= dt;
       dt *= 0.05; // 히트스톱: 월드 시간만 잠깐 느려짐
+    }
+
+    this.updateDataMotes(dt);
+    this.objectiveRefreshTimer -= dt;
+    if (this.objectiveRefreshTimer <= 0) {
+      this.objectiveRefreshTimer = 0.2;
+      this.updateObjectiveBanner();
     }
 
     this.validateGameState();
@@ -2354,6 +2458,65 @@ export class DefenseGame {
 
   chargeStaticOnKill() {
     this.staticSystem.currentCharge += this.staticSystem.killChargeAmount;
+  }
+
+  // 상단 목표 배너: "지금 뭘 해야 하는지"를 항상 한 줄로 보여줌
+  updateObjectiveBanner() {
+    if (!this.objectiveBanner) return;
+    const maxPages = this.maxPages || 12;
+    let text = "";
+    let color = "#00f0ff";
+    let progress = null; // null이면 진행바 숨김
+
+    if (this.isBossFight && this.bossManager) {
+      const status = this.bossManager.getStatus();
+      if (status.isBreachReady) {
+        text = ">>> BREACH READY — 침입을 실행하라 <<<";
+        color = "#ffcc00";
+        progress = 1;
+      } else {
+        text = "BOSS — 실드를 끄고 침입 게이지를 채워라";
+        color = "#ff3366";
+        progress = Math.min(1, (status.breachGauge || 0) / (status.maxBreachGauge || 100));
+      }
+    } else if (this.isConquered) {
+      text = "SECTOR SECURED — 점령 완료";
+      color = "#00ff88";
+    } else if (this.isReinforcementMode) {
+      text = `REINFORCEMENT ${this.reinforcementPage}/${this.reinforcementMaxPages} — 버텨라!`;
+      color = "#ff3333";
+      progress = this.reinforcementMaxPages
+        ? (this.reinforcementPage - 1 + Math.min(1, this.pageTimer / (this.pageDuration || 1))) / this.reinforcementMaxPages
+        : null;
+    } else if (this.isSafeZone) {
+      text = "SAFE ZONE — 터미널에서 다음 섹터로 이동";
+      color = "#00ff88";
+    } else if (this.conquerReady || this.currentPage > maxPages) {
+      text = ">>> CONQUER READY — 점령을 실행하라 <<<";
+      color = "#ffcc00";
+      progress = 1;
+    } else if (this.isFarmingZone) {
+      text = `FARMING — 자원 수집 구역 (PAGE ${this.currentPage})`;
+      color = "#ffaa00";
+      progress = Math.min(1, this.pageTimer / (this.pageDuration || 1));
+    } else {
+      text = `PAGE ${this.currentPage}/${maxPages} — 생존하라`;
+      color = "#00f0ff";
+      progress = (this.currentPage - 1 + Math.min(1, this.pageTimer / (this.pageDuration || 1))) / maxPages;
+    }
+
+    if (this.objectiveText.innerText !== text) this.objectiveText.innerText = text;
+    this.objectiveText.style.color = color;
+    this.objectiveBanner.style.borderColor = color;
+
+    if (progress === null) {
+      this.objectiveBarBg.style.display = "none";
+    } else {
+      this.objectiveBarBg.style.display = "block";
+      this.objectiveBar.style.width = `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%`;
+      this.objectiveBar.style.background = color;
+      this.objectiveBar.style.boxShadow = `0 0 6px ${color}`;
+    }
   }
 
   updateWaveDisplay() {

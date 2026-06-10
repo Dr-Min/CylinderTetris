@@ -1452,6 +1452,7 @@ export function applyRenderMixin(DefenseGameClass) {
 
     this.renderSpeechBubbles();
 
+    this.renderDataMotes();
     this.renderDamageNumbers();
 
     this.ctx.restore();
@@ -1604,6 +1605,23 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   }
 
+
+  proto.renderDataMotes = function () {
+    if (!this.dataMotes || this.dataMotes.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.font = "bold 9px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#00ff88";
+    ctx.shadowColor = "#00ff88";
+    ctx.shadowBlur = 8;
+    for (const m of this.dataMotes) {
+      ctx.globalAlpha = Math.max(0.25, Math.min(1, m.life));
+      ctx.fillText(m.char, m.x, m.y);
+    }
+    ctx.restore();
+  };
 
   proto.renderDamageNumbers = function () {
     if (!this.damageNumbers || this.damageNumbers.length === 0) return;
