@@ -359,12 +359,13 @@ export function applyWeaponInputMixin(DefenseGameClass) {
         this.applyKnockback(enemy, 150, 0.5, 1);
 
         this.createExplosion(enemy.x, enemy.y, "#ff8800", 3);
+        this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius, actualDamage, "#ff8800");
 
         if (enemy.hp <= 0) {
           this.enemies.splice(i, 1);
           this.createExplosion(enemy.x, enemy.y, "#ff0000", 15);
 
-          this.awardKillData();
+          this.awardKillData(enemy);
         }
       }
     }

@@ -327,9 +327,41 @@ export function applyEffectsMixin(DefenseGameClass) {
     }
   }
 
+  // 효과음 공용 AudioContext (브라우저당 생성 개수 제한이 있어 재사용 필수)
+  proto.getSfxCtx = function() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!this._sfxCtx) this._sfxCtx = new Ctx();
+    if (this._sfxCtx.state === "suspended") this._sfxCtx.resume();
+    return this._sfxCtx;
+  }
+
+  proto.playKillSound = function(combo = 1) {
+    try {
+      const ctx = this.getSfxCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      // 콤보가 쌓일수록 반음씩 올라가는 짧은 블립
+      const freq = 240 * Math.pow(1.059, Math.min(combo - 1, 16));
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + 0.06);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } catch (e) {
+    }
+  }
+
   proto.playImpactSound = function() {
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const audioCtx = this.getSfxCtx();
+      if (!audioCtx) return;
       const now = audioCtx.currentTime;
 
       const bass = audioCtx.createOscillator();
@@ -449,7 +481,8 @@ export function applyEffectsMixin(DefenseGameClass) {
 
   proto.playGlitchSound = function() {
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const audioCtx = this.getSfxCtx();
+      if (!audioCtx) return;
 
       const bufferSize = audioCtx.sampleRate * 0.05;
       const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);

@@ -99,6 +99,12 @@ export class DefenseGame {
     this.worldHeight = 0;
     this.camera = { x: 0, y: 0 };
 
+    // 타격감 피드백 (셰이크/히트스톱/데미지 숫자/킬 콤보)
+    this.screenShake = { power: 0, x: 0, y: 0 };
+    this.hitStopTimer = 0;
+    this.killCombo = { count: 0, timer: 0 };
+    this.damageNumbers = [];
+
     this.coreHome = { x: 0, y: 0 };
     this.coreMoveSpeed = 220;
     this.coreReturnSpeed = 280;
@@ -931,11 +937,69 @@ export class DefenseGame {
     return Math.max(5, Math.round(baseGain * stageScale * pageScale));
   }
 
-  awardKillData() {
+  awardKillData(enemy = null) {
     const gain = this.getKillDataGain();
     this.currentData += gain;
     this.updateResourceDisplay(this.currentData);
     if (this.onResourceGained) this.onResourceGained(gain);
+
+    this.killCombo.count++;
+    this.killCombo.timer = 2.0;
+    this.addScreenShake(Math.min(9, 3 + this.killCombo.count * 0.4));
+    this.triggerHitStop(0.03);
+    if (enemy) {
+      this.spawnDamageNumber(enemy.x, enemy.y - (enemy.radius || 8), `+${gain}`, "#00ff88", true);
+    }
+    this.playKillSound(this.killCombo.count);
+  }
+
+  addScreenShake(power) {
+    this.screenShake.power = Math.min(16, this.screenShake.power + power);
+  }
+
+  triggerHitStop(seconds) {
+    this.hitStopTimer = Math.max(this.hitStopTimer, seconds);
+  }
+
+  spawnDamageNumber(x, y, text, color = "#ffffff", big = false) {
+    if (this.damageNumbers.length > 40) this.damageNumbers.shift();
+    this.damageNumbers.push({
+      x: x + (Math.random() - 0.5) * 10,
+      y,
+      text: String(text),
+      color,
+      big,
+      vy: -46,
+      life: 0.75,
+      maxLife: 0.75,
+    });
+  }
+
+  // 셰이크/콤보/데미지 숫자는 히트스톱과 무관하게 실제 시간으로 진행
+  updateFeedbackSystems(dt) {
+    const shake = this.screenShake;
+    if (shake.power > 0.05) {
+      shake.power *= Math.pow(0.0005, dt);
+      shake.x = (Math.random() - 0.5) * 2 * shake.power;
+      shake.y = (Math.random() - 0.5) * 2 * shake.power;
+    } else {
+      shake.power = 0;
+      shake.x = 0;
+      shake.y = 0;
+    }
+
+    if (this.killCombo.timer > 0) {
+      this.killCombo.timer -= dt;
+      if (this.killCombo.timer <= 0) this.killCombo.count = 0;
+    }
+
+    for (let i = this.damageNumbers.length - 1; i >= 0; i--) {
+      const d = this.damageNumbers[i];
+      d.life -= dt;
+      d.y += d.vy * dt;
+      d.vy *= Math.pow(0.1, dt);
+      if (d.life <= 0) this.damageNumbers.splice(i, 1);
+    }
   }
 
   getPageSpawnRate(page, diffScale) {
@@ -996,10 +1060,11 @@ export class DefenseGame {
 
       enemy.hp -= damage;
       this.createExplosion(enemy.x, enemy.y, "#00f0ff", 5);
+      this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius, Math.round(damage), "#00f0ff");
 
       if (enemy.hp <= 0) {
         this.createExplosion(enemy.x, enemy.y, "#00ff00", 10);
-        this.awardKillData();
+        this.awardKillData(enemy);
       }
     });
 
@@ -1510,7 +1575,13 @@ export class DefenseGame {
     const now = performance.now() / 1000;
 
     const clampedDeltaTime = Math.min(deltaTime, 100);
-    const dt = clampedDeltaTime / 1000;
+    let dt = clampedDeltaTime / 1000;
+
+    this.updateFeedbackSystems(dt);
+    if (this.hitStopTimer > 0) {
+      this.hitStopTimer -= dt;
+      dt *= 0.05; // 히트스톱: 월드 시간만 잠깐 느려짐
+    }
 
     this.validateGameState();
     this.ensureRoamingProtocolState();
@@ -1916,6 +1987,7 @@ export class DefenseGame {
         if (dist < p.radius + p.target.radius) {
           p.target.hp -= p.damage;
           this.createExplosion(p.x, p.y, "#ffff00", 3);
+          this.spawnDamageNumber(p.target.x, p.target.y - p.target.radius, Math.round(p.damage));
           this.projectiles.splice(i, 1);
 
           if (p.target.hp <= 0) {
@@ -1924,7 +1996,7 @@ export class DefenseGame {
               this.enemies.splice(idx, 1);
               this.createExplosion(p.target.x, p.target.y, "#00ff00", 15);
 
-              this.awardKillData();
+              this.awardKillData(p.target);
             }
           }
         }
@@ -1947,6 +2019,8 @@ export class DefenseGame {
           if (dist < p.radius + enemy.radius) {
             enemy.hp -= p.damage;
             this.createExplosion(p.x, p.y, p.color || "#00ff00", 5);
+            this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius, Math.round(p.damage));
+            this.applyKnockback(enemy, 60);
 
             if (p.explosive && p.explosionRadius > 0) {
               this.handleExplosion(
@@ -1962,7 +2036,7 @@ export class DefenseGame {
               this.enemies.splice(j, 1);
               this.createExplosion(enemy.x, enemy.y, p.color || "#00ff00", 15);
 
-              this.awardKillData();
+              this.awardKillData(enemy);
               this.chargeStaticOnKill();
 
               const shooter = this.alliedViruses.find(v => v.virusType === 'HUNTER');
@@ -2183,13 +2257,14 @@ export class DefenseGame {
     this.addChainLine(prevX, prevY, currentTarget.x, currentTarget.y);
     currentTarget.hp -= ss.damage;
     this.createExplosion(currentTarget.x, currentTarget.y, "#ffff00", 8);
+    this.spawnDamageNumber(currentTarget.x, currentTarget.y - currentTarget.radius, Math.round(ss.damage), "#ffff00");
 
     if (currentTarget.hp <= 0) {
       const idx = this.enemies.indexOf(currentTarget);
       if (idx !== -1) {
         this.enemies.splice(idx, 1);
         this.createExplosion(currentTarget.x, currentTarget.y, "#ffff00", 15);
-        this.awardKillData();
+        this.awardKillData(currentTarget);
       }
     }
 
@@ -2220,13 +2295,14 @@ export class DefenseGame {
 
       nextTarget.hp -= ss.damage;
       this.createExplosion(nextTarget.x, nextTarget.y, "#ffff00", 6);
+      this.spawnDamageNumber(nextTarget.x, nextTarget.y - nextTarget.radius, Math.round(ss.damage), "#ffff00");
 
       if (nextTarget.hp <= 0) {
         const idx = this.enemies.indexOf(nextTarget);
         if (idx !== -1) {
           this.enemies.splice(idx, 1);
           this.createExplosion(nextTarget.x, nextTarget.y, "#ffff00", 15);
-          this.awardKillData();
+          this.awardKillData(nextTarget);
         }
       }
 

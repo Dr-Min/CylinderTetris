@@ -470,7 +470,7 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       if (enemy.hp <= 0) {
         this.enemies.splice(i, 1);
         this.createExplosion(enemy.x, enemy.y, barrageColor, 10);
-        this.awardKillData();
+        this.awardKillData(enemy);
       }
     }
 

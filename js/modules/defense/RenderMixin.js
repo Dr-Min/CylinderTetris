@@ -840,7 +840,10 @@ export function applyRenderMixin(DefenseGameClass) {
     this.ctx.translate(centerX, centerY);
     this.ctx.scale(this.gameScale, this.gameScale);
     this.ctx.translate(-centerX, -centerY);
-    this.ctx.translate(-this.camera.x + centerX, -this.camera.y + centerY);
+    this.ctx.translate(
+      -this.camera.x + centerX + (this.screenShake ? this.screenShake.x : 0),
+      -this.camera.y + centerY + (this.screenShake ? this.screenShake.y : 0)
+    );
 
     const time = Date.now() / 1000;
     const isMobile = this.isMobile;
@@ -1449,6 +1452,8 @@ export function applyRenderMixin(DefenseGameClass) {
 
     this.renderSpeechBubbles();
 
+    this.renderDamageNumbers();
+
     this.ctx.restore();
 
     if (this.isBossFight && this.bossManager) {
@@ -1599,6 +1604,24 @@ export function applyRenderMixin(DefenseGameClass) {
     ctx.restore();
   }
 
+
+  proto.renderDamageNumbers = function () {
+    if (!this.damageNumbers || this.damageNumbers.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    for (const d of this.damageNumbers) {
+      const t = Math.max(0, d.life / d.maxLife);
+      ctx.globalAlpha = t > 0.6 ? 1 : t / 0.6;
+      ctx.font = `bold ${d.big ? 15 : 11}px 'Courier New', monospace`;
+      ctx.fillStyle = d.color;
+      ctx.shadowColor = d.color;
+      ctx.shadowBlur = 6;
+      ctx.fillText(d.text, d.x, d.y);
+    }
+    ctx.restore();
+  };
 
   proto.renderStaticEffects = function () {
     const ss = this.staticSystem;

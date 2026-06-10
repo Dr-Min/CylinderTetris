@@ -295,6 +295,7 @@ export function applyEnemyMixin(DefenseGameClass) {
             const shieldDamage = (enemy.type === 'BREACHER') ? 50 : 10;
             core.shieldHp -= shieldDamage;
             this.chargeStaticOnHit();
+            this.addScreenShake(enemy.type === 'BREACHER' ? 8 : 3);
             this.createExplosion(enemy.x, enemy.y, "#00f0ff", (enemy.type === 'BREACHER') ? 15 : 5);
             this.enemies.splice(idx, 1);
 
@@ -319,6 +320,9 @@ export function applyEnemyMixin(DefenseGameClass) {
                     this.frameCoreDamaged = (this.frameCoreDamaged || 0) + 1;
                 }
             }
+            this.addScreenShake(12);
+            this.triggerHitStop(0.05);
+            this.spawnDamageNumber(core.x, core.y - core.radius - 6, `-${enemy.damage}`, "#ff4444", true);
             this.createExplosion(enemy.x, enemy.y, "#ff0000", 20);
             this.enemies.splice(idx, 1);
 

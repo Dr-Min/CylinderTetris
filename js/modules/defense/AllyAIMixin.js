@@ -1110,7 +1110,7 @@ export function applyAllyAIMixin(DefenseGameClass) {
       this.enemies.splice(enemyIdx, 1);
       this.createExplosion(enemy.x, enemy.y, "#00ff00", 10);
 
-      this.awardKillData();
+      this.awardKillData(enemy);
 
       if (this.onEnemyKilled) {
         this.onEnemyKilled(enemy.x, enemy.y);
