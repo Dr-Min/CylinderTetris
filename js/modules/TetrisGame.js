@@ -139,6 +139,7 @@ export class TetrisGame {
     this.sharedMaterials = {};
     this.specialMaterials = {};
     this.explosions = [];
+    this.clearWaves = [];
     this.cameraShake = 0;
 
     // 2D Context for Next Piece
@@ -1007,6 +1008,18 @@ export class TetrisGame {
     if (linesCleared.length > 0) {
       this.SoundManager.clear();
       linesCleared.forEach((y) => this.createExplosion(y));
+      linesCleared.forEach((y, i) => this.createClearWave(y, i));
+
+      // 멀티 라인일수록 강한 셰이크 + 상승 아르페지오
+      this.cameraShake = Math.max(this.cameraShake, 0.8 + linesCleared.length * 0.35);
+      if (linesCleared.length >= 2) {
+        for (let i = 0; i < linesCleared.length; i++) {
+          setTimeout(
+            () => this.SoundManager.playTone(440 * Math.pow(1.26, i), "square", 0.18, 0.12),
+            i * 90
+          );
+        }
+      }
 
       specialEffects.forEach((effect) => {
         if (effect.type === this.SPECIAL_TYPES.BOMB) {
@@ -1982,6 +1995,27 @@ export class TetrisGame {
     this.cameraShake = 0.8;
   }
 
+  // 줄 클리어 시 원통을 휘감는 빛의 링
+  createClearWave(gridY, delayIndex = 0) {
+    const CELL_HEIGHT =
+      (2 * Math.PI * this.CONFIG.RADIUS) / this.CONFIG.GRID_WIDTH;
+    const yPos = gridY * CELL_HEIGHT + CELL_HEIGHT / 2;
+
+    const geometry = new THREE.TorusGeometry(this.CONFIG.RADIUS + 0.4, 0.18, 8, 48);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x00ffaa,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+    });
+    const ring = new THREE.Mesh(geometry, material);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = yPos;
+    ring.userData = { life: 1.0, delay: delayIndex * 0.08 };
+    this.effectGroup.add(ring);
+    this.clearWaves.push(ring);
+  }
+
   refreshGridVisuals() {
     this.piecesGroup.clear();
     for (let y = 0; y < this.CONFIG.GRID_HEIGHT; y++) {
@@ -2083,6 +2117,9 @@ export class TetrisGame {
     ) {
       this.state.currentPiece.y--;
     }
+    // 하드드롭 임팩트: 카메라 펀치 + 묵직한 착지음
+    this.cameraShake = Math.max(this.cameraShake, 0.6);
+    this.SoundManager.playTone({ start: 150, end: 40 }, "triangle", 0.18, 0.3);
     this.lockPiece();
   }
 
@@ -2196,6 +2233,25 @@ export class TetrisGame {
         positions[j * 3 + 2] += vels[j * 3 + 2];
       }
       p.geometry.attributes.position.needsUpdate = true;
+    }
+
+    for (let i = this.clearWaves.length - 1; i >= 0; i--) {
+      const ring = this.clearWaves[i];
+      if (ring.userData.delay > 0) {
+        ring.userData.delay -= deltaTime / 1000;
+        continue;
+      }
+      ring.userData.life -= deltaTime / 400;
+      if (ring.userData.life <= 0) {
+        ring.geometry.dispose();
+        ring.material.dispose();
+        this.effectGroup.remove(ring);
+        this.clearWaves.splice(i, 1);
+        continue;
+      }
+      const grow = 1 + (1 - ring.userData.life) * 0.5;
+      ring.scale.set(grow, grow, 1);
+      ring.material.opacity = ring.userData.life * 0.9;
     }
 
     if (this.cameraShake > 0) {

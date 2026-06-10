@@ -358,6 +358,27 @@ export function applyEffectsMixin(DefenseGameClass) {
     }
   }
 
+  proto.playShootSound = function() {
+    try {
+      const ctx = this.getSfxCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      const base = 880 + (Math.random() - 0.5) * 120;
+      osc.frequency.setValueAtTime(base, now);
+      osc.frequency.exponentialRampToValueAtTime(base * 0.4, now + 0.05);
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.07);
+    } catch (e) {
+    }
+  }
+
   proto.playImpactSound = function() {
     try {
       const audioCtx = this.getSfxCtx();

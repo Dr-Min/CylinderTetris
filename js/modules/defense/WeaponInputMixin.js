@@ -248,6 +248,8 @@ export function applyWeaponInputMixin(DefenseGameClass) {
     const projectileCount = mode.projectileCount || 1;
     const spreadAngle = mode.spreadAngle || 0;
 
+    this.playShootSound();
+
     for (let i = 0; i < projectileCount; i++) {
       let angle = baseAngle;
 
@@ -391,6 +393,7 @@ export function applyWeaponInputMixin(DefenseGameClass) {
     const recoilDist = 8;
     this.core.targetOffsetX = Math.cos(this.turret.angle) * recoilDist;
     this.core.targetOffsetY = Math.sin(this.turret.angle) * recoilDist;
+    this.playShootSound();
 
     this.projectiles.push({
       x: this.core.x,
@@ -427,6 +430,7 @@ export function applyWeaponInputMixin(DefenseGameClass) {
     const recoilDist = 8;
     this.core.targetOffsetX = Math.cos(angle) * recoilDist;
     this.core.targetOffsetY = Math.sin(angle) * recoilDist;
+    this.playShootSound();
 
     for (let i = 0; i < projectileCount; i++) {
       const randomChar =
