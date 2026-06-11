@@ -89,11 +89,59 @@ export class TutorialDirector {
       this.showPageEventHintOnce(payload.type);
       return;
     }
+    if (eventName === "upgrade-opened") {
+      this.tryShowTopicToast("upgrade-menu", {
+        speaker: "PDX-01",
+        title: "SYSTEM UPGRADES",
+        body: "강화는 4종이에요: 코어(포탑) / 조력자(저요!) / 아군 바이러스 / 실드.\n참고로 저부터 강화하셔도 됩니다? (진심)",
+      }, 4600);
+      return;
+    }
+    if (eventName === "upgrade-helper-opened") {
+      this.tryShowTopicToast("weapon-modes", {
+        speaker: "PDX-01",
+        title: "WEAPON MODES",
+        body: "상단 탭으로 제 무기를 바꿀 수 있어요!\n샷건·스나이퍼·연사·런처 — 오늘의 기분에 맞게 골라주세요.",
+      }, 4600);
+      return;
+    }
+    if (eventName === "upgrade-ally-opened") {
+      this.tryShowTopicToast("ally-config", {
+        speaker: "PDX-01",
+        title: "ALLY SQUAD",
+        body: "메인+서브 타입 조합으로 시너지가 발동돼요!\n조합마다 효과가 다르니 이것저것 실험해보세요.",
+      }, 4600);
+      return;
+    }
+    if (eventName === "perk-shop-opened") {
+      this.tryShowTopicToast("perk-shop", {
+        speaker: "PDX-01",
+        title: "PERMANENT PERKS",
+        body: "REP로 사는 영구 강화예요. 한 번 사면 죽어도 안 사라져요.\n...그 점은 조금 부럽네요. 아무튼 추천!",
+      }, 4600);
+      return;
+    }
+    if (eventName === "blueprint-collected") {
+      this.tryShowTopicToast("blueprint", {
+        speaker: "PDX-01",
+        title: "BLUEPRINT FRAGMENT",
+        body: "블루프린트 조각이에요! 모으면 새 아군 바이러스나\n새 무기가 해금됩니다. 보이면 무조건 줍기!",
+      }, 4600);
+      return;
+    }
+    if (eventName === "shield-return-mode") {
+      this.tryShowTopicToast("shield-return", {
+        speaker: "PDX-01",
+        title: "EMERGENCY RETURN",
+        body: "코어가 실드 밖으로 나가면 버튼이 RETURN으로 바뀌어요.\n누르면 즉시 실드 안으로 귀환 — 단, 충전 2회뿐!",
+      }, 4600);
+      return;
+    }
     if (eventName === "boss-breach-ready") {
       this.tryShowTopicToast("boss-breach-ready", {
         speaker: "PDX-01",
         title: "BREACH READY",
-        body: "침입 게이지 완충! 명령을 실행하면 테트리스 침입으로\n보스 코어에 직접 데미지를 입힙니다.",
+        body: "게이지 완충!! 지금이에요, 해커님!\n침입 명령을 실행하면 보스 코어를 직접 때릴 수 있어요!",
       }, 4200);
       return;
     }
@@ -101,7 +149,7 @@ export class TutorialDirector {
       this.tryShowTopicToast("after-recall", {
         speaker: "PDX-01",
         title: "BACK TO SAFE ZONE",
-        body: "재정비 후 /map으로 재출격하세요.\n점령한 섹터와 DATA는 그대로 유지됩니다.",
+        body: "무사 귀환! 역시 판단이 빠르시네요.\n재정비 후 /map으로 재출격 — 점령지와 DATA는 그대로예요.",
       }, 4200);
       return;
     }
@@ -109,7 +157,7 @@ export class TutorialDirector {
       this.tryShowTopicToast("roaming-shards", {
         speaker: "PDX-01",
         title: "PROTOCOL SHARDS",
-        body: "필드에 F~A 조각이 흩어져 있습니다.\n코어를 움직여 전부 수집하면 OVERDRIVE 탄막이 발동!",
+        body: "필드에 F~A 조각이 떨어져 있어요!\n코어로 전부 주우면 OVERDRIVE 탄막이 발동됩니다. 꽁돈이에요!",
       }, 4600);
       return;
     }
@@ -210,6 +258,11 @@ export class TutorialDirector {
         break;
       case "conquest-complete":
         this.complete();
+        this.tryShowTopicToast("conquest-mining", {
+          speaker: "PDX-01",
+          title: "SECTOR SECURED!",
+          body: "해냈어요!! 이제 이 섹터가 DATA를 채굴해서 보내줍니다.\n인접 점령지 2개는 병합돼서 아군이 더 강해져요!",
+        }, 5200);
         break;
       default:
         break;
@@ -390,9 +443,9 @@ export class TutorialDirector {
   async showHeroIntro() {
     const loreResult = await this.showModal({
       speaker: "PDX-01",
-      title: "WELCOME, OPERATOR",
+      title: "PDX-01 ONLINE",
       body:
-        "당신은 적 네트워크에 침투한 해커입니다.\n바이러스로부터 코어를 지키며 섹터를 하나씩 점령하고,\n최종 목표 — 중앙의 Core Nexus를 함락시키는 것이 임무입니다.",
+        "저는 당신의 조력자, PDX-01입니다!\n당신이 그... 전설의 해커시군요! 드디어, 드디어 와주셨네요.\n이쪽 시스템은 좀 달라서 기본만 설명드릴게요.\n나머지는 — 실력으로 보여주세요!",
       continueLabel: "NEXT",
       placement: "center",
       target: null,
@@ -401,9 +454,9 @@ export class TutorialDirector {
 
     const introResult = await this.showModal({
       speaker: "PDX-01",
-      title: "LINK ESTABLISHED",
+      title: "SAFE ZONE",
       body:
-        "Safe Zone에 연결됐습니다.\n여기는 재정비 구역입니다. 코어가 무너지지 않는 동안 장비를 확인하고 다음 섹터로 이동할 수 있어요.",
+        "여기는 Safe Zone — 이 망에서 유일하게 숨 돌릴 수 있는 곳이에요.\n여기서 장비를 정비하고 다음 섹터로 출격합니다.\n섹터를 하나씩 점령하다 보면... 중앙의 Core Nexus까지 닿을 거예요.",
       continueLabel: "NEXT",
       placement: "center",
       target: null,
@@ -414,7 +467,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "TERMINAL COMMANDS",
       body:
-        "/map: 스테이지 지도 열기\n/inventory: 획득 아이템 확인/장착\n/upgrade: DATA로 시스템 강화\n/reset: 진행 초기화라 신중히 사용",
+        "/map: 작전 지도 열기\n/inventory: 아이템 확인/장착\n/upgrade: DATA로 시스템 강화\n/reset: 전부 삭제 (신중히!)\n\n참, 우측 LOCK을 풀면 명령어를 직접 타이핑할 수도 있어요.\n역시 전설은 수동을 선호하시죠?",
       continueLabel: "NEXT",
       placement: "center",
       target: null,
@@ -426,9 +479,9 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "SAFE ZONE FACILITIES",
       body: (isMobile
-        ? "조이스틱으로 코어를 움직여 시설에 접근할 수 있습니다.\n"
-        : "WASD/방향키로 코어를 움직여 시설에 접근할 수 있습니다.\n") +
-        "UPGRADE SHOP: DATA로 코어/조력자/아군/실드 강화\nDISMANTLER: 남는 아이템을 분해해 자원으로 전환",
+        ? "조이스틱으로 코어를 움직여 시설에 들를 수 있어요.\n"
+        : "WASD/방향키로 코어를 움직여 시설에 들를 수 있어요.\n") +
+        "UPGRADE SHOP: DATA로 코어/조력자(저요!)/아군/실드 강화\nDISMANTLER: 남는 아이템 분해\n\n여긴 제가 오랫동안 혼자 지켜온— 아, 아니에요! 아무것도!",
       continueLabel: "OPEN MENU",
       placement: "center",
       target: null,
@@ -443,7 +496,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "CORE PROTECTION",
       body:
-        "중앙 코어가 방어 목표입니다.\n코어 HP가 0이 되면 작전은 실패하고 DATA 일부를 잃습니다.",
+        "보이시죠? 중앙의 코어가 당신의 접속 단말이에요.\nHP가 0이 되면 접속이 끊기고 DATA 일부를 잃습니다.\n잃는 게 DATA뿐이라 다행이죠! 아무튼 사수하세요!",
       continueLabel: "NEXT",
       placement: "bottom",
       target: () => this.getCoreRect(),
@@ -454,7 +507,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "SHIELD CONTROL",
       body:
-        "방패 버튼으로 실드를 켜고 끕니다.\n켜면 안전하지만, 끈 동안 적을 처치하면 DATA가 코어로 흡수됩니다.\n끈 뒤에는 실드 범위 안에서 REARM 게이지가 차야 다시 켤 수 있습니다.",
+        "방패 버튼! 켜면 안전, 끄면 수익이에요.\n실드를 끈 동안 처치하면 DATA가 코어로 빨려 들어옵니다.\n다시 켜려면 실드 범위 안에서 REARM 게이지를 채워야 해요.\n타이밍이 곧 실력입니다, 해커님!",
       continueLabel: "NEXT",
       placement: "top",
       target: () => this.getElementRect("#shield-btn"),
@@ -466,8 +519,8 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "FIRE & MOVE",
       body: isMobile
-        ? "화면을 터치하면 그 방향으로 발사합니다.\n왼쪽 아래 조이스틱으로 코어를 움직일 수 있어요.\n상단 배너에 현재 목표와 진행도가 항상 표시됩니다."
-        : "클릭 또는 스페이스바로 발사합니다 (연사 가능).\nWASD/방향키로 코어를 움직일 수 있어요.\n상단 배너에 현재 목표와 진행도가 항상 표시됩니다.",
+        ? "화면을 터치하면 그 방향으로 발사!\n왼쪽 아래 조이스틱으로 코어 이동.\n상단 배너에 현재 목표와 진행도가 항상 떠 있어요."
+        : "클릭/스페이스바로 발사 (연사 가능)!\nWASD·방향키로 이동, Shift를 누르면 질주합니다.\n상단 배너에 현재 목표와 진행도가 항상 떠 있어요.",
       continueLabel: "MOVE OUT",
       placement: "bottom",
       target: () => this.getElementRect("#objective-banner"),
@@ -478,7 +531,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "EMERGENCY RECALL",
       body:
-        "전황이 불리하면 RECALL로 Safe Zone에 귀환할 수 있습니다.\n5초 캐스팅 동안 피격되면 취소되니 안전할 때 사용하세요.\n획득한 아이템과 DATA는 가지고 돌아갑니다.",
+        "불리하면 RECALL로 Safe Zone에 귀환하세요.\n5초 캐스팅 중 맞으면 취소되니 안전할 때!\n전설이라도 후퇴는 전략입니다. 아이템과 DATA는 챙겨 드릴게요.",
       continueLabel: "MOVE OUT",
       placement: "top",
       target: () => this.getElementRect("#recall-btn"),
@@ -515,7 +568,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "SURVIVE THE PAGES",
       body:
-        "PAGE가 끝날 때까지 코어를 지키세요.\n상단 배너의 진행바가 가득 차면 정복 명령이 열립니다.",
+        "PAGE가 끝날 때까지 코어를 지켜요!\n배너의 진행바가 가득 차면 점령 명령이 열립니다.\n급하시면 SKIP PAGE로 다음 페이지를 바로 부를 수도 있어요.",
       placement: "bottom",
       target: () =>
         this.getElementRect("#objective-banner") ||
@@ -529,7 +582,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "CONQUEST PROMPT",
       body:
-        ">>> CONQUER THIS SECTOR <<<가 열렸습니다.\n이 명령을 누르면 Tetris breach와 강화 방어가 동시에 시작됩니다.",
+        ">>> CONQUER THIS SECTOR <<< 가 열렸어요!\n누르는 순간 침입 퍼즐과 강화 방어전이 동시에 시작됩니다.\n자, 보여주세요. 전설의 실력!",
       placement: "bottom",
       target: () => this.findChoiceButton("conquer") || this.getElementRect("#conquer-btn"),
       avoid: () => this.getElementRect("#choice-area"),
@@ -600,9 +653,9 @@ export class TutorialDirector {
 
     const rulesResult = await this.showModal({
       speaker: "PDX-01",
-      title: "TETRIS BREACH RULES",
+      title: "BREACH RULES",
       body:
-        "점령은 두 조건을 모두 만족해야 완료됩니다.\n1. Tetris에서 목표 3줄을 클리어\n2. 미니 방어 화면의 코어가 강화 PAGE 3개를 생존",
+        "점령 조건은 두 가지! 둘 다 만족해야 해요.\n1. 침입 퍼즐에서 목표 3줄 클리어\n2. 미니 방어 화면의 코어가 강화 PAGE 3개 생존",
       continueLabel: "NEXT",
       placement: "center",
       elevated: true,
@@ -610,11 +663,15 @@ export class TutorialDirector {
     });
     if (rulesResult === "skip") return;
 
+    const isMobileBreach = !!this.defenseGame?.isMobile;
     const controlResult = await this.showModal({
       speaker: "PDX-01",
       title: "DUAL SURVIVAL",
       body:
-        "줄을 지우면 적에게 넉백/피해가 들어갑니다.\n모바일은 좌/우, DROP, NEXT BLOCK 버튼으로 조작하세요.",
+        "줄을 지우면 방어전의 적에게 넉백/피해가 들어가요!\n" +
+        (isMobileBreach
+          ? "조작: 좌/우 버튼, DROP(하드 드롭), NEXT BLOCK으로 다음 블록 교체."
+          : "조작: ←→ 이동, ↑ 회전, ↓ 소프트 드롭, Space 하드 드롭.\nNEXT BLOCK 버튼으로 다음 블록을 고를 수도 있어요."),
       continueLabel: "START BREACH",
       placement: "right",
       elevated: true,
@@ -633,17 +690,17 @@ export class TutorialDirector {
       RUSH: {
         topic: "page-event-rush",
         title: "RUSH PAGE",
-        body: "적이 평소의 2배로 몰려옵니다.\n실드를 아끼지 말고 버티세요 — 처치 DATA도 2배!",
+        body: "어어, 많이 와요!! 평소의 2배!\n대신 처치 DATA도 2배예요. 버텨요, 해커님!",
       },
       CARRIER: {
         topic: "page-event-carrier",
         title: "CARRIER 출현",
-        body: "황금 캐리어는 코어를 공격하지 않지만 곧 도주합니다.\n격추하면 대량의 DATA 캐시!",
+        body: "저 황금색! 공격은 안 하지만 곧 도망가요.\n도주 전에 격추하면 DATA 캐시가 두둑합니다!",
       },
       SUPPLY: {
         topic: "page-event-supply",
         title: "SUPPLY DROP",
-        body: "필드에 보급 아이템이 떨어졌습니다.\n수집 바이러스가 자동으로 회수해 옵니다.",
+        body: "보급이 떨어졌어요! 누가 보냈는지는... 묻지 마세요.\n수집 바이러스가 알아서 주워 올 거예요.",
       },
     };
     const hint = hints[type];
@@ -667,7 +724,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "BOSS PROTOCOL — CORE NEXUS",
       body:
-        "보스는 침입 게이지를 채워야 공격할 수 있습니다.\n실드를 끄면 게이지가 1.5배로 차고, 적 처치는 보너스 충전.\n단, 코어가 피격되면 게이지가 깎입니다.",
+        "...해커님. 여기부터는 농담을 조금 줄일게요.\n저 안에 있는 건 제가 아는 가장 오래된 시스템이에요.\n실드를 끄면 침입 게이지가 1.5배로 차고, 처치는 보너스 충전.\n단, 코어가 피격되면 게이지가 깎입니다.",
       continueLabel: "NEXT",
       hideSkip: true,
       placement: "center",
@@ -678,7 +735,7 @@ export class TutorialDirector {
         speaker: "PDX-01",
         title: "BOSS BREACH & PHASES",
         body:
-          "게이지 100% → 테트리스 침입으로 보스 HP를 깎습니다.\n보스는 페이즈마다 강해집니다: 탄막 링(틈새로 회피),\n증원 소환, 조준 사격. 테트리스 중에도 방해가 들어옵니다.",
+          "게이지 100% → 침입 퍼즐로 보스 HP를 직접 깎습니다.\n페이즈마다 강해져요: 탄막 링(틈새로 회피!), 증원 소환,\n조준 사격. 퍼즐 중에도 방해가 들어옵니다.\n...이기고 돌아와 주세요. 꼭.",
       continueLabel: "ENGAGE",
         hideSkip: true,
         placement: "center",
@@ -716,8 +773,8 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "RECOVERY AFTER FAILURE",
       body:
-        `실패하면 DATA의 70%를 잃고 30%만 유지됩니다.\n${lossLine}${remainingLine}` +
-        "REBOOT 후 Safe Zone에서 /inventory와 /upgrade를 확인한 뒤 /map으로 재출격하세요.",
+        `괜찮아요. DATA 70%는 잃었지만, 당신은 무사하니까요.\n${lossLine}${remainingLine}` +
+        "REBOOT 후 /inventory와 /upgrade를 점검하고 /map으로 재출격!\n...이번에는, 잃지 않을 거예요.",
       continueLabel: "REBOOT READY",
       hideSkip: true,
       placement: "center",

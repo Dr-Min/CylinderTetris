@@ -252,6 +252,7 @@ export function applyLootMixin(GameManagerClass) {
     if (item.effect && item.effect.type === "blueprint") {
       const target = this.processDecryption(item);
       this.showBlueprintCollectedNotification(item, target);
+      this.tutorialDirector?.handleEvent("blueprint-collected");
       return; // 인벤토리에 추가하지 않음
     }
 

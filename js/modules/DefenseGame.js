@@ -1792,7 +1792,10 @@ export class DefenseGame {
     const outsideThreshold = Math.max(0, maxDistShield + 8);
     const prevMode = this.shieldBtnMode;
     if (this.shieldBtnMode === "SHIELD") {
-      if (distShield > outsideThreshold) this.shieldBtnMode = "RETURN";
+      if (distShield > outsideThreshold) {
+        this.shieldBtnMode = "RETURN";
+        if (this.onShieldReturnMode) this.onShieldReturnMode();
+      }
     } else {
       if (distShield <= insideThreshold) this.shieldBtnMode = "SHIELD";
     }

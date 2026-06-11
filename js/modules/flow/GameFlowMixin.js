@@ -479,6 +479,7 @@ export function applyGameFlowMixin(GameManagerClass) {
    * 맵 UI 표시
    */
   proto.enterPermanentShop = async function() {
+    this.tutorialDirector?.handleEvent("perk-shop-opened");
     // 이벤트 리스너 (업그레이드 처리)
     const upgradeHandler = async (e) => {
       const { nodeId, cost } = e.detail;

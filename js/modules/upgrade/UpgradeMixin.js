@@ -5,6 +5,7 @@ export function applyUpgradeMixin(GameManagerClass) {
   const proto = GameManagerClass.prototype;
 
   proto.showUpgrades = async function(source = "terminal") {
+    this.tutorialDirector?.handleEvent("upgrade-opened");
     this.upgradePriceSource = source;
     this.defenseGame.pause();
 
@@ -206,6 +207,7 @@ export function applyUpgradeMixin(GameManagerClass) {
   };
 
   proto.showHelperUpgrades = function(overlay) {
+    this.tutorialDirector?.handleEvent("upgrade-helper-opened");
     overlay.innerHTML = "";
 
     // 헤더
@@ -1188,6 +1190,7 @@ export function applyUpgradeMixin(GameManagerClass) {
   };
 
   proto.showAllyUpgrades = function(overlay) {
+    this.tutorialDirector?.handleEvent("upgrade-ally-opened");
     overlay.innerHTML = "";
 
     // 헤더
