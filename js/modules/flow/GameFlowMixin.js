@@ -393,6 +393,7 @@ export function applyGameFlowMixin(GameManagerClass) {
     // 디펜스 게임에 점령 상태 설정 (시각화 + 아군 10마리)
     debugLog("Conquest", "Setting conquered state");
     this.defenseGame.setConqueredState(true);
+    this.defenseGame.playConquestWave(); // 정복 연출은 첫 점령 순간에만
 
     // 채굴 마이너 스폰
     debugLog("GameManager", "Spawning miners for conquered stage:", currentStage.id);

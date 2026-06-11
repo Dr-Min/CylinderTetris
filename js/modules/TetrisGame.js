@@ -2181,8 +2181,12 @@ export class TetrisGame {
     const deltaTime = now - this.state.lastTime;
     this.state.lastTime = now;
 
-    this.update(deltaTime);
-    this.render();
+    try {
+      this.update(deltaTime);
+      this.render();
+    } catch (e) {
+      console.error("[Tetris] frame error:", e);
+    }
   }
 
   update(deltaTime) {

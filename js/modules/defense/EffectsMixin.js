@@ -60,8 +60,13 @@ export function applyEffectsMixin(DefenseGameClass) {
     }
     const deltaTime = time - this.lastTime;
     this.lastTime = time;
-    this.update(deltaTime);
-    this.render();
+    try {
+      this.update(deltaTime);
+      this.render();
+    } catch (e) {
+      // 한 프레임의 예외가 rAF 체인을 끊어 화면이 영구 정지되는 것 방지
+      console.error("[Defense] frame error:", e);
+    }
     requestAnimationFrame((t) => this.animate(t));
   }
 

@@ -3267,7 +3267,7 @@ export class DefenseGame {
     let color = "#00ff00";
 
     if (this.isConquered) {
-      text = "? ?";
+      text = "SECURED ✓";
       color = "#00ff00";
       this.playBGMTrack('SAFE_ZONE');
     } else if (this.isReinforcementMode) {
@@ -3382,7 +3382,6 @@ export class DefenseGame {
     if (conquered) {
       this.conqueredStartTime = Date.now() / 1000;
       this.lastRotationStep = -1;
-      this.playConquestWave();
       debugLog(
         "DefenseGame",
         "TODO",
