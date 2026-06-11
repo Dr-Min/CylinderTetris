@@ -644,6 +644,12 @@ export function applyWeaponInputMixin(DefenseGameClass) {
           this.handleConquerClick();
         }
         break;
+      case "KeyE":
+        if (this.specialAmmo > 0) {
+          e.preventDefault();
+          this.fireSpecialAmmo();
+        }
+        break;
       case "ArrowUp":
       case "KeyW":
         this.keyState.up = true;

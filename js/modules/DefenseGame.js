@@ -355,6 +355,42 @@ export class DefenseGame {
     this.uiLayer.appendChild(this.shieldBtn);
     this.updateShieldBtnUI("ACTIVE", "#00f0ff");
 
+    // 특수 탄약(DATA NUKE) 버튼 — 테트리스 줄 클리어로 충전
+    this.specialAmmo = 0;
+    this.onSpecialAmmoUsed = null;
+    this.specialBtn = document.createElement("button");
+    this.specialBtn.id = "special-ammo-btn";
+    this.specialBtn.style.cssText = `
+      position: absolute;
+      bottom: ${this.isMobile ? 150 : 100}px;
+      ${this.isMobile ? "right: 10px;" : "left: calc(50% + " + (this.shieldBtnWidth / 2 + 14) + "px);"}
+      width: ${this.isMobile ? 52 : 60}px;
+      height: ${this.isMobile ? 40 : 40}px;
+      background: rgba(60, 0, 80, 0.45);
+      border: 2px solid #cc66ff;
+      color: #cc66ff;
+      font-family: var(--term-font);
+      font-size: 13px;
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 30;
+      display: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    `;
+    this.specialBtn.innerText = "⚡0";
+    const handleSpecialTap = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.fireSpecialAmmo();
+    };
+    if (window.PointerEvent) {
+      this.specialBtn.addEventListener("pointerdown", handleSpecialTap);
+    } else {
+      this.specialBtn.addEventListener("touchstart", handleSpecialTap, { passive: false });
+    }
+    this.uiLayer.appendChild(this.specialBtn);
+
     this.conquerBtn = document.createElement("button");
     this.conquerBtn.id = "conquer-btn";
     this.conquerBtn.style.position = "absolute";
@@ -1223,6 +1259,29 @@ export class DefenseGame {
     this.addScreenShake(6);
     this.playGlitchSound();
     this.pdxComment("큰 놈이에요!! 큰 놈은 큰 보상이죠!", { force: true });
+  }
+
+  // 특수 탄약: 테트리스 줄 클리어로 충전, 사용 시 코어 중심 광역 폭발
+  setSpecialAmmo(count) {
+    this.specialAmmo = Math.max(0, count);
+    if (!this.specialBtn) return;
+    this.specialBtn.innerText = `⚡${this.specialAmmo}`;
+    this.specialBtn.style.display = this.specialAmmo > 0 ? "block" : "none";
+  }
+
+  fireSpecialAmmo() {
+    if (this.specialAmmo <= 0 || this.isSafeZone) return;
+    this.setSpecialAmmo(this.specialAmmo - 1);
+    if (this.onSpecialAmmoUsed) this.onSpecialAmmoUsed();
+
+    // DATA NUKE: 광역 데미지 + 넉백 + 연출
+    this.handleExplosion(this.core.x, this.core.y, 480, 60, "#cc66ff");
+    this.enemies.forEach((enemy) => this.applyKnockback(enemy, 420, 0.5, 1.2));
+    this.createExplosion(this.core.x, this.core.y, "#cc66ff", 50);
+    this.addScreenShake(12);
+    this.triggerHitStop(0.07);
+    this.playImpactSound();
+    this.announcePageEvent("⚡ DATA NUKE", "#cc66ff");
   }
 
   // 해킹 노드: 코어를 직접 몰고 가야 하는 필드 오브젝트.

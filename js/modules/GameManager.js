@@ -110,6 +110,23 @@ export class GameManager {
     this.defenseGame.onHackNodeSpawned = () =>
       this.tutorialDirector?.handleEvent("hack-node-spawned");
 
+    // 특수 탄약: 테트리스 줄 클리어 → 충전, 디펜스에서 사용
+    this.specialAmmo = parseInt(localStorage.getItem("special_ammo") || "0", 10) || 0;
+    this.defenseGame.setSpecialAmmo(this.specialAmmo);
+    this.tetrisGame.onAmmoCharge = (lines) => {
+      const before = this.specialAmmo;
+      this.specialAmmo = Math.min(3, this.specialAmmo + lines);
+      localStorage.setItem("special_ammo", String(this.specialAmmo));
+      this.defenseGame.setSpecialAmmo(this.specialAmmo);
+      if (this.specialAmmo > before) {
+        this.tutorialDirector?.handleEvent("special-ammo-charged");
+      }
+    };
+    this.defenseGame.onSpecialAmmoUsed = () => {
+      this.specialAmmo = Math.max(0, this.specialAmmo - 1);
+      localStorage.setItem("special_ammo", String(this.specialAmmo));
+    };
+
     // 아이템 수집 완료 콜백 (수집 바이러스가 코어에 도착했을 때)
     this.defenseGame.onItemCollected = (item) => this.handleItemCollected(item);
 

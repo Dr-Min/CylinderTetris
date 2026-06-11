@@ -1087,6 +1087,9 @@ export class TetrisGame {
       this.state.linesClearedTotal += linesCleared.length;
       this.state.linesClearedStage += linesCleared.length;
 
+      // 특수 탄약 충전 (디펜스에서 사용)
+      if (this.onAmmoCharge) this.onAmmoCharge(linesCleared.length);
+
       if (this.onLineCleared && this.state.isBossFight) {
         this.onLineCleared(this.state.linesClearedStage);
       }

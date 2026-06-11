@@ -158,6 +158,14 @@ export class TutorialDirector {
       }, 4200);
       return;
     }
+    if (eventName === "special-ammo-charged") {
+      this.tryShowTopicToast("special-ammo", {
+        speaker: "PDX-01",
+        title: "⚡ SPECIAL AMMO",
+        body: "줄 클리어로 특수 탄약이 충전됐어요! (최대 3발)\n디펜스에서 ⚡버튼 또는 E키로 광역 폭발!",
+      }, 4600);
+      return;
+    }
     if (eventName === "hack-node-spawned") {
       this.tryShowTopicToast("hack-node", {
         speaker: "PDX-01",
