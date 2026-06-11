@@ -988,6 +988,21 @@ export class DefenseGame {
     return JSON.stringify(payload);
   }
 
+  // 스테이지 기본 난이도 + 페이지 진행 보정 (REMEMBER.md 공식)
+  getDifficultyScale() {
+    const stageIndex = Math.max(0, this.currentStageId || 0);
+    let stageBase;
+    if (stageIndex === 0) stageBase = 0.5;
+    else if (stageIndex <= 2) stageBase = 1.0;
+    else if (stageIndex <= 4) stageBase = 1.5;
+    else if (stageIndex <= 6) stageBase = 2.0;
+    else stageBase = 2.0 + Math.min(1.4, (stageIndex - 6) * 0.07);
+
+    const maxPages = this.stageMaxPages || 1;
+    const pageProgress = maxPages > 1 ? (this.currentPage - 1) / (maxPages - 1) : 0;
+    return stageBase + pageProgress * ((this.stageDifficultyScale || 1) * stageBase * 0.5);
+  }
+
   getKillDataGain() {
     const baseGain = 10;
     const stageIndex = Math.max(0, this.currentStageId || 0);
@@ -2060,7 +2075,7 @@ export class DefenseGame {
       this.waveTimer += dt;
       if (this.waveTimer > currentSpawnRate) {
         // 기존 spawnEnemy() 대신 WaveMixin의 trySpawnWave() 호출
-        this.trySpawnWave(this.difficultyScale);
+        this.trySpawnWave(this.getDifficultyScale());
         this.waveTimer = 0;
       }
     }
@@ -2543,7 +2558,7 @@ export class DefenseGame {
         vx: -Math.cos(angle) * speed,
         vy: -Math.sin(angle) * speed,
         radius: 6,
-        damage: 8,
+        damage: 6,
         life: 14,
         color: "#ff3366",
       });
@@ -2657,11 +2672,11 @@ export class DefenseGame {
     const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 50;
     const ex = this.core.x + Math.cos(angle) * distance;
     const ey = this.core.y + Math.sin(angle) * distance;
-    const diffScale = this.stageDifficultyScale || 1;
+    const diffScale = this.getDifficultyScale();
     const cfg = {
       id: "CARRIER",
       speed: 95,
-      hp: Math.max(12, Math.floor(28 * diffScale)),
+      hp: Math.max(12, Math.floor(22 * diffScale)),
       damage: 0,
       radius: 13,
       color: "#ffcc00",

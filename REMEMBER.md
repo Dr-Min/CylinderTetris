@@ -24,12 +24,16 @@ Stage base difficulty:
 - if stageIndex <= 6 => 2.0
 - else => 2.0 + min(1.4, (stageIndex - 6) * 0.07)
 
-Page difficulty + enemy stats:
+Page difficulty + enemy stats (2026-06-11 개편: WaveMixin.getEnemyStatScales):
 - pageProgress = (currentPage - 1) / (stageMaxPages - 1)
-- difficultyScale = stageBase + pageProgress * (stageDifficultyScale * stageBase * 0.5)
-- enemy hp = floor(baseHp * difficultyScale)
-- enemy damage = max(6, floor(baseDamage * difficultyScale))
-- enemy speed = baseSpeed * difficultyScale
+- difficultyScale(d) = stageBase + pageProgress * (stageDifficultyScale * stageBase * 0.5)
+  (DefenseGame.getDifficultyScale — 과거 this.difficultyScale 미정의로 모든 적이
+   기본 스탯 폴백으로 스폰되던 버그를 수정하면서 복원)
+- enemy hp = floor(baseHp * d * (1 + stageId*0.12 + page*0.03))
+- enemy damage = floor(baseDamage * min(3, 0.8 + d*0.6))  ← 데미지는 완만+상한
+- enemy speed = baseSpeed * min(1.6, 0.9 + d*0.15)        ← 속도도 완만+상한
+- CARRIER hp = 22 * d, 격추 보상 = killGain * 6
+- 보스 링 탄막: 발당 6 대미지 (실드로 전탄 수비 시 링당 ~60)
 
 Spawn rate:
 - stageFactor = 1 + min(0.5, stageIndex * 0.03)

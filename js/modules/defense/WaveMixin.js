@@ -68,6 +68,7 @@ export function applyWaveMixin(DefenseGameClass) {
         }
 
         // 실제로 적을 생성하여 enemies 배열에 푸시
+        const scales = this.getEnemyStatScales(difficultyScale);
         spawnList.forEach(item => {
             const ex = centerX + item.offsetX;
             const ey = centerY + item.offsetY;
@@ -76,9 +77,9 @@ export function applyWaveMixin(DefenseGameClass) {
             let typeConfig = this.getBaseEnemyConfig(item.id);
 
             // 난이도 및 보정치 적용
-            typeConfig.speed *= (difficultyScale * 0.8 + 0.2);
-            typeConfig.hp = Math.max(1, Math.floor(typeConfig.hp * difficultyScale * (item.customHpScale || 1.0)));
-            typeConfig.damage = Math.max(1, Math.floor(typeConfig.damage * difficultyScale));
+            typeConfig.speed *= scales.spd;
+            typeConfig.hp = Math.max(1, Math.floor(typeConfig.hp * scales.hp * (item.customHpScale || 1.0)));
+            typeConfig.damage = Math.max(1, Math.floor(typeConfig.damage * scales.dmg));
             if (item.customRadius) typeConfig.radius = item.customRadius;
             if (item.customColor) typeConfig.color = item.customColor;
 
@@ -225,20 +226,28 @@ export function applyWaveMixin(DefenseGameClass) {
 
         let typeConfig = this.getBaseEnemyConfig(chosenId);
 
-        // 2. 스테이지 및 페이즈 기반 지수형 난이도 스케일링
-        const stageId = this.currentStageId || 0;
-        const page = this.currentPage || 1;
-        // stageId와 page 진척도에 따라 체력이 기하급수적으로 폭증 (예: Math.pow(1.15, X))
-        const explosiveScale = difficultyScale * Math.pow(1.15, stageId + (page * 0.1));
-
-        typeConfig.speed *= (difficultyScale * 0.8 + 0.2); // 속도는 완만하게 증가
-
-        // 체력과 데미지는 위기감이 들도록 지수 스케일링 적용
-        typeConfig.hp = Math.max(1, Math.floor(typeConfig.hp * explosiveScale));
-        typeConfig.damage = Math.max(1, Math.floor(typeConfig.damage * explosiveScale));
+        const scales = this.getEnemyStatScales(difficultyScale);
+        typeConfig.speed *= scales.spd;
+        typeConfig.hp = Math.max(1, Math.floor(typeConfig.hp * scales.hp));
+        typeConfig.damage = Math.max(1, Math.floor(typeConfig.damage * scales.dmg));
 
         const enemyInstance = this.createEnemyFromType(typeConfig, ex, ey, angle, distance);
         this.enemies.push(enemyInstance);
+    };
+
+    /**
+     * 난이도 → 스탯 배율 변환 (HP는 가파르게, 데미지/속도는 완만하게 + 상한)
+     * 데미지가 그대로 곡선을 타면 후반 잡몹 한 방이 코어 HP의 절반을 깎는다.
+     */
+    proto.getEnemyStatScales = function (difficultyScale) {
+        const d = Number.isFinite(difficultyScale) && difficultyScale > 0 ? difficultyScale : 1;
+        const stageId = Math.max(0, this.currentStageId || 0);
+        const page = Math.max(1, this.currentPage || 1);
+        return {
+            hp: d * (1 + stageId * 0.12 + page * 0.03),
+            dmg: Math.min(3, 0.8 + d * 0.6),
+            spd: Math.min(1.6, 0.9 + d * 0.15),
+        };
     };
 
 }
