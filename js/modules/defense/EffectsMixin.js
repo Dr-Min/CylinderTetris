@@ -102,6 +102,9 @@ export function applyEffectsMixin(DefenseGameClass) {
 
       this.droppedItems = [];
       this.collectorViruses = [];
+      if (typeof this.resetHackNodesForStage === "function") {
+        this.resetHackNodesForStage();
+      }
       this.core.shieldRadius = 0;
       this.core.x = centerX;
       this.core.y = centerY;

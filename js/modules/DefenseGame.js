@@ -1303,6 +1303,15 @@ export class DefenseGame {
     this.announcePageEvent("⚡ DATA NUKE", "#cc66ff");
   }
 
+  // 스테이지 진입(시작/이동 양쪽)마다 해킹 노드 재배치
+  resetHackNodesForStage() {
+    this.hackNodes = [];
+    if (!this.isSafeZone && !this.isConquered && !this.isBossFight) {
+      this.spawnHackNode();
+      if (Math.random() < 0.5) this.spawnHackNode();
+    }
+  }
+
   // 해킹 노드: 코어를 직접 몰고 가야 하는 필드 오브젝트.
   // 실드 앵커에서 떨어져야 하므로 자연스럽게 리스크-보상이 된다.
   spawnHackNode() {
@@ -2022,11 +2031,7 @@ export class DefenseGame {
     }
     this.ensureRoamingProtocolState();
 
-    this.hackNodes = [];
-    if (!this.isSafeZone && !this.isConquered && !this.isBossFight) {
-      this.spawnHackNode();
-      if (Math.random() < 0.5) this.spawnHackNode();
-    }
+    this.resetHackNodesForStage();
 
     this.startLoop();
     debugLog("Defense", "Mode Started");
