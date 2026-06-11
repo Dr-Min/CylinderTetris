@@ -1454,6 +1454,7 @@ export function applyRenderMixin(DefenseGameClass) {
 
     this.renderSpeechBubbles();
 
+    this.renderSpawnTelegraphs();
     this.renderEnemyProjectiles();
     this.renderDataMotes();
     this.renderDamageNumbers();
@@ -1732,6 +1733,37 @@ export function applyRenderMixin(DefenseGameClass) {
     }
     ctx.fillStyle = this._vignette;
     ctx.fillRect(0, 0, w, h);
+  };
+
+  // 스폰 예고 마커: 적이 등장할 방향의 화면 가장자리에 깜빡이는 경고
+  proto.renderSpawnTelegraphs = function () {
+    if (!this.pendingSpawns || this.pendingSpawns.length === 0) return;
+    const ctx = this.ctx;
+    const core = this.core;
+    const edgeR = Math.min(this.canvas.width, this.canvas.height) / 2 - 46;
+    ctx.save();
+    for (const p of this.pendingSpawns) {
+      const e = p.enemy;
+      const ang = Math.atan2(e.y - core.y, e.x - core.x);
+      const mx = core.x + Math.cos(ang) * edgeR;
+      const my = core.y + Math.sin(ang) * edgeR;
+      const pulse = 0.45 + 0.55 * Math.abs(Math.sin((p.timer / p.maxTimer) * Math.PI * 3));
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = e.isWarden ? "#ff3366" : "#ff5533";
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 8;
+      ctx.translate(mx, my);
+      ctx.rotate(ang + Math.PI / 2);
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.lineTo(6, 4);
+      ctx.lineTo(-6, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.rotate(-(ang + Math.PI / 2));
+      ctx.translate(-mx, -my);
+    }
+    ctx.restore();
   };
 
   proto.renderEnemyProjectiles = function () {

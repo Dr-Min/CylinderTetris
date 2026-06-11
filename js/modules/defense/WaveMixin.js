@@ -85,7 +85,11 @@ export function applyWaveMixin(DefenseGameClass) {
 
             const angle = Math.atan2(this.core.y - ey, this.core.x - ex); // 초기 방향
             const enemyInstance = this.createEnemyFromType(typeConfig, ex, ey, angle, 0);
-            this.enemies.push(enemyInstance);
+            if (typeof this.queueEnemySpawn === "function") {
+              this.queueEnemySpawn(enemyInstance, 1.0); // 진형은 조금 더 긴 경고
+            } else {
+              this.enemies.push(enemyInstance);
+            }
         });
     };
 
@@ -232,7 +236,11 @@ export function applyWaveMixin(DefenseGameClass) {
         typeConfig.damage = Math.max(1, Math.floor(typeConfig.damage * scales.dmg));
 
         const enemyInstance = this.createEnemyFromType(typeConfig, ex, ey, angle, distance);
-        this.enemies.push(enemyInstance);
+        if (typeof this.queueEnemySpawn === "function") {
+          this.queueEnemySpawn(enemyInstance);
+        } else {
+          this.enemies.push(enemyInstance);
+        }
     };
 
     /**

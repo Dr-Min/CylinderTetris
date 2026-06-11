@@ -206,8 +206,18 @@ export class DefenseGame {
     `;
     objectiveBarBg.appendChild(this.objectiveBar);
     this.objectiveBarBg = objectiveBarBg;
+    this.objectiveIntel = document.createElement("div");
+    this.objectiveIntel.style.cssText = `
+      margin-top: 3px;
+      font-size: ${this.isMobile ? 9 : 11}px;
+      color: rgba(160, 220, 255, 0.85);
+      letter-spacing: 0.5px;
+      display: none;
+      white-space: nowrap;
+    `;
     this.objectiveBanner.appendChild(this.objectiveText);
     this.objectiveBanner.appendChild(objectiveBarBg);
+    this.objectiveBanner.appendChild(this.objectiveIntel);
     this.uiLayer.appendChild(this.objectiveBanner);
     this.objectiveRefreshTimer = 0;
 
@@ -221,6 +231,12 @@ export class DefenseGame {
     // 보스전: 적 탄환 + 페이즈별 공격 타이머
     this.enemyProjectiles = [];
     this.bossAttackTimers = { ring: 0, aimed: 0, summon: 0 };
+
+    // 인텔 예고 + 스폰 텔레그래프
+    this.pendingSpawns = [];
+    this.intelText = null;
+    this._intelShownForPage = -1;
+    this._prerolledEvent = undefined;
 
     // PDX-01 라이브 코멘터리 (조력자 캐릭터의 상황 반응)
     this.pdxCommentCooldownUntil = 0;
@@ -1205,6 +1221,63 @@ export class DefenseGame {
     this.pdxComment("큰 놈이에요!! 큰 놈은 큰 보상이죠!", { force: true });
   }
 
+  // 다음 페이지 구성 예고 (배너 하단 인텔 라인)
+  showNextPageIntel() {
+    const maxPages = this.maxPages || 12;
+    const nextPage = this.currentPage + 1;
+
+    if (nextPage === maxPages) {
+      this.intelText = "INTEL ▸ ⛔ SECTOR WARDEN 접근 경보";
+      this.updateObjectiveBanner();
+      return;
+    }
+
+    // 다음 페이지 스폰 풀 미리보기
+    this.currentPage = nextPage;
+    const pool = this.getSpawnPoolAndWeights();
+    this.currentPage = nextPage - 1;
+    const threats = pool
+      .filter((p) => p.id !== "GRUNT")
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 3)
+      .map((p) => p.id);
+
+    // 페이지 이벤트 사전 굴림 (예고-실제 일치)
+    if (nextPage >= 2 && !this.conquerReady) {
+      const roll = Math.random();
+      this._prerolledEvent =
+        roll < 0.18 ? "RUSH" : roll < 0.3 ? "CARRIER" : roll < 0.4 ? "SUPPLY" : null;
+    } else {
+      this._prerolledEvent = null;
+    }
+
+    const eventTag = {
+      RUSH: " + ⚠RUSH",
+      CARRIER: " + ◆CARRIER",
+      SUPPLY: " + ▼SUPPLY",
+    }[this._prerolledEvent] || "";
+    const threatText = threats.length > 0 ? threats.join("·") : "표준 패턴";
+    this.intelText = `INTEL ▸ NEXT: ${threatText}${eventTag}`;
+    this.updateObjectiveBanner();
+  }
+
+  // 스폰 텔레그래프: 적은 0.85초 경고 마커 후 실제 등장
+  queueEnemySpawn(enemy, delay = 0.85) {
+    this.pendingSpawns.push({ enemy, timer: delay, maxTimer: delay });
+  }
+
+  processPendingSpawns(dt) {
+    if (!this.pendingSpawns || this.pendingSpawns.length === 0) return;
+    for (let i = this.pendingSpawns.length - 1; i >= 0; i--) {
+      const p = this.pendingSpawns[i];
+      p.timer -= dt;
+      if (p.timer <= 0) {
+        this.enemies.push(p.enemy);
+        this.pendingSpawns.splice(i, 1);
+      }
+    }
+  }
+
   // PDX-01의 상황 반응 한마디 — 화면 하단에 잠깐 표시.
   // 전역 9초 쿨다운으로 스팸 방지 (force는 중요 순간용)
   pdxComment(text, { force = false } = {}) {
@@ -1791,6 +1864,10 @@ export class DefenseGame {
     this.enemyProjectiles = [];
     this.bossAttackTimers = { ring: 0, aimed: 0, summon: 0 };
     this._ringAnnounced = false;
+    this.pendingSpawns = [];
+    this.intelText = null;
+    this._intelShownForPage = -1;
+    this._prerolledEvent = undefined;
     this.conquerReady = false;
     this.conquerBtn.style.display = "none";
     this.updateWaveDisplay();
@@ -2170,6 +2247,17 @@ export class DefenseGame {
         this.updateWaveDisplay();
       }
 
+      // 다음 페이지 인텔: 전환 3초 전 예고
+      if (
+        this._intelShownForPage !== this.currentPage &&
+        this.pageTimer >= (this.pageDuration || 1) - 3 &&
+        this.currentPage < maxPages &&
+        !this.isFarmingZone
+      ) {
+        this._intelShownForPage = this.currentPage;
+        this.showNextPageIntel();
+      }
+
       if (this.pageTimer >= this.pageDuration) {
         if (this.currentPage < maxPages || this.isFarmingZone) {
           this.currentPage++;
@@ -2294,6 +2382,7 @@ export class DefenseGame {
       }
     }
 
+    this.processPendingSpawns(dt);
     this.updateEnemies(dt, this.core);
 
     if (this.isBossFight && this.bossManager?.isActive) {
@@ -2861,10 +2950,19 @@ export class DefenseGame {
   // 새 페이지 시작 시 변형 이벤트를 굴림: 매 페이지가 똑같지 않게
   rollPageEvent() {
     this.pageEvent = null;
+    this.intelText = null;
     if (this.isSafeZone || this.isFarmingZone || this.isConquered || this.isBossFight) return;
     if (this.currentPage < 2 || this.conquerReady) return;
 
-    const roll = Math.random();
+    let roll;
+    if (this._prerolledEvent !== undefined) {
+      // 인텔 예고에서 미리 굴린 결과를 소비 (예고와 실제가 일치하도록)
+      const pre = this._prerolledEvent;
+      this._prerolledEvent = undefined;
+      roll = pre === "RUSH" ? 0.1 : pre === "CARRIER" ? 0.25 : pre === "SUPPLY" ? 0.35 : 0.9;
+    } else {
+      roll = Math.random();
+    }
     if (roll < 0.18) {
       this.pageEvent = "RUSH";
       this.spawnRate = Math.max(0.08, this.spawnRate * 0.45);
@@ -3000,6 +3098,17 @@ export class DefenseGame {
       this.objectiveBar.style.width = `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%`;
       this.objectiveBar.style.background = color;
       this.objectiveBar.style.boxShadow = `0 0 6px ${color}`;
+    }
+
+    if (this.objectiveIntel) {
+      if (this.intelText) {
+        this.objectiveIntel.style.display = "block";
+        if (this.objectiveIntel.innerText !== this.intelText) {
+          this.objectiveIntel.innerText = this.intelText;
+        }
+      } else {
+        this.objectiveIntel.style.display = "none";
+      }
     }
   }
 
