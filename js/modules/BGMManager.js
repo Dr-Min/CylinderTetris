@@ -29,6 +29,10 @@ export class BGMManager {
     // 트랙 인덱스 (패턴 순환용)
     this.bassNoteIndex = 0;
     this.leadNoteIndex = 0;
+
+    // 음악성: 4마디 코드 진행 + 진행도 기반 인텐시티
+    this.currentBar = 0;
+    this.intensity = 0;
     
     // === 트랙 정의 ===
     this.tracks = {
@@ -144,8 +148,81 @@ export class BGMManager {
         
         // 추가 효과
         addDistortion: true,
+        chordProgression: [0, -2, -4, -5],
+      },
+
+      // ========================================
+      // BOSS - Core Nexus 전용: 느리고 무겁고 불길하게
+      // ========================================
+      BOSS: {
+        name: "Boss",
+        baseBpm: 140,
+        maxBpm: 170,
+        masterVolume: 0.36,
+
+        kickPattern:  [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1],
+        hihatPattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1],
+        snarePattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+
+        // 반음 충돌이 깔린 저음 리프 (E1-F1-E1-B0)
+        bassPattern: [1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
+        bassNotes: [41.2, 43.7, 41.2, 30.9, 41.2, 49, 43.7, 41.2],
+        bassType: 'sawtooth',
+        bassDecay: 0.2,
+
+        leadPattern: [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
+        leadNotes: [329.6, 311.1, 246.9, 329.6, 369.9, 311.1],
+        leadType: 'sawtooth',
+        leadVolume: 0.09,
+
+        arpChance: 0.15,
+        arpNotes: [82.4, 87.3, 123.5, 164.8, 174.6],
+
+        kickFreq: 150,
+        kickDecay: 0.18,
+        hihatVolume: 0.09,
+        snareVolume: 0.45,
+        chordProgression: [0, 0, 1, -4],
+      },
+
+      // ========================================
+      // CONQUERED - 점령지: 차분한 승리의 여운
+      // ========================================
+      CONQUERED: {
+        name: "Conquered",
+        baseBpm: 96,
+        maxBpm: 108,
+        masterVolume: 0.24,
+
+        kickPattern:  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+        hihatPattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+        snarePattern: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+
+        // 메이저 펜타토닉 — 밝고 안정적
+        bassPattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+        bassNotes: [65.4, 73.4, 82.4, 98, 82.4, 73.4],
+        bassType: 'triangle',
+        bassDecay: 0.5,
+
+        leadPattern: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        leadNotes: [261.6, 293.7, 329.6, 392, 440, 523.2],
+        leadType: 'sine',
+        leadVolume: 0.08,
+
+        arpChance: 0.12,
+        arpNotes: [130.8, 146.8, 164.8, 196, 220],
+
+        kickFreq: 110,
+        kickDecay: 0.25,
+        hihatVolume: 0.07,
+        snareVolume: 0.12,
+        chordProgression: [0, 5, 7, 5],
       },
     };
+
+    // 기존 트랙에도 코드 진행 부여
+    this.tracks.SAFE_ZONE.chordProgression = [0, 3, 5, 3];
+    this.tracks.DEFENSE.chordProgression = [0, 0, -2, 3];
   }
 
   /**
@@ -327,6 +404,7 @@ export class BGMManager {
     
     const track = this.tracks[this.currentTrack];
     const progress = Math.min((page - 1) / (maxPage - 1), 1);
+    this.intensity = progress;
     this.targetBpm = track.baseBpm + (track.maxBpm - track.baseBpm) * progress;
     
     // 부드럽게 BPM 변경
@@ -346,6 +424,9 @@ export class BGMManager {
       this.scheduleBeat(this.currentBeat, this.nextNoteTime);
       this.nextNoteTime += secondsPerBeat;
       this.currentBeat = (this.currentBeat + 1) % 16;
+      if (this.currentBeat === 0) {
+        this.currentBar = (this.currentBar + 1) % 4; // 4마디 코드 순환
+      }
     }
   }
 
@@ -355,40 +436,51 @@ export class BGMManager {
   scheduleBeat(beat, time) {
     const track = this.tracks[this.currentTrack];
     if (!track) return;
-    
+
+    // 4마디 코드 진행: 반음 단위 트랜스포즈
+    const semis = track.chordProgression
+      ? track.chordProgression[this.currentBar % track.chordProgression.length]
+      : 0;
+    const transpose = Math.pow(2, semis / 12);
+
     // 킥 드럼
     if (track.kickPattern[beat]) {
       this.playKick(time, track);
     }
-    
+
     // 하이햇
     if (track.hihatPattern[beat]) {
       this.playHihat(time, track);
     }
-    
-    // 스네어
-    if (track.snarePattern[beat] && track.snareVolume > 0) {
+
+    // 스네어 (4번째 마디 끝은 필인: 후반 4비트 연타)
+    const isFillZone = this.currentBar === 3 && beat >= 12;
+    if ((track.snarePattern[beat] || isFillZone) && track.snareVolume > 0) {
       this.playSnare(time, track);
     }
-    
+
     // 베이스
     if (track.bassPattern[beat]) {
       const noteIndex = this.bassNoteIndex % track.bassNotes.length;
-      this.playBass(time, track.bassNotes[noteIndex], track);
+      this.playBass(time, track.bassNotes[noteIndex] * transpose, track);
       this.bassNoteIndex++;
     }
-    
-    // 리드
+
+    // 리드 (인텐시티에 따라 약간 커짐)
     if (track.leadPattern[beat]) {
       const noteIndex = this.leadNoteIndex % track.leadNotes.length;
-      this.playLead(time, track.leadNotes[noteIndex], track);
+      this.playLead(time, track.leadNotes[noteIndex] * transpose, {
+        ...track,
+        leadVolume: track.leadVolume * (0.85 + this.intensity * 0.4),
+      });
       this.leadNoteIndex++;
     }
-    
-    // 아르페지오
-    if (Math.random() < track.arpChance) {
+
+    // 아르페지오 (진행도가 깊어질수록 잦아짐)
+    const arpChance = track.arpChance * (0.7 + this.intensity * 0.9);
+    if (Math.random() < arpChance) {
       const note = track.arpNotes[beat % track.arpNotes.length];
-      this.playArp(time, note, track);
+      this.playArp(time, note * transpose, track);
     }
   }
 

@@ -4351,9 +4351,16 @@ export class DefenseGame {
 
 
   playBGMTrack(trackName) {
-    if (this.currentBGMTrack === trackName) return;
-    this.currentBGMTrack = trackName;
-    this.bgmManager.play(trackName);
+    // 상태 기반 라우팅: 보스전은 BOSS, 점령지는 CONQUERED 트랙
+    let resolved = trackName;
+    if (this.isBossFight && trackName !== 'SAFE_ZONE') {
+      resolved = 'BOSS';
+    } else if (this.isConquered && trackName === 'SAFE_ZONE' && !this.isSafeZone) {
+      resolved = 'CONQUERED';
+    }
+    if (this.currentBGMTrack === resolved) return;
+    this.currentBGMTrack = resolved;
+    this.bgmManager.play(resolved);
   }
 
 
