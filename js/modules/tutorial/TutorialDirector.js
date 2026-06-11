@@ -177,9 +177,9 @@ export class TutorialDirector {
     if (eventName === "roaming-shards-active") {
       this.tryShowTopicToast("roaming-shards", {
         speaker: "PDX-01",
-        title: "PROTOCOL SHARDS",
-        body: "필드에 F~A 조각이 떨어져 있어요!\n코어로 전부 주우면 OVERDRIVE 탄막이 발동됩니다. 꽁돈이에요!",
-      }, 4600);
+        title: "COMMAND PROTOCOL",
+        body: "필드에 떠다니는 글자들 보이시죠? 제가 감지한 명령어예요!\n코어로 순서대로 주우면 실행 — 단어마다 보상이 달라요. 순서는 위 HUD를 보세요!",
+      }, 5200);
       return;
     }
 
@@ -404,14 +404,16 @@ export class TutorialDirector {
 
   showToast(config, duration = 2800) {
     this.resolveModal(null);
+    // 토스트는 코어 위에 붙는다 (PDX-01 말풍선과 같은 위치 정책).
+    // 디펜스 캔버스가 안 보이면 getCoreRect가 null → 화면 위쪽 중앙으로 폴백.
     this.show({
       ...config,
       mode: "toast",
       showContinue: false,
       hideSkip: true,
       blocking: false,
-      target: null,
-      placement: "center",
+      target: () => this.getCoreRect(),
+      placement: "top",
     });
     this.toastTimer = window.setTimeout(() => {
       this.hide();
@@ -1062,23 +1064,29 @@ export class TutorialDirector {
       const cardRect = this.card.getBoundingClientRect();
       const left = (viewportWidth - cardRect.width) * 0.5;
       const top = this.currentMode === "toast"
-        ? clamp(viewportHeight - cardRect.height - 28, 18, viewportHeight - cardRect.height - 18)
+        ? clamp(viewportHeight * 0.28, 18, viewportHeight - cardRect.height - 18)
         : (viewportHeight - cardRect.height) * 0.5;
       this.card.style.left = `${Math.round(left)}px`;
       this.card.style.top = `${Math.round(top)}px`;
       return;
     }
 
-    const highlightPad = this.currentMode === "modal" ? 12 : 8;
-    const highlightLeft = targetRect.left - highlightPad;
-    const highlightTop = targetRect.top - highlightPad;
-    const highlightWidth = targetRect.width + highlightPad * 2;
-    const highlightHeight = targetRect.height + highlightPad * 2;
-    this.highlight.style.display = "block";
-    this.highlight.style.left = `${Math.round(highlightLeft)}px`;
-    this.highlight.style.top = `${Math.round(highlightTop)}px`;
-    this.highlight.style.width = `${Math.round(highlightWidth)}px`;
-    this.highlight.style.height = `${Math.round(highlightHeight)}px`;
+    // 토스트는 코어 위치 추적용으로만 타겟을 쓰므로 하이라이트/화살표는 생략
+    const showDecor = this.currentMode !== "toast";
+    if (showDecor) {
+      const highlightPad = this.currentMode === "modal" ? 12 : 8;
+      const highlightLeft = targetRect.left - highlightPad;
+      const highlightTop = targetRect.top - highlightPad;
+      const highlightWidth = targetRect.width + highlightPad * 2;
+      const highlightHeight = targetRect.height + highlightPad * 2;
+      this.highlight.style.display = "block";
+      this.highlight.style.left = `${Math.round(highlightLeft)}px`;
+      this.highlight.style.top = `${Math.round(highlightTop)}px`;
+      this.highlight.style.width = `${Math.round(highlightWidth)}px`;
+      this.highlight.style.height = `${Math.round(highlightHeight)}px`;
+    } else {
+      this.highlight.style.display = "none";
+    }
 
     const cardRect = this.card.getBoundingClientRect();
     const margin = 18;
@@ -1110,6 +1118,11 @@ export class TutorialDirector {
       startY = cardTop + cardRect.height;
     } else {
       startY = cardTop;
+    }
+
+    if (!showDecor) {
+      this.pointer.style.display = "none";
+      return;
     }
 
     const dx = targetCenterX - startX;

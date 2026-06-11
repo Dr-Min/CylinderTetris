@@ -1,13 +1,60 @@
 const debugLog = window.debugLog || function () {};
 
-const LETTER_COLORS = {
-  F: "#42f59e",
-  E: "#48d7ff",
-  D: "#4b8cff",
-  C: "#9f72ff",
-  B: "#ff5cb8",
-  A: "#ff944d",
-};
+// 글자 색은 단어 내 위치(index) 기준 팔레트로 부여
+const LETTER_PALETTE = ["#42f59e", "#48d7ff", "#4b8cff", "#9f72ff", "#ff5cb8", "#ff944d"];
+
+// 커맨드 워드 풀 — 스테이지/사이클마다 하나가 랜덤으로 떠서 보상이 매번 달라진다.
+// 주의: 수집 판정이 글자 동일성 기반이므로 단어 안에 중복 글자가 없어야 한다.
+const PROTOCOL_WORDS = [
+  {
+    word: "SUDO",
+    effect: "barrage",
+    color: "#ff5cb8",
+    label: "OVERDRIVE 탄막",
+    intro: "명령어 [SUDO] 감지! 순서대로 모으면 최고 권한 — 일제 사격이에요!",
+    done: "sudo 권한 획득!! 청소 시간이에요!!",
+  },
+  {
+    word: "HEAL",
+    effect: "heal",
+    color: "#42f59e",
+    label: "코어/실드 수리",
+    intro: "명령어 [HEAL] 감지! 순서대로 모으면 코어를 수리해드릴게요!",
+    done: "수리 완료! 새것 같죠? ...거의요.",
+  },
+  {
+    word: "NUKE",
+    effect: "nuke",
+    color: "#ff944d",
+    label: "광역 폭발",
+    intro: "명령어 [NUKE] 감지! 이거… 큰 거예요. 순서대로!",
+    done: "NUKE 실행!! 와아아—!!",
+  },
+  {
+    word: "PING",
+    effect: "ping",
+    color: "#48d7ff",
+    label: "적 정지 + 정찰",
+    intro: "명령어 [PING] 감지! 순서대로 모으면 적들이 멈춰버려요!",
+    done: "핑 전송! 전원 응답 대기 중 — 지금이에요!",
+  },
+  {
+    word: "WARP",
+    effect: "warp",
+    color: "#9f72ff",
+    label: "이동속도 버스트",
+    intro: "명령어 [WARP] 감지! 순서대로 모으면 한동안 엄청 빨라져요!",
+    done: "WARP!! 지금 해커님을 따라잡을 수 있는 건 저뿐이에요!",
+  },
+  {
+    word: "CASH",
+    effect: "cash",
+    color: "#ffd84d",
+    label: "DATA 2배 (30초)",
+    intro: "명령어 [CASH] 감지! 순서대로 모으면 30초간 DATA 2배!",
+    done: "CASH-IN!! 버는 만큼 쓸어 담으세요!",
+  },
+];
 const BARRAGE_ASCII_CHARS =
   "!@#$%^&*(){}[]|\\:;<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const MOBILE_ROAMING_RING_RADIUS = 62;
@@ -112,6 +159,25 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     return this.roamingProtocol.letters[this.getRoamingProtocolProgressIndex()] || null;
   };
 
+  proto.getRoamingLetterColor = function (index) {
+    return LETTER_PALETTE[index % LETTER_PALETTE.length];
+  };
+
+  // 새 커맨드 워드를 뽑고 PDX-01이 알려준다 (비개발자도 단어 뜻을 몰라도 되도록
+  // 보상 설명을 항상 함께 말한다). 직전 단어는 연속으로 나오지 않음.
+  proto.rollRoamingProtocolWord = function ({ announce = true } = {}) {
+    if (!this.roamingProtocol) return;
+    const pool = PROTOCOL_WORDS.filter((w) => w.word !== this.roamingProtocol.word);
+    const pick = pool[Math.floor(Math.random() * pool.length)] || PROTOCOL_WORDS[0];
+    this.roamingProtocol.word = pick.word;
+    this.roamingProtocol.wordInfo = pick;
+    this.roamingProtocol.letters = pick.word.split("");
+    this.roamingProtocol.barrageColor = pick.color;
+    if (announce && typeof this.pdxComment === "function") {
+      this.pdxComment(pick.intro, { force: true });
+    }
+  };
+
   proto.ensureRoamingProtocolVisualState = function () {
     if (!this.roamingProtocol) return null;
     if (!this.roamingProtocol.visual) {
@@ -192,6 +258,7 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     this.roamingProtocol.shards = [];
     this.resetRoamingProtocolVisualState("center");
 
+    this.rollRoamingProtocolWord();
     this.spawnRoamingProtocolShards();
     if (this.roamingProtocol.shards.length > 0 && this.onRoamingShardsActive) {
       this.onRoamingShardsActive();
@@ -209,6 +276,8 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     this.roamingProtocol.shards.forEach((shard) => {
       shard.x = clamp(shard.x, margin, Math.max(margin, worldW - margin));
       shard.y = clamp(shard.y, margin, Math.max(margin, worldH - margin));
+      shard.homeX = clamp(shard.homeX ?? shard.x, margin, Math.max(margin, worldW - margin));
+      shard.homeY = clamp(shard.homeY ?? shard.y, margin, Math.max(margin, worldH - margin));
     });
   };
 
@@ -331,8 +400,14 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         letter,
         x: point.x,
         y: point.y,
+        // 글자가 스폰 지점 주변을 살짝 떠다님 (정지 표적이 아니라 살아있는 느낌)
+        homeX: point.x,
+        homeY: point.y,
+        driftPhase: Math.random() * Math.PI * 2,
+        driftSpeed: 0.3 + Math.random() * 0.35,
+        driftRadius: 20 + Math.random() * 16,
         radius: this.roamingProtocol.shardRadius,
-        color: LETTER_COLORS[letter] || "#ffffff",
+        color: this.getRoamingLetterColor(index),
         pulseOffset: Math.random() * Math.PI * 2,
       };
     });
@@ -419,10 +494,89 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     }
 
     if (this.roamingProtocol.collected.length >= this.roamingProtocol.letters.length) {
-      this.activateRoamingProtocolOverdrive();
+      this.executeRoamingProtocolWord();
       return "complete";
     }
     return "collected";
+  };
+
+  // 단어 완성 → 단어별 효과 실행. SUDO만 지속형(탄막 오버드라이브),
+  // 나머지는 즉발/버프형이라 처리 후 바로 다음 단어 사이클로 넘어간다.
+  proto.executeRoamingProtocolWord = function () {
+    const info = this.roamingProtocol?.wordInfo || PROTOCOL_WORDS[0];
+
+    if (info.effect === "barrage") {
+      this.activateRoamingProtocolOverdrive();
+      if (typeof this.pdxComment === "function") {
+        this.pdxComment(info.done, { force: true });
+      }
+      return;
+    }
+
+    // 즉발/버프 공통 연출: 코어에서 단어 색 폭발 + 충격파
+    this.roamingProtocol.active = false;
+    this.roamingProtocol.shards = [];
+    this.roamingProtocol.collected = [...this.roamingProtocol.letters];
+    this.roamingProtocol.respawnTimer = this.roamingProtocol.respawnDelay + 3;
+    this.createExplosion(this.core.x, this.core.y, info.color, 22);
+    this.shockwaves.push({
+      x: this.core.x,
+      y: this.core.y,
+      radius: 14,
+      maxRadius: Math.max(170, this.core.shieldRadius * 2.2),
+      speed: 460,
+      alpha: 0.85,
+      color: hexToRgba(info.color, 0.95),
+      lineWidth: 5,
+      damageDealt: false,
+    });
+
+    switch (info.effect) {
+      case "heal": {
+        const core = this.core;
+        const healed = Math.min(core.maxHp, core.hp + core.maxHp * 0.5);
+        const gained = Math.round(healed - core.hp);
+        core.hp = healed;
+        // BROKEN/RECHARGING은 자체 수리 상태머신이 shieldHp를 덮어쓰므로 ACTIVE만 회복
+        if (core.shieldState === "ACTIVE") {
+          core.shieldHp = core.shieldMaxHp;
+        }
+        this.spawnDamageNumber(core.x, core.y - 36, `REPAIR +${gained}`, info.color, true);
+        break;
+      }
+      case "nuke": {
+        this.handleExplosion(this.core.x, this.core.y, 460, 55, info.color);
+        this.enemies.forEach((enemy) => this.applyKnockback(enemy, 400, 0.5, 1.2));
+        this.createExplosion(this.core.x, this.core.y, info.color, 45);
+        this.addScreenShake(12);
+        this.triggerHitStop(0.07);
+        break;
+      }
+      case "ping": {
+        const until = performance.now() + 3200;
+        this.enemies.forEach((enemy) => {
+          enemy.slowMultiplier = 0.05;
+          enemy.slowEndTime = until;
+        });
+        if (typeof this.showNextPageIntel === "function" && !this.isBossFight) {
+          this.showNextPageIntel();
+        }
+        break;
+      }
+      case "warp": {
+        this.protocolWarpTimer = 7;
+        break;
+      }
+      case "cash": {
+        this.protocolCashTimer = 30;
+        break;
+      }
+    }
+
+    if (typeof this.pdxComment === "function") {
+      this.pdxComment(info.done, { force: true });
+    }
+    debugLog("Defense", "Protocol word executed", info.word);
   };
 
   proto.activateRoamingProtocolOverdrive = function () {
@@ -534,6 +688,14 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
   };
 
   proto.updateRoamingProtocol = function (dt) {
+    // 버프형 단어 타이머는 가용성과 무관하게 항상 감소
+    if (this.protocolWarpTimer > 0) {
+      this.protocolWarpTimer = Math.max(0, this.protocolWarpTimer - dt);
+    }
+    if (this.protocolCashTimer > 0) {
+      this.protocolCashTimer = Math.max(0, this.protocolCashTimer - dt);
+    }
+
     if (
       !this.roamingProtocol ||
       (typeof this.isRoamingProtocolAvailable === "function" &&
@@ -621,13 +783,35 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         );
       }
       if (this.roamingProtocol.respawnTimer <= 0) {
+        // 사이클 완료 후 리스폰 — 새 단어로 교체 (실수 리셋은 같은 단어 유지)
+        if (this.roamingProtocol.collected.length > 0) {
+          this.rollRoamingProtocolWord();
+        }
         this.spawnRoamingProtocolShards();
       }
       return;
     }
 
+    const worldW = this.worldWidth || this.canvas.width || 0;
+    const worldH = this.worldHeight || this.canvas.height || 0;
+    const driftMargin = 44;
     for (let i = this.roamingProtocol.shards.length - 1; i >= 0; i--) {
       const shard = this.roamingProtocol.shards[i];
+
+      // 홈 지점 주변을 느리게 떠다님
+      shard.driftPhase += dt * (shard.driftSpeed || 0.4);
+      const driftR = shard.driftRadius || 24;
+      shard.x = clamp(
+        (shard.homeX ?? shard.x) + Math.cos(shard.driftPhase) * driftR,
+        driftMargin,
+        Math.max(driftMargin, worldW - driftMargin)
+      );
+      shard.y = clamp(
+        (shard.homeY ?? shard.y) + Math.sin(shard.driftPhase * 0.8 + (shard.pulseOffset || 0)) * driftR,
+        driftMargin,
+        Math.max(driftMargin, worldH - driftMargin)
+      );
+
       const captureRadius = this.core.radius + shard.radius + 6;
       const dist = Math.hypot(this.core.x - shard.x, this.core.y - shard.y);
       if (dist <= captureRadius) {
@@ -719,18 +903,25 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       (this.roamingProtocol.resetFlashTimer || 0) > 0 &&
       !!failedLetter;
     const nextLetter = this.getNextRoamingProtocolLetter();
-    const header = isActive ? "F-A OVERDRIVE" : warningActive ? "F-A RESET" : "F-A DRIVE";
+    const word = this.roamingProtocol.word || "----";
+    const wordLabel = this.roamingProtocol.wordInfo?.label || "";
+    const header = isActive
+      ? `${word} 실행 중`
+      : warningActive
+        ? `${word} RESET`
+        : `CMD: ${word}`;
     const subline = isActive
-      ? `${this.roamingProtocol.timer.toFixed(1)}s CORE BARRAGE`
+      ? `${this.roamingProtocol.timer.toFixed(1)}s — ${wordLabel}`
       : warningActive
         ? `WRONG ${failedLetter} -> RESET`
         : nextLetter
-          ? `NEXT SHARD: ${nextLetter}`
+          ? `${wordLabel} | NEXT: ${nextLetter}`
           : `${progressIndex}/${letters.length} SHARDS LOCKED`;
     const boxWidth = this.isMobile ? 244 : 268;
     const boxHeight = this.isMobile ? 58 : 64;
     const x = this.canvas.width / 2 - boxWidth / 2;
-    const y = this.isMobile ? 18 : 16;
+    // 데스크탑은 목표 배너(top:10px, 인텔 포함 ~70px)와 겹치지 않게 그 아래로
+    const y = this.isMobile ? 18 : 86;
     const frameColor = isActive
       ? this.roamingProtocol.barrageColor
       : warningActive
@@ -797,7 +988,7 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
         const badgeAngle = orbitPhase + (index * Math.PI * 2) / Math.max(1, letters.length);
         const badgeX = anchorX + Math.cos(badgeAngle) * ringRadius;
         const badgeY = anchorY + Math.sin(badgeAngle) * ringRadius;
-        const color = LETTER_COLORS[letter] || "#ffffff";
+        const color = this.getRoamingLetterColor(index);
         const isCharged = fullyCharged || index < progressIndex;
         const isNext = !fullyCharged && index === progressIndex;
         const isFailed = warningActive && failedLetter === letter;
@@ -868,7 +1059,7 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       const badgeX = badgeStartX + badgeGap * index;
       const collected = isActive || index < progressIndex;
       const isNext = !isActive && index === progressIndex;
-      const color = LETTER_COLORS[letter] || "#ffffff";
+      const color = this.getRoamingLetterColor(index);
 
       ctx.fillStyle = collected
         ? hexToRgba(color, 0.26)
@@ -890,6 +1081,16 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
       ctx.font = "bold 11px monospace";
       ctx.fillText(letter, badgeX, badgeY + 0.5);
     });
+
+    // 진행 중인 버프형 단어 타이머 (박스 아래 한 줄)
+    const buffParts = [];
+    if (this.protocolWarpTimer > 0) buffParts.push(`WARP ${this.protocolWarpTimer.toFixed(0)}s`);
+    if (this.protocolCashTimer > 0) buffParts.push(`CASH x2 ${this.protocolCashTimer.toFixed(0)}s`);
+    if (buffParts.length > 0) {
+      ctx.font = "bold 10px monospace";
+      ctx.fillStyle = "#ffd84d";
+      ctx.fillText(buffParts.join("  |  "), x + boxWidth / 2, y + boxHeight + 12);
+    }
 
     ctx.restore();
   };

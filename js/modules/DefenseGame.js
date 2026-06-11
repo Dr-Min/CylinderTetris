@@ -796,7 +796,9 @@ export class DefenseGame {
     this.currentData = 0;
     this.roamingProtocol = {
       stageKey: null,
-      letters: ["F", "E", "D", "C", "B", "A"],
+      word: null, // 현재 커맨드 워드 (스테이지/사이클마다 rollRoamingProtocolWord로 결정)
+      wordInfo: null,
+      letters: [],
       collected: [],
       shards: [],
       active: false,
@@ -816,6 +818,8 @@ export class DefenseGame {
       resetFlashTimer: 0,
       failedLetter: null,
     };
+    this.protocolWarpTimer = 0; // WARP 단어: 이동속도 버스트
+    this.protocolCashTimer = 0; // CASH 단어: DATA 2배
     window.render_game_to_text = () => this.renderGameToText();
     window.advanceTime = (ms) => this.advanceTime(ms);
 
@@ -1096,7 +1100,8 @@ export class DefenseGame {
     const maxPages = this.stageMaxPages || 0;
     const pageProgress = maxPages > 1 ? (this.currentPage - 1) / (maxPages - 1) : 0;
     const pageScale = 1 + Math.min(0.3, pageProgress * 0.3);
-    return Math.max(5, Math.round(baseGain * stageScale * pageScale));
+    const cashScale = this.protocolCashTimer > 0 ? 2 : 1; // CASH 단어 버프
+    return Math.max(5, Math.round(baseGain * stageScale * pageScale * cashScale));
   }
 
   awardKillData(enemy = null) {
@@ -1419,45 +1424,14 @@ export class DefenseGame {
     }
   }
 
-  // PDX-01의 상황 반응 한마디 — 화면 하단에 잠깐 표시.
+  // PDX-01의 상황 반응 한마디 — 코어 위(스태틱 게이지 위)에 말풍선으로 표시.
+  // 캔버스에 직접 그리므로 카메라/코어 이동을 자동으로 따라간다 (렌더: renderPdxBubble).
   // 전역 9초 쿨다운으로 스팸 방지 (force는 중요 순간용)
   pdxComment(text, { force = false } = {}) {
     const now = performance.now();
     if (!force && now < this.pdxCommentCooldownUntil) return;
     this.pdxCommentCooldownUntil = now + 9000;
-
-    if (!this.uiLayer) return;
-    if (this._pdxBubble) this._pdxBubble.remove();
-    const el = document.createElement("div");
-    el.style.cssText = `
-      position: absolute;
-      bottom: ${this.isMobile ? 160 : 64}px;
-      left: 50%;
-      transform: translateX(-50%);
-      max-width: 86%;
-      padding: 4px 12px;
-      background: rgba(0, 20, 10, 0.78);
-      border: 1px solid rgba(255, 255, 0, 0.45);
-      border-radius: 12px;
-      font-family: var(--term-font, 'Courier New', monospace);
-      font-size: ${this.isMobile ? 11 : 13}px;
-      color: #ffff88;
-      text-shadow: 0 0 6px rgba(255, 255, 0, 0.5);
-      white-space: nowrap;
-      pointer-events: none;
-      z-index: 37;
-      opacity: 0;
-      transition: opacity 0.25s;
-    `;
-    el.innerText = `[PDX-01] ${text}`;
-    this.uiLayer.appendChild(el);
-    this._pdxBubble = el;
-    requestAnimationFrame(() => { el.style.opacity = "1"; });
-    setTimeout(() => { el.style.opacity = "0"; }, 2600);
-    setTimeout(() => {
-      el.remove();
-      if (this._pdxBubble === el) this._pdxBubble = null;
-    }, 3000);
+    this.pdxBubble = { text, shownAt: now, dur: 3.2 };
   }
 
   // 상태 전이 감시형 코멘트 (매 프레임, updateFeedbackSystems에서 호출)
@@ -1479,12 +1453,7 @@ export class DefenseGame {
     }
     this._pdxPrevShieldState = core.shieldState;
 
-    // 오버드라이브 발동 순간
-    const overdriveActive = !!this.roamingProtocol?.active;
-    if (overdriveActive && !this._pdxPrevOverdrive) {
-      this.pdxComment("OVERDRIVE!! 청소 시간이에요!!", { force: true });
-    }
-    this._pdxPrevOverdrive = overdriveActive;
+    // (오버드라이브 발동 멘트는 executeRoamingProtocolWord의 단어별 done 라인이 담당)
 
     // 아주 가끔: Safe Zone 혼잣말 (다크 떡밥)
     if (this.isSafeZone && Math.random() < 0.00002) {
@@ -4447,7 +4416,8 @@ export class DefenseGame {
     }
 
     const moveFx = this.getItemEffects ? this.getItemEffects() : {};
-    const speed = this.coreMoveSpeed * speedScale * (1 + (moveFx.moveSpeedBonus || 0));
+    const warpBoost = this.protocolWarpTimer > 0 ? 1.6 : 1; // WARP 단어 버프
+    const speed = this.coreMoveSpeed * speedScale * (1 + (moveFx.moveSpeedBonus || 0)) * warpBoost;
     this.core.x += this.moveInput.x * speed * dt;
     this.core.y += this.moveInput.y * speed * dt;
 

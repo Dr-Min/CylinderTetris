@@ -1453,6 +1453,7 @@ export function applyRenderMixin(DefenseGameClass) {
     this.renderCollectorViruses();
 
     this.renderSpeechBubbles();
+    this.renderPdxBubble();
 
     this.renderConquestWave();
     this.renderHackNodes();
@@ -2009,6 +2010,64 @@ export function applyRenderMixin(DefenseGameClass) {
   }
 
 
+
+  // PDX-01 말풍선 — 코어 위 스태틱 게이지(-18px)보다 더 위에 그린다.
+  // 월드 공간이라 카메라/코어 이동·셰이크를 자동으로 따라감.
+  proto.renderPdxBubble = function () {
+    const b = this.pdxBubble;
+    if (!b) return;
+    const elapsed = (performance.now() - b.shownAt) / 1000;
+    const dur = b.dur || 3.2;
+    if (elapsed >= dur) {
+      this.pdxBubble = null;
+      return;
+    }
+    const fadeIn = Math.min(1, elapsed / 0.2);
+    const fadeOut = Math.min(1, (dur - elapsed) / 0.4);
+    const alpha = Math.min(fadeIn, fadeOut);
+
+    const ctx = this.ctx;
+    const core = this.core;
+    const text = `[PDX-01] ${b.text}`;
+    const anchorX = core.x;
+    const anchorY = core.y - (core.radius || 15) - 40;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = "bold 12px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const padX = 10;
+    const textW = ctx.measureText(text).width;
+    const boxW = textW + padX * 2;
+    const boxH = 22;
+    const boxX = anchorX - boxW / 2;
+    const boxY = anchorY - boxH;
+
+    ctx.fillStyle = "rgba(0, 20, 10, 0.8)";
+    ctx.strokeStyle = "rgba(255, 255, 0, 0.5)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // 코어를 가리키는 꼬리
+    ctx.fillStyle = "rgba(0, 20, 10, 0.8)";
+    ctx.beginPath();
+    ctx.moveTo(anchorX - 5, boxY + boxH);
+    ctx.lineTo(anchorX + 5, boxY + boxH);
+    ctx.lineTo(anchorX, boxY + boxH + 6);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#ffff88";
+    ctx.shadowColor = "rgba(255, 255, 0, 0.5)";
+    ctx.shadowBlur = 5;
+    ctx.fillText(text, anchorX, boxY + boxH / 2 + 0.5);
+    ctx.restore();
+  };
 
   proto.renderMiningEffect = function (ctx, time) {
     if (!this.miningManager) return;
