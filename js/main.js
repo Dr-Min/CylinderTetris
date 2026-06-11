@@ -52,6 +52,15 @@ class UpdateManager {
                             this.showUpdateNotification();
                         }
                     });
+
+                    // 새 SW가 제어권을 잡는 순간 1회 자동 리로드 —
+                    // 구버전 JS + 신버전 HTML이 섞인 채 계속 플레이되는 것을 방지
+                    let refreshed = false;
+                    navigator.serviceWorker.addEventListener("controllerchange", () => {
+                        if (refreshed) return;
+                        refreshed = true;
+                        window.location.reload();
+                    });
                 })
                 .catch((err) => console.error("[UpdateManager] SW Registration Failed:", err));
         }

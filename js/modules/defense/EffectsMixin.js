@@ -288,9 +288,8 @@ export function applyEffectsMixin(DefenseGameClass) {
         this.enemies.length
       );
 
-      const worldW = this.worldWidth || this.canvas.width;
-      const worldH = this.worldHeight || this.canvas.height;
-      const maxRadius = Math.hypot(worldW, worldH) * 1.2;
+      // 착지 충격파는 화면 한 번 휩쓸고 빠르게 소멸 (기존: 월드 대각선*1.2 / 220px·s = 16초 동안 잔류)
+      const maxRadius = Math.min(this.canvas.width, this.canvas.height) * 0.9;
       const waveId = this.nextWaveId++;
       this.shockwaves.push({
         id: waveId,
@@ -298,7 +297,7 @@ export function applyEffectsMixin(DefenseGameClass) {
         y: this.core.y,
         radius: 0,
         maxRadius: maxRadius,
-        speed: 220,
+        speed: 620,
         alpha: 0.9,
         color: "#00f0ff",
         lineWidth: 6,

@@ -1,5 +1,5 @@
-// v2.3.1
-const CACHE_NAME = "hacker-tetris-v2.3.1";
+// v2.3.2
+const CACHE_NAME = "hacker-tetris-v2.3.2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -17,8 +17,22 @@ const ASSETS = [
   "./js/modules/StageManager.js",
   "./js/modules/InventoryManager.js",
   "./js/modules/MiningManager.js",
+  "./js/modules/ItemDatabase.js",
   "./js/modules/flow/GameFlowMixin.js",
   "./js/modules/tutorial/TutorialDirector.js",
+  "./js/modules/upgrade/UpgradeMixin.js",
+  "./js/modules/loot/LootMixin.js",
+  "./js/modules/persist/PersistenceMixin.js",
+  "./js/modules/perks/RunPerkMixin.js",
+  "./js/modules/debug/DebugSystem.js",
+  "./js/modules/defense/AllyAIMixin.js",
+  "./js/modules/defense/EffectsMixin.js",
+  "./js/modules/defense/EnemyMixin.js",
+  "./js/modules/defense/RenderMixin.js",
+  "./js/modules/defense/RoamingProtocolMixin.js",
+  "./js/modules/defense/ShieldMixin.js",
+  "./js/modules/defense/WaveMixin.js",
+  "./js/modules/defense/WeaponInputMixin.js",
   "./js/data/virusDialogues.json",
   "./js/data/facilityDialogues.json",
   "./manifest.json",
@@ -91,14 +105,27 @@ self.addEventListener("fetch", (e) => {
           return caches.match(e.request);
         })
     );
+  } else if (/\.(js|css|json)(\?|$)/.test(e.request.url)) {
+    // JS/CSS/JSON은 네트워크 우선 — 구버전 캐시와 신버전 HTML이 섞여
+    // 게임이 깨지는 혼합 버전 사고 방지. 오프라인이면 캐시 폴백.
+    e.respondWith(
+      fetch(e.request)
+        .then((fetchResponse) => {
+          const responseClone = fetchResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseClone);
+          });
+          return fetchResponse;
+        })
+        .catch(() => caches.match(e.request))
+    );
   } else {
-    // 기타 리소스는 캐시 우선
+    // 이미지/폰트 등은 캐시 우선
     e.respondWith(
       caches.match(e.request).then((response) => {
         return (
           response ||
           fetch(e.request).then((fetchResponse) => {
-            // 캐시에 저장
             const responseClone = fetchResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(e.request, responseClone);
