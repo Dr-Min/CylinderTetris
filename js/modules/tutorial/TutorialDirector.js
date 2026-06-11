@@ -158,6 +158,14 @@ export class TutorialDirector {
       }, 4200);
       return;
     }
+    if (eventName === "hack-node-spawned") {
+      this.tryShowTopicToast("hack-node", {
+        speaker: "PDX-01",
+        title: "DATA NODE",
+        body: "필드에 데이터 노드가 있어요!\n코어를 붙이고 3초 버티면 해킹 보상 — 실드 밖이니 조심!",
+      }, 4600);
+      return;
+    }
     if (eventName === "roaming-shards-active") {
       this.tryShowTopicToast("roaming-shards", {
         speaker: "PDX-01",

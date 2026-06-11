@@ -1454,6 +1454,7 @@ export function applyRenderMixin(DefenseGameClass) {
 
     this.renderSpeechBubbles();
 
+    this.renderHackNodes();
     this.renderSpawnTelegraphs();
     this.renderEnemyProjectiles();
     this.renderDataMotes();
@@ -1733,6 +1734,68 @@ export function applyRenderMixin(DefenseGameClass) {
     }
     ctx.fillStyle = this._vignette;
     ctx.fillRect(0, 0, w, h);
+  };
+
+  proto.renderHackNodes = function () {
+    if (!this.hackNodes || this.hackNodes.length === 0) return;
+    const ctx = this.ctx;
+    for (const node of this.hackNodes) {
+      if (node.done) continue;
+      const pulse = 0.6 + Math.sin(node.phase) * 0.25;
+      const size = 14;
+
+      ctx.save();
+      ctx.translate(node.x, node.y);
+
+      // 채널링 빔 (코어 → 노드)
+      if (node.channeling) {
+        ctx.save();
+        ctx.translate(-node.x, -node.y);
+        ctx.strokeStyle = "rgba(102, 204, 255, 0.6)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 6]);
+        ctx.lineDashOffset = -performance.now() / 40;
+        ctx.beginPath();
+        ctx.moveTo(this.core.x, this.core.y);
+        ctx.lineTo(node.x, node.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      // 다이아몬드 본체
+      ctx.rotate(Math.PI / 4);
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = "rgba(0, 40, 70, 0.85)";
+      ctx.strokeStyle = "#66ccff";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = "#66ccff";
+      ctx.shadowBlur = node.channeling ? 16 : 8;
+      ctx.fillRect(-size / 2, -size / 2, size, size);
+      ctx.strokeRect(-size / 2, -size / 2, size, size);
+      ctx.rotate(-Math.PI / 4);
+
+      // 진행 링
+      if (node.progress > 0) {
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, size + 8, -Math.PI / 2, -Math.PI / 2 + (node.progress / node.needed) * Math.PI * 2);
+        ctx.strokeStyle = "#66ccff";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      // 라벨
+      ctx.globalAlpha = 0.9;
+      ctx.font = "bold 9px 'Courier New', monospace";
+      ctx.textAlign = "center";
+      ctx.shadowBlur = 4;
+      ctx.fillStyle = "#66ccff";
+      ctx.fillText(node.channeling ? "HACKING..." : "DATA NODE", 0, -size - 12);
+
+      ctx.restore();
+    }
   };
 
   // 스폰 예고 마커: 적이 등장할 방향의 화면 가장자리에 깜빡이는 경고

@@ -107,6 +107,8 @@ export class GameManager {
       this.tutorialDirector?.handleEvent("roaming-shards-active");
     this.defenseGame.onShieldReturnMode = () =>
       this.tutorialDirector?.handleEvent("shield-return-mode");
+    this.defenseGame.onHackNodeSpawned = () =>
+      this.tutorialDirector?.handleEvent("hack-node-spawned");
 
     // 아이템 수집 완료 콜백 (수집 바이러스가 코어에 도착했을 때)
     this.defenseGame.onItemCollected = (item) => this.handleItemCollected(item);

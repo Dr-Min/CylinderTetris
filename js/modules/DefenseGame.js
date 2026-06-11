@@ -232,6 +232,10 @@ export class DefenseGame {
     this.enemyProjectiles = [];
     this.bossAttackTimers = { ring: 0, aimed: 0, summon: 0 };
 
+    // 필드 해킹 노드 (코어를 몰고 가서 채널링하면 보상)
+    this.hackNodes = [];
+    this.onHackNodeSpawned = null;
+
     // 인텔 예고 + 스폰 텔레그래프
     this.pendingSpawns = [];
     this.intelText = null;
@@ -1221,6 +1225,56 @@ export class DefenseGame {
     this.pdxComment("큰 놈이에요!! 큰 놈은 큰 보상이죠!", { force: true });
   }
 
+  // 해킹 노드: 코어를 직접 몰고 가야 하는 필드 오브젝트.
+  // 실드 앵커에서 떨어져야 하므로 자연스럽게 리스크-보상이 된다.
+  spawnHackNode() {
+    const home = this.coreHome || this.core;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 220 + Math.random() * 200;
+    const margin = 80;
+    const x = Math.min(Math.max(home.x + Math.cos(angle) * dist, margin), (this.worldWidth || 800) - margin);
+    const y = Math.min(Math.max(home.y + Math.sin(angle) * dist, margin), (this.worldHeight || 600) - margin);
+    this.hackNodes.push({
+      x,
+      y,
+      progress: 0,
+      needed: 3,
+      done: false,
+      phase: Math.random() * Math.PI * 2,
+    });
+    if (this.onHackNodeSpawned) this.onHackNodeSpawned();
+  }
+
+  updateHackNodes(dt) {
+    if (!this.hackNodes || this.hackNodes.length === 0) return;
+    const core = this.core;
+    for (let i = this.hackNodes.length - 1; i >= 0; i--) {
+      const node = this.hackNodes[i];
+      if (node.done) continue;
+      node.phase += dt * 2;
+      const dist = Math.hypot(core.x - node.x, core.y - node.y);
+      node.channeling = dist < 56;
+      if (node.channeling) {
+        node.progress += dt;
+        if (node.progress >= node.needed) {
+          node.done = true;
+          const gain = this.getKillDataGain() * 8;
+          this.currentData += gain;
+          this.updateResourceDisplay(this.currentData);
+          if (this.onResourceGained) this.onResourceGained(gain);
+          this.spawnDamageNumber(node.x, node.y - 24, `NODE HACKED +${gain}`, "#66ccff", true);
+          this.createExplosion(node.x, node.y, "#66ccff", 20);
+          this.spawnDataMotes(node.x, node.y);
+          this.addScreenShake(5);
+          this.pdxComment("노드 해킹 완료! 짭짤하네요!");
+          this.hackNodes.splice(i, 1);
+        }
+      } else {
+        node.progress = Math.max(0, node.progress - dt * 1.5);
+      }
+    }
+  }
+
   // 다음 페이지 구성 예고 (배너 하단 인텔 라인)
   showNextPageIntel() {
     const maxPages = this.maxPages || 12;
@@ -1890,6 +1944,12 @@ export class DefenseGame {
     }
     this.ensureRoamingProtocolState();
 
+    this.hackNodes = [];
+    if (!this.isSafeZone && !this.isConquered && !this.isBossFight) {
+      this.spawnHackNode();
+      if (Math.random() < 0.5) this.spawnHackNode();
+    }
+
     this.startLoop();
     debugLog("Defense", "Mode Started");
   }
@@ -2383,6 +2443,7 @@ export class DefenseGame {
     }
 
     this.processPendingSpawns(dt);
+    this.updateHackNodes(dt);
     this.updateEnemies(dt, this.core);
 
     if (this.isBossFight && this.bossManager?.isActive) {
@@ -2951,6 +3012,10 @@ export class DefenseGame {
   rollPageEvent() {
     this.pageEvent = null;
     this.intelText = null;
+
+    if (this.hackNodes.filter((n) => !n.done).length < 2 && Math.random() < 0.35) {
+      this.spawnHackNode();
+    }
     if (this.isSafeZone || this.isFarmingZone || this.isConquered || this.isBossFight) return;
     if (this.currentPage < 2 || this.conquerReady) return;
 
