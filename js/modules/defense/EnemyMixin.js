@@ -317,7 +317,7 @@ export function applyEnemyMixin(DefenseGameClass) {
             const shieldDamage = (enemy.type === 'BREACHER') ? 50 : 10;
             core.shieldHp -= shieldDamage;
             this.chargeStaticOnHit();
-            this.addScreenShake(enemy.type === 'BREACHER' ? 8 : 3);
+            this.tryNudgeShake(enemy.type === 'BREACHER' ? 6 : 2.5);
             this.createExplosion(enemy.x, enemy.y, "#00f0ff", (enemy.type === 'BREACHER') ? 15 : 5);
             this.enemies.splice(idx, 1);
 

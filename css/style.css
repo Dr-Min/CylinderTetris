@@ -1166,6 +1166,9 @@ body {
   #terminal-layer {
     font-size: 13px; /* 11px -> 13px (2px 증가) */
     padding: 8px;
+    /* 단축 속성이 768px 쿼리의 padding-top을 덮어쓰면서
+       로그가 상단 UI(LOCK/목표 배너)와 겹치던 문제 — 상단 여백 복구 */
+    padding-top: 80px;
   }
 
   .terminal-line {

@@ -140,9 +140,25 @@ export class DefenseGame {
     // 상단 상시 목표 배너 + 페이지 진행바
     this.objectiveBanner = document.createElement("div");
     this.objectiveBanner.id = "objective-banner";
-    this.objectiveBanner.style.cssText = `
+    // 모바일은 좌상단 터미널 로그와 겹치지 않게 우상단(LOCK 버튼 아래) 도킹
+    this.objectiveBanner.style.cssText = this.isMobile
+      ? `
       position: absolute;
-      top: ${this.isMobile ? 6 : 10}px;
+      top: 34px;
+      right: 8px;
+      max-width: 52vw;
+      padding: 3px 8px 5px;
+      background: rgba(0, 10, 5, 0.82);
+      border: 1px solid rgba(0, 255, 136, 0.35);
+      border-radius: 4px;
+      font-family: var(--term-font, 'Courier New', monospace);
+      text-align: center;
+      pointer-events: none;
+      z-index: 35;
+    `
+      : `
+      position: absolute;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       max-width: 92%;
@@ -157,16 +173,18 @@ export class DefenseGame {
     `;
     this.objectiveText = document.createElement("div");
     this.objectiveText.style.cssText = `
-      font-size: ${this.isMobile ? 11 : 13}px;
-      letter-spacing: 1px;
+      font-size: ${this.isMobile ? 10 : 13}px;
+      letter-spacing: ${this.isMobile ? 0 : 1}px;
       color: #00f0ff;
       text-shadow: 0 0 6px currentColor;
-      white-space: nowrap;
+      white-space: ${this.isMobile ? "normal" : "nowrap"};
+      word-break: keep-all;
     `;
     const objectiveBarBg = document.createElement("div");
     objectiveBarBg.style.cssText = `
       margin-top: 4px;
-      width: ${this.isMobile ? 150 : 220}px;
+      width: ${this.isMobile ? 120 : 220}px;
+      max-width: 100%;
       height: 4px;
       background: rgba(0, 255, 136, 0.12);
       border-radius: 2px;
@@ -1021,8 +1039,8 @@ export class DefenseGame {
 
     this.killCombo.count++;
     this.killCombo.timer = 2.0;
-    this.addScreenShake(Math.min(9, 3 + this.killCombo.count * 0.4));
-    this.triggerHitStop(0.03);
+    // 연속 킬 시 셰이크/히트스톱이 끊임없이 이어지지 않도록 쿨다운 게이트
+    this.tryKillPunch();
     if (enemy) {
       this.spawnDamageNumber(enemy.x, enemy.y - (enemy.radius || 8), `+${gain}`, "#00ff88", true);
       if (!this.core.shieldActive) {
@@ -1033,7 +1051,7 @@ export class DefenseGame {
         this.updateResourceDisplay(this.currentData);
         if (this.onResourceGained) this.onResourceGained(enemy.dataBonus);
         this.spawnDamageNumber(enemy.x, enemy.y - 26, `+${enemy.dataBonus} CACHE`, "#ffcc00", true);
-        this.addScreenShake(8);
+        this.addScreenShake(6);
         this.spawnDataMotes(enemy.x, enemy.y);
       }
     }
@@ -1082,7 +1100,24 @@ export class DefenseGame {
   }
 
   addScreenShake(power) {
-    this.screenShake.power = Math.min(16, this.screenShake.power + power);
+    this.screenShake.power = Math.min(12, this.screenShake.power + power);
+  }
+
+  // 킬 펀치(셰이크+히트스톱)는 0.4초에 한 번만 — 학살 중 화면이 계속 떨리는 것 방지
+  tryKillPunch() {
+    const nowMs = performance.now();
+    if (nowMs - (this._lastKillPunchAt || 0) < 400) return;
+    this._lastKillPunchAt = nowMs;
+    this.addScreenShake(Math.min(5, 2 + this.killCombo.count * 0.2));
+    this.triggerHitStop(0.03);
+  }
+
+  // 실드 피격처럼 잦은 이벤트용: 쿨다운 있는 소프트 셰이크
+  tryNudgeShake(power, cooldownMs = 350) {
+    const nowMs = performance.now();
+    if (nowMs - (this._lastShakeNudgeAt || 0) < cooldownMs) return;
+    this._lastShakeNudgeAt = nowMs;
+    this.addScreenShake(power);
   }
 
   triggerHitStop(seconds) {

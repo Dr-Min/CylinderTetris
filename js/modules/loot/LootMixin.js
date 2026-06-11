@@ -453,6 +453,8 @@ export function applyLootMixin(GameManagerClass) {
       const render = () => {
         const invData = this.inventoryManager.getData();
         const emptySlots = invData.inventory.filter(s => s === null).length;
+        // 모바일(좁은 화면)에서는 10열이 잘리므로 5열 4행으로
+        const invCols = window.innerWidth <= 480 ? 5 : 10;
 
         overlay.innerHTML = `
         <div style="color: #ffaa00; font-size: 20px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 0 10px #ffaa00;">
@@ -467,7 +469,8 @@ export function applyLootMixin(GameManagerClass) {
           flex-wrap: wrap;
           gap: 8px;
           justify-content: center;
-          max-width: 400px;
+          max-width: min(400px, 100%);
+          box-sizing: border-box;
           padding: 15px;
           border: 2px solid #ffaa00;
           background: rgba(50, 30, 0, 0.3);
@@ -481,12 +484,15 @@ export function applyLootMixin(GameManagerClass) {
         
         <div id="inventory-grid" style="
           display: grid;
-          grid-template-columns: repeat(10, 40px);
+          grid-template-columns: repeat(${invCols}, 40px);
           gap: 4px;
           padding: 10px;
           border: 2px solid #00ff00;
           background: rgba(0, 30, 0, 0.3);
           margin-bottom: 15px;
+          max-width: 100%;
+          box-sizing: border-box;
+          justify-content: center;
         "></div>
         
         <div id="data-conversion-info" style="
