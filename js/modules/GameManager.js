@@ -1262,6 +1262,8 @@ export class GameManager {
       !this.defenseGame.isSafeZone &&
       !isBossStage &&
       currentStage?.type === "conquest" &&
+      !currentStage?.conquered &&
+      !this.defenseGame.isConquered &&
       this.defenseGame.conquerReady === true;
 
     const choices = isDefenseStage
@@ -1612,7 +1614,9 @@ export class GameManager {
 
     const ctx = miniCanvas.getContext("2d");
 
+    const loopGen = (this._monitorLoopGen = (this._monitorLoopGen || 0) + 1);
     this.defenseMonitorLoop = () => {
+      if (loopGen !== this._monitorLoopGen) return;
       if (!this.isConquestMode) return;
 
       // 미니 캔버스에 디펜스 렌더링 - 캔버스 전체를 채우도록 스케일 업
@@ -1662,14 +1666,16 @@ export class GameManager {
 
       // 강화 페이지 완료 체크
       if (this.defenseGame.reinforcementComplete) {
-        // 테트리스 성공 시에만 점령 완료
         if (this.conquestTetrisComplete) {
           this.handleConquestComplete();
-        } else {
-          // 테트리스 실패했으면 점령 없이 종료
-          this.handleConquestFailNoConquer();
+          return;
         }
-        return;
+        // 퍼즐 미완성이면 조용히 중단하지 않는다 — 연장전:
+        // 압박이 점점 거세지는 동안 퍼즐을 끝내야 함 (코어 파괴만이 실패)
+        this.defenseGame.reinforcementComplete = false;
+        this.defenseGame.pageTimer = 0;
+        this.defenseGame.spawnRate = Math.max(0.07, (this.defenseGame.spawnRate || 0.2) * 0.85);
+        this.defenseGame.announcePageEvent("⌛ OVERTIME — 퍼즐을 완성하라!", "#ffcc00");
       }
 
       // 코어 파괴 체크

@@ -153,6 +153,9 @@ export function applyGameFlowMixin(GameManagerClass) {
    */
   proto.startConquestTetris = function() {
     debugLog("Conquest", "=== startConquestTetris 시작 ===");
+    // 점령 중 코어 파괴는 전체 게임오버 핸들러가 아니라 점령 실패 경로로
+    this._conquestEnding = false;
+    this.defenseGame.onGameOver = () => this.handleConquestFail();
     const targetLines = 3;
     const speed = 500;
 
@@ -335,8 +338,13 @@ export function applyGameFlowMixin(GameManagerClass) {
 
   // 퍼즐 줄 클리어 시 디펜스에 파동 효과 + 아이템 드롭 확률
   proto.handleConquestComplete = async function() {
+    if (this._conquestEnding) return;
+    this._conquestEnding = true;
+    this.defenseGame.onGameOver = () => this.handleDefenseGameOver();
     debugLog("Conquest", "========== handleConquestComplete START ==========");
     this.isConquestMode = false;
+    this.defenseGame.conquerReady = false;
+    if (this.defenseGame.conquerBtn) this.defenseGame.conquerBtn.style.display = "none";
     this.tutorialDirector?.handleEvent("conquest-complete");
 
     // 테트리스 정리 (혹시 아직 플레이 중이면)
@@ -417,6 +425,9 @@ export function applyGameFlowMixin(GameManagerClass) {
 
   // 점령 실패 (코어 파괴)
   proto.handleConquestFail = async function() {
+    if (this._conquestEnding) return;
+    this._conquestEnding = true;
+    this.defenseGame.onGameOver = () => this.handleDefenseGameOver();
     this.isConquestMode = false;
 
     // 테트리스 정리
@@ -445,6 +456,9 @@ export function applyGameFlowMixin(GameManagerClass) {
 
   // 점령 실패 (테트리스 실패, 점령 없이 종료)
   proto.handleConquestFailNoConquer = async function() {
+    if (this._conquestEnding) return;
+    this._conquestEnding = true;
+    this.defenseGame.onGameOver = () => this.handleDefenseGameOver();
     this.isConquestMode = false;
 
     // 테트리스 정리
