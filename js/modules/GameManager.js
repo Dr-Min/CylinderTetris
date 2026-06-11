@@ -1945,10 +1945,12 @@ export class GameManager {
         textColor = "#ffcc00";
         extraStyle = "animation: pulse 1.5s infinite;";
       } else if (isConquered) {
-        // 🔵 점령 완료: 파란색
-        bgColor = "rgba(0, 150, 255, 0.3)";
-        borderColor = "#00aaff";
-        textColor = "#00aaff";
+        // 🔵 점령 완료: 파란색 + 점유 발광 (내 영토라는 성취감)
+        bgColor = "rgba(0, 150, 255, 0.35)";
+        borderColor = "#00ccff";
+        textColor = "#aaeeff";
+        extraStyle =
+          "box-shadow: 0 0 14px rgba(0, 200, 255, 0.55), inset 0 0 12px rgba(0, 200, 255, 0.25);";
       } else if (stage.type === "boss") {
         // 🔴 보스 (잠김): 어두운 빨간색
         bgColor = "rgba(100, 0, 0, 0.3)";

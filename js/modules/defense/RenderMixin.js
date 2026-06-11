@@ -1454,6 +1454,7 @@ export function applyRenderMixin(DefenseGameClass) {
 
     this.renderSpeechBubbles();
 
+    this.renderConquestWave();
     this.renderHackNodes();
     this.renderSpawnTelegraphs();
     this.renderEnemyProjectiles();
@@ -1734,6 +1735,35 @@ export function applyRenderMixin(DefenseGameClass) {
     }
     ctx.fillStyle = this._vignette;
     ctx.fillRect(0, 0, w, h);
+  };
+
+  // 점령 웨이브: 코어에서 뻗어나가는 빛의 링 + 초록 워시
+  proto.renderConquestWave = function () {
+    const wave = this.conquestWave;
+    if (!wave || !wave.active) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, wave.alpha);
+
+    // 지나간 영역을 점령색으로 살짝 물들임
+    ctx.beginPath();
+    ctx.arc(this.core.x, this.core.y, wave.r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0, 255, 136, 0.07)";
+    ctx.fill();
+
+    // 전진하는 링 (이중)
+    for (const [offset, width, alpha] of [[0, 6, 0.9], [-40, 2, 0.4]]) {
+      const r = Math.max(0, wave.r + offset);
+      if (r <= 0) continue;
+      ctx.beginPath();
+      ctx.arc(this.core.x, this.core.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0, 255, 136, ${alpha * wave.alpha})`;
+      ctx.lineWidth = width;
+      ctx.shadowColor = "#00ff88";
+      ctx.shadowBlur = 14;
+      ctx.stroke();
+    }
+    ctx.restore();
   };
 
   proto.renderHackNodes = function () {

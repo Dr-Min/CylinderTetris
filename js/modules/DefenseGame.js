@@ -1261,6 +1261,25 @@ export class DefenseGame {
     this.pdxComment("큰 놈이에요!! 큰 놈은 큰 보상이죠!", { force: true });
   }
 
+  // 점령 순간: 코어에서 섹터 전체로 번지는 정복의 웨이브
+  playConquestWave() {
+    this.conquestWave = { r: 0, alpha: 1, active: true };
+    this.addScreenShake(8);
+    this.playImpactSound();
+    this.pdxComment("이 섹터는 이제 우리 거예요!!", { force: true });
+  }
+
+  updateConquestWave(dt) {
+    const wave = this.conquestWave;
+    if (!wave || !wave.active) return;
+    wave.r += dt * 900;
+    const maxR = Math.max(this.worldWidth || 1000, this.worldHeight || 800);
+    if (wave.r > maxR) {
+      wave.alpha -= dt * 1.5;
+      if (wave.alpha <= 0) wave.active = false;
+    }
+  }
+
   // 특수 탄약: 테트리스 줄 클리어로 충전, 사용 시 코어 중심 광역 폭발
   setSpecialAmmo(count) {
     this.specialAmmo = Math.max(0, count);
@@ -2503,6 +2522,7 @@ export class DefenseGame {
 
     this.processPendingSpawns(dt);
     this.updateHackNodes(dt);
+    this.updateConquestWave(dt);
     this.updateEnemies(dt, this.core);
 
     if (this.isBossFight && this.bossManager?.isActive) {
@@ -3357,6 +3377,7 @@ export class DefenseGame {
     if (conquered) {
       this.conqueredStartTime = Date.now() / 1000;
       this.lastRotationStep = -1;
+      this.playConquestWave();
       debugLog(
         "DefenseGame",
         "TODO",
