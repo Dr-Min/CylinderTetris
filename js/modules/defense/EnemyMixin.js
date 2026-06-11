@@ -221,6 +221,38 @@ export function applyEnemyMixin(DefenseGameClass) {
                 }
                 break;
 
+            case 'WARDEN': {
+                // 섹터 관리자: 중거리 선회 + 4초마다 3연발 조준 사격
+                const orbitRW = (core.shieldRadius || 100) + 150;
+                const distW = Math.hypot(enemy.x - core.x, enemy.y - core.y) || 1;
+                const toCoreW = Math.atan2(core.y - enemy.y, core.x - enemy.x);
+                const radialW = (distW - orbitRW) * 0.7;
+                const tangentW = toCoreW + (Math.PI / 2) * (enemy.orbitDir || 1);
+                enemy.x += (Math.cos(toCoreW) * radialW + Math.cos(tangentW) * enemy.speed) * dt;
+                enemy.y += (Math.sin(toCoreW) * radialW + Math.sin(tangentW) * enemy.speed) * dt;
+                enemy.rotation = toCoreW;
+
+                enemy.volleyTimer = (enemy.volleyTimer ?? 3) - dt;
+                if (enemy.volleyTimer <= 0 && Array.isArray(this.enemyProjectiles)) {
+                    enemy.volleyTimer = 4;
+                    for (let s = 0; s < 3; s++) {
+                        const aim = toCoreW + (s - 1) * 0.14;
+                        this.enemyProjectiles.push({
+                            x: enemy.x,
+                            y: enemy.y,
+                            vx: Math.cos(aim) * 200,
+                            vy: Math.sin(aim) * 200,
+                            radius: 5,
+                            damage: 7,
+                            life: 8,
+                            color: "#ff3366",
+                        });
+                    }
+                    this.createExplosion(enemy.x, enemy.y, "#ff3366", 4);
+                }
+                return;
+            }
+
             case 'CARRIER': {
                 // 보급 캐리어: 코어 주위를 선회하다가 시간이 지나면 도주.
                 // 코어를 공격하지 않으며, 격추 시 대량의 DATA 캐시를 떨어뜨림.

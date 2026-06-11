@@ -1056,6 +1056,16 @@ export class DefenseGame {
       if (fx.convert > 0 && !enemy.isCarrier && Math.random() < fx.convert) {
         this.convertEnemyToAlly(enemy);
       }
+      if (enemy.isWarden) {
+        this.currentData += enemy.dataBonus || 0;
+        this.updateResourceDisplay(this.currentData);
+        if (this.onResourceGained) this.onResourceGained(enemy.dataBonus || 0);
+        this.spawnDamageNumber(enemy.x, enemy.y - 30, `WARDEN DOWN +${enemy.dataBonus}`, "#ff3366", true);
+        this.createExplosion(enemy.x, enemy.y, "#ff3366", 40);
+        this.addScreenShake(12);
+        this.triggerHitStop(0.08);
+        this.announcePageEvent("⛔ 관리자 격침 — 섹터가 무방비 상태", "#00ff88");
+      }
       if (enemy.isCarrier && enemy.dataBonus) {
         this.currentData += enemy.dataBonus;
         this.updateResourceDisplay(this.currentData);
@@ -1146,6 +1156,39 @@ export class DefenseGame {
       life: 0.75,
       maxLife: 0.75,
     });
+  }
+
+  // 섹터 관리자(미니보스): 마지막 페이지의 클라이맥스.
+  // 격추해야 점령이 열린다. 중거리 선회 + 조준 사격 (AI는 EnemyMixin WARDEN 케이스).
+  spawnSectorWarden() {
+    if (this.isFarmingZone || this.isConquered || this.isBossFight || this.isSafeZone) return;
+    if (this.enemies.some((e) => e.isWarden)) return;
+    const d = this.getDifficultyScale();
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.max(this.canvas.width, this.canvas.height) / 2 + 60;
+    const cfg = {
+      id: "WARDEN",
+      speed: 70,
+      hp: Math.floor(200 * d),
+      damage: 20,
+      radius: 22,
+      color: "#ff3366",
+    };
+    const warden = this.createEnemyFromType(
+      cfg,
+      this.core.x + Math.cos(angle) * distance,
+      this.core.y + Math.sin(angle) * distance,
+      angle,
+      distance
+    );
+    warden.isWarden = true;
+    warden.orbitDir = Math.random() < 0.5 ? 1 : -1;
+    warden.volleyTimer = 3;
+    warden.dataBonus = this.getKillDataGain() * 10;
+    this.enemies.push(warden);
+    this.announcePageEvent("⛔ SECTOR WARDEN — 격추해야 점령 가능", "#ff3366");
+    this.addScreenShake(6);
+    this.playGlitchSound();
   }
 
   // 전향 프로토콜(런 퍽): 처치한 적이 아군 바이러스로 전향
@@ -2044,18 +2087,27 @@ export class DefenseGame {
           this.pageTimer = 0;
           if (!this.isFarmingZone) {
             this.spawnRate = this.getPageSpawnRate(this.currentPage, diffScale);
-            this.rollPageEvent();
+            if (this.currentPage === maxPages) {
+              this.spawnSectorWarden(); // 마지막 페이지: 섹터 관리자 등장
+            } else {
+              this.rollPageEvent();
+            }
           }
           this.updateWaveDisplay();
         } else if (!this.conquerReady && !this.isFarmingZone) {
-          this.conquerReady = true;
+          // 관리자가 살아있는 동안에는 점령이 열리지 않음 (타이머만 고정)
+          if (this.enemies.some((e) => e.isWarden)) {
+            this.pageTimer = this.pageDuration;
+          } else {
+            this.conquerReady = true;
 
-          if (this.onPageUpdate) {
-            this.onPageUpdate("BREACH READY", "#ff3333");
-          }
+            if (this.onPageUpdate) {
+              this.onPageUpdate("BREACH READY", "#ff3333");
+            }
 
-          if (this.onConquerReady) {
-            this.onConquerReady();
+            if (this.onConquerReady) {
+              this.onConquerReady();
+            }
           }
         }
       }
@@ -2832,6 +2884,11 @@ export class DefenseGame {
       text = `FARMING — 자원 수집 구역 (PAGE ${this.currentPage})`;
       color = "#ffaa00";
       progress = Math.min(1, this.pageTimer / (this.pageDuration || 1));
+    } else if (this.enemies && this.enemies.some((e) => e.isWarden)) {
+      const warden = this.enemies.find((e) => e.isWarden);
+      text = "⛔ SECTOR WARDEN — 관리자를 격추하라";
+      color = "#ff3366";
+      progress = warden && warden.maxHp ? 1 - warden.hp / warden.maxHp : null;
     } else {
       const eventInfo = {
         RUSH: { tag: "⚠ RUSH · ", color: "#ff5533" },
