@@ -193,6 +193,9 @@ export function applyRoamingProtocolMixin(DefenseGameClass) {
     this.resetRoamingProtocolVisualState("center");
 
     this.spawnRoamingProtocolShards();
+    if (this.roamingProtocol.shards.length > 0 && this.onRoamingShardsActive) {
+      this.onRoamingShardsActive();
+    }
     debugLog("Defense", "Roaming protocol reset", stageKey);
   };
 

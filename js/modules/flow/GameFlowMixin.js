@@ -756,6 +756,7 @@ export function applyGameFlowMixin(GameManagerClass) {
    */
   proto.handleBreachReady = async function() {
     debugLog("Boss", "Breach ready!");
+    this.tutorialDirector?.handleEvent("boss-breach-ready");
 
     // 선택지 표시
     await this.terminal.printSystemMessage('>>> BREACH READY <<<');

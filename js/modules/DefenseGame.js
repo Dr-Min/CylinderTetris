@@ -2700,6 +2700,10 @@ export class DefenseGame {
       if (this.onSupplyDrop) this.onSupplyDrop();
       this.announcePageEvent("▼ SUPPLY DROP — 보급품 회수", "#00ff88");
     }
+
+    if (this.pageEvent && this.onPageEvent) {
+      this.onPageEvent(this.pageEvent);
+    }
   }
 
   spawnCarrierEnemy() {

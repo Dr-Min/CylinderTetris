@@ -99,6 +99,12 @@ export class GameManager {
     // 보급 페이지: 필드에 아이템 투하
     this.defenseGame.onSupplyDrop = () => this.handleSupplyDrop();
 
+    // 페이지 변형 이벤트/로밍 셔드 첫 등장 시 튜토리얼 안내
+    this.defenseGame.onPageEvent = (type) =>
+      this.tutorialDirector?.handleEvent("page-event", { type });
+    this.defenseGame.onRoamingShardsActive = () =>
+      this.tutorialDirector?.handleEvent("roaming-shards-active");
+
     // 아이템 수집 완료 콜백 (수집 바이러스가 코어에 도착했을 때)
     this.defenseGame.onItemCollected = (item) => this.handleItemCollected(item);
 
@@ -1339,6 +1345,8 @@ export class GameManager {
 
       // Safe Zone (스테이지 0)으로 이동 (드랍 연출 포함)
       await this.moveToStage(0);
+
+      this.tutorialDirector?.handleEvent("recall-complete");
 
       debugLog("Recall", "5. 완료");
     } else {

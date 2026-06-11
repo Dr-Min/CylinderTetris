@@ -80,6 +80,40 @@ export class TutorialDirector {
       return;
     }
 
+    // 첫 튜토리얼 완료 후에 처음 등장하는 요소들 — topic 기반 일회성 안내
+    if (eventName === "combat-ready" && payload.stage?.type === "boss") {
+      await this.showBossBriefingOnce();
+      return;
+    }
+    if (eventName === "page-event") {
+      this.showPageEventHintOnce(payload.type);
+      return;
+    }
+    if (eventName === "boss-breach-ready") {
+      this.tryShowTopicToast("boss-breach-ready", {
+        speaker: "PDX-01",
+        title: "BREACH READY",
+        body: "침입 게이지 완충! 명령을 실행하면 테트리스 침입으로\n보스 코어에 직접 데미지를 입힙니다.",
+      }, 4200);
+      return;
+    }
+    if (eventName === "recall-complete") {
+      this.tryShowTopicToast("after-recall", {
+        speaker: "PDX-01",
+        title: "BACK TO SAFE ZONE",
+        body: "재정비 후 /map으로 재출격하세요.\n점령한 섹터와 DATA는 그대로 유지됩니다.",
+      }, 4200);
+      return;
+    }
+    if (eventName === "roaming-shards-active") {
+      this.tryShowTopicToast("roaming-shards", {
+        speaker: "PDX-01",
+        title: "PROTOCOL SHARDS",
+        body: "필드에 F~A 조각이 흩어져 있습니다.\n코어를 움직여 전부 수집하면 OVERDRIVE 탄막이 발동!",
+      }, 4600);
+      return;
+    }
+
     if (!this.isActive()) return;
 
     switch (eventName) {
@@ -287,6 +321,13 @@ export class TutorialDirector {
     });
   }
 
+  tryShowTopicToast(topic, config, duration = 3600) {
+    if (this.hasSeenTopic(topic)) return;
+    if (this.pendingResolve) return; // 모달 안내 중에는 끼어들지 않음 (topic 미표시로 다음 기회에)
+    this.markTopicSeen(topic);
+    this.showToast(config, duration);
+  }
+
   showToast(config, duration = 2800) {
     this.resolveModal(null);
     this.show({
@@ -347,6 +388,17 @@ export class TutorialDirector {
   }
 
   async showHeroIntro() {
+    const loreResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "WELCOME, OPERATOR",
+      body:
+        "당신은 적 네트워크에 침투한 해커입니다.\n바이러스로부터 코어를 지키며 섹터를 하나씩 점령하고,\n최종 목표 — 중앙의 Core Nexus를 함락시키는 것이 임무입니다.",
+      continueLabel: "NEXT",
+      placement: "center",
+      target: null,
+    });
+    if (loreResult === "skip") return;
+
     const introResult = await this.showModal({
       speaker: "PDX-01",
       title: "LINK ESTABLISHED",
@@ -363,11 +415,25 @@ export class TutorialDirector {
       title: "TERMINAL COMMANDS",
       body:
         "/map: 스테이지 지도 열기\n/inventory: 획득 아이템 확인/장착\n/upgrade: DATA로 시스템 강화\n/reset: 진행 초기화라 신중히 사용",
-      continueLabel: "OPEN MENU",
+      continueLabel: "NEXT",
       placement: "center",
       target: null,
     });
     if (commandResult === "skip") return;
+
+    const isMobile = !!this.defenseGame?.isMobile;
+    const facilityResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "SAFE ZONE FACILITIES",
+      body: (isMobile
+        ? "조이스틱으로 코어를 움직여 시설에 접근할 수 있습니다.\n"
+        : "WASD/방향키로 코어를 움직여 시설에 접근할 수 있습니다.\n") +
+        "UPGRADE SHOP: DATA로 코어/조력자/아군/실드 강화\nDISMANTLER: 남는 아이템을 분해해 자원으로 전환",
+      continueLabel: "OPEN MENU",
+      placement: "center",
+      target: null,
+    });
+    if (facilityResult === "skip") return;
   }
 
   async showCombatBriefing() {
@@ -388,7 +454,7 @@ export class TutorialDirector {
       speaker: "PDX-01",
       title: "SHIELD CONTROL",
       body:
-        "방패 버튼으로 실드를 켜고 끕니다.\n켜면 안전하지만, 실드를 끈 동안 적을 처치하면 DATA가 코어로 흡수됩니다.\n끄면 벌고, 켜면 산다 — 타이밍이 전부입니다.",
+        "방패 버튼으로 실드를 켜고 끕니다.\n켜면 안전하지만, 끈 동안 적을 처치하면 DATA가 코어로 흡수됩니다.\n끈 뒤에는 실드 범위 안에서 REARM 게이지가 차야 다시 켤 수 있습니다.",
       continueLabel: "NEXT",
       placement: "top",
       target: () => this.getElementRect("#shield-btn"),
@@ -407,6 +473,17 @@ export class TutorialDirector {
       target: () => this.getElementRect("#objective-banner"),
     });
     if (fireResult === "skip") return;
+
+    const recallResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "EMERGENCY RECALL",
+      body:
+        "전황이 불리하면 RECALL로 Safe Zone에 귀환할 수 있습니다.\n5초 캐스팅 동안 피격되면 취소되니 안전할 때 사용하세요.\n획득한 아이템과 DATA는 가지고 돌아갑니다.",
+      continueLabel: "MOVE OUT",
+      placement: "top",
+      target: () => this.getElementRect("#recall-btn"),
+    });
+    if (recallResult === "skip") return;
 
     this.resumeDefense();
   }
@@ -548,6 +625,67 @@ export class TutorialDirector {
     if (controlResult === "skip") return;
 
     this.resumeTetris();
+    this.resumeDefense();
+  }
+
+  showPageEventHintOnce(type) {
+    const hints = {
+      RUSH: {
+        topic: "page-event-rush",
+        title: "RUSH PAGE",
+        body: "적이 평소의 2배로 몰려옵니다.\n실드를 아끼지 말고 버티세요 — 처치 DATA도 2배!",
+      },
+      CARRIER: {
+        topic: "page-event-carrier",
+        title: "CARRIER 출현",
+        body: "황금 캐리어는 코어를 공격하지 않지만 곧 도주합니다.\n격추하면 대량의 DATA 캐시!",
+      },
+      SUPPLY: {
+        topic: "page-event-supply",
+        title: "SUPPLY DROP",
+        body: "필드에 보급 아이템이 떨어졌습니다.\n수집 바이러스가 자동으로 회수해 옵니다.",
+      },
+    };
+    const hint = hints[type];
+    if (!hint) return;
+    this.tryShowTopicToast(hint.topic, {
+      speaker: "PDX-01",
+      title: hint.title,
+      body: hint.body,
+    }, 4200);
+  }
+
+  // 보스 스테이지 첫 진입 시 침입 게이지/보스 패턴 브리핑
+  async showBossBriefingOnce() {
+    if (this.hasSeenTopic("boss-briefing")) return;
+    if (this.pendingResolve) return;
+    this.markTopicSeen("boss-briefing");
+
+    this.pauseDefense();
+
+    const gaugeResult = await this.showModal({
+      speaker: "PDX-01",
+      title: "BOSS PROTOCOL — CORE NEXUS",
+      body:
+        "보스는 침입 게이지를 채워야 공격할 수 있습니다.\n실드를 끄면 게이지가 1.5배로 차고, 적 처치는 보너스 충전.\n단, 코어가 피격되면 게이지가 깎입니다.",
+      continueLabel: "NEXT",
+      hideSkip: true,
+      placement: "center",
+      target: null,
+    });
+    if (gaugeResult !== "skip") {
+      await this.showModal({
+        speaker: "PDX-01",
+        title: "BOSS BREACH & PHASES",
+        body:
+          "게이지 100% → 테트리스 침입으로 보스 HP를 깎습니다.\n보스는 페이즈마다 강해집니다: 탄막 링(틈새로 회피),\n증원 소환, 조준 사격. 테트리스 중에도 방해가 들어옵니다.",
+      continueLabel: "ENGAGE",
+        hideSkip: true,
+        placement: "center",
+        target: null,
+      });
+    }
+
     this.resumeDefense();
   }
 
