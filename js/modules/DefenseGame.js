@@ -1038,7 +1038,8 @@ export class DefenseGame {
   }
 
   awardKillData(enemy = null) {
-    const gain = this.getKillDataGain();
+    const fx = this.getItemEffects ? this.getItemEffects() : {};
+    const gain = Math.max(5, Math.round(this.getKillDataGain() * (1 + (fx.dataBonus || 0))));
     this.currentData += gain;
     this.updateResourceDisplay(this.currentData);
     if (this.onResourceGained) this.onResourceGained(gain);
@@ -1051,6 +1052,9 @@ export class DefenseGame {
       this.spawnDamageNumber(enemy.x, enemy.y - (enemy.radius || 8), `+${gain}`, "#00ff88", true);
       if (!this.core.shieldActive) {
         this.spawnDataMotes(enemy.x, enemy.y);
+      }
+      if (fx.convert > 0 && !enemy.isCarrier && Math.random() < fx.convert) {
+        this.convertEnemyToAlly(enemy);
       }
       if (enemy.isCarrier && enemy.dataBonus) {
         this.currentData += enemy.dataBonus;
@@ -1142,6 +1146,31 @@ export class DefenseGame {
       life: 0.75,
       maxLife: 0.75,
     });
+  }
+
+  // 전향 프로토콜(런 퍽): 처치한 적이 아군 바이러스로 전향
+  convertEnemyToAlly(enemy) {
+    try {
+      const typeData = {
+        color: "#66ffcc",
+        baseHp: 12,
+        baseDamage: 6,
+        baseSpeed: 150,
+        radius: Math.min(10, enemy.radius || 8),
+        attackType: "melee",
+      };
+      const ally = this.createVirusFromType("SWARM", typeData, 0, 0, this.alliedConfig || {});
+      ally.x = enemy.x;
+      ally.y = enemy.y;
+      ally.spawning = false;
+      ally.converted = true;
+      ally.color = "#66ffcc";
+      this.alliedViruses.push(ally);
+      this.createExplosion(enemy.x, enemy.y, "#66ffcc", 12);
+      this.spawnDamageNumber(enemy.x, enemy.y - 16, "CONVERTED", "#66ffcc", true);
+    } catch (e) {
+      debugWarn?.("Defense", "convertEnemyToAlly failed", e);
+    }
   }
 
   // 셰이크/콤보/데미지 숫자는 히트스톱과 무관하게 실제 시간으로 진행
@@ -4005,7 +4034,8 @@ export class DefenseGame {
       this.shiftAccel = 1.0;
     }
 
-    const speed = this.coreMoveSpeed * speedScale;
+    const moveFx = this.getItemEffects ? this.getItemEffects() : {};
+    const speed = this.coreMoveSpeed * speedScale * (1 + (moveFx.moveSpeedBonus || 0));
     this.core.x += this.moveInput.x * speed * dt;
     this.core.y += this.moveInput.y * speed * dt;
 

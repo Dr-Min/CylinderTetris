@@ -1173,7 +1173,8 @@ export function applyUpgradeMixin(GameManagerClass) {
 
     const baseShieldMaxHp = 100;
     const bonusShieldHp = shieldLevel * 20;
-    const nextShieldMaxHp = baseShieldMaxHp + bonusShieldHp;
+    const runPerkBonus = this.getRunPerkEffects?.().shieldMaxBonus || 0;
+    const nextShieldMaxHp = baseShieldMaxHp + bonusShieldHp + runPerkBonus;
 
     const shieldDiff = nextShieldMaxHp - this.defenseGame.core.shieldMaxHp;
     this.defenseGame.core.shieldMaxHp = nextShieldMaxHp;

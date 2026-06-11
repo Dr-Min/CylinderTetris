@@ -266,12 +266,13 @@ export function applyWeaponInputMixin(DefenseGameClass) {
       const randomChar =
         asciiChars[Math.floor(Math.random() * asciiChars.length)];
 
+      const fx = this.getItemEffects ? this.getItemEffects() : {};
       this.projectiles.push({
         x: this.helper.x,
         y: this.helper.y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        damage: this.helper.damage,
+        damage: Math.round(this.helper.damage * (1 + (fx.damageBonus || 0))),
         life: 2,
         radius: 8,
         char: randomChar,
@@ -279,7 +280,7 @@ export function applyWeaponInputMixin(DefenseGameClass) {
         fromHelper: true,
         explosive: mode.explosive || false,
         explosionRadius: mode.explosionRadius || 0,
-        piercing: mode.piercing || false,
+        piercing: mode.piercing || (fx.pierce || 0) > 0,
       });
     }
 
@@ -395,13 +396,14 @@ export function applyWeaponInputMixin(DefenseGameClass) {
     this.core.targetOffsetY = Math.sin(this.turret.angle) * recoilDist;
     this.playShootSound();
 
+    const fx = this.getItemEffects ? this.getItemEffects() : {};
     this.projectiles.push({
       x: this.core.x,
       y: this.core.y,
       target: target,
       angle: this.turret.angle,
       speed: 400,
-      damage: this.turret.damage,
+      damage: Math.round(this.turret.damage * (1 + (fx.damageBonus || 0))),
       radius: 4,
       life: 2.0,
       char: randomChar,
@@ -440,17 +442,19 @@ export function applyWeaponInputMixin(DefenseGameClass) {
           ? angle + (i - (projectileCount - 1) / 2) * spread
           : angle;
 
+      const fx = this.getItemEffects ? this.getItemEffects() : {};
       this.projectiles.push({
         x: this.core.x,
         y: this.core.y,
         target: null,
         angle: shotAngle,
         speed: 400,
-        damage: this.turret.damage * damageMultiplier,
+        damage: Math.round(this.turret.damage * damageMultiplier * (1 + (fx.damageBonus || 0))),
         radius: 4,
         life: 2.0,
         char: randomChar,
         color: projectileColor,
+        piercing: (fx.pierce || 0) > 0,
       });
     }
 

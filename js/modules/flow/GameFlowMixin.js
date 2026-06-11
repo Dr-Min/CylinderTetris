@@ -418,6 +418,9 @@ export function applyGameFlowMixin(GameManagerClass) {
     // 획득 아이템 선택 화면 표시
     await this.showLootSummary();
 
+    // 점령 보상: 런 퍽 3택1
+    await this.showRunPerkSelection();
+
     // 선택지 표시
     await this.showCommandMenu();
     debugLog("Conquest", "========== handleConquestComplete END ==========");

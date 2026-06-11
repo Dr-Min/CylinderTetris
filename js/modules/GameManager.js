@@ -15,6 +15,7 @@ import { applyLootMixin } from "./loot/LootMixin.js";
 import { applyPersistenceMixin } from "./persist/PersistenceMixin.js";
 import { applyGameFlowMixin } from "./flow/GameFlowMixin.js";
 import { TutorialDirector } from "./tutorial/TutorialDirector.js";
+import { applyRunPerkMixin } from "./perks/RunPerkMixin.js";
 
 export class GameManager {
   constructor() {
@@ -111,7 +112,15 @@ export class GameManager {
     this.defenseGame.onItemCollected = (item) => this.handleItemCollected(item);
 
     // 아이템 효과 getter 연결
-    this.defenseGame.getItemEffects = () => this.inventoryManager.getEquippedEffects();
+    this.loadRunPerks();
+    this.defenseGame.getItemEffects = () => {
+      const merged = { ...this.inventoryManager.getEquippedEffects() };
+      const run = this.getRunPerkEffects();
+      for (const key of Object.keys(run)) {
+        merged[key] = (merged[key] || 0) + run[key];
+      }
+      return merged;
+    };
 
     // 테트리스 게임 이벤트 연결
     this.tetrisGame.onStageClear = (lines) => this.handleBreachClear(lines);
@@ -3307,6 +3316,10 @@ export class GameManager {
   }
 
   async handleDefenseGameOver() {
+    const lostPerks = this.clearRunPerks();
+    if (lostPerks > 0) {
+      this.terminal?.printSystemMessage?.(`RUN PERKS LOST: ${lostPerks}`);
+    }
     // 1. 게임 오버 페널티 적용 (30%만 유지)
     const oldMoney = this.currentMoney;
     const newMoney = this.applyGameOverPenalty();
@@ -3620,6 +3633,7 @@ export class GameManager {
 }
 
 // Apply mixin modules to GameManager prototype
+applyRunPerkMixin(GameManager);
 applyUpgradeMixin(GameManager);
 applyLootMixin(GameManager);
 applyPersistenceMixin(GameManager);
