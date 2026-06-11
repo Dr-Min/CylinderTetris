@@ -144,9 +144,9 @@ export class DefenseGame {
     this.objectiveBanner.style.cssText = this.isMobile
       ? `
       position: absolute;
-      top: 34px;
-      right: 8px;
-      max-width: 52vw;
+      top: 190px;
+      left: 8px;
+      max-width: 58vw;
       padding: 3px 8px 5px;
       background: rgba(0, 10, 5, 0.82);
       border: 1px solid rgba(0, 255, 136, 0.35);

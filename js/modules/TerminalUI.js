@@ -82,9 +82,11 @@ export class TerminalUI {
     // Input lock icon toggle (default locked)
     this.inputLockBtn = document.createElement("button");
     this.inputLockBtn.id = "terminal-input-lock";
+    // 모바일: 터미널이 항상 맨 위이므로 LOCK은 터미널 블록 아래로
+    const lockTop = window.innerWidth <= 768 ? 190 : 8;
     this.inputLockBtn.style.cssText = `
       position: absolute;
-      top: 8px;
+      top: ${lockTop}px;
       right: 10px;
       padding: 4px 6px;
       font-family: var(--term-font);
