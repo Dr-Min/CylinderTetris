@@ -89,7 +89,13 @@ export class DefenseGame {
 
     this.gameScale = 1.0;
 
-    this.isMobile = window.innerWidth <= 768;
+    this.isMobile = window.innerWidth <= 768; // 레이아웃용 (화면 폭)
+    // 입력 방식 판별: 터치가 주 입력인 기기 (태블릿 포함, 터치 노트북 제외)
+    const coarsePointer =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: coarse)").matches;
+    this.hasTouchInput =
+      coarsePointer || ((navigator.maxTouchPoints || 0) > 0 && window.innerWidth <= 1180);
     this.maxParticles = this.isMobile ? 30 : 100;
     this.particleMultiplier = this.isMobile ? 0.3 : 1.0;
 
@@ -1782,7 +1788,7 @@ export class DefenseGame {
     this.updateCamera();
     this.updateSafeZoneFacilityPrompt();
     const canMove = this.core.shieldState !== "DISABLED";
-    this.joystickContainer.style.display = (this.isMobile && canMove) ? "block" : "none";
+    this.joystickContainer.style.display = (this.hasTouchInput && canMove) ? "block" : "none";
 
     const dxShield = this.core.x - this.shieldAnchor.x;
     const dyShield = this.core.y - this.shieldAnchor.y;
@@ -4076,7 +4082,7 @@ export class DefenseGame {
   }
 
   startJoystick(e) {
-    if (!this.isMobile) return;
+    if (!this.hasTouchInput) return;
     this.joystick.active = true;
     this.joystick.pointerId = e.pointerId;
     this.updateJoystickInput(e);

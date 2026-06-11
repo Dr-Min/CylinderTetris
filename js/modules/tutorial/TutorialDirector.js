@@ -37,6 +37,11 @@ export class TutorialDirector {
     return this.completed;
   }
 
+  // 조작 안내 분기는 화면 폭이 아니라 입력 방식 기준 (태블릿=터치, 좁은 창 PC=키보드)
+  usesTouch() {
+    return !!(this.defenseGame?.hasTouchInput ?? this.defenseGame?.isMobile);
+  }
+
   isActive() {
     return this.sessionActive && !this.completed;
   }
@@ -474,7 +479,7 @@ export class TutorialDirector {
     });
     if (commandResult === "skip") return;
 
-    const isMobile = !!this.defenseGame?.isMobile;
+    const isMobile = this.usesTouch();
     const facilityResult = await this.showModal({
       speaker: "PDX-01",
       title: "SAFE ZONE FACILITIES",
@@ -514,7 +519,7 @@ export class TutorialDirector {
     });
     if (shieldResult === "skip") return;
 
-    const isMobile = !!this.defenseGame?.isMobile;
+    const isMobile = this.usesTouch();
     const fireResult = await this.showModal({
       speaker: "PDX-01",
       title: "FIRE & MOVE",
@@ -663,7 +668,7 @@ export class TutorialDirector {
     });
     if (rulesResult === "skip") return;
 
-    const isMobileBreach = !!this.defenseGame?.isMobile;
+    const isMobileBreach = this.usesTouch();
     const controlResult = await this.showModal({
       speaker: "PDX-01",
       title: "DUAL SURVIVAL",
