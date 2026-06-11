@@ -113,6 +113,7 @@ export class GameManager {
     // 특수 탄약: 테트리스 줄 클리어 → 충전, 디펜스에서 사용
     this.specialAmmo = parseInt(localStorage.getItem("special_ammo") || "0", 10) || 0;
     this.defenseGame.setSpecialAmmo(this.specialAmmo);
+    this.tetrisGame.onBgmToggle = () => this.defenseGame.toggleBGM();
     this.tetrisGame.onAmmoCharge = (lines) => {
       const before = this.specialAmmo;
       this.specialAmmo = Math.min(3, this.specialAmmo + lines);

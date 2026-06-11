@@ -66,8 +66,9 @@ export function applyGameFlowMixin(GameManagerClass) {
       }
       await this.showCommandMenu();
     } else if (mode === "breach") {
-      // 1. 디펜스 정지 및 숨김
+      // 1. 디펜스 정지 및 숨김 (BGM은 끊지 않고 유지 — 브금 고정)
       this.defenseGame.stop();
+      this.defenseGame.bgmManager.play(this.defenseGame.currentBGMTrack || "DEFENSE");
 
       // 2. 터미널 및 UI 조정
       this.terminal.setTransparentMode(true);

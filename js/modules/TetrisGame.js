@@ -198,30 +198,8 @@ export class TetrisGame {
         osc.start();
         osc.stop(this.ctx.currentTime + duration);
       },
-      startBGM: function () {
-        if (!this.isBgmOn || this.bgmTimer) return;
-
-        const tempo = 250;
-        this.bgmTimer = setInterval(() => {
-          if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
-
-          const freq = this.bgmNotes[this.noteIndex % this.bgmNotes.length];
-          const detune = (Math.random() - 0.5) * 5;
-          this.playTone(freq + detune, "sine", 0.5, 0.03);
-
-          if (this.noteIndex % 8 === 0) {
-            let bassFreq = 65.41;
-            const bar = Math.floor((this.noteIndex % 32) / 8);
-            if (bar === 2) bassFreq = 51.91;
-            if (bar === 3) bassFreq = 49.0;
-
-            this.playTone(bassFreq, "triangle", 2.0, 0.1);
-            this.playTone(bassFreq * 2, "triangle", 2.0, 0.05);
-          }
-
-          this.noteIndex++;
-        }, tempo);
-      },
+      // 테트리스 자체 BGM 제거 — 메인 BGMManager가 모든 모드를 담당
+      startBGM: function () {},
       stopBGM: function () {
         if (this.bgmTimer) {
           clearInterval(this.bgmTimer);
@@ -230,8 +208,6 @@ export class TetrisGame {
       },
       toggleBGM: function () {
         this.isBgmOn = !this.isBgmOn;
-        if (this.isBgmOn) this.startBGM();
-        else this.stopBGM();
         return this.isBgmOn;
       },
       move: function () {
@@ -338,7 +314,10 @@ export class TetrisGame {
   }
 
   toggleBGM(btn) {
-    const isOn = this.SoundManager.toggleBGM();
+    // 메인 BGM(BGMManager)을 제어 — 테트리스 전용 BGM은 제거됨
+    const isOn = this.onBgmToggle
+      ? this.onBgmToggle()
+      : this.SoundManager.toggleBGM();
     if (btn) {
       btn.innerHTML = `BGM<br>${isOn ? "ON" : "OFF"}`;
       btn.style.color = isOn ? "var(--term-color)" : "#555";

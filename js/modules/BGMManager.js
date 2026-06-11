@@ -34,195 +34,187 @@ export class BGMManager {
     this.currentBar = 0;
     this.intensity = 0;
     
-    // === 트랙 정의 ===
+    // === 트랙 정의 (v2.3.1 — 전곡 신규 작곡) ===
     this.tracks = {
       // ========================================
-      // SAFE ZONE - 편안하고 느긋한 분위기
+      // SAFE ZONE "Harbor" — 로파이, 느긋한 항구의 밤
       // ========================================
       SAFE_ZONE: {
-        name: "Safe Zone",
-        baseBpm: 90,
-        maxBpm: 110,
-        masterVolume: 0.25,
-        
-        // 드럼 패턴 (느린 4/4)
-        kickPattern:  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-        hihatPattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-        snarePattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 스네어 없음
-        
-        // 베이스 (부드러운 사인파)
-        bassPattern: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-        bassNotes: [55, 55, 65.4, 73.4, 55, 55, 65.4, 82.4], // A1, C2, D2, E2
-        bassType: 'sine',
-        bassDecay: 0.4,
-        
-        // 리드 (부드러운 패드)
-        leadPattern: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-        leadNotes: [220, 261.6, 293.7, 329.6], // A3, C4, D4, E4
+        name: "Harbor",
+        baseBpm: 76,
+        maxBpm: 88,
+        masterVolume: 0.22,
+        swing: 0.28,
+
+        kickPattern:  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        hihatPattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1],
+        snarePattern: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+
+        // A 마이너 펜타토닉 — 따뜻한 트라이앵글 베이스
+        bassPattern: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+        bassNotes: [55, 49, 43.65, 41.2, 55, 65.4],
+        bassType: 'triangle',
+        bassDecay: 0.55,
+
+        // 드문드문 떨어지는 부드러운 멜로디
+        leadPattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+        leadNotes: [220, 246.9, 261.6, 329.6, 293.7, 261.6, 246.9, 220],
         leadType: 'sine',
-        leadVolume: 0.06,
-        
-        // 아르페지오 (잔잔한)
-        arpChance: 0.08,
-        arpNotes: [110, 130.8, 146.8, 164.8], // A2, C3, D3, E3
-        
-        // 드럼 사운드 설정
-        kickFreq: 120,
-        kickDecay: 0.2,
-        hihatVolume: 0.08,
-        snareVolume: 0,
+        leadVolume: 0.07,
+
+        arpChance: 0.06,
+        arpNotes: [110, 130.8, 164.8, 196],
+
+        kickFreq: 95,
+        kickDecay: 0.28,
+        hihatVolume: 0.05,
+        snareVolume: 0.06,
+        chordProgression: [0, -4, 3, -2], // Am - F - C - G 무드
       },
-      
+
       // ========================================
-      // DEFENSE - 긴박하고 긴장감 있는 전투
+      // DEFENSE "Pursuit" — 신스웨이브 추격전
       // ========================================
       DEFENSE: {
-        name: "Defense",
-        baseBpm: 128,
-        maxBpm: 165,
-        masterVolume: 0.3,
-        
-        // 드럼 패턴 (하드한 4/4, 더블 킥)
-        kickPattern:  [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0],
-        hihatPattern: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // 16비트 하이햇
-        snarePattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-        
-        // 베이스 (공격적인 톱니파)
-        bassPattern: [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1],
-        bassNotes: [55, 55, 41.2, 55, 61.7, 55, 41.2, 73.4], // A1, E1, A1, B1, E1, D2
+        name: "Pursuit",
+        baseBpm: 132,
+        maxBpm: 158,
+        masterVolume: 0.28,
+        swing: 0,
+
+        kickPattern:  [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0],
+        hihatPattern: [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1],
+        snarePattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+
+        // 오프비트 8분 음표 베이스 — 달리는 느낌
+        bassPattern: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        bassNotes: [41.2, 41.2, 41.2, 49, 41.2, 41.2, 55, 49],
         bassType: 'sawtooth',
-        bassDecay: 0.15,
-        
-        // 리드 (날카로운 스퀘어)
-        leadPattern: [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0],
-        leadNotes: [220, 293.7, 329.6, 392, 440, 523.2], // A3, D4, E4, G4, A4, C5
+        bassDecay: 0.12,
+
+        // E 마이너 후크 리프
+        leadPattern: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0],
+        leadNotes: [164.8, 196, 246.9, 196, 329.6, 246.9, 196, 164.8],
         leadType: 'square',
-        leadVolume: 0.1,
-        
-        // 아르페지오 (빠른)
-        arpChance: 0.2,
-        arpNotes: [110, 146.8, 174.6, 220, 293.7], // A2, D3, F3, A3, D4
-        
-        // 드럼 사운드 설정 (하드)
-        kickFreq: 160,
-        kickDecay: 0.12,
-        hihatVolume: 0.12,
-        snareVolume: 0.3,
-      },
-      
-      // ========================================
-      // FINAL - 최종 페이지/보스전 최고 긴장감
-      // ========================================
-      FINAL: {
-        name: "Final",
-        baseBpm: 150,
-        maxBpm: 185,
-        masterVolume: 0.35,
-        
-        // 드럼 패턴 (격렬한 브레이크비트)
-        kickPattern:  [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0],
-        hihatPattern: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        snarePattern: [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0],
-        
-        // 베이스 (디스토션 느낌, 낮은 옥타브)
-        bassPattern: [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1],
-        bassNotes: [41.2, 41.2, 36.7, 41.2, 49, 41.2, 55, 61.7], // E1, D1, E1, G1, A1, B1
-        bassType: 'sawtooth',
-        bassDecay: 0.08,
-        
-        // 리드 (공격적인, 디튠 강화)
-        leadPattern: [1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0],
-        leadNotes: [329.6, 392, 440, 523.2, 587.3, 659.2], // E4, G4, A4, C5, D5, E5
-        leadType: 'sawtooth',
-        leadVolume: 0.12,
-        
-        // 아르페지오 (격렬)
-        arpChance: 0.35,
-        arpNotes: [146.8, 174.6, 220, 293.7, 349.2, 440],
-        
-        // 드럼 사운드 설정 (격렬)
-        kickFreq: 180,
-        kickDecay: 0.1,
-        hihatVolume: 0.15,
-        snareVolume: 0.4,
-        
-        // 추가 효과
-        addDistortion: true,
-        chordProgression: [0, -2, -4, -5],
-      },
-
-      // ========================================
-      // BOSS - Core Nexus 전용: 느리고 무겁고 불길하게
-      // ========================================
-      BOSS: {
-        name: "Boss",
-        baseBpm: 140,
-        maxBpm: 170,
-        masterVolume: 0.36,
-
-        kickPattern:  [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1],
-        hihatPattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1],
-        snarePattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-
-        // 반음 충돌이 깔린 저음 리프 (E1-F1-E1-B0)
-        bassPattern: [1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
-        bassNotes: [41.2, 43.7, 41.2, 30.9, 41.2, 49, 43.7, 41.2],
-        bassType: 'sawtooth',
-        bassDecay: 0.2,
-
-        leadPattern: [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-        leadNotes: [329.6, 311.1, 246.9, 329.6, 369.9, 311.1],
-        leadType: 'sawtooth',
         leadVolume: 0.09,
 
-        arpChance: 0.15,
-        arpNotes: [82.4, 87.3, 123.5, 164.8, 174.6],
+        arpChance: 0.16,
+        arpNotes: [82.4, 98, 123.5, 164.8, 196],
 
         kickFreq: 150,
-        kickDecay: 0.18,
-        hihatVolume: 0.09,
-        snareVolume: 0.45,
-        chordProgression: [0, 0, 1, -4],
+        kickDecay: 0.12,
+        hihatVolume: 0.1,
+        snareVolume: 0.28,
+        chordProgression: [0, 0, -4, -2], // Em - Em - C - D 무드
       },
 
       // ========================================
-      // CONQUERED - 점령지: 차분한 승리의 여운
+      // FINAL "Zero Hour" — 프리지안 광폭
+      // ========================================
+      FINAL: {
+        name: "Zero Hour",
+        baseBpm: 158,
+        maxBpm: 186,
+        masterVolume: 0.33,
+        swing: 0,
+
+        kickPattern:  [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
+        hihatPattern: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        snarePattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1],
+
+        // 프리지안(♭2) 리프 — 불길한 반음 충돌
+        bassPattern: [1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1],
+        bassNotes: [41.2, 43.7, 41.2, 36.7, 41.2, 43.7, 49, 41.2],
+        bassType: 'sawtooth',
+        bassDecay: 0.08,
+
+        leadPattern: [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1],
+        leadNotes: [329.6, 349.2, 392, 329.6, 493.9, 440, 392, 349.2],
+        leadType: 'sawtooth',
+        leadVolume: 0.11,
+
+        arpChance: 0.3,
+        arpNotes: [164.8, 174.6, 220, 246.9, 329.6],
+
+        kickFreq: 180,
+        kickDecay: 0.1,
+        hihatVolume: 0.13,
+        snareVolume: 0.4,
+        addDistortion: true,
+        chordProgression: [0, 1, 0, -5], // E - F - E - B 프리지안
+      },
+
+      // ========================================
+      // BOSS "The Oldest System" — 둠 하프타임
+      // ========================================
+      BOSS: {
+        name: "The Oldest System",
+        baseBpm: 92,
+        maxBpm: 122,
+        masterVolume: 0.36,
+        swing: 0,
+
+        kickPattern:  [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        hihatPattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+        snarePattern: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+
+        // 트라이톤이 박힌 무거운 서브 베이스
+        bassPattern: [1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+        bassNotes: [41.2, 41.2, 58.27, 41.2, 38.9, 41.2],
+        bassType: 'sawtooth',
+        bassDecay: 0.32,
+
+        // 드물게 떨어지는 불길한 종소리
+        leadPattern: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+        leadNotes: [246.9, 233.1, 246.9, 311.1],
+        leadType: 'triangle',
+        leadVolume: 0.1,
+
+        arpChance: 0.07,
+        arpNotes: [82.4, 87.3, 116.5],
+
+        kickFreq: 130,
+        kickDecay: 0.3,
+        hihatVolume: 0.07,
+        snareVolume: 0.5,
+        chordProgression: [0, 6, 0, -1], // 트라이톤 상승 후 반음 하강
+      },
+
+      // ========================================
+      // CONQUERED "Afterglow" — 점령지의 여운
       // ========================================
       CONQUERED: {
-        name: "Conquered",
-        baseBpm: 96,
-        maxBpm: 108,
-        masterVolume: 0.24,
+        name: "Afterglow",
+        baseBpm: 84,
+        maxBpm: 96,
+        masterVolume: 0.22,
+        swing: 0.2,
 
-        kickPattern:  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+        kickPattern:  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
         hihatPattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
         snarePattern: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
 
-        // 메이저 펜타토닉 — 밝고 안정적
+        // C 메이저 — 밝고 안정적인 쿼터 베이스
         bassPattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-        bassNotes: [65.4, 73.4, 82.4, 98, 82.4, 73.4],
+        bassNotes: [65.4, 98, 87.3, 73.4],
         bassType: 'triangle',
         bassDecay: 0.5,
 
         leadPattern: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-        leadNotes: [261.6, 293.7, 329.6, 392, 440, 523.2],
+        leadNotes: [261.6, 329.6, 392, 523.25, 392, 329.6],
         leadType: 'sine',
         leadVolume: 0.08,
 
-        arpChance: 0.12,
-        arpNotes: [130.8, 146.8, 164.8, 196, 220],
+        arpChance: 0.1,
+        arpNotes: [130.8, 164.8, 196, 261.6],
 
-        kickFreq: 110,
+        kickFreq: 100,
         kickDecay: 0.25,
-        hihatVolume: 0.07,
-        snareVolume: 0.12,
-        chordProgression: [0, 5, 7, 5],
+        hihatVolume: 0.06,
+        snareVolume: 0.1,
+        chordProgression: [0, -3, -7, -5], // C - Am - F - G 무드
       },
     };
-
-    // 기존 트랙에도 코드 진행 부여
-    this.tracks.SAFE_ZONE.chordProgression = [0, 3, 5, 3];
-    this.tracks.DEFENSE.chordProgression = [0, 0, -2, 3];
   }
 
   /**
@@ -421,7 +413,11 @@ export class BGMManager {
     const secondsPerBeat = 60.0 / this.bpm / 4;
     
     while (this.nextNoteTime < this.audioCtx.currentTime + this.scheduleAheadTime) {
-      this.scheduleBeat(this.currentBeat, this.nextNoteTime);
+      const track = this.tracks[this.currentTrack];
+      const swing = track && track.swing && this.currentBeat % 2 === 1
+        ? secondsPerBeat * track.swing
+        : 0;
+      this.scheduleBeat(this.currentBeat, this.nextNoteTime + swing);
       this.nextNoteTime += secondsPerBeat;
       this.currentBeat = (this.currentBeat + 1) % 16;
       if (this.currentBeat === 0) {

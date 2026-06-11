@@ -4371,6 +4371,7 @@ export class DefenseGame {
 
   toggleBGM() {
     const isOn = this.bgmManager.toggleMute();
+    this.currentBGMTrack = null; // 다시 켤 때 재생이 스킵되지 않도록
 
     if (isOn && this.isRunning) {
       if (this.isSafeZone) {
