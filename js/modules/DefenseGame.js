@@ -222,6 +222,12 @@ export class DefenseGame {
     this.enemyProjectiles = [];
     this.bossAttackTimers = { ring: 0, aimed: 0, summon: 0 };
 
+    // PDX-01 라이브 코멘터리 (조력자 캐릭터의 상황 반응)
+    this.pdxCommentCooldownUntil = 0;
+    this._pdxLowHpWarned = false;
+    this._pdxPrevShieldState = null;
+    this._pdxPrevOverdrive = false;
+
     const joystickLeft = this.isMobile ? 60 : 24;
     const joystickBottom = this.isMobile ? 60 : 24;
     this.joystickContainer = document.createElement("div");
@@ -1046,6 +1052,11 @@ export class DefenseGame {
 
     this.killCombo.count++;
     this.killCombo.timer = 2.0;
+    if (this.killCombo.count === 10) {
+      this.pdxComment("10 콤보!! 역시... 전설.");
+    } else if (this.killCombo.count === 25) {
+      this.pdxComment("...이게 되는구나. 메모해둘게요.");
+    }
     // 연속 킬 시 셰이크/히트스톱이 끊임없이 이어지지 않도록 쿨다운 게이트
     this.tryKillPunch();
     if (enemy) {
@@ -1065,6 +1076,7 @@ export class DefenseGame {
         this.addScreenShake(12);
         this.triggerHitStop(0.08);
         this.announcePageEvent("⛔ 관리자 격침 — 섹터가 무방비 상태", "#00ff88");
+        this.pdxComment("격침!! ...방금 좀 멋졌어요.", { force: true });
       }
       if (enemy.isCarrier && enemy.dataBonus) {
         this.currentData += enemy.dataBonus;
@@ -1073,6 +1085,7 @@ export class DefenseGame {
         this.spawnDamageNumber(enemy.x, enemy.y - 26, `+${enemy.dataBonus} CACHE`, "#ffcc00", true);
         this.addScreenShake(6);
         this.spawnDataMotes(enemy.x, enemy.y);
+        this.pdxComment("나이스 샷! 캐시 회수 완료!", { force: true });
       }
     }
     this.playKillSound(this.killCombo.count);
@@ -1189,6 +1202,80 @@ export class DefenseGame {
     this.announcePageEvent("⛔ SECTOR WARDEN — 격추해야 점령 가능", "#ff3366");
     this.addScreenShake(6);
     this.playGlitchSound();
+    this.pdxComment("큰 놈이에요!! 큰 놈은 큰 보상이죠!", { force: true });
+  }
+
+  // PDX-01의 상황 반응 한마디 — 화면 하단에 잠깐 표시.
+  // 전역 9초 쿨다운으로 스팸 방지 (force는 중요 순간용)
+  pdxComment(text, { force = false } = {}) {
+    const now = performance.now();
+    if (!force && now < this.pdxCommentCooldownUntil) return;
+    this.pdxCommentCooldownUntil = now + 9000;
+
+    if (!this.uiLayer) return;
+    if (this._pdxBubble) this._pdxBubble.remove();
+    const el = document.createElement("div");
+    el.style.cssText = `
+      position: absolute;
+      bottom: ${this.isMobile ? 160 : 64}px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 86%;
+      padding: 4px 12px;
+      background: rgba(0, 20, 10, 0.78);
+      border: 1px solid rgba(255, 255, 0, 0.45);
+      border-radius: 12px;
+      font-family: var(--term-font, 'Courier New', monospace);
+      font-size: ${this.isMobile ? 11 : 13}px;
+      color: #ffff88;
+      text-shadow: 0 0 6px rgba(255, 255, 0, 0.5);
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 37;
+      opacity: 0;
+      transition: opacity 0.25s;
+    `;
+    el.innerText = `[PDX-01] ${text}`;
+    this.uiLayer.appendChild(el);
+    this._pdxBubble = el;
+    requestAnimationFrame(() => { el.style.opacity = "1"; });
+    setTimeout(() => { el.style.opacity = "0"; }, 2600);
+    setTimeout(() => {
+      el.remove();
+      if (this._pdxBubble === el) this._pdxBubble = null;
+    }, 3000);
+  }
+
+  // 상태 전이 감시형 코멘트 (매 프레임, updateFeedbackSystems에서 호출)
+  updatePdxCommentary() {
+    const core = this.core;
+
+    // 코어 위기 (30% 미만 진입 시 1회)
+    const hpRatio = core.maxHp ? core.hp / core.maxHp : 1;
+    if (hpRatio < 0.3 && !this._pdxLowHpWarned) {
+      this._pdxLowHpWarned = true;
+      this.pdxComment("해커님?! 정신 차리세요!! 코어가 버티질 못해요!", { force: true });
+    } else if (hpRatio > 0.5 && this._pdxLowHpWarned) {
+      this._pdxLowHpWarned = false;
+    }
+
+    // 실드 파손 순간
+    if (core.shieldState === "BROKEN" && this._pdxPrevShieldState !== "BROKEN") {
+      this.pdxComment("실드 파손!! 수리까지 5초 — 도망 다니세요!", { force: true });
+    }
+    this._pdxPrevShieldState = core.shieldState;
+
+    // 오버드라이브 발동 순간
+    const overdriveActive = !!this.roamingProtocol?.active;
+    if (overdriveActive && !this._pdxPrevOverdrive) {
+      this.pdxComment("OVERDRIVE!! 청소 시간이에요!!", { force: true });
+    }
+    this._pdxPrevOverdrive = overdriveActive;
+
+    // 아주 가끔: Safe Zone 혼잣말 (다크 떡밥)
+    if (this.isSafeZone && Math.random() < 0.00002) {
+      this.pdxComment("...예전에도 이런 밤이 있었어요. 아, 혼잣말이에요!");
+    }
   }
 
   // 전향 프로토콜(런 퍽): 처치한 적이 아군 바이러스로 전향
@@ -1241,6 +1328,8 @@ export class DefenseGame {
       d.vy *= Math.pow(0.1, dt);
       if (d.life <= 0) this.damageNumbers.splice(i, 1);
     }
+
+    this.updatePdxCommentary();
   }
 
   getPageSpawnRate(page, diffScale) {
